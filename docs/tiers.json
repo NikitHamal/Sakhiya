@@ -37,11 +37,11 @@
    "variant": "tiny",
    "mb": 6.509,
    "rtf": 0.0189,
-   "utmos": 2.95,
+   "utmos": 3.236,
    "ne_pcer": null,
    "sa_pcer": null,
    "ready": true,
-   "desc": "Smallest model · acoustic student + V1 vocoder · much cleaner voice"
+   "desc": "Smallest model · fully trained student + V1 vocoder · clean voice"
   }
  ],
  "voices": {

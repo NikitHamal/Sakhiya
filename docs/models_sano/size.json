@@ -22,11 +22,11 @@
   "browser_ort_node": {
     "fp16": {
       "sr": 24000,
-      "samples": 526784,
-      "dur_s": 21.949,
-      "rtf_1thread": 0.0604,
+      "samples": 551225,
+      "dur_s": 22.968,
+      "rtf_1thread": 0.061,
       "max_abs": 0.9,
-      "rms": 0.1607,
+      "rms": 0.1487,
       "nan_count": 0,
       "segments": [
         "ne",
@@ -36,11 +36,11 @@
     },
     "tiny": {
       "sr": 24000,
-      "samples": 527426,
-      "dur_s": 21.976,
-      "rtf_1thread": 0.0598,
+      "samples": 552228,
+      "dur_s": 23.009,
+      "rtf_1thread": 0.059,
       "max_abs": 0.9,
-      "rms": 0.1573,
+      "rms": 0.1501,
       "nan_count": 0,
       "segments": [
         "ne",
