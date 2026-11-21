@@ -35,12 +35,13 @@ function opts(el,all,map){el.innerHTML='<option value="">'+all+'</option>'+Objec
 function filt(){const s=$("st").value,y=$("sy").value,v=$("vd").value,q=$("q").value.trim().toLowerCase();
  V=L.filter(c=>(!s||c.status===s)&&(!y||c.style===y)&&(!q||(c.text||"").toLowerCase().includes(q)||c.id.toLowerCase().includes(q))&&
  (!v||(v==="todo"?!FX[c.id]:FX[c.id]&&FX[c.id].verdict===v)));page=0;draw()}
+const ENG={gemini:'Gemini','assemblyai':'AssemblyAI','groq-whisper-v3':'Groq Whisper v3','groq-whisper-v3-turbo':'Groq Whisper turbo',ic:'IndicConformer'};
 function draw(){const a=V.slice(page*PS,page*PS+PS);$("msg").textContent=V.length?"":"No clips match this filter.";
  $("list").innerHTML=a.map(c=>{const f=FX[c.id]||{},t=f.text!=null?f.text:(c.text||"");
  const bad=c.status==="vedic_bad";
  return `<div class="c ${f.verdict==='bad'?'rej':f.verdict?'fixed':''}" data-id="${esc(c.id)}"><div>
  <span class="chip ${bad?'r':c.status.startsWith('vedic')?'g':'y'}">${esc(LBL[c.status]||c.status)}</span><span class="chip">${esc(SYL[c.style]||c.style)}</span>
- ${c.engine==='gemini'?'<span class="chip g">Gemini words</span>':''}<span class="chip">${(c.dur||0).toFixed(1)} s</span>${c.utmos?`<span class="chip">quality ${(+c.utmos).toFixed(2)}</span>`:''}
+ ${c.engine?`<span class="chip g">${esc(ENG[c.engine]||c.engine)} words</span>`:''}<span class="chip">${(c.dur||0).toFixed(1)} s</span>${c.utmos?`<span class="chip">quality ${(+c.utmos).toFixed(2)}</span>`:''}
  ${f.verdict?`<span class="chip g">you: ${esc(f.verdict)}</span>`:''}</div>
  ${bad&&c.why?`<div class="mu">why rejected: ${esc([].concat(c.why).join("; "))}</div>`:''}
  <audio controls preload="none" src="clips/${encodeURIComponent(c.file)}" onerror="this.insertAdjacentHTML('afterend','<div class=mu style=color:#ff6b6b>⚠ audio file missing on server: '+this.getAttribute('src')+'</div>')"></audio>

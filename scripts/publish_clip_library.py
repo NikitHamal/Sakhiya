@@ -5,7 +5,7 @@ Caps keep the repo small (32 kbps mono mp3).  usage: python scripts/publish_clip
 import argparse, collections, glob, json, os, random, re, subprocess, time
 from concurrent.futures import ThreadPoolExecutor
 ROOT = os.environ.get("TTS_ROOT", "/work/tts"); REPO = f"{ROOT}/repo"; OUT = f"{REPO}/docs/clips"
-CAP = {"kept": 350, "heard": 500, "cleaned": 120, "vedic_gold": 250, "vedic_ok": 100, "vedic_bad": 60, "sakhiya": 120}
+CAP = {"kept": 700, "heard": 1800, "cleaned": 900, "vedic_gold": 300, "vedic_ok": 100, "vedic_bad": 60, "sakhiya": 150}
 def jl(p):
     try: return [json.loads(l) for l in open(p)]
     except Exception: return []
@@ -63,6 +63,12 @@ def main():
         if r["style"] == "vedic_chant" or "/vedic_chant/" in r.get("path", ""): continue   # owner rule: Gemini never touches Sanskrit/Vedic
         elif cid in items and t and items[cid]["status"] in ("kept", "heard", "cleaned"):
             c = items[cid]; c["text_w"] = c.get("text_w") or c.get("text", ""); c["text"] = t; c["engine"] = "gemini"; c["lid"] = r["lang"]
+    # AssemblyAI (language auto) + Groq Whisper v3/turbo words (session 65): Nepali only, one engine per clip (asr_claims.py), never Vedic
+    for r in jl(f"{ROOT}/asr/cloud_asr.jsonl"):
+        cid, t = r["id"], r.get("text", "")
+        if r.get("style") == "vedic_chant" or "/vedic_chant/" in r.get("path", "") or not t: continue
+        if cid in items and items[cid]["status"] in ("kept", "heard", "cleaned"):
+            c = items[cid]; c["text_w"] = c.get("text_w") or c.get("text", ""); c["text"] = t; c["engine"] = r["provider"]; c["lid"] = r.get("lang", "")
     try: fx = json.load(open(f"{ROOT}/corrections.json"))   # owner audit: corrected words override the machine's; garbage clips never appear as good
     except Exception: fx = {}
     for cid, f in fx.items():
