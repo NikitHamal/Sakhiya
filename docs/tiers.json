@@ -23,11 +23,11 @@
    "variant": "tiny",
    "mb": 8.932,
    "rtf": 0.0217,
-   "utmos": 3.083,
+   "utmos": 3.253,
    "ne_pcer": null,
    "sa_pcer": null,
    "ready": true,
-   "desc": "Small model · acoustic student + V1 vocoder · much cleaner voice"
+   "desc": "Small model · fully trained student + V1 vocoder · clean voice"
   },
   {
    "id": "atom",
