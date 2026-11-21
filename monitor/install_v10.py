@@ -10,7 +10,7 @@ async def main():
     async with cm.get_context(skip_staleness_check=True) as ctx:
         by_name = {c.name: c.id for c in ctx.cells.values()}
         for c in list(ctx.cells.values()):
-            if c.name not in C.CELLS:
+            if c.name not in C.CELLS and not c.name.startswith("tts_v11_"):   # keep the v11 V1 fine-tune cards (monitor/cells_v11.py)
                 ctx.delete_cell(c.id)
         ids = {}
         for name, src in C.CELLS.items():
