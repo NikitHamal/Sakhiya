@@ -8,8 +8,8 @@ in-browser ONNX synthesis. Live studio: https://nikithamal.github.io/Sakhiya/
 | Name | What it is | Size (int8, what the browser downloads) |
 |---|---|---|
 | **Sakhiya-V1** | Best quality (the old "V5 Final"). | ~16 MB |
-| **Sakhiya-V1-Nano** | Small model: small acoustic student + V1 vocoder. Measured UTMOS 3.08 (old 2.47), 0 clicks (old 37). | ~8.9 MB |
-| **Sakhiya-V1-Atom** | Smallest model: tiny acoustic student + V1 vocoder. Measured UTMOS 2.95 (old 2.03). | ~6.5 MB |
+| **Sakhiya-V1-Nano** | Small model: fully trained small acoustic student + V1 vocoder. Measured numbers live in `docs/tiers.json` / `eval/forensic_v9_nano.json`. | ~8.9 MB |
+| **Sakhiya-V1-Atom** | Smallest model: tiny acoustic student + V1 vocoder. Measured numbers live in `docs/tiers.json` / `eval/forensic_v9_atom.json`. | ~6.5 MB |
 
 Nano and Atom are distilled from V1 (a small acoustic model + a small vocoder). Numbers for every shipped model come from
 `scripts/forensic_audio_gate.py` and are stored in `eval/forensic_*.json`; `STATUS.md` has the honest log of what worked.
@@ -35,6 +35,9 @@ tts = SakhiyaONNX("docs/models_v2/", tiny=True)   # V1 int8;  use docs/models_vo
 wav, sr = tts.say("नेपालको राजधानी काठमाडौँ हो।", speaker="sakhiya", style="news")
 ```
 Controls: `lang` (`auto`/`ne`/`sa`), `style` (`news`, `storytelling`, `conversational`, `warm_soft`, `expressive`, `vedic_chant`), `rate`, `pitch_shift`.
+
+## How Nano / Atom were improved (v9)
+v8 swapped the tiny vocoder for V1's vocoder, but the small acoustic students had only ~4.6k training steps because the teacher flow-ODE was recomputed every step (2.5 steps/s). v9 (`scripts/v9_am_cached.py`) runs the teacher once, keeps its targets in GPU memory and trains the students ~3x faster at 2x the batch size, under a hard 100-minute cap with a step-50 throughput gate. `scripts/v9_chain.sh` exports, runs the real forensic gate and publishes only if the result beats v8. The website selector lists only V1, Nano and Atom; older packs stay in the repo but are not listed.
 
 ## How Nano / Atom were fixed (v8)
 1. **Measured where the robotic sound comes from** (`scripts/v8_voc_gta.py`, "DIAG" line, real text -> model -> audio path):
