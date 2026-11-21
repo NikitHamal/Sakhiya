@@ -7,7 +7,8 @@ Output (resumable, append-only): /work/tts/asr/gemini.jsonl  {id,path,style,text
 Key from env GEMINI_API_KEY or /tmp/gemini_key (never committed).
 run (N_TRANSCRIBE=8 N_FLASH=24): setsid nohup python scripts/gemini_transcribe.py > /work/tts/logs/gemini.log 2>&1 < /dev/null &"""
 import argparse, asyncio, base64, glob, json, os, random, subprocess, time
-import websockets
+import websockets, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import asr_claims as claims
 ROOT = os.environ.get("TTS_ROOT", "/work/tts"); OUT = os.environ.get("GEMINI_OUT", f"{ROOT}/asr/gemini.jsonl"); STATE = f"{ROOT}/asr/gemini_state.json"
 KEY = os.environ.get("GEMINI_API_KEY") or open("/tmp/gemini_key").read().strip()
 URL = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={KEY}"
@@ -189,6 +190,7 @@ async def main():
             while True:
                 async with lk: x = next(it, None)
                 if x is None: return
+                if not claims.claim(x[0], "gemini"): continue      # owner rule: a clip belongs to ONE engine (AssemblyAI / Groq already took it)
                 await one(x, fo, primary)
         ws_ = [worker(m) for m, n in POOLS.items() for _ in range(n)]
     await asyncio.gather(*ws_); bt.cancel(); log("DONE", stats); save(True)
