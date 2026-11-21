@@ -1,5 +1,11 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 64 — owner rules: Gemini = Nepali only; Clip Library back on GitHub Pages
+- **Gemini on Nepali only.** `gemini_transcribe.py` no longer sends any `vedic_chant` clip (and re-does rows that came back empty); `apply_gemini.py` / `publish_clip_library.py` ignore Gemini for Sanskrit. Sanskrit is judged by the local stack (verse-matched reference text, `vedic_gold_audit`, `vedic_purity_gate`). Gemini runs at real-time speed (~0.2 clips/s, token-quota bound), best clips first; the full backlog is far larger than one session.
+- **Clip Library** `docs/clips.html` (tab "Clips"): 1,380 clips (24 kbps mono mp3, 37 MB) - Nepali (kept / heard / cleaned, Gemini words where available), verified Sanskrit (gold / ok) and 60 REJECTED Vedic clips shown in red with the reason. Each clip has an editable transcript + OK / Fixed / BAD buttons (saved in the browser); "Save my fixes" exports `sakhiya_corrections.json`, importable in MoLab card 6. Verified live: `clips.html`, `clips/library.json` and mp3s return 200 on Pages.
+- **MoLab cards:** card 8 rewritten (plain English, Nepali-only Gemini progress + 6 before/after clips). All 14 cells BAD 0.
+- **Not done this session:** v6 teacher / Voca / Sano training, HF/Kaggle progressive export check, Sakhiya VC preview clips (none in the library yet), refresh of the library with newer Gemini words (re-run `scripts/publish_clip_library.py` on the box, then push).
+
 ## Session 63 — v8: Nano/Atom voice fixed by swapping the bottleneck; repo slimmed
 - **Naming/selector:** Sakhiya-V1 (= v5_final), Sakhiya-V1-Nano, Sakhiya-V1-Atom only. Old v7 Nano/Atom stay in the comparator labelled as "old, for comparison". Everything else left the tree (kept in GitHub Release `v8-archive`, incl. the full pre-cleanup git history as bundle parts).
 - **Measured diagnosis** (`scripts/v8_voc_gta.py` DIAG, real text->model path): student mel through V1 vocoder = UTMOS 3.39 (Nano) / 3.16 (Atom); through the tiny vocoder = 2.69 / 2.27. The tiny vocoder (450k params) was the bottleneck; the v7 AM students were only at step ~4k of 52k (the earlier job died) but are not the main problem.
