@@ -1,0 +1,140 @@
+{
+  "tag": "v5_final",
+  "label": "v5-Final (SWA Pareto Champion)",
+  "commit_sha": "8790fd1",
+  "timestamp_utc": "2026-11-21T01:16:06Z",
+  "notes": "Cycle 4: Multi-Checkpoint SWA Weight-Space Soup across C1-C3 + Calibrated Prosody/Svara",
+  "metrics": {
+    "ne_pcer": 0.0251,
+    "ne_wer": 0.0949,
+    "sa_pcer": 0.0331,
+    "utmos": 3.898,
+    "sv_cos_sim": 0.9673,
+    "cross_style_sv": 0.9673,
+    "rigveda_svara_st": 4.94,
+    "style_f0_ratio": 1.469,
+    "glitch_frames": 0
+  },
+  "clips": [
+    {
+      "id": "ne_kathmandu",
+      "lang": "ne",
+      "style": "news",
+      "text": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
+      "mp3": "samples/versions/v5_final/ne_kathmandu.mp3",
+      "duration_s": 6.0
+    },
+    {
+      "id": "ne_story",
+      "lang": "ne",
+      "style": "storytelling",
+      "text": "एक समयको कुरा हो, एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन्। उनी बिहानै उठेर चरालाई दाना हाल्थिन्।",
+      "mp3": "samples/versions/v5_final/ne_story.mp3",
+      "duration_s": 9.77
+    },
+    {
+      "id": "ne_chat",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "नमस्ते! आज मौसम धेरै राम्रो छ, चिया खान जाऔँ न? तिमी कताबाट आउँदै छौ?",
+      "mp3": "samples/versions/v5_final/ne_chat.mp3",
+      "duration_s": 5.26
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "text": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ। गहिरो श्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्।",
+      "mp3": "samples/versions/v5_final/ne_warm.mp3",
+      "duration_s": 12.05
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "text": "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
+      "mp3": "samples/versions/v5_final/ne_expressive.mp3",
+      "duration_s": 6.2
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "बाटोबाट हिँड्दै गर्दा गाउँका साथीहरूसँग भेट भयो, अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौँ।",
+      "mp3": "samples/versions/v5_final/ne_tricky_real.mp3",
+      "duration_s": 7.21
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "text": "सन् २०२६ मा नेपालको प्रविधि क्षेत्रमा १५ प्रतिशत वृद्धि भएको छ, र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन् बढेका छन्।",
+      "mp3": "samples/versions/v5_final/ne_loan_num.mp3",
+      "duration_s": 12.42
+    },
+    {
+      "id": "sa_om",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
+      "mp3": "samples/versions/v5_final/sa_om.mp3",
+      "duration_s": 10.03
+    },
+    {
+      "id": "sa_rv",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
+      "mp3": "samples/versions/v5_final/sa_rv.mp3",
+      "duration_s": 6.82
+    },
+    {
+      "id": "sa_gita",
+      "lang": "sa",
+      "style": "storytelling",
+      "text": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥",
+      "mp3": "samples/versions/v5_final/sa_gita.mp3",
+      "duration_s": 10.43
+    },
+    {
+      "id": "sa_gayatri",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "ॐ भूर्भुवः स्वः। तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि। धियो यो नः प्रचोदयात्॥",
+      "mp3": "samples/versions/v5_final/sa_gayatri.mp3",
+      "duration_s": 8.98
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "text": "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥ आज मौसम निकै रमाइलो र शान्त छ।",
+      "mp3": "samples/versions/v5_final/mixed_owner.mp3",
+      "duration_s": 21.41
+    },
+    {
+      "id": "ne_unseen_dialogue",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "दिदी, आज बजारमा नयाँ किताबहरू आएका रहेछन्। हामी साँझपख सँगै गएर हेरौँला नि, हुँदैन र?",
+      "mp3": "samples/versions/v5_final/ne_unseen_dialogue.mp3",
+      "duration_s": 6.42
+    },
+    {
+      "id": "ne_unseen_narrative",
+      "lang": "ne",
+      "style": "storytelling",
+      "text": "वर्षा थामिएपछि पहाडको टुप्पोबाट कलकल बग्ने झरनाको आवाज अझै मीठो सुनियो। गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।",
+      "mp3": "samples/versions/v5_final/ne_unseen_narrative.mp3",
+      "duration_s": 12.76
+    },
+    {
+      "id": "ne_unseen_prose",
+      "lang": "ne",
+      "style": "news",
+      "text": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्‍याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ।",
+      "mp3": "samples/versions/v5_final/ne_unseen_prose.mp3",
+      "duration_s": 9.77
+    }
+  ]
+}

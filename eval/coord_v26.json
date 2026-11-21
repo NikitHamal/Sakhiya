@@ -1,0 +1,49 @@
+{
+ "session": "Sakhiya v2.6 Flagship Quality Recovery",
+ "lead_ml": "Gemini 4 Argon",
+ "ui_lane": "Claude Sonnet 5.5",
+ "stage": "Stage 1: Zero-Mismatch Re-Phonemization + Prosody Extraction",
+ "stage_idx": 0,
+ "right_now": "MoLab sandbox sb-9b4bce3bd9ef2c08 returned 410 'sandbox terminated'. Needs a new box URL/token before any GPU work or card verification.",
+ "targets": {
+  "voices": [
+   "sakhiya",
+   "sandesh"
+  ],
+  "styles": [
+   "news",
+   "conversational",
+   "storytelling",
+   "warm_soft",
+   "vedic_chant"
+  ],
+  "wavlm_sv_min": 0.88,
+  "rigveda_svara_st": [
+   4.0,
+   5.5
+  ],
+  "max_fp16_mb": 32.0,
+  "max_int8_mb": 16.0
+ },
+ "tracks": {
+  "sonnet": "MoLab sandbox terminated (HTTP 410) - cards/stage1 not re-verifiable; local G2P parity + 18 pytest + node --check pass",
+  "gemini": "v2.6 CFG 2-voice AM + VocSpecExport + pronunciation/style audit active"
+ },
+ "scope": "flagship only; Nano/Atom frozen",
+ "status": "molab_unreachable",
+ "updated": 1795166630.3183286,
+ "stage1": {
+  "script": "scripts/v26_rephonemize.py",
+  "log": "/work/tts/logs/v26_stage1_rephon.log",
+  "out": "/work/tts/feats/v26_shards",
+  "note": "Rasa shards only; SLR43 (v2_native_24k) + noisy-clip drop + audio F0-std still to do (f0_std_z=0 placeholder)",
+  "launched_by": "sonnet-failsafe"
+ },
+ "g2p": {
+  "canonical_sa": "sakhiya.sanskrit.phonemize_v26",
+  "ne": "sakhiya.g2p.text_to_phones",
+  "phone_dm": "all 1.0",
+  "inventory": "unchanged symbols.py (ळ=ɽ, च=ts, श्च=ʃ ts)"
+ },
+ "gate": "scripts/gate_pronunciation_v26.py --model <export_dir> [--promote]; writes eval/gate_v26.json"
+}

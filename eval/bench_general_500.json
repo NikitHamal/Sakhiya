@@ -1,0 +1,3508 @@
+{
+  "version": "3.1",
+  "total": 500,
+  "n_nepali": 350,
+  "n_sanskrit": 150,
+  "sentences": [
+    {
+      "id": "slr43_val_00",
+      "text": "विद्युत घटक जसले विद्युत सर्किट तोड्न सक्छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_01",
+      "text": "देवराज भट्टको जन्म सुदूरपश्चिम नेपालको डोटी जिल्लामा भएको हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_02",
+      "text": "केशव उप्रेतीको जन्म सुदूरपश्चिम नेपालको डडेलधुरा जिल्लामा भएको हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_03",
+      "text": "झङ्कर थापाको जन्म सुदूरपश्चिम नेपालको अछाम जिल्लामा भएको हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_04",
+      "text": "पवित्र भण्डारीको जन्म सुदूरपश्चिम नेपालको अछाम जिल्लामा भएको हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_05",
+      "text": "फ्रान्सेली चरण र प्रारम्भिक फिल्म अभिनेत्री",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_06",
+      "text": "पश्चिमी घाटहरू पर्वत श्रेणी हुन जुन भारतको",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_07",
+      "text": "अस्ट्रिया इटाली जर्मनी बेलायत स्लोभेनिया आदि विभिन्न राष्ट्रहरूबाट पनि सहयोग प्राप्त हुने सिलसिला जारी रहेको छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_08",
+      "text": "सबैभन्दा चलनमा रहेको कोबोर्डको डिजाइन हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_09",
+      "text": "बहरिन मध्यम दुरी धावक",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_10",
+      "text": "अमेरिकी अल्पाइन स्कि रेसर",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_11",
+      "text": "नेपालमा बढी पानी पर्ने जिल्ला कास्कीको लुम्ले गाउँ विकास समिति अन्तर्गतको क्षेत्र पर्दछ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_12",
+      "text": "उहाँले फिल्मसम्बन्धि किताब लेख्नु भएको थियो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_13",
+      "text": "किचकवध भन्ने ठाउँ झापाको पृथ्वीनगर गाविसको वडा पाँच स्थित मेची नदी देउनिया खोलाको संगममा छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_14",
+      "text": "उन्नाइस सय अठहत्तरमा कोरियाका फिल्म निर्देशक सिङ साङ ओकलाई अपहरण गर्ने आदेश दिए",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_15",
+      "text": "रियाद साउदी अरबको सबै भन्दा ठूलो सहर र यस मुलूकको राजधानी हो",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_16",
+      "text": "तन्त्र विभिन्न रूपमा भारत नेपाल चीन जापान तिब्बत कोरिया कम्बोडिया म्या म्यान्मार इन्डोनेसिया मङ्गोलियामा विद्यमान रहेको छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_17",
+      "text": "कालीबंगा गंगानगर जिल्लामा सुरतगढका निकट अवस्थित छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_18",
+      "text": "के एल टावर एण्ड मल्टिकम्प्लेक्समा हरेक प्रकारका उपभोग्य वस्तु उपलब्ध छन्",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_19",
+      "text": "माछापु्च्छ्रे र फेवातालको प्रतिविम्ब जिल्ला पर्यटन व्यवसायका रथी हुन्",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_20",
+      "text": "राज्यको आर्थिक व्यवस्थामा पर्यटनले निर्णयात्मक भूमिका निभाएको छ",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_21",
+      "text": "स्लोभाकियाको कुटिकमा रहेको रेलवे स्टेसन",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_22",
+      "text": "उन्नाइस सय त्रिसट्ठीको ब्रिटिस अमेरिकी स्विस महाकाव्य नाटक फिलिम",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_23",
+      "text": "पूर्वी अर्थोडक्स भिक्षु",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_24",
+      "text": "फ्रान्सको लियोनको रोमद्वारा निर्मित केन्द्रित संरचना",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_25",
+      "text": "अमेरिकी व्यावसायिक पोकर खेलाडी",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_26",
+      "text": "सर्बियन वंशको स्लोवेनियाई पशुशास्त्री",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_27",
+      "text": "फ्रान्सको कोट ड्अरमा रहेको आश्रम",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_28",
+      "text": "क्युबा को भिल्ला क्लारा प्रान्तमा रहेको सहर",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_29",
+      "text": "जर्मन राष्ट्रिय फुटबल टोली र पूर्व फुटबल खेलाडीको प्रबन्धक",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_30",
+      "text": "परम्परा र बगैँचाको शैली र विश्व सम्पदा सूची",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_31",
+      "text": "केन्द्रीय संयुक्त राज्य अमेरिकामा रहेको नदी",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_32",
+      "text": "कुनै वेबसाइटसँग सम्बन्धित प्रतिमा",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_33",
+      "text": "दुई हजार दसको अमेरिकी कम्प्युटरले एनिमेटे गरेको तीन आयाम कमेडी फिल्म",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "slr43_val_34",
+      "text": "किमडाँडा अर्घाखाँची जिल्ला अवस्थित गाउँ विकास समिति",
+      "lang": "ne",
+      "src": "slr43_heldout",
+      "style": "conversational"
+    },
+    {
+      "id": "fleurs_test_-8",
+      "text": "यद्यपि, संचार च्यानलहरू ढिला हुनाले, पश्चिममा शैलीहरू 25 देखि 30 वर्ष पछि रहन सक्दछन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-7",
+      "text": "किनमेल गर्न सबैभन्दा कम रोचक ठाउँहरूमध्ये मोरक्कोमा कासाब्लान्का हो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-6",
+      "text": "नतिजाको रूपमा, कलाकारहरूले स्टेजमा गाँजा सेवन गर्छन् र नाटकघर आफैँले श्रोताहरूलाई सामेल हुन प्रोत्साहित गरिरहेको हुन्छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-5",
+      "text": "तपाईंका लागि सिए शब्द सँगसँगै वाक्यको बीचमा पनि सबै नामहरू सधैँ ठूलो अक्षरबाट सुरु हुन्छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-4",
+      "text": "मिश्रित धातुहरू मुख्यतया दुई वा अधिक धातुहरूका मिश्रण हुन्। नबिर्सनुहोस् कि पेरियोडिक तालिकामा धेरै तत्त्वहरू छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-3",
+      "text": "1960 को दशकमा, ब्रजेजिनस्कीले John F. Kennedy का लागि सल्लाहकारको र त्यसपछि Lyndon B. Johnson प्रशासनको रूपमा काम गरे।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-2",
+      "text": "ग्रिकको ज्ञानमा गिरावट आउँदा, पश्चिमले आफूलाई आफ्नो ग्रिक दार्शनिक र वैज्ञानिक जराबाट टाढा भएको पायो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_-1",
+      "text": "तिनका खुट्टामा कत्ला र पन्जा हुन्छन्, तिनले अण्डा पार्छन् र ती आफ्ना पछाडिका दुई खुट्टाका सहायताले टी-रेक्स जस्तै गरी हिँड्छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_00",
+      "text": "मोहम्मदमा यस सांसारिक जीवन भन्दा परको बारेमा गहिरो चासो थियो। उनले बारम्बार गुफाको प्रयोग गर्दथे जुन चिन्तनका लागि “नूर” (प्रकाश) को पहाडमा “हिरा” “भनेर चिनिन्थ्यो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_01",
+      "text": "बच्चा र वृद्ध व्यक्तिसहित छ बन्धकहरूलाई फिलिपिनी फोटोग्राफरहरूलाई जस्तै छिट्टै रिहा गरिए।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_02",
+      "text": "गाडीलाई नै त्यही दिन लगभग 1200 GMT मा दुर्घटना स्थलबाट टाढा लगिएको थियो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_03",
+      "text": "साँचो “अदृश्य टीम” (Larson र LaFasto, 1989, p109) को उपस्थिति पनि भर्चुअल टोलीको अद्वितीय अंश हो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_04",
+      "text": "आँधिबेहरी क्याट्रिनाका सम्बन्धमा राहत तथा पुनर्निर्माणमा खर्च गर्ने विषयमा विवाद चर्किएको थियो जसलाई केही वित्तीय कट्टरपन्थीहरूले “बुसको नयाँ ओर्लिन्स डिल” को हास्यपूर्वक लेबल लगाएका छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_05",
+      "text": "इन्टरनेटले दुवै सामूहिक र पारस्परिक सञ्चारका तत्त्वहरूलाई जोड्दछ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_06",
+      "text": "यद्यपि, त्यो सत्य होइन। कागजातको पछाडि केही लेखिएको भए तापनि, त्यो खजानाको नक्सा होइन।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_07",
+      "text": "थप उत्तरका ठूला क्षेत्रहरू एकदम बिरलै बसोबास युक्त छन् र केही लगभग बसोबास नभएको उजाडस्थान हो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_08",
+      "text": "तर कप्तानको विकेट गुमाएपछि भारतले 7 विकेट गुमाएर 36 रन मात्रै बनायो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_09",
+      "text": "1988 देखि, मतपत्र बाकसहरू अनिवार्य रुपमा पारदर्शी हुनुपर्दछ ताकि मतदाता र पर्यवेक्षकहरूले मतदानको थालनीमा कुनै खाम उपस्थित छैनन् र विधिवत् गणना भएका र अधिकृत मतदाताका बाहेक कुनै पनि अन्य खामहरू नहालिउन् भन्ने कुराको साक्षी हुन सकून्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_10",
+      "text": "नेक्स्टजेन एक प्रणाली हो जुन FAAले दावी गर्दछ कि यसले विमानहरूलाई छोटो मार्गहरू उडान भर्न र प्रत्येक वर्ष लाखौं ग्यालेन इन्धन बचाउन र कार्बन उत्सर्जनमा कटौती गर्न मद्दत गर्दछ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_11",
+      "text": "असभ्य बालबालिकाले घर छोड्नु र भाग्नुभन्दा पहिला गम्भीर बाल दुर्व्यवहार वा भौतिक क्षतिको सामना गरेको हुन सक्छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_12",
+      "text": "दुर्घटनापछि, गिब्सनलाई अस्पतालमा लगियो तर केही समयपछि उनको मृत्यु भयो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_13",
+      "text": "ब्रह्माण्डमा सबै सामग्री पदार्थबाट बनेको हुन्छ। सबै कुरा परमाणु भनिने साना कणहरूद्वारा बनेको हुन्छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_14",
+      "text": "पात र फलफूलहरूमा पाइने प्रोटिनहरू सबैभन्दा सजिलो र पहुँचयोग्य वनस्पति स्रोतहरू हुन सक्थे। तर हामी जस्ता नरवानरका लागि यी खानेकुरा नपकाइकन खाँदा पचाउन गाह्रो हुन्छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_15",
+      "text": "सुरुमा उहाँ ग्रेट यारमाउथको जेम्स पागेट अस्पतालमा भर्ना हुनु भएको थियो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_16",
+      "text": "एउटा गाडीमा राजा र रानीका बिरूद्ध धम्की दिँदै चिच्याउँदै र कराउँदै गरिरहेका मानिसहरूको भीडले घेरिएर तिनीहरू पेरिस फर्के। जहाँ",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_17",
+      "text": "बसहरू दिनभरि अन्तर-जिल्ला बस स्टेशनबाट (नदी तर्फ) छुट्दछन्, यद्यपि प्राय: जसो उनीहरू पूर्वतिर जाकर / बुमथाङ जाने क्रममा 06:30 र 07:30 का बीच छुट्टिन्छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_18",
+      "text": "सन् 1966 देखि सुन्दरबन वन्यजन्तु आरक्षण केन्द्र भएको छ र यस क्षेत्रमा अहिले 400 वटा शाही बंगाल बाघ र लगभग 30,000 हरिणहरू रहेको अनुमान गरिएको छ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_19",
+      "text": "यसको सहायताले खेलाडीहरू भिडियो गेमका एक्सन र चालहरू यो यन्त्रलाई हावामा यताउता चलाएर नियन्त्रण गर्न सक्छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_20",
+      "text": "लोकप्रिय रूपमा प्रयोगमा रहेको सफारी शब्दले विशेषगरी सवानामा सानदार अफ्रिकी वन्यजन्तुहरू हेर्नका लागि गरिने जमिन माथिको यात्रालाई बुझाउँछ।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_21",
+      "text": "एक ब्रिटिश पाउन्ड (GBP)को बराबर मूल्य सेट गरिएको आधिकारिक फल्कल्यान्ड मुद्रा फल्कल्यान्ड पाउन्ड (FKP) हो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_22",
+      "text": "“यो विदाई हुन गइरहेको छैन। यो एक अध्यायको समापन र नयाँ एकको उद्घाटन हो।”",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_23",
+      "text": "यहाँ अझै धेरै पुरुष र महिलाहरू बाँचेका छन् जसले आफ्नो समय यहाँ व्यतीत गरे र अरू धेरै जसका प्रियजनहरू थिए जसलाई त्यहाँ मारिएको वा यहूदी र गैर-यहूदीहरूलाई समान रुपमा मृत्युदण्ड दिइएको थियो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_24",
+      "text": "अन्त्यमा, कीरा, रोडेन्ट, छेपारो र चराहरू जस्ता अझ धेरै अनगिनत स-साना शिकार खाने (खुल्ला पाल्तु बिरालाहरू सहित) धेरै साना बिरालाहरू छन्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_25",
+      "text": "स्कीइङ मार्गलाई हाइकिङ मार्ग जस्तै समान रूपमा सोच्नुहोस्।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "fleurs_test_26",
+      "text": "सन्‌ 1920 को दशकमा अधिकांश नागरिक र राष्ट्रहरूको प्रचलित मनोवृत्ति शान्तिवाद र पृथकीकरण थियो।",
+      "lang": "ne",
+      "src": "fleurs_heldout",
+      "style": "news"
+    },
+    {
+      "id": "ne_news_01",
+      "text": "नेपाल राष्ट्र बैंकले चालु आर्थिक वर्षको मौद्रिक नीतिको तेस्रो त्रैमासिक समीक्षा सार्वजनिक गरेको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_news_02",
+      "text": "काठमाडौँ उपत्यकामा आज बिहानैदेखि हल्का वर्षा भएकाले अधिकतम तापक्रम घटेर बाइस डिग्री सेल्सियसमा झरेको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_news_03",
+      "text": "सगरमाथा राष्ट्रिय निकुञ्जको जैविक विविधता संरक्षणका लागि स्थानीय समुदाय र सरकारबीच सहकार्य हुँदै आएको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_news_04",
+      "text": "शिक्षा मन्त्रालयले आगामी शैक्षिक सत्रदेखि सामुदायिक विद्यालयमा डिजिटल पाठ्यपुस्तक लागू गर्ने निर्णय गरेको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_news_05",
+      "text": "त्रिभुवन अन्तर्राष्ट्रिय विमानस्थलबाट दैनिक हजारौँ यात्रुहरू विभिन्न अन्तर्राष्ट्रिय गन्तव्यतर्फ प्रस्थान गर्छन्।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_story_01",
+      "text": "सूर्यास्तको सुनौलो किरण हिमालका चुचुरामा पर्दा सारा गाउँ नै उज्यालो र शान्त देखियो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_story_02",
+      "text": "आमाको काखमा बसेर बाल्यकालका मीठा कथाहरू सुन्दा मनमा अनौठो आनन्द र न्यानोपन छाउँथ्यो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_story_03",
+      "text": "खोलाको कलकल आवाज र वनचरीको चिरबिरले बटुवाको थकान क्षणभरमै मेटाइदियो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_story_04",
+      "text": "बर्खाको झरी रोकिएपछि आकाशमा सात रङको इन्द्रेणी उदायो र केटाकेटीहरू आँगनमा रमाउँदै नाच्न थाले।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_story_05",
+      "text": "पुरानो चौतारीको पीपलको रुखमुनि बसेर वृद्ध बाजेले गाउँको इतिहास सुनाउनुभयो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_conv_01",
+      "text": "नमस्ते दिदी, आज बजार जानुभएको होइन र? तरकारी र फलफूल कत्तिको ताजा पाउनुभयो?",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_conv_02",
+      "text": "तपाईँले पठाउनुभएको इमेल मैले भर्खरै पढेँ, भोलि बिहान दस बजे कार्यालयमा भेटौँला है।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_conv_03",
+      "text": "चिया पिउनुहुन्छ कि कफी बनाऊँ? बाहिर निकै जाडो बढेको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_conv_04",
+      "text": "यो काम समयमै सम्पन्न गर्न हामी सबैले मिलेर मेहनत गर्नुपर्छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_conv_05",
+      "text": "बसपार्कबाट पोखरा जाने माइक्रोबस कति बजे छुट्छ, तपाईँलाई थाहा छ?",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_num_01",
+      "text": "विक्रम संवत् दुई हजार एकासी साल वैशाख पन्ध्र गते शनिबार विशेष सांस्कृतिक कार्यक्रम आयोजना गरियो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_num_02",
+      "text": "यस परियोजनाका लागि कुल पैँतालीस करोड अठहत्तर लाख रुपैयाँ बजेट विनियोजन गरिएको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_num_03",
+      "text": "नेपालको कुल क्षेत्रफल एक लाख सड्चालीस हजार पाँच सय सोह्र वर्ग किलोमिटर रहेको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_conj_01",
+      "text": "प्रत्यक्षदर्शीहरूले दुर्घटनाग्रस्त सवारीसाधनका घाइतेहरूलाई तत्कालै अस्पताल पुर्‍याए।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_conj_02",
+      "text": "स्वास्थ्यकर्मीहरूको निष्ठापूर्वक सेवाले बिरामीहरूको आत्मविश्वास बढाएको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "warm_soft"
+    },
+    {
+      "id": "ne_conj_03",
+      "text": "अन्तर्राष्ट्रिय प्रतिस्पर्धामा उत्कृष्ट प्रदर्शन गर्दै नेपाली खेलाडीले स्वर्ण पदक जिते।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "expressive"
+    },
+    {
+      "id": "ne_verb_01",
+      "text": "उहाँहरूले भन्नुभएको कुरा ध्यानपूर्वक सुनेर मात्र निर्णय लिनु उपयुक्त हुन्छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "warm_soft"
+    },
+    {
+      "id": "ne_verb_02",
+      "text": "बिहान सबेरै उठेर प्राणायाम र ध्यान गर्नाले शरीर स्वस्थ र मन प्रसन्न रहन्छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "warm_soft"
+    },
+    {
+      "id": "ne_verb_03",
+      "text": "गाउँलेहरूले मिलीजुली कुलो मर्मत गरेर खेतमा पानी लगाएका छन्।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_loan_01",
+      "text": "आर्टिफिसियल इन्टेलिजेन्स र टेक्स्ट टु स्पीच मोडेलले नेपाली भाषाको प्रविधिलाई नयाँ उचाइमा पुर्‍याएको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_loan_02",
+      "text": "मोबाइल एप्लिकेसन र इन्टरनेट बैंकिङको प्रयोगले गाउँघरमा पनि आर्थिक कारोबार सहज बनाएको छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_loan_03",
+      "text": "कम्प्युटर इन्जिनियरिङका विद्यार्थीहरूले युनिकोड फन्ट र सफ्टवेयर विकासमा उल्लेखनीय योगदान दिएका छन्।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_loan_04",
+      "text": "अस्पतालको इमर्जेन्सी वार्डमा चौबिसै घण्टा अक्सिजन र एम्बुलेन्स सेवा उपलब्ध छ।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "news"
+    },
+    {
+      "id": "ne_para_01",
+      "text": "नेपाल प्राकृतिक सौन्दर्य र सांस्कृतिक विविधताले भरिपूर्ण देश हो। यहाँका हिमाल, पहाड र तराईले अनुपम एकताको सन्देश दिन्छन्।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_para_02",
+      "text": "भाषा र साहित्य समाजको ऐना हो। पुर्खाको ज्ञान र परम्परालाई जोगाउनु हामी सबैको कर्तव्य हो।",
+      "lang": "ne",
+      "src": "real_world_ne",
+      "style": "warm_soft"
+    },
+    {
+      "id": "ne_extra_01",
+      "text": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "news"
+    },
+    {
+      "id": "ne_extra_02",
+      "text": "एक समयको कुरा हो, एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन्।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_extra_03",
+      "text": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "warm_soft"
+    },
+    {
+      "id": "ne_extra_04",
+      "text": "पोखराबाट काठमाडौँ आउँदा बाटोमा हरिया डाँडाकाँडा र भैँसी चरेका फाँटहरू देखिए।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_extra_05",
+      "text": "हामी सबै गाउँमा बसेर चिया खाँदै रमाइलो कुराकानी गर्छौँ।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "conversational"
+    },
+    {
+      "id": "ne_extra_06",
+      "text": "यो काम सक्कल हो कि नक्कल हो, राम्ररी जाँचेर मात्र निर्णय गर्नुहोस्।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "news"
+    },
+    {
+      "id": "ne_extra_07",
+      "text": "पोखरीमा सेतो हाँस पौडी खेल्दै छ र किनारमा हरियो बाँस झुलेको छ।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "storytelling"
+    },
+    {
+      "id": "ne_extra_08",
+      "text": "कम्प्युटर र इन्टरनेटबाट टेक्स्ट टु स्पीच मोडेल चलाउन निकै सजिलो छ।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "news"
+    },
+    {
+      "id": "ne_extra_09",
+      "text": "आज बिहानैदेखि पानी परेको छैन, तर साँझपख चिसो हावा चल्ने सम्भावना छ।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "news"
+    },
+    {
+      "id": "ne_extra_10",
+      "text": "राष्ट्रिय तथा अन्तर्राष्ट्रिय स्तरमा नेपाली साहित्यको लोकप्रियता बढ्दै गएको हो।",
+      "lang": "ne",
+      "src": "curated_real",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_001",
+      "text": "उसको काम राम्रो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_002",
+      "text": "उसले खाम पठायो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_003",
+      "text": "कल बन्द गर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_004",
+      "text": "खलमा मसला पिस।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_005",
+      "text": "मेरो गाउँ टाढा छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_006",
+      "text": "उसको हातमा घाउ लाग्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_007",
+      "text": "खेतको गडा बनाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_008",
+      "text": "घडामा पानी भर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_009",
+      "text": "त्यो काल कठिन थियो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_010",
+      "text": "बच्चाको गाल रातो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_011",
+      "text": "चार जना मान्छे आए।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_012",
+      "text": "आगोको छार बटुल।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_013",
+      "text": "रगतको चाप बढ्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_014",
+      "text": "कागजमा छाप लगाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_015",
+      "text": "माछा मार्न जाल फेर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_016",
+      "text": "यो खानामा झाल धेरै छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_017",
+      "text": "भोलि जाँच छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_018",
+      "text": "ढोकाबाट झाँक।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_019",
+      "text": "चोर भागिहाल्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_020",
+      "text": "खेतको छोरमा रूख छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_021",
+      "text": "रोटीको टुक्रा दे।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_022",
+      "text": "उसले प्रस्ताव ठुक्रायो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_023",
+      "text": "मेरो टाउको दुख्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_024",
+      "text": "यो राम्रो ठाउँ हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_025",
+      "text": "डाक आयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_026",
+      "text": "मुख ढाक।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_027",
+      "text": "डोलमा पानी भर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_028",
+      "text": "ढोल बजाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_029",
+      "text": "उसले टोपी लगायो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_030",
+      "text": "ढिकीमा धान कुट।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_031",
+      "text": "फेवा ताल सुन्दर छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_032",
+      "text": "थालमा भात राख।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_033",
+      "text": "तार टुटेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_034",
+      "text": "तिम्रो थार के हो?",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_035",
+      "text": "उसले दान दियो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_036",
+      "text": "खेतमा धान रोप।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_037",
+      "text": "यसको दाम कति हो?",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_038",
+      "text": "गाउँमा धाम लाग्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_039",
+      "text": "दुन उपत्यकामा खेती हुन्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_040",
+      "text": "यो गीतको धुन मिठो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_041",
+      "text": "अब तिम्रो पाल हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_042",
+      "text": "बिरालोले फाल मार्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_043",
+      "text": "एक पल रोक।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_044",
+      "text": "रूखमा फल लाग्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_045",
+      "text": "बारीमा बार लगाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_046",
+      "text": "यो भार गह्रौँ छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_047",
+      "text": "नानीको बाला हरायो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_048",
+      "text": "सिपाहीले भाला बोकेको थियो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_049",
+      "text": "यो बाख्राको पाटो हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_050",
+      "text": "बाटो हिँड्न सजिलो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_051",
+      "text": "उसको हास रोकिएन।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_052",
+      "text": "पोखरीमा हाँस पौडिरहेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_053",
+      "text": "एउटा गीत गाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_054",
+      "text": "मेरो गाउँ रामेछाप हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_055",
+      "text": "दशैँ ठूलो चाड हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_056",
+      "text": "आज चाँद राम्रो देखिन्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_057",
+      "text": "धानको काटा सकियो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_058",
+      "text": "काँटाले खुट्टा बिझ्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_059",
+      "text": "सास घरमा हुनुहुन्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_060",
+      "text": "साँस फेर्नु गाह्रो भयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_061",
+      "text": "रातको बास कहाँ हो?",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_062",
+      "text": "बाँसको डालो बनाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_063",
+      "text": "काम नटाल।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_064",
+      "text": "ताल राम्रो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_065",
+      "text": "रूखको डाल भाँचियो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_066",
+      "text": "दाल भात खाऊ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_067",
+      "text": "नयाँ कोट लगाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_068",
+      "text": "कोत पर्व मनाइन्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_069",
+      "text": "नदीको घाटमा जाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_070",
+      "text": "शत्रुले घात गर्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_071",
+      "text": "खेत गोड्नु पर्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_072",
+      "text": "बच्चालाई गोद लिए।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_073",
+      "text": "सकल जनसंख्या बढ्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_074",
+      "text": "सक्कल प्रमाणपत्र ल्याउनुहोस्।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_075",
+      "text": "भीमसेनको गदा प्रसिद्ध छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_076",
+      "text": "नयाँ गद्दा किन्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_077",
+      "text": "यो कथा रमाइलो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_078",
+      "text": "पानमा कत्था लगाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_079",
+      "text": "हाम्रो कुल पुरानो हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_080",
+      "text": "कुल्लोबाट पानी आउँछ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_081",
+      "text": "घरको पता दिनुहोस्।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_082",
+      "text": "रूखको पत्ता खस्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_083",
+      "text": "कमल फुलेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_084",
+      "text": "कमला सुन्तला मिठो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_085",
+      "text": "खानामा नमक थोरै छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_086",
+      "text": "ऊ नम्र मान्छे हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_087",
+      "text": "मेरो करम नराम्रो रहेछ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_088",
+      "text": "राम्रो कर्म गर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_089",
+      "text": "धरम कमाउनु पर्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_090",
+      "text": "धर्मको मार्गमा हिँड।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_091",
+      "text": "कर तिर्नुपर्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_092",
+      "text": "नयाँ कार किन्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_093",
+      "text": "गुन बिर्सिनु हुँदैन।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_094",
+      "text": "उनको गुण राम्रो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_095",
+      "text": "अन्नको एक एक कण बचाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_096",
+      "text": "कानमा दुखाइ भयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_097",
+      "text": "रामले बाण चलाए।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_098",
+      "text": "यो खराब बान हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_099",
+      "text": "यो रङ राम्रो छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_100",
+      "text": "उसले दुई रन बनायो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_101",
+      "text": "गङ्गा पवित्र नदी हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_102",
+      "text": "लुगा गन्दा भयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_103",
+      "text": "पञ्चले फैसला सुनाए।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_104",
+      "text": "यो धार्मिक पन्थ पुरानो हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_105",
+      "text": "मन्दिरमा पूजा गर।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_106",
+      "text": "मण्डपमा विवाह भयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_107",
+      "text": "चन्दनको बोट मनपर्छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_108",
+      "text": "चण्डी देवीको पूजा गरे।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_109",
+      "text": "तपाईं जानुहुन्छ?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_110",
+      "text": "खाना खानुभयो?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_111",
+      "text": "को आयो?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_112",
+      "text": "तपाईंको नाम के हो?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_113",
+      "text": "राम्रो छ, है?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_114",
+      "text": "तिमी जान्छौ, हैन?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_115",
+      "text": "उसले त्यो भन्यो?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_116",
+      "text": "यो कसरी सम्भव छ र?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_117",
+      "text": "चिया कि कफी?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_118",
+      "text": "आज कि भोलि?",
+      "lang": "ne",
+      "src": "question_intonation",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_119",
+      "text": "वाह, कति राम्रो खबर!",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_120",
+      "text": "उहाँ अब हाम्रो बीचमा हुनुहुन्न।",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_121",
+      "text": "यो कसरी स्वीकार्य हुन सक्छ?",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_122",
+      "text": "के हुन्छ होला?",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_123",
+      "text": "अरे! तिमी यहाँ?",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_124",
+      "text": "आज मंगलबार हो।",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_125",
+      "text": "छिटो अस्पताल लैजाऊ!",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_126",
+      "text": "दुःख नमान्नुहोस्, सबै ठीक हुन्छ।",
+      "lang": "ne",
+      "src": "emotion",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_137",
+      "text": "रामले किताब किन्यो।",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_138",
+      "text": "सीताले भात पकाइन्।",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_139",
+      "text": "हरिले हिजो गाडी चलायो।",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_141",
+      "text": "उनी काठमाडौं गइन्।",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_142",
+      "text": "रामले मोटरसाइकल किन्यो।",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_143",
+      "text": "ठूलो मान्छेको छोरा",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_144",
+      "text": "नयाँ नेपालको कथा",
+      "lang": "ne",
+      "src": "contrastive_stress",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_145",
+      "text": "कच्चा काँचको कचौरा कच्चा काँचको कचौरा",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_146",
+      "text": "कछुवाको छालाको छत्रीमा कछुवा छ",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_147",
+      "text": "राम रामले राम्रो रामको रामायण राम्ररी पढ्यो",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_148",
+      "text": "हो।",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_149",
+      "text": "छैन।",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_150",
+      "text": "विद्यालयव्यवस्थापनसमिति",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_151",
+      "text": "Facebook मा post गर्नुहोस्",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_152",
+      "text": "Meeting cancel भयो, email check गर्नुस्",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_153",
+      "text": "अभिलेखागारमा पुरातात्त्विक दस्तावेजहरू सुरक्षित राखिएका छन्।",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_154",
+      "text": "सर्वोच्च न्यायालयको न्यायाधीशले यथास्थितिमा रिट जारी गर्नुभयो।",
+      "lang": "ne",
+      "src": "robustness",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_155",
+      "text": "नमस्ते",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_156",
+      "text": "नमस्कार",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_158",
+      "text": "धन्यवाद",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_159",
+      "text": "माफ गर्नुहोस्",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_160",
+      "text": "बधाई छ",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_161",
+      "text": "कृपया",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_162",
+      "text": "तपाईंलाई कस्तो छ?",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_163",
+      "text": "सन्चै हुनुहुन्छ?",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_sent_164",
+      "text": "दशैंको शुभकामना",
+      "lang": "ne",
+      "src": "phrases",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_165",
+      "text": "सरकारले नयाँ कर लगायो।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_166",
+      "text": "यो काम चाँडो कर।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_167",
+      "text": "रुखमा फल पाकेको छ।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_168",
+      "text": "मेहनतको फल मीठो हुन्छ।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_169",
+      "text": "उसमा धेरै बल छ।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_170",
+      "text": "बत्ती बल, अँध्यारो छ।",
+      "lang": "ne",
+      "src": "homographs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_171",
+      "text": "पूर्वाधारकै अभावमा प्रदेश राजधानी सुर्खेत",
+      "lang": "ne",
+      "src": "newspaper_ambiguities",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_172",
+      "text": "प्रतिस्पर्धामा बिजुली किन्ने प्राधिकरणको दोस्रो प्रस्तावमा पनि भारतीय कम्पनीले देखाएनन् चासो",
+      "lang": "ne",
+      "src": "newspaper_ambiguities",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_173",
+      "text": "निर्वाचनमा सञ्चारकर्मीमाथिको भौतिक आक्रमणप्रति सरोकारवालाको गम्भीर चिन्ता",
+      "lang": "ne",
+      "src": "newspaper_ambiguities",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_174",
+      "text": "चुनावीको र्‍यालीका सहभागी सवार बस दुर्घटना, २९ जना घाईते",
+      "lang": "ne",
+      "src": "newspaper_ambiguities",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_175",
+      "text": "हात्तीको सुडले पानी तान्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_176",
+      "text": "बैंकको सुद बढ्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_177",
+      "text": "सडक निर्माण भइरहेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_178",
+      "text": "सड्कमा गाडी धेरै छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_179",
+      "text": "समय बित्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_180",
+      "text": "सम्य छैन अहिले।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_181",
+      "text": "ऊ गोर मान्छे हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_182",
+      "text": "यो घोर अपराध हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_183",
+      "text": "उसले काम टाल्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_184",
+      "text": "उसले काम ठाल्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_185",
+      "text": "डाँडामा बस्ती छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_186",
+      "text": "यो नयाँ ढाँडा हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_187",
+      "text": "ढोकीमा धान कुट।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_188",
+      "text": "राजनीतिक दल बन्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_189",
+      "text": "पर्खाल धल्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_190",
+      "text": "स्विमिङ पूलमा पौडी खेल।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_191",
+      "text": "फूल फुलेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_192",
+      "text": "दशैँ ठूलो चाद हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_193",
+      "text": "पाटो बाख्रा बिक्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_194",
+      "text": "रूखको पातो खसिरहेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_195",
+      "text": "भात पका।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_196",
+      "text": "यो कुरा पक्का हो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_197",
+      "text": "पानी परेपछि छाता लगाउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_198",
+      "text": "जंगलमा छात्ता उम्रिएको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_199",
+      "text": "मेरो मन दुखेको छ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_200",
+      "text": "एक मण चामल ल्याउ।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_201",
+      "text": "कनमा दुखाइ भयो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_sent_203",
+      "text": "टायरमा पन्चर लाग्यो।",
+      "lang": "ne",
+      "src": "phonological_minimal_pairs",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_001",
+      "text": "सम्झिदा रुन मन लाग्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_002",
+      "text": "सुतिरै निक्लिनु पर्ने रैछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_003",
+      "text": "कोरोनाको उपचार के हुन्छ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_004",
+      "text": "युवाहरु भलिबल खेल्दै थिए।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_005",
+      "text": "कहा को जन्म हो",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_006",
+      "text": "तर मधेरु नजिक छैन।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_007",
+      "text": "बागबनाबाट सफर सुरु भयो।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_008",
+      "text": "त्यो भनेको बोलाको हो?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_009",
+      "text": "नदीले बाटो पनि छेकिदिन्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_010",
+      "text": "वहाँ मेरो आन्टी हुन्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_011",
+      "text": "बस्ती बिस्तारै गाउँ बोक्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_012",
+      "text": "चाइनिज भरी भनेको हो।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_013",
+      "text": "तरकारी अब लैजाइद होइछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_014",
+      "text": "कठिनाइहरुलाई हासेरै अंगाले हिड्छु",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_015",
+      "text": "अब के सिक्का हो?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_016",
+      "text": "कहाँ देखि ल्याउनु भयो?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_017",
+      "text": "अष्ट अरुको दिमागमा घन्टी बजाउँछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_018",
+      "text": "ओ सरपंच अली कहाँ छ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_019",
+      "text": "क्या खाना पाइन्छ त? पाइन्छ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_020",
+      "text": "नौलीले चिटा खोलेर हेर्दा हुन्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_021",
+      "text": "रुन चै त्यो सम्झिना आउछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_022",
+      "text": "तपाईको प्रेसर अलि कमै रैछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_023",
+      "text": "ढुंगा को धारो पनि छौ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_024",
+      "text": "नियाली जाउँछ। झन् गरुम भन्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_025",
+      "text": "लगभग तीन जना परिवार छन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_026",
+      "text": "हाम्रो गन्तव्य त मुगु थियो।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_027",
+      "text": "प्लेनहरु उडी राखी कोनी थियो?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_028",
+      "text": "रारा ताल कुन जिल्लामा पर्छ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_029",
+      "text": "आखिर धन तथा कुकुरमा उत्रेछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_030",
+      "text": "साँझको दूध धुने बेला भयो।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_031",
+      "text": "झ्यालबाट निस्किन्छन् र क्याम्पस जान्छन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_032",
+      "text": "गाउँमा धेरै जसो यादवहरु बस्छन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_033",
+      "text": "त्यही बस्छु भने जस्तो छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_034",
+      "text": "नेपालको सम्झनाले बेलाबेला भक्कानो छुटाउँछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_035",
+      "text": "छोड त म यो उठाउँछु।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_036",
+      "text": "फौजदार पनि जमानाका खेलाडी रहेछन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_037",
+      "text": "सन्चो छैन देखाउने घाउ छैन",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_038",
+      "text": "मान्छेहरु कतै झर्छन् कतै चढ्छन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_039",
+      "text": "क्या यारो त कान छ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_040",
+      "text": "बाबाले निफे काँगको चाही भन्नुहुन्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_041",
+      "text": "अब यो तपाईंलाई थाहा छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_042",
+      "text": "हत्याको जिम्मा लिएर कटगरामा उभिनु पर्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_043",
+      "text": "अ बुद्धेको आमा। सन्चै हुनुहुन्छ? छन्?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_044",
+      "text": "निमा दिदीको घरमा ढिडो पाक्दै छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_045",
+      "text": "आज हामी यी साथीका कथा देखाउछौ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_046",
+      "text": "आउँछ भने दिनु। आवाज दे। आउँछ?",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "conversational"
+    },
+    {
+      "id": "neptts_chirp_047",
+      "text": "यस्तो गर्दा त मान्छे बुढी हाल्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_048",
+      "text": "अनौठा बाबा गडमा दबाउँदै लिएर आउँछ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_049",
+      "text": "सकिला मियाका श्रीमान बम्बईमै बितेका रहेछन्।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "neptts_chirp_050",
+      "text": "स्कुलमा बिहानीको पढाइ छ। छिट्टै उठ्नुपर्छ।",
+      "lang": "ne",
+      "src": "natural_speech",
+      "style": "news"
+    },
+    {
+      "id": "rasa_sa_val_00",
+      "text": "अस्य मासस्य द्वादशतारिकायां श्रीमान् त्रिवेदी राज्यसभायाः त्यागपत्रस्य उद्घोषणं कृतवान् आसीत्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_01",
+      "text": "संस्थायाः कार्यक्रमे मञ्चे आतिथेयः स्याम् इति विचारेण अहं न सुखम् अनुभवामि।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_02",
+      "text": "आम्, सर्वान् प्रतिलिपिकृतान् भागान् प्रकाशयति, वास्तविकं स्रोतः अपि दर्शयति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_03",
+      "text": "गुवाहाटी–सिकन्दराबाद् एक्स्प्रेस्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_04",
+      "text": "ओ अस्तु! तर्हि षोडशाधिकपञ्चशतोत्तरसप्तसहस्रं किलोमीटर् यावत् सम्पूर्णः प्रायद्वीपीयप्रदेशः अस्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_05",
+      "text": "सन्त्रस्तः मा भव, राकी। कोऽपि मार्गः निश्चयेन अस्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_06",
+      "text": "एकविंशतिः वर्षाणाम् अधस्तनबालिकानां कृते एशियन् यूथ् नेट्बाल् चाम्पियन्‌शिप् अपि अस्ति यस्य सप्तमप्रतियोगिता दशाधिकद्विसहस्रतमे वर्षे आयोजिता आसीत्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_07",
+      "text": "तदर्थं भवते केवलं पञ्च रूप्यकाणि अतिरिक्तानि व्ययीभविष्यन्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_08",
+      "text": "विमाने मम पृष्ठतः उपविष्टः यात्रिकः मम आसनं प्रहरन् आसीत्, तेनाहं परिक्लिष्टः अभवम्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_09",
+      "text": "दीपावली पञ्चदिवसीयः उत्सवः अस्ति यः प्रकाशोत्सवम् आचरति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_10",
+      "text": "पानी पुरी",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_11",
+      "text": "आम्, अथ इतोऽपि अधिकम्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_12",
+      "text": "प्रायः पञ्चाशत् जनाः मृताः, येषु अनेके अफ्रिकादेशस्य योद्धृहस्तैः मारिताः।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_13",
+      "text": "लोककथायाः अनुसारं प्रपातानां तले स्थितः गर्तः अथवा कुण्डः भारतीय पौराणिक कथासु उद्दिष्टः अधोलोकः पातालः इव तावान् गभीरः वर्तते इति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_14",
+      "text": "अग्रिमसप्ताहे दीपावल्याः कृते ब्रिटानिया ट्रीट् स्ट्राबेरी वेफर्स् उपरि किमपि आफर् भविष्यति वा?",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_15",
+      "text": "चन्दः अलीगढ मुस्लिम् विश्वविद्यालये, अलीगढे अध्ययनं कृतवान् अन्ते च द्वात्रिंशदधिक नवदशशतं तमे वर्षे ग्वालियर् प्रदेशस्य विक्टोरिया महाविद्यालयात् स्नातकपदवीं प्राप्तवान्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_16",
+      "text": "पुरी यश्वन्त्पुर्  गरीब् रथ् एक्स्प्रेस्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_17",
+      "text": "साहिबी राजस्थान्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_18",
+      "text": "चलच्चित्रगृहस्य प्रेक्षकाः तेभ्यः जनेभ्यः क्रुद्धाः भवेयुः ये विलम्बेन आगत्य स्वासनानाम् अन्वेषणकार्ये तेषां पुरतः तिष्ठेयुः।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_19",
+      "text": "षष्ट्यधिक नवदशशतं तमस्य दशकस्य अन्ते यावत् स्थितस्य 'आपरेशन् फ्लड्' इत्यस्य परिणामेन देशजातीनां न्यूनदुग्धस्य उत्पादनं वर्धयितुं क्रास् प्रजननस्य माध्यमेन होल्स्टीन् जातयः भारते स्वमार्गं प्राप्तवन्तः।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_20",
+      "text": "प्रथमा भारतीया महिलारक्षमहानिदेशिका",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_21",
+      "text": "आर्थिकमन्दतायाः कृते मम कम्पन-विशेषस्य वित्तीयस्वास्थ्यस्य सिद्धतायाः आवश्यकतया अहं रात्रौ जागर्मि।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_22",
+      "text": "नाहरलगुन् गुवाहाटी दोन्यि पोलो एक्स्प्रेस्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_23",
+      "text": "दिवसोयं जीवनस्य प्रत्येकस्मिन् क्षेत्रे महिलाभिः निर्वोढिताया असामान्यभूमिकाया रेखाङ्कनायै परिपाल्यते।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_24",
+      "text": "केज्रीवाल्-क्याम्पैन् वार्तासञ्चयम् अनुसर।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_25",
+      "text": "कृपया डब्ल्यु डब्ल्यु डब्ल्यु डाट् मावैष्णोदेवी डाट् ओ आर् जि पश्यतु।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_26",
+      "text": "सा पुनरवलोकनं करोति, परन्तु आरम्भादेव मन्दगत्या गन्तुं शक्नुयात्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_27",
+      "text": "मन्नै एक्स्प्रेस्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_28",
+      "text": "तेङ्कुतिट्टुः अविश्वसनीयनृत्यपदानां, उच्चोड्डयननृत्यचालानां, अतिशयेन राक्षसानां च कृते प्रसिद्धः अस्ति ।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_29",
+      "text": "मृदङ्ग",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_30",
+      "text": "ज्वरग्रस्तां पत्नीं परीक्ष्य सः अवगतवान् यत् आहारस्य असेवनं शरीर दौर्बल्यं च ज्वरस्य कारणम् इति ।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_31",
+      "text": "मल्लिका",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_32",
+      "text": "अहम् सद्यः एव एकस्य महत्त्वपूर्णस्य व्यावसायिक व्ययस्य प्रतिपूर्तिं प्राप्तवान्, यदहं अनुमोद्यते इत्येव न अमन्वि।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_33",
+      "text": "चत्वारि सप्त चत्वारि पञ्च द्वे द्वे पिन्कोड् युक्तस्य क्षेत्रस्य समीपे ई.एस्.ऐ.सी.केन्द्रेषु कर्मचारी राज्य अभिरक्षा औषधालयस्य केन्द्रम् अस्ति वा?",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_34",
+      "text": "के अपि कार्यक्रमाः प्रवर्तमानाः सन्ति वा गाङ्ग्टाक्नगरे?",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_35",
+      "text": "बिकनेर् कोयम्बत्तूर् सुपर्फास्ट् एसी एक्स्प्रेस्",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_36",
+      "text": "अष्ट परिमिता सञ्जाता।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_37",
+      "text": "इति प्रश्नः तां पौनः पुन्येन बाधते ।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_38",
+      "text": "अहं विश्वसितुं न शक्नोमि यत् ते अस्मान् अन्यस्मिन् नीरसव्याख्याने उपवेष्टुम् अपेक्षन्ते इति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_39",
+      "text": "भारतस्य हृदये स्थितः छत्तीसगढः समृद्धैः सांस्कृतिकपरम्पराभिः मनोहारिभिः प्राकृतिकैः वैविध्यैः च सम्पन्नः अस्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_40",
+      "text": "मम व्याक्सीन् इत्येतत् प्रमाणपत्रं दूरवाणीसङ्ख्यां अष्टौ पञ्च सप्त षट् द्वे शून्यं त्रीणि एकं षट् षट् नव  उपयुज्य अवाहर।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_41",
+      "text": "यदा अहं क्रयणाय द्विचक्रिकां चेतुम् असमर्थः अभवं तदा सः अपमानम् अकरोत् इति अहं द्विचक्रिकाविक्रेतारम् अक्रुध्यम्।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_42",
+      "text": "पुलकेशिनः बहवः पुत्राः आसन्, तस्य अनन्तरं उत्तराधिकारस्य क्रमः उपलब्धैः ऐतिहासिकसाक्ष्यैः स्पष्टः नास्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_43",
+      "text": "केरला स्टोरि",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_44",
+      "text": "यद्यपि अन्यराज्यानां तुलनया अयम् अनुपातः अल्पः अस्ति, तथापि भारते अयं विशिष्टः अस्ति यतोहि छत्तीसगढ राज्यं भारतस्य दशमं बृहत्तमं राज्यम् अस्ति।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_45",
+      "text": "मम्मट आनन्दवर्धन इत्यादयः सर्वे काश्मीरदेशीयाः सन्ति प्रायः पञ्चमषष्टशतकादेव अत्र संस्कृते साहित्यमीमांसा आरब्धा अस्ति",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "rasa_sa_val_46",
+      "text": "गतसप्ताहस्य मम आर्डर् गोद्रेज् एर् पवर् पोकेट् स्नानगृहम् एर् फ्रेग्रन्स् नाशनल् गार्डेन्स् घटिताः रक्तफलबीजानि च पुनः आवर्तय।",
+      "lang": "sa",
+      "src": "rasa_sa_heldout",
+      "style": "storytelling"
+    },
+    {
+      "id": "sa_shruti_01",
+      "text": "संस्कृतभाषा भारतवर्षस्य नेपालदेशस्य च प्राचीनतमा ज्ञानभाषा अस्ति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_02",
+      "text": "हिमालयस्य शिखराणि सर्वदा धवलेन हिमेन आच्छादितानि भवन्ति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_03",
+      "text": "प्राचीनकाले तक्षशिला नालन्दा च विश्वप्रसिद्धे विद्याकेन्द्रे आस्ताम्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_04",
+      "text": "आयुर्वेदशास्त्रे चरकसंहिता सुश्रुतसंहिता च प्रमुखौ ग्रन्थौ स्तः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_05",
+      "text": "योगेन चित्तस्य पदेन वाचां मलं शरीरस्य च वैद्यकेन योऽपाकरोत् तं प्रवरं मुनीनां पतञ्जलिं प्राञ्जलिरानतोऽस्मि।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_06",
+      "text": "कालिदासः अभिज्ञानशाकुन्तलं मेघदूतं रघुवंशं च रचितवान्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_07",
+      "text": "पाणिनेः अष्टाध्यायी व्याकरणशास्त्रस्य सर्वोच्चः ग्रन्थः मन्यते।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_08",
+      "text": "पञ्चतन्त्रस्य कथाः बालकेभ्यः नीतिशिक्षां व्यावहारिकज्ञानं च यच्छन्ति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_09",
+      "text": "प्रभाते सूर्यः पूर्वदिशि उदेति अन्धकारं च नाशयति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_10",
+      "text": "नद्याः स्वच्छं जलं क्षेत्राणि सिञ्चति कृषकाणां च जीवनं पोषयति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_11",
+      "text": "गुरोः आश्रमे छात्राः वेदान् उपनिषदः दर्शनानि च अपठन्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_12",
+      "text": "सङ्गीतशास्त्रे सामवेदात् सप्त स्वराणां उत्पत्तिः अभवत्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_13",
+      "text": "वसन्तर्तौ उद्यानेषु विविधानि पुष्पाणि विकसन्ति कोकिलाः च मधुरं कूजन्ति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_14",
+      "text": "सत्यमेव जयते नानृतं सत्येन पन्था विततो देवयानः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_15",
+      "text": "माता भूमिः पुत्रोऽहं पृथिव्याः इति अथर्ववेदस्य उद्घोषः अस्ति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_16",
+      "text": "अहिंसा परमो धर्मः धर्मो रक्षति रक्षितः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_17",
+      "text": "ज्ञानेन सदृशं पवित्रमिह विद्यते तत्स्वयं योगसंसिद्धः कालेनात्मनि विन्दति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_18",
+      "text": "श्रद्धावान् लभते ज्ञानं तत्परः संयतेन्द्रियः ज्ञानं लब्ध्वा परां शान्तिमचिरेणाधिगच्छति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_19",
+      "text": "स्वधर्मे निधनं श्रेयः परधर्मो भयावहः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_20",
+      "text": "मन एव मनुष्याणां कारणं बन्धमोक्षयोः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_21",
+      "text": "शरीरमाद्यं खलु धर्मसाधनम् इति महाकविः कालिदासः उक्तवान्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_22",
+      "text": "वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये जगतः पितरौ वन्दे पार्वतीपरमेश्वरौ।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_23",
+      "text": "अस्त्युत्तरस्यां दिशि देवतात्मा हिमालयो नाम नगाधिराजः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_24",
+      "text": "जननी जन्मभूमिश्च स्वर्गादपि गरीयसी इति रामायणे श्रीरामस्य वचनम्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_25",
+      "text": "विद्या नाम नरस्य रूपमधिकं प्रच्छन्नगुप्तं धनम्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_26",
+      "text": "साहित्यसङ्गीतकलाविहीनः साक्षात्पशुः पुच्छविषाणहीनः।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_27",
+      "text": "नमस्ते शारदे देवि काश्मीरपुरवासिनि त्वामहं प्रार्थये नित्यं विद्यादानं च देहि मे।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_28",
+      "text": "गङ्गे च यमुने चैव गोदावरि सरस्वति नर्मदे सिन्धु कावेरि जलेऽस्मिन् सन्निधिं कुरु।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_29",
+      "text": "आकाशे तारकाः रात्रौ दीप्यन्ते चन्द्रमाः च शीतलां कान्तिं प्रसारयति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_30",
+      "text": "सज्जनस्य हृदयं नवनीतमिव कोमलं परदुःखेन च द्रवति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_31",
+      "text": "वृक्षाणां रक्षणेन पर्यावरणस्य सन्तुलनं सुरक्षितं भवति।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_32",
+      "text": "सङ्गच्छध्वं संवदध्वं सं वो मनांसि जानताम्।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_shruti_33",
+      "text": "लोकाः समस्ताः सुखिनो भवन्तु इति सनातनः प्रार्थनावाणी।",
+      "lang": "sa",
+      "src": "shrutilipi_heldout",
+      "style": "news"
+    },
+    {
+      "id": "sa_vedic_01",
+      "text": "अग्निमीळे पुरोहितं यज्ञस्य देवमृत्विजम्। होतारं रत्नधातमम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_vedic_02",
+      "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_vedic_03",
+      "text": "ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_vedic_04",
+      "text": "ॐ असतो मा सद्गमय। तमसो मा ज्योतिर्गमय। मृत्योर्मा अमृतं गमय॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_vedic_05",
+      "text": "ॐ सह नाववतु। सह नौ भुनक्तु। सह वीर्यं करवावहै। तेजस्वि नावधीतमस्तु मा विद्विषावहै॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_gita_01",
+      "text": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_gita_02",
+      "text": "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन। मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_gita_03",
+      "text": "यदा यदा हि धर्मस्य ग्लानिर्भवति भारत। अभ्युत्थानमधर्मस्य तदात्मानं सृजाम्यहम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_gita_04",
+      "text": "परित्राणाय साधूनां विनाशाय च दुष्कृताम्। धर्मसंस्थापनार्थाय सम्भवामि युगे युगे॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_gita_05",
+      "text": "वासांसि जीर्णानि यथा विहाय नवानि गृह्णाति नरोऽपराणि। तथा शरीराणि विहाय जीर्णान्यन्यानि संयाति नवानि देही॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_subh_01",
+      "text": "विद्या ददाति विनयं विनयाद्याति पात्रताम्। पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "storytelling"
+    },
+    {
+      "id": "sa_subh_02",
+      "text": "उद्यमेन हि सिध्यन्ति कार्याणि न मनोरथैः। न हि सुप्तस्य सिंहस्य प्रविशन्ति मुखे मृगाः॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "storytelling"
+    },
+    {
+      "id": "sa_subh_03",
+      "text": "अयं निजः परो वेति गणना लघुचेतसाम्। उदारचरितानां तु वसुधैव कुटुम्बकम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "warm_soft"
+    },
+    {
+      "id": "sa_subh_04",
+      "text": "सत्यं ब्रूयात् प्रियं ब्रूयात् न ब्रूयात् सत्यमप्रियम्। प्रियं च नानृतं ब्रूयात् एष धर्मः सनातनः॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "warm_soft"
+    },
+    {
+      "id": "sa_subh_05",
+      "text": "काव्यशास्त्रविनोदेन कालो गच्छति धीमताम्। व्यसनेन च मूर्खाणां निद्रया कलहेन वा॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "storytelling"
+    },
+    {
+      "id": "sa_subh_06",
+      "text": "नास्ति विद्यासमं चक्षुर्नास्ति सत्यसमं तपः। नास्ति रागसमं दुःखं नास्ति त्यागसमं सुखम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "warm_soft"
+    },
+    {
+      "id": "sa_subh_07",
+      "text": "परोपकाराय फलन्ति वृक्षाः परोपकाराय वहन्ति नद्यः। परोपकाराय दुहन्ति गावः परोपकारार्थमिदं शरीरम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "storytelling"
+    },
+    {
+      "id": "sa_subh_08",
+      "text": "क्षणशः कणशश्चैव विद्यामर्थं च साधयेत्। क्षणत्यागे कुतो विद्या कणत्यागे कुतो धनम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "conversational"
+    },
+    {
+      "id": "sa_subh_09",
+      "text": "अलसस्य कुतो विद्या अविद्यस्य कुतो धनम्। अधनस्य कुतो मित्रममित्रस्य कुतः सुखम्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "conversational"
+    },
+    {
+      "id": "sa_subh_10",
+      "text": "सर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः। सर्वे भद्राणि पश्यन्तु मा कश्चिद्दुःखभाग्भवेत्॥",
+      "lang": "sa",
+      "src": "vedic_classical",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_02",
+      "text": "अग्निः पूर्वेभिर्ऋषिभिरीड्यो नूतनैरुत। स देवां एह वक्षति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_03",
+      "text": "अग्निना रयिमश्नवत् पोषमेव दिवेदिवे। यशसं वीरवत्तमम्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_04",
+      "text": "अग्ने यं यज्ञमध्वरं विश्वतः परिभूरसि। स इद्देवेषु गच्छति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_05",
+      "text": "अग्निर्होता कविक्रतुः सत्यश्चित्रश्रवस्तमः। देवो देवेभिरा गमत्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_06",
+      "text": "यदङ्ग दाशुषे त्वमग्ने भद्रं करिष्यसि। तवेत्तत् सत्यमङ्गिरः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_07",
+      "text": "उप त्वाग्ने दिवेदिवे दोषावस्तर्धिया वयम्। नमो भरन्त एमसि॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_08",
+      "text": "राजन्तमध्वराणां गोपां ऋतस्य दीदिविम्। वर्धमानं स्वे दमे॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_09",
+      "text": "स नः पितेव सूनवेऽग्ने सूपायनो भव। सचस्वा नः स्वस्तये॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_10",
+      "text": "ईळे द्यावापृथिवी पूर्वचित्तयेऽग्निं घर्मं सुरुचं यामन्निष्टये॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_11",
+      "text": "मृळया नः स्वस्तयेऽग्ने विश्वानि दुरितानि पारय॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_12",
+      "text": "मीळ्हुषे रुद्राय तवसे कपर्दिनेगिरं भरामि शन्तमाम्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_13",
+      "text": "ॐ ईशावास्यमिदं सर्वं यत्किञ्च जगत्यां जगत्। तेन त्यक्तेन भुञ्जीथा मा गृधः कस्यस्विद्धनम्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_14",
+      "text": "कुर्वन्नेवेह कर्माणि जिजीविषेच्छतं समाः। एवं त्वयि नान्यथेतोऽस्ति न कर्म लिप्यते नरे॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_15",
+      "text": "असूर्या नाम ते लोका अन्धेन तमसावृताः। तांस्ते प्रेत्याभिगच्छन्ति ये के चात्महनो जनाः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_16",
+      "text": "अनेजदेकं मनसो जवीयो नैनद्देवा आप्नुवन् पूर्वमर्षत्। तद्धावतोऽन्यानत्येति तिष्ठत् तस्मिन्नपो मातरिश्वा दधाति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_17",
+      "text": "तदेजति तन्नैजति तद्दूरे तद्वन्तिके। तदन्तरस्य सर्वस्य तदु सर्वस्यास्य बाह्यतः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_18",
+      "text": "यस्तु सर्वाणि भूतान्यात्मन्येवानुपश्यति। सर्वभूतेषु चात्मानं ततो न विजुगुप्सते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_19",
+      "text": "यस्मिन्सर्वाणि भूतान्यात्मैवाभूद्विजानतः। तत्र को मोहः कः शोक एकत्वमनुपश्यतः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_20",
+      "text": "हिरण्मयेन पात्रेण सत्यस्यापिहितं मुखम्। तत्त्वं पूषन्नपावृणु सत्यधर्माय दृष्टये॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_21",
+      "text": "ॐ केनेषितं पतति प्रेषितं मनः केन प्राणः प्रथमः प्रैति युक्तः। केनेषितां वाचमिमां वदन्ति चक्षुः श्रोत्रं क उ देवो युनक्ति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_22",
+      "text": "श्रोत्रस्य श्रोत्रं मनसो मनो यद् वाचो ह वाचं स उ प्राणस्य प्राणः। चक्षुषश्चक्षुरतिमुच्य धीराः प्रेत्यास्माल्लोकादमृता भवन्ति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_23",
+      "text": "उत्तिष्ठत जाग्रत प्राप्य वरान्निबोधत। क्षुरस्य धारा निशिता दुरत्यया दुर्गं पथस्तत्कवयो वदन्ति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_24",
+      "text": "न जायते म्रियते वा विपश्चिन्नायं कुतश्चिन्न बभूव कश्चित्। अजो नित्यः शाश्वतोऽयं पुराणो न हन्यते हन्यमाने शरीरे॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_25",
+      "text": "अणोरणीयान् महतो महीयानात्मास्य जन्तोर्निहितो गुहायाम्। तमक्रतुः पश्यति वीतशोको धातुः प्रसादान्महिमानमात्मनः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_26",
+      "text": "आत्मानं रथिनं विद्धि शरीरं रथमेव तु। बुद्धिं तु सारथिं विद्धि मनः प्रग्रहमेव च॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_27",
+      "text": "इन्द्रियाणि हयानाहुर्विषयांस्तेषु गोचरान्। आत्मेन्द्रियमनोयुक्तं भोक्तेत्याहुर्मनीषिणः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_28",
+      "text": "ॐ सत्यं ज्ञानमनन्तं ब्रह्म यो वेद निहितं गुहायां परमे व्योमन्। सोऽश्नुते सर्वान् कामान् सह ब्रह्मणा विपश्चितेति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_29",
+      "text": "भृगुर्वै वारुणिः वरुणं पितरमुपससार। अधीहि भगवो ब्रह्मेति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_30",
+      "text": "अन्नं ब्रह्मेति व्यजानात्। अन्नाद्ध्येव खल्विमानि भूतानि जायन्ते। अन्नेन जातानि जीवन्ति। अन्नं प्रयन्त्यभिसंविशन्तीति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_31",
+      "text": "प्राणो ब्रह्मेति व्यजानात्। प्राणाद्ध्येव खल्विमानि भूतानि जायन्ते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_32",
+      "text": "मनो ब्रह्मेति व्यजानात्। मनसो ह्येव खल्विमानि भूतानि जायन्ते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_33",
+      "text": "विज्ञानं ब्रह्मेति व्यजानात्। विज्ञानाद्ध्येव खल्विमानि भूतानि जायन्ते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_34",
+      "text": "आनन्दो ब्रह्मेति व्यजानात्। आनन्दाद्ध्येव खल्विमानि भूतानि जायन्ते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_35",
+      "text": "ॐ भद्रं कर्णेभिः शृणुयाम देवा भद्रं पश्येमाक्षभिर्यजत्राः। स्थिरैरङ्गैस्तुष्टुवांसस्तनूभिर्व्यशेम देवहितं यदायुः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_36",
+      "text": "स्वस्ति न इन्द्रो वृद्धश्रवाः स्वस्ति नः पूषा विश्ववेदाः। स्वस्ति नस्तार्क्ष्यो अरिष्टनेमिः स्वस्ति नो बृहस्पतिर्दधातु॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_37",
+      "text": "ॐ शं नो मित्रः शं वरुणः। शं नो भवत्वर्यमा। शं न इन्द्रो बृहस्पतिः। शं नो विष्णुरुरुक्रमः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_38",
+      "text": "नमो ब्रह्मणे नमस्ते वायो त्वमेव प्रत्यक्षं ब्रह्मासि। त्वामेव प्रत्यक्षं ब्रह्म वदिष्यामि॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_39",
+      "text": "ऋतं वदिष्यामि सत्यं वदिष्यामि। तन्मामवतु तद्वक्तारमवतु। अवतु माम् अवतु वक्तारम्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_40",
+      "text": "ॐ वाङ्मे मनसि प्रतिष्ठिता मनो मे वाचि प्रतिष्ठितमाविरावीर्म एधि। वेदस्य म आणीस्थः श्रुतं मे मा प्रहासीः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_41",
+      "text": "सङ्ख्ये रथे च तिष्ठन्तं दृष्ट्वा तु पाण्डवानीकम्। व्यूढं दुर्योधनस्तदा आचार्यमुपसङ्गम्य राजा वचनमब्रवीत्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_42",
+      "text": "अशोच्यानन्वशोचस्त्वं प्रज्ञावादांश्च भाषसे। गतासूनगतासूंश्च नानुशोचन्ति पण्डिताः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_43",
+      "text": "नैनं छिन्दन्ति शस्त्राणि नैनं दहति पावकः। न चैनं क्लेदयन्त्यापो न शोषयति मारुतः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_44",
+      "text": "ध्यायतो विषयान्पुंसः सङ्गस्तेषूपजायते। सङ्गात्सञ्जायते कामः कामात्क्रोधोऽभिजायते॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_45",
+      "text": "क्रोधाद्भवति सम्मोहः सम्मोहात्स्मृतिविभ्रमः। स्मृतिभ्रंशाद्बुद्धिनाशो बुद्धिनाशात्प्रणश्यति॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_46",
+      "text": "या निशा सर्वभूतानां तस्यां जागर्ति संयमी। यस्यां जाग्रति भूतानि सा निशा पश्यतो मुनेः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_47",
+      "text": "श्रेयान्स्वधर्मो विगुणः परधर्मात्स्वनुष्ठितात्। स्वधर्मे निधनं श्रेयः परधर्मो भयावहः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_48",
+      "text": "ब्रह्मार्पणं ब्रह्म हविर्ब्रह्माग्नौ ब्रह्मणा हुतम्। ब्रह्मैव तेन गन्तव्यं ब्रह्मकर्मसमाधिना॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_49",
+      "text": "अनन्याश्चिन्तयन्तो मां ये जनाः पर्युपासते। तेषां नित्याभियुक्तानां योगक्षेमं वहाम्यहम्॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_50",
+      "text": "पत्रं पुष्पं फलं तोयं यो मे भक्त्या प्रयच्छति। तदहं भक्त्युपहृतमश्नामि प्रयतात्मनः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    },
+    {
+      "id": "sa_extra_51",
+      "text": "मन्मना भव मद्भक्तो मद्याजी मां नमस्कुरु। मामेवैष्यसि युक्त्वैवमात्मानं मत्परायणः॥",
+      "lang": "sa",
+      "src": "vedic_classical_unseen",
+      "style": "vedic_chant"
+    }
+  ]
+}

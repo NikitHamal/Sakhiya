@@ -1,0 +1,59 @@
+{
+ "nepali_sentences": {
+  "lexicon_snap_baseline": {
+   "wer": 0.1929,
+   "cer": 0.069,
+   "exact": 0.235,
+   "n": 200
+  },
+  "context_neural": {
+   "wer": 0.0733,
+   "cer": 0.0142,
+   "exact": 0.66,
+   "n": 200
+  },
+  "gaunma_check": "म गाउँमा बस्छु"
+ },
+ "thr_dangaura": {
+  "lexicon_snap_baseline": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  },
+  "context_neural": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  }
+ },
+ "thr_rana": {
+  "lexicon_snap_baseline": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  },
+  "context_neural": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  }
+ },
+ "thr_chitwania": {
+  "lexicon_snap_baseline": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  },
+  "context_neural": {
+   "wer": 0.0,
+   "cer": 0.0,
+   "exact": 1.0,
+   "n": 100
+  }
+ }
+}

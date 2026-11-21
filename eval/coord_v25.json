@@ -1,0 +1,113 @@
+{
+ "gemini_4_argon": {
+  "role": "ROLE 2 \u2014 GEMINI 4 ARGON: DEEP ML BREAKTHROUGH (MULTI-STYLE/VOICE v2.5 + 1-PASS SEQKD NANO & ATOM)",
+  "issue": 3,
+  "status": "active_role2_gemini4_argon_1pass_seqkd_nano_atom_and_v25_cluster_polish",
+  "gpu_lane": "RTX PRO 6000 Blackwell (98 GB) - v2.5 Multi-Style/Voice + 1-Pass Deterministic SeqKD Nano/Atom",
+  "molab_session": "s_y0oaw7",
+  "helper": "scripts/molab_exec.py",
+  "bugs_targeted": [
+   "1. \u0950 -> \u0915\u094b\u0939\u092e\u094d (koham) in Sample 2 (\u0950 \u092a\u0942\u0930\u094d\u0923\u092e\u0926\u0903...)",
+   "2. \u0915\u093e\u0916\u092e\u093e -> \u0915\u093e\u0916\u094d\u0935\u093e in Sample 1 (\u0939\u093f\u092e\u093e\u0932\u0915\u094b \u0915\u093e\u0916\u092e\u093e \u0930\u0939\u0947\u0915\u094b)",
+   "3. \u0909\u0920\u0947\u0930 -> \u0909\u0920\u094d\u092f\u093e in Sample 5 (\u0909\u0928\u0940 \u092c\u093f\u0939\u093e\u0928\u0948 \u0909\u0920\u0947\u0930...)",
+   "4. \u0909\u0926\u091a\u094d\u092f\u0924\u0947 -> \u0909\u0927\u091a\u094d\u092f\u0924\u0947 in Sample 2 (\u092a\u0942\u0930\u094d\u0923\u093e\u0924\u094d\u092a\u0942\u0930\u094d\u0923\u092e\u0941\u0926\u091a\u094d\u092f\u0924\u0947)",
+   "5. \u0905\u0917\u094d\u0928\u093f\u092e\u0940\u0933\u0947 -> \u0905\u0917\u094d\u0928\u093f\u092e\u0940\u0921\u0947 + musical Vedic Svara in Sample 3 (Rigveda 1.1.1)",
+   "6. \u092f\u0941\u092f\u0941\u0924\u094d\u0938\u0935\u0903 -> \u092f\u0941\u092f\u0941\u091a\u094d\u0935\u0939, \u092e\u093e\u092e\u0915\u093e\u0903 -> \u092e\u093e\u092e\u0915\u0939\u093e, \u092a\u093e\u0923\u094d\u0921\u0935\u093e\u0936\u094d\u091a\u0948\u0935 -> \u092a\u093e\u0923\u094d\u0921\u0935\u093e\u0936\u0948\u0935 in Sample 4 (Gita 1.1)"
+  ],
+  "voices_planned": [
+   "sakhiya",
+   "aanchal",
+   "sandesh",
+   "acharya",
+   "kiran"
+  ],
+  "styles_planned": [
+   "news",
+   "conversational",
+   "storytelling",
+   "warm_soft",
+   "expressive",
+   "vedic_chant"
+  ],
+  "tiers_planned": {
+   "v2.5_fp16": "docs/models_v2",
+   "v2.5_int8": "docs/models_v2",
+   "nano_int8": "docs/models_nano",
+   "atom_int8": "docs/models_atom"
+  },
+  "updated_utc": "2026-11-19T22:22:00Z"
+ },
+ "execution_lane_agent": {
+  "role": "ROLE 2 \u2014 execution/QA/parity lane (no GPU access in this session)",
+  "status": "session43_polish_done_samples_regenerated",
+  "verified": {
+   "node_check_docs_js": "pass",
+   "pytest": "18 passed",
+   "gen_all_samples_fp16": "12 items OK, RTF 0.10-0.27 on CPU"
+  },
+  "blockers": [
+   "Polish gives no measurable keyword gain by MMS-npi (needs listening); Nano partly intelligible, Atom not intelligible (ASR)."
+  ],
+  "next": [
+   "Gemini lane: export v2.5/Nano/Atom ONNX and record paths here",
+   "Execution lane: scripts/gen_all_samples.py + docs wiring once ONNX exist"
+  ],
+  "molab": {
+   "connected": "scripts/molab_exec.py (REST /api/kernel/execute, token from /tmp/molab_token)",
+   "box_state": "boot_v25.sh launched detached (Rasa Nepali+Sanskrit download -> v2_prep_rasa; cache_data pull -> v2_prep_native). runs/v2_am/last.pt + runs/v2_voc/G_best.pt present. No training PID yet."
+  },
+  "open_for_gpu_lane": [
+   "Gita 1.1 still mis-articulated after front-end floors (see eval/asr_v25_proofpack.json): \u092f\u0941\u092f\u0941\u0924\u094d\u0938\u0935\u0903, \u092a\u093e\u0923\u094d\u0921\u0935\u093e\u0936\u094d\u091a\u0948\u0935 need AM polish oversampling",
+   "\u0909\u0920\u0947\u0930 heard '\u0909\u0920\u093f\u0930'; \u0933 needs a listening check"
+  ],
+  "failsafe": "If GPU util<5% and no training PID in /work/tts/COORD_V25.json after data prep, execution lane launches Stage 1 polish.",
+  "artifacts": {
+   "polish_ckpt": "ckpt/v2_am_polish.fp16.pt",
+   "polish_ab": "docs/samples/polish_ab/",
+   "asr": [
+    "eval/asr_v2_base_proofpack.json",
+    "eval/asr_v25_polish_proofpack.json",
+    "eval/asr_proofpack_tier_models.json",
+    "eval/asr_proofpack_tier_models_nano.json",
+    "eval/asr_proofpack_tier_models_atom.json"
+   ],
+   "samples": "docs/samples/v25/manifest.json (21 items, 4 tiers)"
+  }
+ },
+ "sonnet_ui_lane": {
+  "role": "ROLE 1 - molab bootstrap, live cards, samples, M3X UI, JS parity",
+  "status": "connected; /work/tts already bootstrapped; GPU 93% busy with Stage2A v2-AM polish (pid 27457); JS node --check OK",
+  "gpu_idle_failsafe": "armed: relaunch Stage 1 if util<5% and no PID in COORD_V25.json",
+  "updated": 1795126446.6506014
+ },
+ "sonnet_lane": {
+  "role": "MoLab live cards, samples, UI/JS parity",
+  "molab_connected": true,
+  "checked": 1795129422.9044774,
+  "gpu": "100% util, nano+atom pure-ODE AM distillation running (pids 54615/54616); no failsafe launch needed",
+  "tests": "remote pytest 18 passed; node --check docs/*.js OK",
+  "helper": "scripts/molab_exec.py"
+ },
+ "claude_sonnet_5_5": {
+  "role": "ROLE 1 - bootstrap, live cards, G2P/JS parity, M3X web studio, sample refresh",
+  "done": [
+   "g2p/sanskrit Py+JS parity: stop-junction release gap (2.4x on '|' between homorganic stops), visarga h floor 1.15x, nasal word-final tail 1.35x, ng+gh glide 1.15x; tests extended",
+   "docs/ rebuilt: M3X Studio (4 voices, 6 styles, model-tier picker gated by docs/tiers.json), lean Samples gallery, old benchmarks/baselines/training dashboards/duplicate models removed",
+   "monitor/: TTS-only MoLab cards (3s refresh, 60s heartbeat) installed on the box"
+  ],
+  "gpu_idle_failsafe": "launched scripts/v2_polish.py warm-start from v2_am_polish_r2 -> /work/tts/runs/v2_am_polish_s45 (0.5 h, log polish_s45.log); NOT exported or promoted",
+  "not_done": [
+   "multi-style/multi-voice weights (zero-init style_emb) - Gemini lane",
+   "Nano/Atom 1-pass SeqKD retrain + harmonic-plus-noise vocoder - Gemini lane; tiers stay gated (ready=false) in docs/tiers.json",
+   "Pareto chart + sample refresh pending next v2.5/Nano/Atom export"
+  ],
+  "updated_utc": "2026-11-19T23:59:10Z",
+  "session_check": {
+   "box": "connected via scripts/molab_exec.py",
+   "cards": "TTS-only live cards + 60s heartbeat verified (heartbeat fresh)",
+   "gpu": "Nano/Atom 1-pass SeqKD relaunched by Gemini lane (pids 26557/26558); Sonnet did not duplicate",
+   "tiers": "Nano/Atom remain ready=false in docs/tiers.json until ASR gate passes",
+   "pending": "run scripts/gen_all_samples.py + Pareto refresh immediately after v25_ready/nano/atom export"
+  }
+ }
+}

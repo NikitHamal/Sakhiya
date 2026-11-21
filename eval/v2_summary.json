@@ -1,0 +1,293 @@
+{
+  "timestamp": 1795118062.0987,
+  "arch": "Sakhiya-v2 (24 kHz 10.2M OT-CFM AM + 4.89M 16x Hybrid iSTFTNet/HiFTNet Vocoder, 100% teacher-free from scratch)",
+  "sizes_mb": {
+    "total_fp16_mb": 30.842,
+    "total_tiny_mb": 15.932,
+    "fp16_total_mb": 30.842,
+    "int8_total_mb": 15.932,
+    "encoder": {
+      "fp16_mb": 8.386,
+      "int8_mb": 4.294
+    },
+    "decoder": {
+      "fp16_mb": 12.654,
+      "int8_mb": 6.694
+    },
+    "vocoder": {
+      "fp16_mb": 9.802,
+      "int8_mb": 4.944
+    },
+    "browser_ort_node": {
+      "fp16": {
+        "sr": 24000,
+        "samples": 655864,
+        "dur_s": 27.328,
+        "rtf_1thread": 0.1693,
+        "max_abs": 0.9,
+        "rms": 0.1633,
+        "nan_count": 0,
+        "segments": [
+          "ne",
+          "sa",
+          "ne",
+          "thr_dangaura"
+        ]
+      },
+      "tiny": {
+        "sr": 24000,
+        "samples": 647928,
+        "dur_s": 26.997,
+        "rtf_1thread": 0.1873,
+        "max_abs": 0.9,
+        "rms": 0.1751,
+        "nan_count": 0,
+        "segments": [
+          "ne",
+          "sa",
+          "ne",
+          "thr_dangaura"
+        ]
+      }
+    }
+  },
+  "browser_ort_node": {
+    "fp16": {
+      "sr": 24000,
+      "samples": 655864,
+      "dur_s": 27.328,
+      "rtf_1thread": 0.1693,
+      "max_abs": 0.9,
+      "rms": 0.1633,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne",
+        "thr_dangaura"
+      ]
+    },
+    "tiny": {
+      "sr": 24000,
+      "samples": 647928,
+      "dur_s": 26.997,
+      "rtf_1thread": 0.1873,
+      "max_abs": 0.9,
+      "rms": 0.1751,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne",
+        "thr_dangaura"
+      ]
+    }
+  },
+  "copysynth_24k": {
+    "n": 24,
+    "utmos_raw": 3.5978,
+    "utmos_copy": 2.4806,
+    "gap": 1.1172,
+    "mcd_db": 4.3788,
+    "mel_l1": 0.2035,
+    "pass_gate": false
+  },
+  "voice_unification": {
+    "cos_sim_ne_sa": 0.9854,
+    "cos_sim_ne_thr": 0.9919,
+    "cos_sim_sa_thr": 0.9792,
+    "xlsr_mfcc_cos_ne_sa": 0.9896,
+    "wavlm_cos_ne_sa": 0.9854,
+    "wavlm_cos_ne_thr": 0.9919,
+    "wavlm_cos_sa_thr": 0.9792,
+    "owner_mixed_fp16_dur_s": 27.3277,
+    "owner_mixed_int8_dur_s": 26.997,
+    "owner_mixed_fp16_mos": 2.4968,
+    "owner_mixed_int8_mos": 2.2908,
+    "clauses_asr": {
+      "ne:\u0939\u0947\u0932\u094b \u0938\u093e\u0925\u0940\u0939\u0930\u0942\u0964 \u092e \u0938\u0916\u093f\u092f\u093e \u0939\u0941": {
+        "hyp": "\u0939\u0947\u0932\u094b \u0938\u093e\u0925\u0940\u0939\u0930\u0942 \u092e \u0938\u0916\u093f\u092f\u093e \u0939\u0941\u0901 \u0928\u093f\u0915\u093f\u0924 \u0939\u092e\u093e\u0932 \u091c\u093f\u0909\u0932\u0947 \u092c\u0928\u093e\u0909\u0928\u0941\u092d\u090f\u0915\u094b \u0938\u093e\u0928\u094b \u091f\u0947\u0915\u094d\u0938\u091f\u0941 \u0938\u094d\u092a\u093f\u091a \u092e\u094b\u0921\u0947\u0932 \u092e \u0938\u0902\u0938\u094d\u0915\u0943\u0924 \u092a\u0928\u093f \u092c\u094b\u0932\u094d\u0928 \u0938\u0915\u094d\u091b\u0941",
+        "pcer": 0.055
+      },
+      "sa:\u0927\u0930\u094d\u092e\u0915\u094d\u0937\u0947\u0924\u094d\u0930\u0947 \u0915\u0941\u0930\u0941\u0915\u094d\u0937\u0947\u0924\u094d\u0930": {
+        "hyp": "\u0927\u0930\u094d\u092e\u0915 \u0915\u094d\u0937\u0947\u0924\u094d\u0930\u0947 \u0915\u0941\u0930\u0941 \u0915\u094d\u0937\u0947\u0924\u094d\u0930\u0947 \u0938\u092e\u0942\u0935\u0947\u0924\u093e \u092f\u093f\u092f\u0941\u092e\u093e\u092e\u0915\u093e \u092a\u093e\u0923\u094d\u0921\u0935\u093e\u0938 \u0938\u0948\u0935 \u0915\u093f\u092e\u0915\u0941\u0930\u094d\u0935\u0924 \u0938\u0928\u094d\u091d\u092f\u094b",
+        "pcer": 0.2045
+      },
+      "ne:\u0930 \u0925\u093e\u0930\u0942 \u092d\u093e\u0937\u093e\u092e\u093e \u092a\u0928\u093f \u092c\u094b\u0932\u094d\u0928 ": {
+        "hyp": "\u0930 \u0925\u093e\u0930\u0941 \u092d\u093e\u0937\u093e\u092e\u093e \u092a\u0928\u093f \u092c\u094b\u0932\u094d\u0928 \u0938\u0915\u094d\u091b\u0941",
+        "pcer": 0.0312
+      },
+      "thr_dangaura:\u0939\u0947\u0932\u094b \u0938\u0902\u0918\u0930\u093f\u092f\u093e\u0939\u0941\u0915\u094d\u0930\u0947\u0964 \u092e\u0948 \u0938": {
+        "hyp": "\u0939\u0947\u0932\u094b \u0938\u0902\u094d\u0918\u0930\u093f\u092f\u093e \u0939\u0941\u0916\u094d\u0930\u0947 \u092e\u0948 \u0938\u0916\u094d\u092f\u093e \u0939\u094b \u0928\u093f\u0915\u093f\u0924 \u0939\u092e\u093e\u0932\u091c\u0940 \u092c\u0928\u093e\u0907\u0932 \u091b\u094b\u091f \u091f\u0947\u0915\u094d\u0938 \u091f\u0941 \u0938\u094d\u092a\u093f\u091a \u092e\u094b\u0921\u0947\u0932",
+        "pcer": 0.1169
+      }
+    },
+    "pass_unification_gate": true
+  },
+  "nepali_slr43": {
+    "sakhiya_v2_fp16": {
+      "sentence": {
+        "pcer": 0.0411,
+        "cer": 0.0463,
+        "wer": 0.256,
+        "mos": 3.0987,
+        "hnr": 15.183,
+        "mcd": 18.499,
+        "f0corr": 0.4564,
+        "rtf": 0.0978,
+        "spk_sim_cos": 0.9726,
+        "n": 24
+      },
+      "paragraph": {
+        "pcer": 0.0391,
+        "wer": 0.2647,
+        "mos": 2.6338,
+        "hnr": 15.6639
+      }
+    },
+    "sakhiya_v2_tiny_int8": {
+      "sentence": {
+        "pcer": 0.0411,
+        "cer": 0.0451,
+        "wer": 0.2382,
+        "mos": 3.0398,
+        "hnr": 15.228,
+        "mcd": 18.5208,
+        "f0corr": 0.4821,
+        "rtf": 0.1192,
+        "spk_sim_cos": 0.9726,
+        "n": 24
+      },
+      "paragraph": {
+        "pcer": 0.0547,
+        "wer": 0.3235,
+        "mos": 2.3296,
+        "hnr": 15.5187
+      }
+    },
+    "wave42_incumbent": {
+      "sentence": {
+        "pcer": 0.0605,
+        "cer": 0.0569,
+        "wer": 0.3047,
+        "mos": 2.7899,
+        "hnr": 18.331,
+        "mcd": 17.5712,
+        "f0corr": 0.6759,
+        "rtf": 0.0179,
+        "spk_sim_cos": 0.9596,
+        "n": 24
+      },
+      "paragraph": {
+        "pcer": 0.0625,
+        "wer": 0.3235,
+        "mos": 2.4247,
+        "hnr": 17.9926
+      }
+    }
+  },
+  "sanskrit": {
+    "sakhiya_v2_fp16": {
+      "pcer": 0.0952,
+      "mos": 2.839,
+      "hnr": 15.2354,
+      "n": 20
+    }
+  },
+  "vedic_svara_rigveda_1_1_1": {
+    "svara_depth_1": {
+      "svarita_st": 3.9404,
+      "anudatta_st": -2.1469,
+      "contrast_st": 6.0873,
+      "f0_std_st": 6.7618
+    },
+    "svara_depth_0": {
+      "svarita_st": 2.1642,
+      "anudatta_st": 0.7756,
+      "contrast_st": 1.3886,
+      "f0_std_st": 6.7674
+    }
+  },
+  "shanti_mantra_om": {
+    "with_om_dur_s": 10.7947,
+    "without_om_dur_s": 9.5253,
+    "leading_om_delta_s": 1.2693,
+    "utmos22": 2.4948,
+    "hnr_db": 17.2404,
+    "pass_om_gate": true
+  },
+  "tharu": {
+    "thr_dangaura": {
+      "pcer_nepali_asr": 0.1335,
+      "hnr": 15.2003,
+      "roman_word_acc": 1.0,
+      "roman_wer_lexicon": 0.0
+    },
+    "thr_rana": {
+      "pcer_nepali_asr": 0.1805,
+      "hnr": 15.0374,
+      "roman_word_acc": 1.0,
+      "roman_wer_lexicon": 0.0
+    },
+    "thr_chitwania": {
+      "pcer_nepali_asr": 0.1491,
+      "hnr": 15.2669,
+      "roman_word_acc": 1.0,
+      "roman_wer_lexicon": 0.0
+    }
+  },
+  "gates": {
+    "copysynth_pass": false,
+    "voice_unification_ge_0_85": true,
+    "nepali_pcer_le_0_07": true,
+    "sanskrit_pcer_le_0_22": true,
+    "fp16_le_32mb": true,
+    "int8_le_16mb": true,
+    "om_spoken_pass": true,
+    "browser_ort_pass": true,
+    "teacher_free_from_scratch": true,
+    "promote_to_docs_models": false
+  },
+  "ab_pack_dir": "eval/ab_pack",
+  "ab_pack_files": [
+    "copysynth",
+    "ne_conv_sakhiya_v2.wav",
+    "ne_conv_wave42.wav",
+    "ne_para_0_sakhiya_v2_fp16.wav",
+    "ne_para_0_wave42_fp16.wav",
+    "ne_roman_gaunma_sakhiya_v2.wav",
+    "ne_roman_gaunma_wave42.wav",
+    "ne_sent_0_gt_slr43.wav",
+    "ne_sent_0_sakhiya_v2_fp16.wav",
+    "ne_sent_0_wave42_fp16.wav",
+    "ne_sent_1_gt_slr43.wav",
+    "ne_sent_1_sakhiya_v2_fp16.wav",
+    "ne_sent_1_wave42_fp16.wav",
+    "ne_sent_2_gt_slr43.wav",
+    "ne_sent_2_sakhiya_v2_fp16.wav",
+    "ne_sent_2_wave42_fp16.wav",
+    "ne_story_sakhiya_v2.wav",
+    "ne_story_wave42.wav",
+    "owner_mixed_test_fp16.wav",
+    "owner_mixed_test_int8.wav",
+    "owner_mixed_test_wave42.wav",
+    "sa_gita_1_1_sakhiya_v2.wav",
+    "sa_gita_1_1_wave42.wav",
+    "sa_rigveda_svara0_sakhiya_v2.wav",
+    "sa_rigveda_svara0_wave42.wav",
+    "sa_rigveda_svara1_sakhiya_v2.wav",
+    "sa_rigveda_svara1_wave42.wav",
+    "sa_sent_0_sakhiya_v2_fp16.wav",
+    "sa_sent_0_wave42_fp16.wav",
+    "sa_sent_1_sakhiya_v2_fp16.wav",
+    "sa_sent_1_wave42_fp16.wav",
+    "sa_shanti_om_sakhiya_v2.wav",
+    "sa_shanti_om_wave42.wav",
+    "thr_chitwania_0_sakhiya_v2.wav",
+    "thr_chitwania_0_wave42.wav",
+    "thr_dangaura_0_sakhiya_v2.wav",
+    "thr_dangaura_0_wave42.wav",
+    "thr_rana_0_sakhiya_v2.wav",
+    "thr_rana_0_wave42.wav"
+  ]
+}

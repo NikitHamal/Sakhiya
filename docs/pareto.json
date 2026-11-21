@@ -1,0 +1,56 @@
+{
+ "note": "All numbers measured by scripts/forensic_audio_gate.py (UTMOS22 over the 15 master clips) and ORT-node size.json.",
+ "tiers": [
+  {
+   "tag": "sakhiya_v1",
+   "label": "Sakhiya-V1 (V5 Final Flagship)",
+   "params_m": 15.23,
+   "int8_mb": 15.981,
+   "fp16_mb": 31.013,
+   "rtf_int8": 0.1884,
+   "rtf_fp16": 0.1666,
+   "utmos_15": 3.898,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 27,
+   "f0_shutters": 0,
+   "sv_cos": 0.9798,
+   "utmos_target": 3.85,
+   "meets_quality": true
+  },
+  {
+   "tag": "sakhiya_v1_nano",
+   "label": "Sakhiya-V1-Nano (4.4 MB)",
+   "params_m": 4.18,
+   "int8_mb": 4.382,
+   "fp16_mb": 8.47,
+   "rtf_int8": 0.0217,
+   "rtf_fp16": 0.028,
+   "utmos_15": 2.352,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 37,
+   "f0_shutters": 0,
+   "sv_cos": 0.9918,
+   "utmos_target": 3.5,
+   "meets_quality": false
+  },
+  {
+   "tag": "sakhiya_v1_atom",
+   "label": "Sakhiya-V1-Atom (1.8 MB)",
+   "params_m": 1.64,
+   "int8_mb": 1.807,
+   "fp16_mb": 3.404,
+   "rtf_int8": 0.0189,
+   "rtf_fp16": 0.022,
+   "utmos_15": 2.029,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 32,
+   "f0_shutters": 0,
+   "sv_cos": 0.9917,
+   "utmos_target": 3.3,
+   "meets_quality": false
+  }
+ ]
+}

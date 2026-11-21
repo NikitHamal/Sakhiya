@@ -1,0 +1,74 @@
+{
+ "model": "Sakhiya v2 preview (AM_C export, Stage 3A vocoder)",
+ "speaker_model": "microsoft/wavlm-base-plus-sv",
+ "note": "4 Nepali / 4 Sanskrit / 1 Tharu clips; n is tiny, centroid cosine of x-vectors; WavLM-SV cosine is a coarse check and does NOT replace listening",
+ "voice_unification": {
+  "lock_voice=False": {
+   "cos_ne_sa": 0.9682328701019287,
+   "cos_ne_thr": 0.9912120699882507,
+   "cos_sa_thr": 0.9665077328681946,
+   "mean_pairwise_ne_sa": 0.945777103304863,
+   "within_ne": 0.9705936710039774
+  },
+  "lock_voice=True": {
+   "cos_ne_sa": 0.9958177804946899,
+   "cos_ne_thr": 0.9912120699882507,
+   "cos_sa_thr": 0.9890464544296265,
+   "mean_pairwise_ne_sa": 0.9773155115544796,
+   "within_ne": 0.9705936710039774
+  }
+ },
+ "gate_cos_ne_sa_ge_0.85": true,
+ "asr_round_trip_new_frontend": {
+  "ne|lock=False": {
+   "pCER": 0.02849002849002849,
+   "CER": 0.047313432835820894
+  },
+  "sa|lock=False": {
+   "pCER": 0.17839254163353885,
+   "CER": 0.22523880105401844
+  },
+  "thr_dangaura|lock=False": {
+   "pCER": 0.06756756756756757,
+   "CER": 0.14102564102564102
+  },
+  "ne|lock=True": {
+   "pCER": 0.02849002849002849,
+   "CER": 0.047313432835820894
+  },
+  "sa|lock=True": {
+   "pCER": 0.11627871913969352,
+   "CER": 0.18769446133576567
+  },
+  "thr_dangaura|lock=True": {
+   "pCER": 0.06756756756756757,
+   "CER": 0.14102564102564102
+  }
+ },
+ "asr_round_trip_old_frontend": {
+  "ne|lock=False": {
+   "pCER": 0.024643874643874644,
+   "CER": 0.028656716417910448
+  },
+  "sa|lock=False": {
+   "pCER": 0.16947261067448,
+   "CER": 0.2042154403567447
+  },
+  "thr_dangaura|lock=False": {
+   "pCER": 0.02666666666666667,
+   "CER": 0.07692307692307693
+  },
+  "ne|lock=True": {
+   "pCER": 0.024643874643874644,
+   "CER": 0.028656716417910448
+  },
+  "sa|lock=True": {
+   "pCER": 0.16947261067448,
+   "CER": 0.2042154403567447
+  },
+  "thr_dangaura|lock=True": {
+   "pCER": 0.02666666666666667,
+   "CER": 0.07692307692307693
+  }
+ }
+}

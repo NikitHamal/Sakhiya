@@ -1,0 +1,7 @@
+{
+  "version": "4.0",
+  "arch": "sakhiya-v2-atomplus-cfm-istft24k",
+  "fp16_mb": 12.764,
+  "int8_mb": 6.509,
+  "generated_utc": "2026-11-21T17:47:17Z"
+}

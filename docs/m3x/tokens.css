@@ -1,0 +1,80 @@
+/* M3X tokens (NEBians Material 3 Expressive). Source: NikitHamal/NEB docs/M3X_DESIGN_SYSTEM.md */
+:root {
+  color-scheme: light;
+  --md-primary: #0058df;                --md-on-primary: #ffffff;
+  --md-primary-container: #dbe4ff;      --md-on-primary-container: #001a52;
+  --md-secondary: #485a80;              --md-on-secondary: #ffffff;
+  --md-secondary-container: #dfe7fa;    --md-on-secondary-container: #0f1c3b;
+  --md-tertiary: #006782;               --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #c6ecff;     --md-on-tertiary-container: #001f2a;
+  --md-error: #ba1a1a;                  --md-on-error: #ffffff;
+  --md-error-container: #ffdad6;        --md-on-error-container: #8c0009;
+  --md-background: #f6f8ff;             --md-on-background: #0b1530;
+  --md-surface: #f6f8ff;                --md-on-surface: #0b1530;
+  --md-surface-variant: #e1e8f8;        --md-on-surface-variant: #414b66;
+  --md-on-surface-tertiary: #4f5976;    /* placeholders */
+  --md-outline: #707a96;                --md-outline-variant: #c6d0ea;
+  --md-surface-dim: #d5dcee;            --md-surface-bright: #fbfcff;
+  --md-surface-container-lowest: #ffffff;   /* cards, fields */
+  --md-surface-container-low: #f0f4fe;      /* inset tiles */
+  --md-surface-container: #e9eefb;
+  --md-surface-container-high: #e2e8f7;
+  --md-surface-container-highest: #dae1f3;
+  --x-float: #ffffff;  --x-float-line: #d3dbef;       /* menus, dialogs, sheets */
+  --x-field: var(--md-surface-container-lowest);
+  --x-field-line: color-mix(in srgb, var(--md-outline) 58%, var(--md-surface));
+  --x-line-w: 1.5px;
+  --md-inverse-surface: #1f2840;  --md-inverse-on-surface: #edf1fc;  --md-inverse-primary: #b2c5ff;
+
+  /* tonal accents: X = vivid fill (dark text), X-c = soft container, X-d = deep fill (white text) */
+  --azure: #7aa2ff;  --azure-c: #d7e3ff;  --azure-d: #0047b8;
+  --sky:   #5cc8ff;  --sky-c:   #cdeeff;  --sky-d:   #00598a;
+  --aqua:  #55d9c6;  --aqua-c:  #c6f3eb;  --aqua-d:  #0a6a62;
+  --peri:  #a9b9ff;  --peri-c:  #e3e9ff;  --peri-d:  #2a47a3;
+  --ink: #06235f;    --on-ink:  #e6eeff;
+
+  /* shape */
+  --md-shape-xs: 8px;  --md-shape-sm: 12px;  --md-shape-md: 16px;
+  --md-shape-lg: 24px; --md-shape-xl: 32px;  --md-shape-xxl: 44px;
+  --md-shape-full: 28px;   /* a pill is FINITE: perfect up to 56px tall */
+
+  /* no elevation: tone, hairline and shape do the separating */
+  --md-elevation-1: none; --md-elevation-2: none; --md-elevation-3: none;
+  --md-shadow: transparent; --md-shadow-lg: transparent;
+
+  --ease-io: cubic-bezier(.65, 0, .35, 1);
+  --display: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --body:    Poppins, ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --md-primary: #b2c5ff;                --md-on-primary: #002a78;
+  --md-primary-container: #003fa6;      --md-on-primary-container: #dbe4ff;
+  --md-secondary: #b4c3e6;              --md-on-secondary: #1a2a4d;
+  --md-secondary-container: #2a3858;    --md-on-secondary-container: #dfe7fa;
+  --md-tertiary: #7fd2f2;               --md-on-tertiary: #003546;
+  --md-tertiary-container: #004d63;     --md-on-tertiary-container: #c6ecff;
+  --md-error: #ffb4ab;                  --md-on-error: #690005;
+  --md-error-container: #93000a;        --md-on-error-container: #ffdad6;
+  --md-background: #090f1f;             --md-on-background: #e3e8f7;
+  --md-surface: #090f1f;                --md-on-surface: #e3e8f7;
+  --md-surface-variant: #252f48;        --md-on-surface-variant: #aab4ce;
+  --md-on-surface-tertiary: #8590ac;
+  --md-outline: #79839f;                --md-outline-variant: #2f3a55;
+  --md-surface-dim: #060b17;            --md-surface-bright: #2a3550;
+  --md-surface-container-lowest: #060b17;
+  --md-surface-container-low: #0e1528;
+  --md-surface-container: #121a2f;
+  --md-surface-container-high: #1a243c;
+  --md-surface-container-highest: #232e48;
+  --x-float: #172036;  --x-float-line: #2f3a55;
+  --md-inverse-surface: #e3e8f7;  --md-inverse-on-surface: #1f2840;  --md-inverse-primary: #0058df;
+  --azure-c: #1c3470;  --azure-d: #9db8ff;
+  --sky-c: #0b3a52;    --sky-d: #8fdcff;
+  --aqua-c: #0b3b37;   --aqua-d: #8ae9da;
+  --peri-c: #25306a;   --peri-d: #c1ccff;
+  --ink: #16397f;
+}
+
+:root{--md-shape-pill:28px;}

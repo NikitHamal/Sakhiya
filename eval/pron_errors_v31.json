@@ -1,0 +1,712 @@
+{
+  "total_sentences": 500,
+  "total_words": 3639,
+  "unique_words": 2622,
+  "flagged_unique_words": 181,
+  "total_word_error_instances": 214,
+  "word_error_rate_pct": 5.88,
+  "dropped_short_final_instances": 0,
+  "stutter_instances": 0,
+  "top50": [
+    {
+      "word": "वैज्ञानिक",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.15,
+      "mean_per": 0.4444,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "w ʌ i dz ɲ a n i k",
+      "target_phones": "b a i g j a n i k",
+      "example": "ग्रिकको ज्ञानमा गिरावट आउँदा, पश्चिमले आफूलाई आफ्नो ग्रिक दार्शनिक र वैज्ञानिक जराबाट टाढा भएको पायो।"
+    },
+    {
+      "word": "रैछ",
+      "lang": "ne",
+      "count": 2,
+      "score": 1.145,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "r ʌ i tsʰ ʌ",
+      "target_phones": "r ʌ i tsʰ",
+      "example": "सुतिरै निक्लिनु पर्ने रैछ।"
+    },
+    {
+      "word": "गन्तव्यतर्फ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "g ʌ n t̪ ʌ w j ʌ t̪ ʌ r pʰ ʌ",
+      "target_phones": "g ʌ n t̪ ʌ w j t̪ ʌ r pʰ ʌ",
+      "example": "त्रिभुवन अन्तर्राष्ट्रिय विमानस्थलबाट दैनिक हजारौँ यात्रुहरू विभिन्न अन्तर्राष्ट्रिय गन्तव्यतर्फ प्रस्थान गर्छन्।"
+    },
+    {
+      "word": "छुटाउँछ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "tsʰ u ʈ ã ũ tsʰ ʌ",
+      "target_phones": "tsʰ u ʈ a ũ tsʰ",
+      "example": "नेपालको सम्झनाले बेलाबेला भक्कानो छुटाउँछ।"
+    },
+    {
+      "word": "जाउँछ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "dz ã ũ tsʰ ʌ",
+      "target_phones": "dz a ũ tsʰ",
+      "example": "नियाली जाउँछ। झन् गरुम भन्छ।"
+    },
+    {
+      "word": "दुर्घटनाग्रस्त",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "d̪ u r gʱ ʌ ʈ ʌ n a g r ʌ s t̪ ʌ",
+      "target_phones": "d̪ u r gʱ ʌ ʈ n a g r ʌ s t̪ ʌ",
+      "example": "प्रत्यक्षदर्शीहरूले दुर्घटनाग्रस्त सवारीसाधनका घाइतेहरूलाई तत्कालै अस्पताल पुर्‍याए।"
+    },
+    {
+      "word": "पहुँचयोग्य",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "p ʌ h ũ ts ʌ j o g j ʌ",
+      "target_phones": "p ʌ h ũ ts j o g j ʌ",
+      "example": "पात र फलफूलहरूमा पाइने प्रोटिनहरू सबैभन्दा सजिलो र पहुँचयोग्य वनस्पति स्रोतहरू हुन सक्थे। तर हामी जस्ता नरवानरका लागि यी खानेकुरा नपकाइकन खाँदा पचाउन गाह्रो हुन्छ।"
+    },
+    {
+      "word": "पाठ्यपुस्तक",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "p a ʈʰ j ʌ p u s t̪ ʌ k",
+      "target_phones": "p a ʈʰ j p u s t̪ ʌ k",
+      "example": "शिक्षा मन्त्रालयले आगामी शैक्षिक सत्रदेखि सामुदायिक विद्यालयमा डिजिटल पाठ्यपुस्तक लागू गर्ने निर्णय गरेको छ।"
+    },
+    {
+      "word": "पूर्वतिर",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "p u r w ʌ t̪ i r ʌ",
+      "target_phones": "p u r w t̪ i r",
+      "example": "बसहरू दिनभरि अन्तर-जिल्ला बस स्टेशनबाट (नदी तर्फ) छुट्दछन्, यद्यपि प्राय: जसो उनीहरू पूर्वतिर जाकर / बुमथाङ जाने क्रममा 06:30 र 07:30 का बीच छुट्टिन्छन्।"
+    },
+    {
+      "word": "फैसला",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "pʰ ʌ i s ʌ l a",
+      "target_phones": "pʰ a i s ʌ l a",
+      "example": "पञ्चले फैसला सुनाए।"
+    },
+    {
+      "word": "फौजदार",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "pʰ ʌ u dz ʌ d̪ a r",
+      "target_phones": "pʰ ʌ u dz d̪ a r",
+      "example": "फौजदार पनि जमानाका खेलाडी रहेछन्।"
+    },
+    {
+      "word": "बालबालिकाले",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "b a l ʌ b a l i k a l e",
+      "target_phones": "b a l b a l i k a l e",
+      "example": "असभ्य बालबालिकाले घर छोड्नु र भाग्नुभन्दा पहिला गम्भीर बाल दुर्व्यवहार वा भौतिक क्षतिको सामना गरेको हुन सक्छ।"
+    },
+    {
+      "word": "बुमथाङ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "b u m ʌ t̪ʰ a ŋ",
+      "target_phones": "b u m t̪ʰ a ŋ",
+      "example": "बसहरू दिनभरि अन्तर-जिल्ला बस स्टेशनबाट (नदी तर्फ) छुट्दछन्, यद्यपि प्राय: जसो उनीहरू पूर्वतिर जाकर / बुमथाङ जाने क्रममा 06:30 र 07:30 का बीच छुट्टिन्छन्।"
+    },
+    {
+      "word": "भीमसेनको",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "bʱ i m ʌ s e n k o",
+      "target_phones": "bʱ i m s e n k o",
+      "example": "भीमसेनको गदा प्रसिद्ध छ।"
+    },
+    {
+      "word": "मंगलबार",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m ʌ ŋ g ʌ l ʌ b a r",
+      "target_phones": "m ʌ ŋ g ʌ l b a r",
+      "example": "आज मंगलबार हो।"
+    },
+    {
+      "word": "मतदाता",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m ʌ t̪ ʌ d̪ a t̪ a",
+      "target_phones": "m ʌ t̪ d̪ a t̪ a",
+      "example": "1988 देखि, मतपत्र बाकसहरू अनिवार्य रुपमा पारदर्शी हुनुपर्दछ ताकि मतदाता र पर्यवेक्षकहरूले मतदानको थालनीमा कुनै खाम उपस्थित छैनन् र विधिवत् गणना भएका र अधिकृत मतदाताका बाहेक कुनै पनि अन्य खामहरू नहालिउन् भन्ने कुराको साक्षी हुन सकून्।"
+    },
+    {
+      "word": "मतदाताका",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m ʌ t̪ ʌ d̪ a t̪ a k a",
+      "target_phones": "m ʌ t̪ d̪ a t̪ a k a",
+      "example": "1988 देखि, मतपत्र बाकसहरू अनिवार्य रुपमा पारदर्शी हुनुपर्दछ ताकि मतदाता र पर्यवेक्षकहरूले मतदानको थालनीमा कुनै खाम उपस्थित छैनन् र विधिवत् गणना भएका र अधिकृत मतदाताका बाहेक कुनै पनि अन्य खामहरू नहालिउन् भन्ने कुराको साक्षी हुन सकून्।"
+    },
+    {
+      "word": "मतदानको",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m ʌ t̪ ʌ d̪ a n k o",
+      "target_phones": "m ʌ t̪ d̪ a n k o",
+      "example": "1988 देखि, मतपत्र बाकसहरू अनिवार्य रुपमा पारदर्शी हुनुपर्दछ ताकि मतदाता र पर्यवेक्षकहरूले मतदानको थालनीमा कुनै खाम उपस्थित छैनन् र विधिवत् गणना भएका र अधिकृत मतदाताका बाहेक कुनै पनि अन्य खामहरू नहालिउन् भन्ने कुराको साक्षी हुन सकून्।"
+    },
+    {
+      "word": "मनपर्छ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m ʌ n ʌ p ʌ r tsʰ ʌ",
+      "target_phones": "m ʌ n p ʌ r tsʰ ʌ",
+      "example": "चन्दनको बोट मनपर्छ।"
+    },
+    {
+      "word": "मोटरसाइकल",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "m o ʈ ʌ r ʌ s a i k ʌ l",
+      "target_phones": "m o ʈ ʌ r s a i k ʌ l",
+      "example": "रामले मोटरसाइकल किन्यो।"
+    },
+    {
+      "word": "यस्तो",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "j ʌ s t̪ o",
+      "target_phones": "j e s t̪ o",
+      "example": "यस्तो गर्दा त मान्छे बुढी हाल्छ।"
+    },
+    {
+      "word": "योगदान",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "j o g ʌ d̪ a n",
+      "target_phones": "j o g d̪ a n",
+      "example": "कम्प्युटर इन्जिनियरिङका विद्यार्थीहरूले युनिकोड फन्ट र सफ्टवेयर विकासमा उल्लेखनीय योगदान दिएका छन्।"
+    },
+    {
+      "word": "राजनीतिक",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "r a dz ʌ n i t̪ i k",
+      "target_phones": "r a dz n i t̪ i k",
+      "example": "राजनीतिक दल बन्यो।"
+    },
+    {
+      "word": "रोमद्वारा",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "r o m ʌ d̪ w a r a",
+      "target_phones": "r o m d̪ w a r a",
+      "example": "फ्रान्सको लियोनको रोमद्वारा निर्मित केन्द्रित संरचना"
+    },
+    {
+      "word": "लोकप्रियता",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "l o k ʌ p r i j ʌ t̪ a",
+      "target_phones": "l o k p r i j ʌ t̪ a",
+      "example": "राष्ट्रिय तथा अन्तर्राष्ट्रिय स्तरमा नेपाली साहित्यको लोकप्रियता बढ्दै गएको हो।"
+    },
+    {
+      "word": "विशेषगरी",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "w i ʃ e ʃ ʌ g ʌ r i",
+      "target_phones": "w i s e s g ʌ r i",
+      "example": "लोकप्रिय रूपमा प्रयोगमा रहेको सफारी शब्दले विशेषगरी सवानामा सानदार अफ्रिकी वन्यजन्तुहरू हेर्नका लागि गरिने जमिन माथिको यात्रालाई बुझाउँछ।"
+    },
+    {
+      "word": "शैली",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "ʃ ʌ i l i",
+      "target_phones": "s a i l i",
+      "example": "परम्परा र बगैँचाको शैली र विश्व सम्पदा सूची"
+    },
+    {
+      "word": "शैलीहरू",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "ʃ ʌ i l i h ʌ r u",
+      "target_phones": "s a i l i h ʌ r u",
+      "example": "यद्यपि, संचार च्यानलहरू ढिला हुनाले, पश्चिममा शैलीहरू 25 देखि 30 वर्ष पछि रहन सक्दछन्।"
+    },
+    {
+      "word": "सँगसँगै",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ̃ g ʌ s ʌ̃ g ʌ i",
+      "target_phones": "s ʌ̃ g s ʌ̃ g ʌ i",
+      "example": "तपाईंका लागि सिए शब्द सँगसँगै वाक्यको बीचमा पनि सबै नामहरू सधैँ ठूलो अक्षरबाट सुरु हुन्छ।"
+    },
+    {
+      "word": "सत्रदेखि",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ t̪ r ʌ d̪ e kʰ i",
+      "target_phones": "s ʌ t̪ r d̪ e kʰ i",
+      "example": "शिक्षा मन्त्रालयले आगामी शैक्षिक सत्रदेखि सामुदायिक विद्यालयमा डिजिटल पाठ्यपुस्तक लागू गर्ने निर्णय गरेको छ।"
+    },
+    {
+      "word": "सफ्टवेयर",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ pʰ ʈ ʌ w e j ʌ r",
+      "target_phones": "s ʌ pʰ ʈ w e j ʌ r",
+      "example": "कम्प्युटर इन्जिनियरिङका विद्यार्थीहरूले युनिकोड फन्ट र सफ्टवेयर विकासमा उल्लेखनीय योगदान दिएका छन्।"
+    },
+    {
+      "word": "समयपछि",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ m ʌ j ʌ p ʌ tsʰ i",
+      "target_phones": "s ʌ m ʌ j p ʌ tsʰ i",
+      "example": "दुर्घटनापछि, गिब्सनलाई अस्पतालमा लगियो तर केही समयपछि उनको मृत्यु भयो।"
+    },
+    {
+      "word": "सरकारबीच",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ r ʌ k a r ʌ b i ts",
+      "target_phones": "s ʌ r ʌ k a r b i ts",
+      "example": "सगरमाथा राष्ट्रिय निकुञ्जको जैविक विविधता संरक्षणका लागि स्थानीय समुदाय र सरकारबीच सहकार्य हुँदै आएको छ।"
+    },
+    {
+      "word": "सरकारले",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ r ʌ k a r l e",
+      "target_phones": "s ʌ r k a r l e",
+      "example": "सरकारले नयाँ कर लगायो।"
+    },
+    {
+      "word": "सरोकारवालाको",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ʌ r o k a r ʌ w a l a k o",
+      "target_phones": "s ʌ r o k a r w a l a k o",
+      "example": "निर्वाचनमा सञ्चारकर्मीमाथिको भौतिक आक्रमणप्रति सरोकारवालाको गम्भीर चिन्ता"
+    },
+    {
+      "word": "साँझपख",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s ã dzʱ ʌ p ʌ kʰ",
+      "target_phones": "s ã dzʱ p ʌ kʰ",
+      "example": "आज बिहानैदेखि पानी परेको छैन, तर साँझपख चिसो हावा चल्ने सम्भावना छ।"
+    },
+    {
+      "word": "सानदार",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s a n ʌ d̪ a r",
+      "target_phones": "s a n d̪ a r",
+      "example": "लोकप्रिय रूपमा प्रयोगमा रहेको सफारी शब्दले विशेषगरी सवानामा सानदार अफ्रिकी वन्यजन्तुहरू हेर्नका लागि गरिने जमिन माथिको यात्रालाई बुझाउँछ।"
+    },
+    {
+      "word": "सुन्दरबन",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "s u n d̪ ʌ r ʌ b ʌ n",
+      "target_phones": "s u n d̪ ʌ r b ʌ n",
+      "example": "सन् 1966 देखि सुन्दरबन वन्यजन्तु आरक्षण केन्द्र भएको छ र यस क्षेत्रमा अहिले 400 वटा शाही बंगाल बाघ र लगभग 30,000 हरिणहरू रहेको अनुमान गरिएको छ।"
+    },
+    {
+      "word": "हास्यपूर्वक",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.09,
+      "mean_per": 0.4,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_compound_medial_schwa"
+      ],
+      "v_phones": "h a s j ʌ p u r w ʌ k",
+      "target_phones": "h a s j p u r w ʌ k",
+      "example": "आँधिबेहरी क्याट्रिनाका सम्बन्धमा राहत तथा पुनर्निर्माणमा खर्च गर्ने विषयमा विवाद चर्किएको थियो जसलाई केही वित्तीय कट्टरपन्थीहरूले “बुसको नयाँ ओर्लिन्स डिल” को हास्यपूर्वक लेबल लगाएका छन्।"
+    },
+    {
+      "word": "आउछ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "a u tsʰ ʌ",
+      "target_phones": "a u tsʰ",
+      "example": "रुन चै त्यो सम्झिना आउछ।"
+    },
+    {
+      "word": "उत्रेछ",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "u t̪ r e tsʰ ʌ",
+      "target_phones": "u t̪ r e tsʰ",
+      "example": "आखिर धन तथा कुकुरमा उत्रेछ।"
+    },
+    {
+      "word": "ओर्लिन्स",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_missing_final_schwa"
+      ],
+      "v_phones": "o r l i n s",
+      "target_phones": "o r l i n s ʌ",
+      "example": "आँधिबेहरी क्याट्रिनाका सम्बन्धमा राहत तथा पुनर्निर्माणमा खर्च गर्ने विषयमा विवाद चर्किएको थियो जसलाई केही वित्तीय कट्टरपन्थीहरूले “बुसको नयाँ ओर्लिन्स डिल” को हास्यपूर्वक लेबल लगाएका छन्।"
+    },
+    {
+      "word": "घेरिएर",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "gʱ e r i e r ʌ",
+      "target_phones": "gʱ e r i e r",
+      "example": "एउटा गाडीमा राजा र रानीका बिरूद्ध धम्की दिँदै चिच्याउँदै र कराउँदै गरिरहेका मानिसहरूको भीडले घेरिएर तिनीहरू पेरिस फर्के। जहाँ"
+    },
+    {
+      "word": "ढाक",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_missing_final_schwa"
+      ],
+      "v_phones": "ɖʱ a k",
+      "target_phones": "ɖʱ a k ʌ",
+      "example": "मुख ढाक।"
+    },
+    {
+      "word": "फाल",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_missing_final_schwa"
+      ],
+      "v_phones": "pʰ a l",
+      "target_phones": "pʰ a l ʌ",
+      "example": "बिरालोले फाल मार्यो।"
+    },
+    {
+      "word": "फेर",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "pʰ e r ʌ",
+      "target_phones": "pʰ e r",
+      "example": "माछा मार्न जाल फेर।"
+    },
+    {
+      "word": "बार",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_missing_final_schwa"
+      ],
+      "v_phones": "b a r",
+      "target_phones": "b a r ʌ",
+      "example": "बारीमा बार लगाउ।"
+    },
+    {
+      "word": "रोकिएन",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "r o k i e n ʌ",
+      "target_phones": "r o k i e n",
+      "example": "उसको हास रोकिएन।"
+    },
+    {
+      "word": "रोप",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_missing_final_schwa"
+      ],
+      "v_phones": "r o p",
+      "target_phones": "r o p ʌ",
+      "example": "खेतमा धान रोप।"
+    },
+    {
+      "word": "सुनेर",
+      "lang": "ne",
+      "count": 1,
+      "score": 1.0225,
+      "mean_per": 0.35,
+      "mean_frames": 12.0,
+      "categories": [
+        "nepali_loan_extra_final_schwa"
+      ],
+      "v_phones": "s u n e r ʌ",
+      "target_phones": "s u n e r",
+      "example": "उहाँहरूले भन्नुभएको कुरा ध्यानपूर्वक सुनेर मात्र निर्णय लिनु उपयुक्त हुन्छ।"
+    }
+  ]
+}
