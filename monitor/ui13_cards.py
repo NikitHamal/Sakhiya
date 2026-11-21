@@ -27,7 +27,7 @@ def _pool(kind, style):
     out = _old_pool(kind, style); g = rows()
     for o in out:
         r = g.get(o["id"])
-        if r and r.get("text") and r["lang"] not in BADL:
+        if r and r.get("text") and r["lang"] not in BADL and r.get("style") != "vedic_chant":
             o["old"] = o["text"]; o["text"] = r["text"]; o["gem"] = True
     return out
 _old_html = _u11.clip_html if _u11 else None
@@ -41,33 +41,44 @@ def _row(r, tag, extra=""):
     p = r["path"]
     return (f"<div class='v8'><div class='clip'>{tag}{pill(C.STYLES.get(r['style'], (r['style'],))[0], 'tag')}<small> id {E(r['id'][:44])}</small>{C.audio(p, maxs=14)}"
             f"<div class='dev' style='font-size:16px'>{E(r['text'][:260]) or '<small>(no words heard)</small>'}</div>{extra}</div></div>")
+_old = {"t": 0, "d": {}}
+def _whisper(cid):
+    """older Whisper/MMS guess for the same clip (to show next to Gemini's words); cached for 10 min"""
+    if time.time() - _old["t"] > 600:
+        d = {}
+        try:
+            for l in open(f"{R}/asr/asr.jsonl"):
+                try: r = json.loads(l); d[os.path.basename(r["path"])[:-4]] = r.get("text_w") or r.get("text") or ""
+                except Exception: pass
+        except Exception: pass
+        _old.update(t=time.time(), d=d)
+    return _old["d"].get(cid, "")
+def _nep(g): return [r for r in g.values() if r["style"] != "vedic_chant" and "/vedic_chant/" not in r.get("path", "")]
 @safe
 def card8_stats():
-    g = rows(); st = state(); n = len(g)
-    if not n: return wrap("<h2>8 · Gemini gold words</h2><p>Gemini is starting to listen to every clip... " + pill("starting", "ok") + "</p>")
-    tot = max(st.get("total", n), n); pct = 100 * n / tot; by = {}
-    for r in g.values(): by.setdefault(r["style"], [0, 0]); by[r["style"]][0] += 1; by[r["style"]][1] += bool(r["text"])
-    v = [r for r in g.values() if r["style"] == "vedic_chant"]; vs = [r for r in v if r["lang"] not in BADL and r["text"]]
-    langs = {}
-    for r in v:
-        if r not in vs: langs[r["lang"] or "no speech"] = langs.get(r["lang"] or "no speech", 0) + 1
+    g = rows(); st = state(); L = _nep(g); n = len(L)
+    if not n: return wrap("<h2>8 · Gemini Nepali words</h2><p>Gemini is starting to listen to the Nepali clips... " + pill("starting", "ok") + "</p>")
+    done = sum(bool(r["text"]) for r in L); tot = max(st.get("total", n), n); pct = 100 * done / max(tot, 1); by = {}
+    for r in L: by.setdefault(r["style"], [0, 0]); by[r["style"]][0] += 1; by[r["style"]][1] += bool(r["text"])
     rate = ""
     try:
-        ts = sorted(r["t"] for r in g.values())[-200:]; cpm = len(ts) / max(1, ts[-1] - ts[0]) * 60; left = max(0, st.get("total", n) - n); eta = left / max(cpm, .1) / 60; rate = f"· speed {cpm:.0f} clips / minute · about {eta:.0f} hours left for all {left:,} remaining (Vedic and kept clips go first; Google allows only ~20,000 audio-tokens a minute)" if len(ts) > 20 else ""
+        ts = sorted(r["t"] for r in L)[-200:]; cpm = len(ts) / max(1, ts[-1] - ts[0]) * 60; left = max(0, tot - n); eta = left / max(cpm, .1) / 60
+        rate = f"Speed {cpm:.0f} clips a minute. Google lets us stream audio only at real-time speed, so the best clips go first (kept, then checked, then the rest); the whole backlog (about {left:,} clips) needs roughly {eta:.0f} hours." if len(ts) > 20 else ""
     except Exception: pass
-    park = st.get("parked") or {}
-    bar = f"<div style='background:#333;border-radius:8px;height:16px'><div style='background:#22c55e;height:16px;border-radius:8px;width:{pct:.1f}%'></div></div>"
-    lang_txt = " · ".join(f"{k}: {c}" for k, c in sorted(langs.items(), key=lambda x: -x[1])[:5]) or "none yet"
-    h = (f"<h2>8 · Gemini gold words</h2><p>Google Gemini is listening to <b>every</b> mined clip again and writing the words. For Vedic clips it also says <b>which language it hears</b>, "
-         f"so Tamil / Telugu / English talk is thrown out and only real Sanskrit stays.</p>{bar}<p><small>{n:,} of {tot:,} clips done ({pct:.1f}%) {rate} {pill('finished', 'ok') if st.get('done') else pill('working', 'ok')}</small></p>"
-         f"<div class='grid'>{big(f'{n:,}', 'clips re-listened')}{big(f'{sum(x[1] for x in by.values()):,}', 'with words written')}{big(f'{len(vs):,}', 'Vedic = real Sanskrit')}{big(f'{len(v) - len(vs):,}', 'Vedic thrown out (wrong language)')}</div>"
-         f"<p><small>Wrong-language Vedic clips heard as -> {E(lang_txt)}</small></p>" + (f"<p><small>Models resting (daily limit reached): {E(', '.join(park))}</small></p>" if park else ""))
+    conf = sum(1 for r in L if r['text'] and r['lang'] == 'nepali')
+    bar = f"<div style='background:#333;border-radius:8px;height:16px'><div style='background:#22c55e;height:16px;border-radius:8px;width:{min(pct, 100):.1f}%'></div></div>"
+    sty = " · ".join(f"{C.STYLES.get(k, (k,))[0]}: {v[1]:,}" for k, v in sorted(by.items()))
+    h = (f"<h2>8 · Gemini Nepali words</h2><p>Google Gemini listens to <b>Nepali clips only</b> and writes the words with ? ! and , as it hears them. "
+         f"<b>Sanskrit / Vedic is NOT sent to Gemini</b> — our own local tools judge that (verse matching + language check).</p>{bar}"
+         f"<p><small>{done:,} of {tot:,} Nepali clips have Gemini words ({pct:.1f}%). {rate} {pill('working', 'ok')}</small></p>"
+         f"<div class='grid'>{big(f'{done:,}', 'Nepali clips with Gemini words')}{big(f'{tot - n:,}', 'still waiting')}{big(f'{conf:,}', 'confirmed Nepali')}</div><p><small>{E(sty)}</small></p>")
     return wrap(h)
 @safe
 def card8_clips(seed=None):
-    g = rows(); rnd = random.Random(seed if seed is not None else time.time()); L = list(g.values())
-    ne = [r for r in L if r["style"] != "vedic_chant" and r["text"]]; vs = [r for r in L if r["style"] == "vedic_chant" and r["lang"] not in BADL and r["text"]]; vb = [r for r in L if r["style"] == "vedic_chant" and (r["lang"] in BADL or not r["text"])]
-    if not L: return wrap("<p>Clips will appear here once Gemini has listened to some.</p>")
-    pick = ([(r, pill("Nepali · Gemini words", "ok"), "") for r in rnd.sample(ne, min(3, len(ne)))] + [(r, pill("Real Sanskrit ✓", "ok") + pill("heard: " + (r["lang"] or "?"), "tag"), "") for r in rnd.sample(vs, min(3, len(vs)))]
-            + [(r, pill("THROWN OUT", "no") + pill("Gemini heard: " + (r["lang"] or "no speech"), "tag"), "") for r in rnd.sample(vb, min(3, len(vb)))])
-    return wrap("<h3>Listen: what Gemini wrote</h3><p><small>3 Nepali, 3 real Sanskrit, 3 thrown-out Vedic clips. Press <b>New clips</b> for others. To fix any words yourself use card 6 - it now starts from Gemini's words.</small></p>" + "".join(_row(*x) for x in pick))
+    g = rows(); rnd = random.Random(seed if seed is not None else time.time()); ne = [r for r in _nep(g) if r["text"]]
+    if not ne: return wrap("<p>Clips will appear here once Gemini has listened to some.</p>")
+    out = []
+    for r in rnd.sample(ne, min(6, len(ne))):
+        w = _whisper(r["id"]); ex = f"<div class='dev'><small>Before (old model): {E(w[:200]) or '—'}</small></div>" if w else ""
+        out.append(_row(r, pill("Nepali · Gemini words", "ok"), ex))
+    return wrap("<h3>Listen: what Gemini wrote (Nepali)</h3><p><small>Press <b>New clips</b> for others. To fix any word yourself use card 6 — it starts from Gemini's words and saves instantly.</small></p>" + "".join(out))
