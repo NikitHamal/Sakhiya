@@ -21,10 +21,7 @@ def main():
     gold = load(f"{R}/gold_text.json", {}); ok, bad, n = [], {}, 0
     for cid, r in rows.items():
         t = r["text"]
-        if r["style"] == "vedic_chant":
-            if r["lang"] in BADLANG or (t and deva(t) < 0.8) or not t: bad[r["path"]] = r["lang"] or "none"
-            else: ok.append(r["path"])
-            if r["path"] in bad: continue
+        if r["style"] == "vedic_chant" or "/vedic_chant/" in r.get("path", ""): continue   # owner rule: Gemini never decides anything about Sanskrit/Vedic (local stack only)
         if t and cid not in owner and deva(t) > 0.8: gold[cid] = t; n += 1
     json.dump(gold, open(f"{R}/gold_text.json", "w"), ensure_ascii=False, indent=1)
     json.dump({"ok": ok, "bad": bad, "ts": time.time()}, open(f"{R}/asr/gemini_vedic.json", "w"), ensure_ascii=False)

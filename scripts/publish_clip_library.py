@@ -5,13 +5,12 @@ Caps keep the repo small (32 kbps mono mp3).  usage: python scripts/publish_clip
 import argparse, collections, glob, json, os, random, re, subprocess, time
 from concurrent.futures import ThreadPoolExecutor
 ROOT = os.environ.get("TTS_ROOT", "/work/tts"); REPO = f"{ROOT}/repo"; OUT = f"{REPO}/docs/clips"
-CAP = {"vedic_gem": 700, "kept": 400, "heard": 700, "cleaned": 250, "vedic_gold": 900, "vedic_ok": 200, "vedic_bad": 120, "sakhiya": 250}
+CAP = {"kept": 350, "heard": 500, "cleaned": 120, "vedic_gold": 250, "vedic_ok": 100, "vedic_bad": 60, "sakhiya": 120}
 def jl(p):
     try: return [json.loads(l) for l in open(p)]
     except Exception: return []
 
 def main():
-    print("publish_clip_library is DISABLED: the Clip Library was moved to GitHub Release v8-archive to keep the repo small."); return
     ap = argparse.ArgumentParser(); ap.add_argument("--push", action="store_true"); a = ap.parse_args(); random.seed(3); os.makedirs(OUT, exist_ok=True); items = {}
     def add(status, path, style, text="", **kw):
         if not path or not os.path.exists(path): return
@@ -61,13 +60,7 @@ def main():
     BADL = {"tamil", "telugu", "malayalam", "kannada", "english", "other", "none", ""}
     for cid, r in gm.items():
         t = r.get("text", "")
-        if r["style"] == "vedic_chant":
-            isbad = r["lang"] in BADL or not t
-            if cid in items and items[cid]["status"] in ("vedic_gold", "vedic_ok") and isbad:
-                items[cid].update(status="vedic_bad", why=["heard as " + (r["lang"] or "no speech") + ", not Sanskrit"], lid=r["lang"])
-            elif cid not in items and not isbad and os.path.exists(r["path"]): add("vedic_gem", r["path"], "vedic_chant", t, lid=r["lang"], engine="gemini", music=r.get("music"))
-            elif cid not in items and isbad and os.path.exists(r["path"]) and sum(1 for c in items.values() if c["status"] == "vedic_bad") < 220: add("vedic_bad", r["path"], "vedic_chant", t, why=["heard as " + (r["lang"] or "no speech") + ", not Sanskrit"], lid=r["lang"], engine="gemini")
-            if cid in items and items[cid]["status"] != "vedic_bad" and t: items[cid]["text_g"] = t; items[cid]["lid"] = r["lang"]
+        if r["style"] == "vedic_chant" or "/vedic_chant/" in r.get("path", ""): continue   # owner rule: Gemini never touches Sanskrit/Vedic
         elif cid in items and t and items[cid]["status"] in ("kept", "heard", "cleaned"):
             c = items[cid]; c["text_w"] = c.get("text_w") or c.get("text", ""); c["text"] = t; c["engine"] = "gemini"; c["lid"] = r["lang"]
     try: fx = json.load(open(f"{ROOT}/corrections.json"))   # owner audit: corrected words override the machine's; garbage clips never appear as good
@@ -87,8 +80,8 @@ def main():
                 if v and n < cap: sel.append(v.pop()); n += 1
     def enc(c):
         o = f"{OUT}/{c['id']}.mp3"; c["file"] = c["id"] + ".mp3"
-        if not os.path.exists(o): subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", c["_p"], "-ac", "1", "-ar", "22050", "-b:a", "32k", o], timeout=60)
-        c["dur"] = round(os.path.getsize(o) / 4000, 2) if os.path.exists(o) else 0; return c
+        if not os.path.exists(o): subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", c["_p"], "-ac", "1", "-ar", "22050", "-b:a", "24k", o], timeout=60)
+        c["dur"] = round(os.path.getsize(o) / 3000, 2) if os.path.exists(o) else 0; return c
     with ThreadPoolExecutor(12) as ex: sel = [c for c in ex.map(enc, sel) if c["dur"] > 0]
     for c in sel: c.pop("_p", None); [c.pop(k) for k in [k for k, v in c.items() if v is None]]
     keep = {c["file"] for c in sel}
