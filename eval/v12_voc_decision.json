@@ -1,0 +1,79 @@
+{
+ "ship": false,
+ "chunk": 2,
+ "step": 12441,
+ "checks": {
+  "score": false,
+  "drops": true,
+  "stutters": true,
+  "clicks": true,
+  "voice": true,
+  "no_style_worse": false,
+  "passed_chunk_gate": true
+ },
+ "v1": {
+  "score": 3.717,
+  "utmos": 3.717,
+  "drops": 0,
+  "stutters": 0,
+  "clicks": 0,
+  "sv_cos": 0.9872,
+  "styles": {
+   "news": 3.874,
+   "storytelling": 3.889,
+   "conversational": 3.752,
+   "warm_soft": 3.746,
+   "expressive": 3.735,
+   "vedic_chant": 3.286
+  }
+ },
+ "candidate": {
+  "score": 3.697,
+  "utmos": 3.697,
+  "drops": 0,
+  "stutters": 0,
+  "clicks": 0,
+  "sv_cos": 0.9867,
+  "styles": {
+   "news": 3.825,
+   "storytelling": 3.736,
+   "conversational": 3.791,
+   "warm_soft": 3.836,
+   "expressive": 3.815,
+   "vedic_chant": 3.31
+  }
+ },
+ "chunks": [
+  {
+   "chunk": 1,
+   "score": 3.652,
+   "ok": false
+  },
+  {
+   "chunk": 2,
+   "score": 3.697,
+   "ok": true
+  },
+  {
+   "chunk": 3,
+   "score": 3.645,
+   "ok": false
+  },
+  {
+   "chunk": 4,
+   "score": 3.63,
+   "ok": false
+  }
+ ],
+ "summary": {
+  "best_chunk": 2,
+  "stop_reason": "2 chunks in a row not OK",
+  "chunks": 4,
+  "steps": 24764,
+  "minutes": 46.6,
+  "inloop_v1": {
+   "sakhiya_mels": 3.559,
+   "real_copysynth": 2.564
+  }
+ }
+}
