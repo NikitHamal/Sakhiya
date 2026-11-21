@@ -128,7 +128,7 @@ def main():
         frac = el / cap
         lr = max(a.lr * 0.5 * (1 + math.cos(math.pi * frac)), 3e-5)
         for g in opt.param_groups: g["lr"] = lr
-        sel = random.choices(range(len(cache)), weights=pool_w, k=nb - na) + random.sample(anchor_idx, na)
+        sel = random.choices(range(len(cache)), weights=pool_w, k=nb - na) + random.choices(anchor_idx, k=na)
         xs = [cache[i] for i in sel]; B = len(xs)
         ids = pad_sequence([x["ids"] for x in xs], batch_first=True); L = ids.shape[1]
         durs = pad_sequence([x["dur"] for x in xs], batch_first=True); po = pad_sequence([x["po"] for x in xs], batch_first=True)
