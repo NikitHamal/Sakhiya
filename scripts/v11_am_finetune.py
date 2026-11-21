@@ -55,10 +55,15 @@ def main():
     print(f"[v11-ft] sakhiya train={len(tr_s)} val={len(va_s)} styles={dict(Counter(x['sty_t'] for x in tr_s))} | mined train={len(tr_m)} (ne {len(tr_m_ne)}, sa {len(tr_m_sa)}) val={len(va_m)} styles={dict(Counter(x['sty_t'] for x in tr_m))}", flush=True)
     net = SakhiyaAM().to(dev); net.stats.copy_(torch.tensor([mean, std]))
     net.load_state_dict({k: v.float() if torch.is_tensor(v) else v for k, v in ck.get("ema", ck).items()}, strict=False)
-    ctc = MelCTCAligner().to(dev).train(False); cc = torch.load(a.ctc, map_location=dev, weights_only=False); ctc.load_state_dict(cc.get("model", cc))
+    ctc = MelCTCAligner().to(dev); cc = torch.load(a.ctc, map_location=dev, weights_only=False); ctc.load_state_dict(cc.get("model", cc))
     for p in ctc.parameters(): p.requires_grad_(False)
+    for m in ctc.modules():   # frozen, but cudnn RNN backward needs train mode: zero every dropout so it stays deterministic
+        if isinstance(m, torch.nn.Dropout): m.p = 0.0
+        if isinstance(m, torch.nn.RNNBase): m.dropout = 0.0
+    ctc.train(True)
     net.ctc_rec = ctc
     ema = copy.deepcopy(net).train(False)
+    ema.ctc_rec = ctc   # share the frozen recogniser (keeps it in train mode for backward)
     vel_p = [p for n, p in net.named_parameters() if n.startswith("vel.") and p.requires_grad]
     oth_p = [p for n, p in net.named_parameters() if not n.startswith("vel.") and not n.startswith("ctc_rec.") and p.requires_grad]
     opt = torch.optim.AdamW([dict(params=oth_p, lr=a.lr), dict(params=vel_p, lr=a.lr * a.vel_lr_mult)], betas=(0.9, 0.99), weight_decay=1e-2)
