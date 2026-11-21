@@ -80,7 +80,7 @@ def main():
     c = TIER_CFG[a.tier]
     D = torch.load(f"{R}/feats/v6_expressive_vedic_24k.pt", weights_only=False)
     mean, std = float(D.get("mean", -5.5028)), float(D.get("std", 2.1869))
-    ctc = MelCTCAligner().to(dev).eval()
+    ctc = MelCTCAligner().to(dev).train()
     ck = torch.load(f"{R}/feats/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
     ctc.load_state_dict(ck.get("model", ck)); [p.requires_grad_(False) for p in ctc.parameters()]
     t_ck = torch.load(a.teacher_am, map_location=dev, weights_only=False)
