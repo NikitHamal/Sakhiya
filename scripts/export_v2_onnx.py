@@ -205,13 +205,16 @@ TIER_CFG = {
     # v8: the small acoustic students keep their size, but are paired with the V1 vocoder (the tiny vocoder was the measured bottleneck)
     "nanoplus": dict(d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=320, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=20.0, max_int8=10.0),
     "atomplus": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=320, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=16.0, max_int8=8.0),
+    # v10: same small acoustic students + ONE shared 1.2 M-param vocoder densely distilled from V1 (scripts/v10_voc_distill.py)
+    "nanov10": dict(d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=11.0, max_int8=5.6),
+    "atomv10": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=6.0, max_int8=2.99),
     "atom": dict(d_enc=64, L_enc=3, ff_enc=96, d_vel=80, nb_vel=4, h_dur=48, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=True, max_fp16=1.9, max_int8=0.95),
 }
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tier", default="v25", choices=["v25", "voca", "sano", "nano", "atom", "nanoplus", "atomplus"])
+    ap.add_argument("--tier", default="v25", choices=["v25", "voca", "sano", "nano", "atom", "nanoplus", "atomplus", "nanov10", "atomv10"])
     ap.add_argument("--am", default="/work/tts/runs/v2_am/last.pt")
     ap.add_argument("--voc", default="/work/tts/runs/v2_voc/G_best.pt")
     ap.add_argument("--out", default="/work/tts/export_v2")
