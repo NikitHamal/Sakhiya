@@ -1,0 +1,221 @@
+{
+  "ne_pcer": 0.0244,
+  "sa_pcer": 0.1336,
+  "ne_wer": 0.2114,
+  "rigveda_svara_st": 1.54,
+  "word_drop_count": 1,
+  "word_drops": [
+    "ne_unseen_narrative:drop:आआफ्नो"
+  ],
+  "stutter_count": 0,
+  "stutters": [],
+  "f0_shutters": 0,
+  "clicks": 0,
+  "ltas_mcd_ne_sa": 8.258,
+  "formant_shift_hz": 10.4,
+  "sv_cos_ne_sa": 0.9951,
+  "min_func_word_frames": 6,
+  "nasal_scores": {
+    "काठमाडौँ": {
+      "ctc_nasal_prob": 0.8411,
+      "band_200_400_ratio": 12.931
+    },
+    "गाउँ": {
+      "ctc_nasal_prob": 0.2536,
+      "band_200_400_ratio": 17.979
+    },
+    "गर्‍यौँ": {
+      "ctc_nasal_prob": 0.9987,
+      "band_200_400_ratio": 15.389
+    },
+    "हेरौँला": {
+      "ctc_nasal_prob": 0.8591,
+      "band_200_400_ratio": 17.929
+    }
+  },
+  "utmos_15": 2.71,
+  "per_clip": [
+    {
+      "id": "ne_kathmandu",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "नेपालको राजधानी काठमाणो हिमालको काँखमा रहेको एउटा ऐतिहासिक सहर हो",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.2,
+      "utmos": 2.916
+    },
+    {
+      "id": "ne_story",
+      "lang": "ne",
+      "style": "storytelling",
+      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन् उनी बिहानै उठेर चरालाई दाना हाल थिन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 3.348
+    },
+    {
+      "id": "ne_chat",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "नमस्थे आज मौसम धिरै राम्रो छ चियाँ खान जाउनो तिमी कताबाट आउँदै छौँ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.2,
+      "utmos": 2.983
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "hyp": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो स्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.92
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "hyp": "वाफकी अद्भुत दृश्य होयो माछा पुच्रे हिमाल बिहानको घामा सुन् जस्तै चम्कीरहेको छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.8,
+      "utmos": 2.669
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "बाटो बाट हिड्दै गर्दा जाउँका साथीहरूसँग भेट भयो अनि हामीले विद्यालयको कार्यक्रम बारे लामो कुरा गर्‍यौं",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 3.117
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशतवृद्धि भएको छ र मोवाी एप्लिकेसन चलाउने प्रयोगकर्ता झन बढेका छन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 2.151
+    },
+    {
+      "id": "sa_om",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "ओm णिध ूरणतूरण ुशये पूरणश्य पूरणमदाय पूरणमिववशिषयते",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.2,
+      "utmos": 2.219
+    },
+    {
+      "id": "sa_rv",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "अगञीमिले पुरोहितम यजजञश्य देव मृत्विजम होतारम रतनधातमम",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.459
+    },
+    {
+      "id": "sa_gita",
+      "lang": "sa",
+      "style": "storytelling",
+      "hyp": "धर्मक्षेत्रेकुरु क्षेत्रे समवेता युयुत्सवह ममक pाडवाष्चैव किमकुरवद सञजय",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.7,
+      "utmos": 2.459
+    },
+    {
+      "id": "sa_gayatri",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "ूरभुवहसवतत सवितुर वरeniयम भर्गो देवस्य धीमहi धिोयो nह प्रचोधयaत",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 2.283
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "hyp": "हेलो साथीहरू म सखिया हुँ निकित हमालज्युले बनाउनुभएको सानो टेक्स्ट टु स्पिच मोडेल म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्मक क्षेत्रे कुरु क्षेत्र समवेता युयुत्सव मामका पाण्ड वाष चैव किम कुर्व द्षन जय आझ मौसम निक्कै रमाइलो र शान्त छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.65
+    },
+    {
+      "id": "ne_unseen_dialogue",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी सासपख सँगै गएर हेरौलानि हुँदैन र",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 2.704
+    },
+    {
+      "id": "ne_unseen_narrative",
+      "lang": "ne",
+      "style": "storytelling",
+      "hyp": "वर्षा थामिएपछि पहाडको टुप्पोबाट कल्कल बग्ने झरनाको आवाज झै मिठो सुनियो गाउँलेहरू ा आफ्नो खेतबारीमा काम गर्न निस्किए",
+      "drops": [
+        "drop:आआफ्नो"
+      ],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.5,
+      "utmos": 2.612
+    },
+    {
+      "id": "ne_unseen_prose",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञचालन गरेको छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.2,
+      "utmos": 3.159
+    }
+  ]
+}

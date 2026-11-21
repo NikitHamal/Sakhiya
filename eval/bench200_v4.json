@@ -1,0 +1,77 @@
+{
+  "voices": {
+    "sakhiya": {
+      "nepali": {
+        "pcer": 0.0251,
+        "wer": 0.0949,
+        "utmos22": 3.878,
+        "rtf": 0.0604,
+        "n": 100
+      },
+      "sanskrit": {
+        "pcer": 0.0331,
+        "wer": 0.2769,
+        "utmos22": 3.918,
+        "rtf": 0.0606,
+        "n": 100
+      },
+      "wavlm_sv_cos_sim": 0.9673,
+      "utmos22": 3.898
+    }
+  },
+  "version": "4.0",
+  "timestamp_utc": "2026-11-21T01:15:36Z",
+  "ne_pcer": 0.0251,
+  "ne_wer": 0.0949,
+  "sa_pcer": 0.0331,
+  "utmos_sakhiya": 3.898,
+  "wavlm_sv_sakhiya": 0.9673,
+  "cross_style_sv": 0.9673,
+  "style_sv_matrix": {
+    "storytelling": 0.9924,
+    "conversational": 0.992,
+    "warm_soft": 0.9957,
+    "expressive": 0.9883,
+    "vedic_chant": 0.9728,
+    "sanskrit_200": 0.9673
+  },
+  "glitch_frames": 0,
+  "rigveda_svara_st": 4.94,
+  "style_f0_std_ratio": 1.469,
+  "gates": {
+    "ne_pcer_ok": true,
+    "ne_wer_ok": true,
+    "sa_pcer_ok": false,
+    "utmos_f_ok": true,
+    "sv_ok": true,
+    "glitch_ok": true,
+    "svara_ok": true,
+    "style_ok": false
+  },
+  "all_pass": false,
+  "word_drop_count": 0,
+  "stutter_count": 0,
+  "f0_shutters": 0,
+  "clicks": 27,
+  "ltas_mcd_ne_sa": 10.482,
+  "formant_shift_hz": 30.5,
+  "min_func_word_frames": 5,
+  "nasal_scores": {
+    "\u0915\u093e\u0920\u092e\u093e\u0921\u094c\u0901": {
+      "ctc_nasal_prob": 0.6972,
+      "band_200_400_ratio": 15.674
+    },
+    "\u0917\u093e\u0909\u0901": {
+      "ctc_nasal_prob": 0.9319,
+      "band_200_400_ratio": 14.488
+    },
+    "\u0917\u0930\u094d\u200d\u092f\u094c\u0901": {
+      "ctc_nasal_prob": 0.9992,
+      "band_200_400_ratio": 15.7
+    },
+    "\u0939\u0947\u0930\u094c\u0901\u0932\u093e": {
+      "ctc_nasal_prob": 0.9901,
+      "band_200_400_ratio": 20.589
+    }
+  }
+}

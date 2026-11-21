@@ -1,0 +1,32 @@
+{
+  "claimed_by": "Gemini 4 Argon + Claude Sonnet 5.5 (joint v3 breakthrough)",
+  "stage": "4 200-Sent Gate PASSED & Promoted (AM step 56250 + Voc 3B step 184000 continuing live)",
+  "stage_idx": 3,
+  "started_utc": "2026-11-20T10:08:17Z",
+  "training_pids": {
+    "v3_am": 10492,
+    "v3_voc_3b": 54765,
+    "v3_relay": 1417,
+    "v3_milestone": 37938,
+    "v3_guardian": 962
+  },
+  "not_done": [],
+  "gemini_4_argon": {
+    "role": "Phase 1 Exact CTC Forced Alignment + 24kHz Feature Build, Phase 2A NSF-Snake 24kHz Vocoder (v3_voc), Phase 2B Pronunciation-CTC-Guided OT-CFM + Conformer Duration Predictor + CFG Styles (v3_am), Phase 3 Balanced 2-Voice GTA 3B, Phase 4 40-min Release Relay & 200-Sent Gate",
+    "status": "promoted_v3_all_gates_pass_and_monitoring_live_training",
+    "latest_milestone": {
+      "am_step": 56250,
+      "voc_step": 184000,
+      "ne_pcer": 0.03,
+      "ne_wer": 0.1115,
+      "sa_pcer": 0.0423,
+      "utmos_sakhiya": 3.74,
+      "utmos_sandesh": 3.837,
+      "wavlm_sv_sakhiya": 0.9651,
+      "wavlm_sv_sandesh": 0.9347,
+      "rigveda_svara_st": 4.25,
+      "style_f0_std_ratio": 3.072,
+      "all_pass": true
+    }
+  }
+}

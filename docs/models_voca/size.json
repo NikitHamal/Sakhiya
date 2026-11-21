@@ -1,0 +1,52 @@
+{
+  "tier": "nanoplus",
+  "params_am": 3724659,
+  "params_voc": 4976052,
+  "params_total": 8700711,
+  "total_fp16_mb": 17.529,
+  "total_tiny_mb": 8.932,
+  "fp16_total_mb": 17.529,
+  "int8_total_mb": 8.932,
+  "encoder": {
+    "fp16_mb": 4.493,
+    "int8_mb": 2.31
+  },
+  "decoder": {
+    "fp16_mb": 3.037,
+    "int8_mb": 1.577
+  },
+  "vocoder": {
+    "fp16_mb": 9.999,
+    "int8_mb": 5.045
+  },
+  "browser_ort_node": {
+    "fp16": {
+      "sr": 24000,
+      "samples": 544080,
+      "dur_s": 22.67,
+      "rtf_1thread": 0.0628,
+      "max_abs": 0.9,
+      "rms": 0.1537,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne"
+      ]
+    },
+    "tiny": {
+      "sr": 24000,
+      "samples": 545360,
+      "dur_s": 22.723,
+      "rtf_1thread": 0.0603,
+      "max_abs": 0.9,
+      "rms": 0.1467,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne"
+      ]
+    }
+  }
+}

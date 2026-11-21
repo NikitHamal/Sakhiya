@@ -1,0 +1,22 @@
+node_modules/
+.next/
+.env
+*.log
+__pycache__/
+*.pyc
+/tmp/
+next-env.d.ts
+*.tsbuildinfo
+.venv/
+# local-only scaffolding (never commit app/TS/React)
+/src/
+/public/
+/package.json
+/package-lock.json
+/tsconfig.json
+/next.config.ts
+/eslint.config.mjs
+/postcss.config.mjs
+/drizzle.config.json
+/models_src/
+*.whl

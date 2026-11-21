@@ -1,0 +1,11 @@
+{
+  "total_sentences": 500,
+  "total_words": 3639,
+  "unique_words": 2622,
+  "flagged_unique_words": 0,
+  "total_word_error_instances": 0,
+  "word_error_rate_pct": 0.0,
+  "dropped_short_final_instances": 0,
+  "stutter_instances": 7,
+  "top50": []
+}

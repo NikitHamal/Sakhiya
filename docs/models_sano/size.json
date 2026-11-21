@@ -1,0 +1,52 @@
+{
+  "tier": "atomplus",
+  "params_am": 1339259,
+  "params_voc": 4976052,
+  "params_total": 6315311,
+  "total_fp16_mb": 12.764,
+  "total_tiny_mb": 6.509,
+  "fp16_total_mb": 12.764,
+  "int8_total_mb": 6.509,
+  "encoder": {
+    "fp16_mb": 1.65,
+    "int8_mb": 0.874
+  },
+  "decoder": {
+    "fp16_mb": 1.115,
+    "int8_mb": 0.591
+  },
+  "vocoder": {
+    "fp16_mb": 9.999,
+    "int8_mb": 5.045
+  },
+  "browser_ort_node": {
+    "fp16": {
+      "sr": 24000,
+      "samples": 526784,
+      "dur_s": 21.949,
+      "rtf_1thread": 0.0604,
+      "max_abs": 0.9,
+      "rms": 0.1607,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne"
+      ]
+    },
+    "tiny": {
+      "sr": 24000,
+      "samples": 527426,
+      "dur_s": 21.976,
+      "rtf_1thread": 0.0598,
+      "max_abs": 0.9,
+      "rms": 0.1573,
+      "nan_count": 0,
+      "segments": [
+        "ne",
+        "sa",
+        "ne"
+      ]
+    }
+  }
+}

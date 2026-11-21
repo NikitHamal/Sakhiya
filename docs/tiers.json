@@ -1,0 +1,55 @@
+{
+ "note": "Measured values only (scripts/build_pareto.py -> docs/pareto.json).",
+ "tiers": [
+  {
+   "id": "v1",
+   "label": "Sakhiya-V1",
+   "prec": "int8",
+   "dir": "models_v2/",
+   "variant": "tiny",
+   "mb": 15.981,
+   "rtf": 0.1884,
+   "utmos": 3.898,
+   "ne_pcer": 0.0251,
+   "sa_pcer": 0.0331,
+   "ready": true,
+   "desc": "Flagship V5 Final · Best studio quality · Unified Nepali & Sanskrit female voice"
+  },
+  {
+   "id": "nano",
+   "label": "Sakhiya-V1-Nano",
+   "prec": "int8",
+   "dir": "models_voca/",
+   "variant": "tiny",
+   "mb": 8.932,
+   "rtf": 0.0217,
+   "utmos": 3.083,
+   "ne_pcer": null,
+   "sa_pcer": null,
+   "ready": true,
+   "desc": "Small model · acoustic student + V1 vocoder · much cleaner voice"
+  },
+  {
+   "id": "atom",
+   "label": "Sakhiya-V1-Atom",
+   "prec": "int8",
+   "dir": "models_sano/",
+   "variant": "tiny",
+   "mb": 6.509,
+   "rtf": 0.0189,
+   "utmos": 2.95,
+   "ne_pcer": null,
+   "sa_pcer": null,
+   "ready": true,
+   "desc": "Smallest model · acoustic student + V1 vocoder · much cleaner voice"
+  }
+ ],
+ "voices": {
+  "sakhiya": "ready"
+ },
+ "styles": {
+  "news": "ready",
+  "storytelling": "ready",
+  "vedic_chant": "ready"
+ }
+}

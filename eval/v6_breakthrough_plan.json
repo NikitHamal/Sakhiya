@@ -1,0 +1,8 @@
+{
+  "status": "fast_breakthrough_mode",
+  "max_experiment_minutes": 25,
+  "stopped_11h_contending_jobs": true,
+  "finding_1": "TeacherAM steps=2 achieves UTMOS 4.185 vs steps=1 (temp=0) UTMOS 1.364 with 0-byte size increase",
+  "finding_2": "VocoderV2 low-channel bottleneck fixed via Source-Filter + Sub-Band Harmonic iSTFT distillation",
+  "finding_3": "Detaching mu_y_s from vel/CTC backprop jumps VocaEnc KD UTMOS from 3.648 to 4.021 in 11.0 seconds (400 steps)"
+}

@@ -1,0 +1,220 @@
+{
+  "word_drop_count": 2,
+  "word_drops": [
+    "ne_expressive:drop:हो",
+    "ne_unseen_narrative:drop:आआफ्नो"
+  ],
+  "stutter_count": 0,
+  "stutters": [],
+  "f0_shutters": 0,
+  "clicks": 35,
+  "ltas_mcd_ne_sa": 13.623,
+  "formant_shift_hz": 45.0,
+  "sv_cos_ne_sa": 0.9902,
+  "min_func_word_frames": 5,
+  "nasal_scores": {
+    "काठमाडौँ": {
+      "ctc_nasal_prob": 0.1384,
+      "band_200_400_ratio": 10.13
+    },
+    "गाउँ": {
+      "ctc_nasal_prob": 0.0754,
+      "band_200_400_ratio": 10.993
+    },
+    "गर्‍यौँ": {
+      "ctc_nasal_prob": 0.9772,
+      "band_200_400_ratio": 12.68
+    },
+    "हेरौँला": {
+      "ctc_nasal_prob": 0.2343,
+      "band_200_400_ratio": 11.314
+    }
+  },
+  "utmos_15": 1.314,
+  "per_clip": [
+    {
+      "id": "ne_kathmandu",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "मेपालको राजधानी ताथवाणो हिमालको ताथमा रहेको एउटा ऐतिहासिक सहर हो",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 1.265
+    },
+    {
+      "id": "ne_story",
+      "lang": "ne",
+      "style": "storytelling",
+      "hyp": "यही समयको कुरा हो एउटा सानो गामा एउटी बुढीगामा बस्थिन् उनी बिहानै उठेर चरालाई दाना हाल्थिन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 3,
+      "max_jump_st": 0.3,
+      "utmos": 1.332
+    },
+    {
+      "id": "ne_chat",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "नवस्थि प्ाजो मौसम धिरै राम्रो छ चिहाँ थानु जाउन तिमी कतबाट भाउँदै छौँ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 2,
+      "max_jump_st": 0.5,
+      "utmos": 1.359
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "hyp": "शान्तभवन र मधुर मुस्कानले हरेत कटिन दिनलाई सहज बनाउन्छ बहिरो श्वास लिनुहोस् र आजको पललाई हृ्णलेरेखि अनुभव गर्नुहोस्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 3,
+      "max_jump_st": 0.2,
+      "utmos": 1.291
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "hyp": "वाख्की अद्भुत दृश्य हुयो माछापुछी हिमाल बिहानको घामा सुन जस्तै चम्की रहेको छ",
+      "drops": [
+        "drop:हो"
+      ],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 1,
+      "max_jump_st": 0.4,
+      "utmos": 1.339
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "बाटोबाट हेर्दै गर्दा डाउका साथीहरूसँग भेड भयो अनि हामीले विद्यालयको पार्यक्रमबाले लामो कुरा गर्‍यौ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 1.263
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशत वृद्धि भएको छ र मोबाईलकै प्रिकेशन चनाउने प्रयोगकर्ता झन बढिता छन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 1,
+      "max_jump_st": 0.5,
+      "utmos": 1.315
+    },
+    {
+      "id": "sa_om",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "णञ ूय ूणय ूवय",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 7,
+      "max_jump_st": 0.2,
+      "utmos": 1.272
+    },
+    {
+      "id": "sa_rv",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "mगnemeै पुरोहित यञञsञ दैव ृतविझऔ हुतार ृथनधात",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 2,
+      "max_jump_st": 0.3,
+      "utmos": 1.291
+    },
+    {
+      "id": "sa_gita",
+      "lang": "sa",
+      "style": "storytelling",
+      "hyp": "धर्मक्षेत्री कुरु क्षेत्री सवेता ुsव वामत pवाचै किमकुरवता सञझय",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 4,
+      "max_jump_st": 0.5,
+      "utmos": 1.298
+    },
+    {
+      "id": "sa_gayatri",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "ुुवहsव ततsवितुरवremिय भरगु देवsय धिमहि धिोयोन प्रचोध यात",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 4,
+      "max_jump_st": 0.4,
+      "utmos": 1.286
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "hyp": "मेरो साथीहरू मसखियाहु निकित हवाजयउले बनाउनुभएको सानो टेक्स टु स्पेच नोडे म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्मक क्षेत्रै कुरु क्षेत्रे सभावेता युयुतसवा मामता पाण्ड वास चिव किवा कूर्वता सञ्झय आज मौसम निक्तै रवाइलो र शान्त छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 5,
+      "max_jump_st": 0.5,
+      "utmos": 1.281
+    },
+    {
+      "id": "ne_unseen_dialogue",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "दिदि आज बजालवा नयाँ किताबहरू ाइता रहेछन् रामि सासबक सगै भएर खेरंलानि हुँदैन र",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 1,
+      "max_jump_st": 0.2,
+      "utmos": 1.399
+    },
+    {
+      "id": "ne_unseen_narrative",
+      "lang": "ne",
+      "style": "storytelling",
+      "hyp": "वर्षा थामीएपछि पहाडको टुप्पुबाट कल्कल बग्ने झरनाको आवाज अझै मिटो सुनियो गाउलीहरू फाफ आफ्नो खिलितबारीमा काम गर्ना मिस्की",
+      "drops": [
+        "drop:आआफ्नो"
+      ],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 1,
+      "max_jump_st": 0.5,
+      "utmos": 1.318
+    },
+    {
+      "id": "ne_unseen_prose",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "स्वास्थ्य र शिक्षावा सवान पहुँज पुर्याउन स्थानीयतहले डिजिटल पुस्ततालय र घुन्ती स्वास्थ्य शिरिव सञ्चालन गरेको छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 1,
+      "max_jump_st": 0.2,
+      "utmos": 1.401
+    }
+  ]
+}

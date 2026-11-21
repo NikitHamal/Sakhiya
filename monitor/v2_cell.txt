@@ -1,0 +1,31 @@
+refresh.value
+_v = (status() or {}).get("v2") or {}
+_sh = _v.get("shards", {}); _am = _v.get("am", {}); _vo = _v.get("voc", {}); _g2 = _v.get("gpu", {}); _co = _v.get("coord", {})
+_age2 = time.time() - _v.get("t", 0) if _v else 9999
+def _pct(a, b): return 100.0 * a / max(1, b)
+def _eta(job, step_total=None):
+    l = job.get("last") or {}
+    el = l.get("elapsed_s")
+    if el is None or not job.get("running"): return "-"
+    left = max(0, job.get("budget_s", 0) - el)
+    return dur(left)
+_pw2 = _g2.get("power") or 0
+_am_l = _am.get("last") or {}; _vo_l = _vo.get("last") or {}
+_gpu_c = (f'<div class="cd"><h3>GPU · Blackwell 98 GB<span class="sp"></span>{chip("live" if _age2 < 30 else "stale", "run" if _age2 < 30 else "bad")}</h3>'
+          f'{bar(_g2.get("util", 0))}<small style="margin:6px 0 12px">utilisation {_g2.get("util", "-")} %</small>'
+          f'{bar(_g2.get("mem_used", 0) / max(1, _g2.get("mem_total", 1)) * 100, "#7fd2f2")}'
+          f'<small style="margin:6px 0 0">VRAM {_g2.get("mem_used", 0) / 1024:.1f} / {_g2.get("mem_total", 0) / 1024:.0f} GB</small>'
+          f'<div class="tls">{tile(str(_g2.get("temp", "-")) + " C", "temp")}{tile(str(round(_pw2)) + " W", "power")}</div></div>')
+_amb = _v.get("am_b", {}); _amb_l = _amb.get("last") or {}; _ox = _v.get("onnx_v2") or {}
+_sh_c = (f'<div class="cd"><h3>v2 data shards (24 kHz)<span class="sp"></span>{chip("studio+native ready" if _sh.get("native_ready") else "studio_24k ready", "ok")}</h3>'
+         f'<small>Rasa 24 kHz shards {_sh.get("am_done", 0)} / {_sh.get("am_total", 130)} · Native SLR43/FLEURS/CV {_sh.get("native_n", 0)} clips ({_sh.get("native_hours", 0):.2f} h)</small>{bar(_pct(_sh.get("am_done", 0), _sh.get("am_total", 130)))}'
+         f'<small style="margin-top:12px">Vocoder wav shards (Rasa+SLR43) {_sh.get("voc_done", 0)} / {_sh.get("voc_total", 131)}</small>{bar(_pct(_sh.get("voc_done", 0), _sh.get("voc_total", 131)), "#7fd2f2")}'
+         f'<div class="tls">{tile(f"{_ox.get(\'total_fp16_mb\', \'-\')} MB", "v2 fp16")}{tile(f"{_ox.get(\'total_tiny_mb\', \'-\')} MB", "v2 int8")}{tile("yes" if _co.get("gta_ready") else "no", "GTA ready")}</div></div>')
+_am_c = (f'<div class="cd"><h3>v2_am · Stage 2A &amp; 2B CFM AM<span class="sp"></span>{chip("running" if _am.get("running") else "idle", "run" if _am.get("running") else "")}</h3>'
+         f'<div class="tls">{tile(_am_l.get("step", "-"), "2A step")}{tile(_am_l.get("loss", "-"), "2A loss")}{tile(_amb_l.get("step", "-"), "2B step")}{tile(_amb_l.get("loss", "-"), "2B loss")}</div>'
+         f'{spark(_am.get("series", {}).get("y", []))}<pre>{chr(10).join((_am.get("tail", [])[-2:] + _amb.get("tail", [])[-1:])) or "waiting for v2_am"}</pre></div>')
+_vo_c = (f'<div class="cd"><h3>v2_voc · 24 kHz 16x iSTFT vocoder<span class="sp"></span>{chip("running" if _vo.get("running") else "idle", "run" if _vo.get("running") else "")}</h3>'
+         f'<div class="tls">{tile(_vo_l.get("step", "-"), "step")}{tile(_vo_l.get("mel", "-"), "mel L1")}{tile(_vo.get("val") if _vo.get("val") is not None else "-", "val L1")}{tile(_eta(_vo), "left")}</div>'
+         f'{spark(_vo.get("series", {}).get("y", []))}<pre>{chr(10).join(_vo.get("tail", [])) or "waiting for v2_voc"}</pre></div>')
+_co_c = (f'<div class="cd w"><h3>Roles (COORD.json)</h3><small><b>A</b> {_co.get("a", "-")}</small><small style="margin-top:6px"><b>B</b> {_co.get("b", "-")}</small></div>')
+mo.Html(CSS + '<div class="sk">' + _sh_c + _gpu_c + _am_c + _vo_c + _co_c + '</div>')
