@@ -43,7 +43,8 @@ JOBS = [("v9 Nano acoustic (cached teacher)", "v9_voca.log", "v9_am_cached.py --
         ("v9 Atom acoustic (cached teacher)", "v9_sano.log", "v9_am_cached.py --tier sano"),
         ("v10 student vocoder (dense distill)", "v10_voc.log", "v10_voc_distill.py"),
         ("v9/v10 ship chain", "v9_chain.log", "v9_chain.sh|v10_chain.sh"),
-        ("v11 V1 fine-tune gate + ship", "v11_gate_chain.log", "v11_gate_chain.sh")]
+        ("v11 V1 fine-tune gate + ship", "v11_gate_chain.log", "v11_gate_chain.sh"),
+        ("box3 rebuild chain (adapt, export, gate, ship)", "v12_chain.log", "v12_box3_chain.sh")]
 
 
 def card_jobs():
@@ -52,7 +53,7 @@ def card_jobs():
     for name, log, pat in JOBS:
         lines = _tail(f"{LOGS}/{log}")
         running = any(re.search(p, ps) for p in pat.split("|"))
-        last = next((l for l in reversed(lines) if "step=" in l or "SCORE" in l or "DONE" in l or "[chain]" in l or "[v11]" in l or "DECISION" in l or "SHIPPED" in l), lines[-1] if lines else "no log yet")
+        last = next((l for l in reversed(lines) if "step=" in l or "SCORE" in l or "DONE" in l or "[chain]" in l or "[v11]" in l or "[box3]" in l or "DECISION" in l or "SHIPPED" in l), lines[-1] if lines else "no log yet")
         gate = next((l for l in lines if "[GATE]" in l), "")
         m = re.search(r"elapsed=([\d.]+)m|t=([\d.]+)m", last); el = float(next(x for x in m.groups() if x)) if m else 0.0
         cap = 100.0 if "v9_" in log and "chain" not in log else 80.0
