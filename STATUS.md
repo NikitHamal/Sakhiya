@@ -704,3 +704,11 @@ Session 1 numbers (early-stage model, 30 sentences) are in `eval/metrics.json` u
 - **Cards first**: `monitor/ui10_cards.py` (cards 2/3 rebuilt: verified-Sanskrit card with audio + exact words; clip browser has "Vedic: verified genuine Sanskrit"); installed live: `CELLS 6 BAD 0`.
 - **VC bug found**: the Sakhiya voice-conversion stage had been failing since it started (`torchaudio.load` needs TorchCodec in torchaudio 2.11 → kNN-VC hub code crashed, so `dataset/vc/` was empty). Patched to soundfile in `scripts/yt_vc_sakhiya.py`.
 - **Not claimed**: Gayatri / Upanishad / Rig-Veda *melodic* chanting beyond Vagdhenu + Gita verses has no verified open source yet (HF search found no other Sanskrit speech dataset with audio); the mined Rig-Veda "IISH" item is an English introduction. No new v6/v7 model quality is claimed in this session.
+
+## Session 65 — Nepali transcription on three cloud engines at once (owner rules)
+- **Rule**: Nepali audio only goes to Gemini, AssemblyAI (language = auto, `assemblyai-stt-3-7`) and Groq Whisper `large-v3` then `large-v3-turbo`; **a clip is given to exactly one engine** (`scripts/asr_claims.py`, SQLite claim ledger, Gemini honours it too). Sanskrit/Vedic stays on the local stack. No local LLM for Nepali any more.
+- `scripts/asr_providers.py` (engines), `scripts/nepali_asr_router.py` (parallel router, AssemblyAI budget guard at $90 of the $100 credit, Groq per-minute / per-day limit rests, v3 -> turbo fall-through). Keys live only in `/tmp/assemblyai_key`, `/tmp/groq_key` on the box (never committed).
+- **Measured**: AssemblyAI ~2.3 clips/s (~$1 per 1000 clips of ~8 s), Groq free tier ~20 requests/min per model, Gemini Live ~0.2 clips/s. Universe: ~79k Nepali clips.
+- **Qwen3.8-27B on Groq is text+vision only (no audio input)** -> it is NOT used as a transcriber (tested: the API rejects `input_audio`).
+- MoLab card 8 (`monitor/ui14_cards.py`) shows all four listeners (progress, spend, resting/working) and 2 random clips per engine with audio; card 6 audit/edit now starts from whichever engine heard the clip. Clip Library page tags the engine per clip; `apply_gemini.py` folds all engines into `gold_text.json` (owner fixes still win).
+- Not done this session: v6 teacher / Voca / Sano retraining (needs the new words first); no model-quality claim.
