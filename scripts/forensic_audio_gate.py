@@ -106,9 +106,9 @@ def ltas_and_formants(w, sr=24000):
     return ltas, np.array(fmts, dtype=np.float32)
 
 
-def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/forensic_v5.json"):
+def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/forensic_v5.json", tiny=False):
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    tts = SakhiyaONNX(model_dir, threads=4) if model_dir and os.path.exists(model_dir) else None
+    tts = SakhiyaONNX(model_dir, tiny=tiny, threads=4) if model_dir and os.path.exists(model_dir) else None
     utmos = load_utmos(dev)
     from transformers import AutoFeatureExtractor, AutoProcessor, Wav2Vec2ForCTC, WavLMForXVector
     proc = AutoProcessor.from_pretrained("facebook/mms-1b-all", target_lang="npi")
@@ -244,6 +244,7 @@ if __name__ == "__main__":
     ap.add_argument("--version-dir", default=None)
     ap.add_argument("--limit", type=int, default=40)
     ap.add_argument("--out", default="eval/forensic_v5.json")
+    ap.add_argument("--tiny", action="store_true", help="score the int8 graphs the website actually serves")
     a = ap.parse_args()
-    run_forensic_gate(a.model, a.version_dir, limit=a.limit, out_json=a.out)
+    run_forensic_gate(a.model, a.version_dir, limit=a.limit, out_json=a.out, tiny=a.tiny)
 
