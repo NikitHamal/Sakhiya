@@ -170,7 +170,9 @@ def universe():
     return out
 async def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--workers", type=int, default=100); ap.add_argument("--limit", type=int, default=0); ap.add_argument("--style", default=""); a = ap.parse_args()
-    done = {r["id"] for r in jl(OUT)}; todo = [u for u in universe() if u[0] not in done and (not a.style or u[2] == a.style)]
+    # OWNER RULE (session 64): Gemini is used ONLY on Nepali voices.  Sanskrit/Vedic stays on the local stack (verse-matched reference text + local purity gate).
+    done = {r["id"] for r in jl(OUT) if r.get("text") and r.get("style") != "vedic_chant"}
+    todo = [u for u in universe() if u[0] not in done and u[2] != "vedic_chant" and "/vedic_chant/" not in u[1] and (not a.style or u[2] == a.style)]
     if a.limit: todo = todo[:a.limit]
     log(len(todo), "clips to transcribe,", len(done), "already done", POOLS); fo = open(OUT, "a", encoding="utf8"); t0 = time.time()
     def save(fin=False): json.dump({"ok": stats["ok"] + len(done), "err": stats["err"], "total": len(todo) + len(done), "ts": time.time(), "done": fin, "models": used, "parked": {}}, open(STATE, "w"))

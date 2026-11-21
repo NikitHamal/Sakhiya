@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sakhiya · Clip Library — listen, check, fix</title>
+<style>
+:root{--bg:#10131a;--card:#1a1f2b;--tx:#e8ecf4;--mu:#97a1b5;--ok:#37c978;--bad:#ff6b6b;--wa:#f5b942;--ac:#6aa5ff}
+@media(prefers-color-scheme:light){:root{--bg:#f4f6fb;--card:#fff;--tx:#14181f;--mu:#5b6578}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px;border-bottom:1px solid #8883}
+h1{font-size:20px;margin:0 0 6px}a{color:var(--ac)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input,button,textarea{font:inherit;color:var(--tx);background:var(--card);border:1px solid #8885;border-radius:10px;padding:7px 10px}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border:0}
+main{max-width:980px;margin:0 auto;padding:12px 16px 80px}
+.c{background:var(--card);border-radius:14px;padding:12px 14px;margin:10px 0;border:2px solid transparent}
+.c.fixed{border-color:var(--ok)}.c.rej{border-color:var(--bad)}
+.chip{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:#8883;margin-right:6px}
+.chip.g{background:#37c97833;color:var(--ok)}.chip.r{background:#ff6b6b33;color:var(--bad)}.chip.y{background:#f5b94233;color:var(--wa)}
+audio{width:100%;margin:8px 0}textarea{width:100%;min-height:60px;font-size:17px;line-height:1.6}
+.mu{color:var(--mu);font-size:13px}#msg{padding:14px;color:var(--wa)}
+</style></head><body>
+<header><h1>🎧 Sakhiya Clip Library <span class="mu" id="sum"></span></h1>
+<div class="row"><select id="st"></select><select id="sy"></select><input id="q" placeholder="search words / id" size="16">
+<select id="vd"><option value="">all</option><option value="todo">not checked yet</option><option value="ok">I marked OK</option><option value="fix">I fixed words</option><option value="bad">I marked BAD</option></select>
+<button id="sh">🔀 shuffle</button><button class="p" id="ex">⬇ Save my fixes (<span id="nf">0</span>)</button><button id="cp">Copy fixes</button>
+<a href="index.html">← back to Sakhiya</a></div></header>
+<main><div id="msg">Loading clips…</div><div id="list"></div><div class="row" id="pg" style="justify-content:center"></div>
+<p class="mu">How to fix: listen, correct the words in the box (use ? ! , । as you hear them), press ✔ OK / ✎ Fixed / ✖ BAD. Everything is saved in this browser automatically. Press “Save my fixes” and send me the file (or paste via “Copy fixes”) — it feeds the next training run. Clips marked BAD are dropped from training.</p></main>
+<script>
+const LBL={kept:"Kept for training",heard:"Heard (words checked)",cleaned:"Clean audio",vedic_gold:"Sanskrit · verified gold",vedic_ok:"Sanskrit · verified",vedic_bad:"Sanskrit · REJECTED (garbage)",sakhiya:"Sakhiya voice (converted)"};
+const SYL={storytelling:"Storytelling",news:"News",conversational:"Conversation",vedic_chant:"Vedic chant"};
+let L=[],V=[],page=0;const PS=25,$=i=>document.getElementById(i);
+let FX={};try{FX=JSON.parse(localStorage.getItem("sk_fix")||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem("sk_fix",JSON.stringify(FX))}catch(e){}$("nf").textContent=Object.keys(FX).length};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function opts(el,all,map){el.innerHTML='<option value="">'+all+'</option>'+Object.keys(map).map(k=>`<option value="${k}">${map[k]}</option>`).join("")}
+function filt(){const s=$("st").value,y=$("sy").value,v=$("vd").value,q=$("q").value.trim().toLowerCase();
+ V=L.filter(c=>(!s||c.status===s)&&(!y||c.style===y)&&(!q||(c.text||"").toLowerCase().includes(q)||c.id.toLowerCase().includes(q))&&
+ (!v||(v==="todo"?!FX[c.id]:FX[c.id]&&FX[c.id].verdict===v)));page=0;draw()}
+function draw(){const a=V.slice(page*PS,page*PS+PS);$("msg").textContent=V.length?"":"No clips match this filter.";
+ $("list").innerHTML=a.map(c=>{const f=FX[c.id]||{},t=f.text!=null?f.text:(c.text||"");
+ const bad=c.status==="vedic_bad";
+ return `<div class="c ${f.verdict==='bad'?'rej':f.verdict?'fixed':''}" data-id="${esc(c.id)}"><div>
+ <span class="chip ${bad?'r':c.status.startsWith('vedic')?'g':'y'}">${esc(LBL[c.status]||c.status)}</span><span class="chip">${esc(SYL[c.style]||c.style)}</span>
+ ${c.engine==='gemini'?'<span class="chip g">Gemini words</span>':''}<span class="chip">${(c.dur||0).toFixed(1)} s</span>${c.utmos?`<span class="chip">quality ${(+c.utmos).toFixed(2)}</span>`:''}
+ ${f.verdict?`<span class="chip g">you: ${esc(f.verdict)}</span>`:''}</div>
+ ${bad&&c.why?`<div class="mu">why rejected: ${esc([].concat(c.why).join("; "))}</div>`:''}
+ <audio controls preload="none" src="clips/${encodeURIComponent(c.file)}" onerror="this.insertAdjacentHTML('afterend','<div class=mu style=color:#ff6b6b>⚠ audio file missing on server: '+this.getAttribute('src')+'</div>')"></audio>
+ <textarea lang="ne" placeholder="(no words yet — type what you hear)">${esc(t)}</textarea>
+ <div class="row"><button data-v="ok">✔ OK</button><button data-v="fix">✎ Fixed</button><button data-v="bad">✖ BAD</button><button data-v="clear">↺ undo</button></div></div>`}).join("");
+ $("pg").innerHTML=`<button id="pv">◀</button><span class="mu">page ${page+1} / ${Math.max(1,Math.ceil(V.length/PS))} · ${V.length} clips</span><button id="nx">▶</button>`;
+ $("pv").onclick=()=>{if(page>0){page--;draw();scrollTo(0,0)}};$("nx").onclick=()=>{if((page+1)*PS<V.length){page++;draw();scrollTo(0,0)}}}
+$("list").addEventListener("click",e=>{const b=e.target.closest("button[data-v]");if(!b)return;const d=b.closest(".c"),id=d.dataset.id,v=b.dataset.v;
+ if(v==="clear")delete FX[id];else{const t=d.querySelector("textarea").value.trim();FX[id]={verdict:v,text:t}}save();
+ const keep=scrollY;draw();scrollTo(0,keep)});
+function out(){return JSON.stringify(FX,null,1)}
+$("ex").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out()],{type:"application/json"}));a.download="sakhiya_corrections.json";a.click()};
+$("cp").onclick=()=>navigator.clipboard.writeText(out()).then(()=>alert("Copied "+Object.keys(FX).length+" fixes"));
+["st","sy","vd"].forEach(i=>$(i).onchange=filt);$("q").oninput=filt;$("sh").onclick=()=>{V.sort(()=>Math.random()-.5);page=0;draw()};
+fetch("clips/library.json?"+Date.now()).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(j=>{L=j.clips;
+ const cnt=j.meta.counts||{};opts($("st"),"all kinds",LBL);opts($("sy"),"all styles",SYL);$("sum").textContent=`· ${L.length} clips · ${(j.meta.hours||0).toFixed(1)} h · built ${j.meta.built}`;save();filt()})
+ .catch(e=>{$("msg").textContent="Could not load clips/library.json ("+e.message+"). The clip list is being rebuilt — try again in a few minutes."});
+</script></body></html>
