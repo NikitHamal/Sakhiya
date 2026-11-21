@@ -14,9 +14,12 @@ def load(p, d):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--root", default=os.environ.get("TTS_ROOT", "/work/tts")); R = ap.parse_args().root
     rows = {}
-    for l in open(f"{R}/asr/gemini.jsonl"):
-        try: r = json.loads(l); rows[r["id"]] = r
-        except Exception: pass
+    for f in ("gemini.jsonl", "cloud_asr.jsonl"):      # Gemini + AssemblyAI + Groq Whisper (one engine per clip, see asr_claims.py)
+        try:
+            for l in open(f"{R}/asr/{f}"):
+                try: r = json.loads(l); rows[r["id"]] = r
+                except Exception: pass
+        except FileNotFoundError: pass
     fx = load(f"{R}/corrections.json", {}); owner = {k for k, v in fx.items() if v.get("text")}
     gold = load(f"{R}/gold_text.json", {}); ok, bad, n = [], {}, 0
     for cid, r in rows.items():
