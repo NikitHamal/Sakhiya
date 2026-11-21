@@ -1,0 +1,78 @@
+{
+ "pick": "best",
+ "ship": false,
+ "checks": {
+  "score": false,
+  "drops": false,
+  "stutters": true,
+  "voice": false,
+  "weak_styles_not_worse": false,
+  "weak_style_improved": false
+ },
+ "v1": {
+  "score": 3.717,
+  "utmos": 3.717,
+  "drops": 0,
+  "stutters": 0,
+  "clicks": 0,
+  "sv_cos": 0.9872,
+  "styles": {
+   "news": 3.874,
+   "storytelling": 3.889,
+   "conversational": 3.752,
+   "warm_soft": 3.746,
+   "expressive": 3.735,
+   "vedic_chant": 3.286
+  }
+ },
+ "candidate": {
+  "score": 0.774,
+  "utmos": 2.276,
+  "drops": 3,
+  "stutters": 0,
+  "clicks": 1,
+  "sv_cos": 0.9818,
+  "styles": {
+   "news": 2.62,
+   "storytelling": 2.379,
+   "conversational": 2.527,
+   "warm_soft": 2.299,
+   "expressive": 2.537,
+   "vedic_chant": 1.371
+  }
+ },
+ "all_candidates": {
+  "best": {
+   "score": 0.774,
+   "utmos": 2.276,
+   "drops": 3,
+   "stutters": 0,
+   "clicks": 1,
+   "sv_cos": 0.9818,
+   "styles": {
+    "news": 2.62,
+    "storytelling": 2.379,
+    "conversational": 2.527,
+    "warm_soft": 2.299,
+    "expressive": 2.537,
+    "vedic_chant": 1.371
+   }
+  },
+  "last": {
+   "score": 0.51,
+   "utmos": 2.012,
+   "drops": 3,
+   "stutters": 0,
+   "clicks": 1,
+   "sv_cos": 0.9866,
+   "styles": {
+    "news": 2.349,
+    "storytelling": 1.99,
+    "conversational": 2.136,
+    "warm_soft": 2.07,
+    "expressive": 2.276,
+    "vedic_chant": 1.354
+   }
+  }
+ }
+}
