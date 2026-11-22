@@ -157,8 +157,8 @@ class WavehaxHarmonicSource(nn.Module):
         s.proj16 = QATConv1d(2 * n_har, c16, 3, padding=1)
 
     def forward(s, mel, shift_st=None):
-        raw = s.f0_net(mel)
-        rf = raw.float()
+        with torch.amp.autocast("cuda", enabled=False):
+            rf = s.f0_net(mel.float()).float()
         f0 = 60.0 + 440.0 * torch.sigmoid(rf[:, 0:1])
         uv = torch.sigmoid(rf[:, 1:2])
         w_v = (uv.detach() > 0.35).float() * uv.detach() + 0.04
@@ -198,7 +198,7 @@ class MSRNDWavehax(nn.Module):
         if variant == "pro":
             ch = ch or 104; c1 = c1 or 88; c2 = c2 or 60; c_2d = c_2d or 24; c_f0 = c_f0 or 128; n_2d = n_2d or 6; n_4x = n_4x or 6; n_16x = n_16x or 6
         else:
-            ch = ch or 72; c1 = c1 or 60; c2 = c2 or 44; c_2d = c_2d or 16; c_f0 = c_f0 or 56; n_2d = n_2d or 5; n_4x = n_4x or 4; n_16x = n_16x or 4
+            ch = ch or 64; c1 = c1 or 56; c2 = c2 or 40; c_2d = c_2d or 16; c_f0 = c_f0 or 128; n_2d = n_2d or 4; n_4x = n_4x or 4; n_16x = n_16x or 4
         s.variant = variant
         s.n_bins = ISTFT_N_FFT // 2 + 1  # 33
         s.f_sub = 8  # 8 frequency subbands x c_2d channels in the 2D Time-Frequency stream
@@ -211,11 +211,11 @@ class MSRNDWavehax(nn.Module):
         s.register_buffer("K_istft", torch.from_numpy(K_istft), persistent=False)  # (66, 1, 64)
         s.register_buffer("win", torch.from_numpy(win), persistent=False)
 
-        # Calibrated per-bin affine scale/offset on the analytical Range-Space log-magnitude envelope (+3.15 matches n_fft=64 vs 1024 log scale)
-        s.range_gain = nn.Parameter(torch.ones(1, s.n_bins, 1))
-        s.range_bias = nn.Parameter(torch.full((1, s.n_bins, 1), 3.15))
-        s.null_gain = nn.Parameter(torch.full((1, s.n_bins, 1), 0.50))
-        s.null_alpha = nn.Parameter(torch.ones(1, s.n_bins, 1))
+        # Calibrated per-bin affine scale/offset on the analytical Range-Space log-magnitude envelope + Null-Space projector
+        s.range_gain = nn.Parameter(torch.full((1, s.n_bins, 1), 0.15))
+        s.range_bias = nn.Parameter(torch.full((1, s.n_bins, 1), 0.45))
+        s.null_gain = nn.Parameter(torch.full((1, s.n_bins, 1), 0.25))
+        s.null_alpha = nn.Parameter(torch.full((1, s.n_bins, 1), 0.85))
 
         s.src = WavehaxHarmonicSource(n_mels, c1, c2, c_f0=c_f0)
         s.pre = QATConv1d(n_mels + s.n_bins, ch, 5, padding=2)
@@ -238,9 +238,10 @@ class MSRNDWavehax(nn.Module):
         s.har_phase = QATConv1d(16, s.n_bins, 1)
 
     def set_qat(s, enabled=True):
-        for m in s.modules():
+        for name, m in s.named_modules():
             if hasattr(m, "qat_enabled"):
-                m.qat_enabled = bool(enabled)
+                # Keep f0_net unperturbed during STE QAT so cumulative harmonic phase stays 100% locked to teacher
+                m.qat_enabled = False if name.startswith("src.f0_net") else bool(enabled)
         return s
 
     def fuse_weight_norm(s):

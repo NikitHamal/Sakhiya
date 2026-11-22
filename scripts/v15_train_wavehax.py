@@ -44,35 +44,54 @@ def spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t):
 
 
 def warm_init_f0(s_voc, t_voc, pools, dev):
-    """Copy (if c_f0==128) or warm-slice + 250-step fast distill (if c_f0<128) f0_net from V1 teacher vocoder."""
+    """Copy exact 128-ch f0_net 1:1 from V1 teacher vocoder & freeze it (zero cumulative phase drift), plus warm-slice shared stems."""
     with torch.no_grad():
-        for (ns, ps), (nt, pt) in zip(s_voc.src.f0_net.named_parameters(), t_voc.src.f0_net.named_parameters()):
-            if ps.shape == pt.shape:
-                ps.copy_(pt)
-            elif ps.ndim == pt.ndim:
-                sl = tuple(slice(0, b) for b in ps.shape)
-                ps.copy_(pt[sl])
-    if s_voc.src.c_f0 == 128:
-        print("[Wavehax-F0] Exact 128-ch f0_net copied 1:1 from V1 teacher.", flush=True)
-        return
-    opt_f0 = torch.optim.AdamW(s_voc.src.f0_net.parameters(), lr=2e-3)
-    gt = pools[0]
-    for st in range(250):
-        mi = []
-        while len(mi) < 64:
-            m = gt[random.randrange(len(gt))]
-            if m is not None and m.shape[1] >= 64:
-                s = random.randint(0, m.shape[1] - 64)
-                mi.append(m[:, s:s + 64].float())
-        x = export_mel(torch.stack(mi))
-        with torch.no_grad():
-            rt = t_voc.src.f0_net(x).float()
-        rs = s_voc.src.f0_net(x).float()
-        loss_f0 = F.l1_loss(rs, rt)
-        opt_f0.zero_grad(set_to_none=True)
-        loss_f0.backward()
-        opt_f0.step()
-    print(f"[Wavehax-F0] Warmed {s_voc.src.c_f0}-ch f0_net in 250 steps (l1={loss_f0.item():.4f})", flush=True)
+        s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
+        for p in s_voc.src.f0_net.parameters():
+            p.requires_grad_(False)
+        # Warm-slice stem/upsampler/projection weights from v14_voc144 (or t_voc) so step 0 starts in-phase
+        ref_voc = t_voc
+        v14_p = "/work/tts/runs/v14_voc144/voc.pt"
+        if os.path.exists(v14_p):
+            try:
+                v14_ck = torch.load(v14_p, map_location=dev, weights_only=False)
+                v14_m = VocoderV2(ch=144, res_kernels=(3, 7, 11)).to(dev).eval()
+                v14_m.load_state_dict(v14_ck.get("G_ema", v14_ck.get("G", v14_ck)), strict=False)
+                v14_m.fuse_weight_norm()
+                ref_voc = v14_m
+            except Exception:
+                ref_voc = t_voc
+        else:
+            t_voc.fuse_weight_norm()
+        ref_sd = ref_voc.state_dict()
+        dst_sd = s_voc.state_dict()
+        pairs = [
+            ("src.proj4.weight", "src.proj4.weight"), ("src.proj4.bias", "src.proj4.bias"),
+            ("src.proj16.weight", "src.proj16.weight"), ("src.proj16.bias", "src.proj16.bias"),
+            ("up1_act.alpha", "up_acts.0.alpha"),
+            ("up1.weight", "ups.0.weight"), ("up1.bias", "ups.0.bias"),
+            ("up2_act.alpha", "up_acts.1.alpha"),
+            ("up2.weight", "ups.1.weight"), ("up2.bias", "ups.1.bias"),
+            ("post_act.alpha", "post_act.alpha"),
+            ("post.weight", "post.weight"), ("post.bias", "post.bias"),
+        ]
+        for dk, sk in pairs:
+            if dk in dst_sd and sk in ref_sd:
+                d_t, s_t = dst_sd[dk], ref_sd[sk].float()
+                sl = tuple(slice(0, min(a, b)) for a, b in zip(d_t.shape, s_t.shape))
+                d_t[sl].copy_(s_t[sl])
+        if "pre.weight" in dst_sd and "pre.weight" in ref_sd:
+            d_t, s_t = dst_sd["pre.weight"], ref_sd["pre.weight"].float()
+            # Center-slice kernel 7 -> 5 on first 100 mel channels, zero-init the 33 range_env channels
+            d_t.zero_()
+            c_m = min(d_t.shape[0], s_t.shape[0])
+            d_t[:c_m, :100, :].copy_(s_t[:c_m, :100, 1:6])
+            dst_sd["pre.bias"][:c_m].copy_(ref_sd["pre.bias"].float()[:c_m])
+        nn.init.zeros_(s_voc.from_2d.weight)
+        nn.init.zeros_(s_voc.from_2d.bias)
+        nn.init.zeros_(s_voc.har_phase.weight)
+        nn.init.zeros_(s_voc.har_phase.bias)
+    print(f"[Wavehax-Init] Copied & froze exact 128-ch f0_net (f0_err=0.0000) + warm-sliced stems from {'v14_voc144' if ref_voc is not t_voc else 't_voc'}.", flush=True)
 
 
 def main():
@@ -169,7 +188,7 @@ def main():
     base = score_utmos(t_voc)
     print(f"[{tag}] TEACHER(V1 5.04MB) on student mels utmos={json.dumps(base)}", flush=True)
 
-    opt = torch.optim.AdamW(s_voc.parameters(), lr=a.lr, betas=(0.8, 0.99), weight_decay=1e-5)
+    opt = torch.optim.AdamW([p for p in s_voc.parameters() if p.requires_grad], lr=a.lr, betas=(0.8, 0.99), weight_decay=1e-5)
     oD = torch.optim.AdamW(D_gan.parameters(), lr=2e-4, betas=(0.8, 0.99))
     best, hist = -1.0, []
     t0, budget, step = time.time(), a.max_minutes * 60.0, step0

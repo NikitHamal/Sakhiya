@@ -15,7 +15,30 @@ from sakhiya.v2_vocoder import VocoderV2, SR, HOP
 from sakhiya.symbols import SYMBOLS, SYM2ID, LANG2ID
 
 
+def _dedup_initializers(m):
+    """Deduplicate byte-identical weight initializers (>= 256 elements) so looped universal blocks store weights ONCE."""
+    import hashlib
+    seen, alias, keep = {}, {}, []
+    for init in m.graph.initializer:
+        arr = numpy_helper.to_array(init)
+        if arr.size >= 256:
+            key = (init.data_type, tuple(init.dims), hashlib.sha1(arr.tobytes()).digest())
+            if key in seen:
+                alias[init.name] = seen[key]
+                continue
+            seen[key] = init.name
+        keep.append(init)
+    if alias:
+        del m.graph.initializer[:]
+        m.graph.initializer.extend(keep)
+        for n in m.graph.node:
+            for i in range(len(n.input)):
+                if n.input[i] in alias:
+                    n.input[i] = alias[n.input[i]]
+
+
 def _strip_meta(m):
+    _dedup_initializers(m)
     del m.graph.value_info[:]
     m.doc_string = ""
     io_names = {x.name for x in list(m.graph.input) + list(m.graph.output)}
@@ -34,7 +57,7 @@ def _strip_meta(m):
 
 
 def to_fp16_weights(src, dst):
-    m = onnx.load(src); new_nodes, keep = [], []
+    m = onnx.load(src); _dedup_initializers(m); new_nodes, keep = [], []
     for init in m.graph.initializer:
         if init.data_type == TensorProto.FLOAT and np.prod(init.dims) > 128:
             h = numpy_helper.from_array(numpy_helper.to_array(init).astype(np.float16), init.name + "_fp16")
@@ -49,7 +72,7 @@ def to_fp16_weights(src, dst):
 
 def to_int8_qdq_weights(src, dst):
     """Weight-only per-channel int8 QDQ (DequantizeLinear) for all weight tensors > 128 elements; zero ConvInteger."""
-    m = onnx.load(src); use = {}
+    m = onnx.load(src); _dedup_initializers(m); use = {}
     for n in m.graph.node:
         for i in n.input: use.setdefault(i, n.op_type)
     new_nodes, keep = [], []
@@ -209,12 +232,13 @@ TIER_CFG = {
     "nanov10": dict(d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=11.0, max_int8=5.6),
     "atomv10": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=6.0, max_int8=2.99),
     "atom": dict(d_enc=64, L_enc=3, ff_enc=96, d_vel=80, nb_vel=4, h_dur=48, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=True, max_fp16=1.9, max_int8=0.95),
+    "pico": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=False, max_fp16=2.0, max_int8=0.99),
 }
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tier", default="v25", choices=["v25", "voca", "sano", "nano", "atom", "nanoplus", "atomplus", "nanov10", "atomv10"])
+    ap.add_argument("--tier", default="v25", choices=["v25", "voca", "sano", "nano", "atom", "nanoplus", "atomplus", "nanov10", "atomv10", "pico"])
     ap.add_argument("--am", default="/work/tts/runs/v2_am/last.pt")
     ap.add_argument("--voc", default="/work/tts/runs/v2_voc/G_best.pt")
     ap.add_argument("--out", default="/work/tts/export_v2")
@@ -222,9 +246,14 @@ def main():
     ap.add_argument("--stage_a_soup", type=float, default=0.0, help="WiSE-FT soup weight (0.0 for v2.6 so male voice is never mixed with female-only Stage B)")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     tc = TIER_CFG[a.tier]
-    am = SakhiyaAM(**{k: tc[k] for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur")}).eval()
-    if os.path.exists(a.am):
-        ck = torch.load(a.am, map_location="cpu", weights_only=False)
+    ck = torch.load(a.am, map_location="cpu", weights_only=False) if os.path.exists(a.am) else {}
+    is_pico = (a.tier == "pico") or (isinstance(ck, dict) and ck.get("arch") == "sakhiya_pico")
+    if is_pico:
+        from sakhiya.v15_pico import SakhiyaPicoAM
+        am = SakhiyaPicoAM(**{k: tc[k] for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur")}).eval()
+    else:
+        am = SakhiyaAM(**{k: tc[k] for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur")}).eval()
+    if ck:
         sd = {k: v.float() if torch.is_tensor(v) else v for k, v in ck.get("ema", ck.get("net", ck)).items()}
         p_2a = "/work/tts/runs/v2_am/last.pt"
         soup_w = a.stage_a_soup
@@ -238,11 +267,11 @@ def main():
                 am.stats.copy_(torch.tensor([float(ck_a["mean"]), float(ck_a["std"])]))
         elif "mean" in ck and "std" in ck:
             am.stats.copy_(torch.tensor([float(ck["mean"]), float(ck["std"])]))
-        am.load_state_dict(sd)
+        am.load_state_dict(sd, strict=False)
 
     # Unlock 5 real studio voices (sakhiya, sandesh, aanchal, acharya, kiran) + 6 true styles (news=0 lossless, conversational=1, storytelling=2, warm_soft=3, expressive=4, vedic_chant=5)
     with torch.no_grad():
-      if os.path.exists(a.am) and torch.load(a.am, map_location="cpu", weights_only=False).get("pre_baked_v25", False):
+      if is_pico or (ck and ck.get("pre_baked_v25", False)):
         w0 = am.enc.sty.weight[0].clone(); w2 = am.enc.sty.weight[2].clone()
         am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
         am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
