@@ -84,11 +84,11 @@ def main():
     ap.add_argument("--am_voca", default=f"{R}/ck/v9_voca_am.pt")
     ap.add_argument("--am_sano", default=f"{R}/ck/v9_sano_am.pt")
     ap.add_argument("--init", default=None)
-    ap.add_argument("--bs", type=int, default=48)
+    ap.add_argument("--bs", type=int, default=32)
     ap.add_argument("--seg", type=int, default=64)
     ap.add_argument("--gan_after", type=int, default=1500)
-    ap.add_argument("--lr", type=float, default=6e-4)
-    ap.add_argument("--eval_every", type=int, default=1500)
+    ap.add_argument("--lr", type=float, default=8e-4)
+    ap.add_argument("--eval_every", type=int, default=2000)
     ap.add_argument("--smoke", type=int, default=0)
     a = ap.parse_args()
     assert a.max_minutes <= 115.0, "hard stage cap <= 115 min"
@@ -215,18 +215,19 @@ def main():
         with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
             re_t, im_t, f0_t, uv_t = t_voc.spectrum_and_f0(x, shift_st=sh_st)
         re_t, im_t = re_t.float(), im_t.float()
-        wav_t = ola64(torch.complex(re_t, im_t), t_voc.win)[:, :L]
+        wav_t = s_voc.spec_to_wav(re_t, im_t)[:, :L]
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             re_s, im_s, f0_s, uv_s = s_voc.spectrum_and_f0(x, shift_st=sh_st)
         re_s, im_s = re_s.float(), im_s.float()
-        wav_s = ola64(torch.complex(re_s, im_s), s_voc.win)[:, :L]
+        wav_s = s_voc.spec_to_wav(re_s, im_s)[:, :L]
 
         use_gan = (step - step0) > a.gan_after
+        b_gan = min(16, a.bs)
         if use_gan:
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                dr, _ = D_gan(wav_t[:, None])
-                df, _ = D_gan(wav_s.detach()[:, None])
+                dr, _ = D_gan(wav_t[:b_gan, None])
+                df, _ = D_gan(wav_s[:b_gan].detach()[:, None])
                 l_d = sum(F.relu(1.0 - r.float()).mean() + F.relu(1.0 + f.float()).mean() for r, f in zip(dr, df)) / len(dr)
             oD.zero_grad(set_to_none=True)
             l_d.backward()
@@ -241,11 +242,12 @@ def main():
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             l_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
             l_stft = mr_complex_stft_loss(wav_s, wav_t, dev)
-            # Frozen WavLM-base-plus perceptual feature + SV timbre matching every 2nd step
+            # Frozen WavLM-base-plus perceptual feature + SV timbre matching every 2nd step on 8-clip sub-batch
             if step % 2 == 0:
+                b_slm = min(8, a.bs)
                 with torch.no_grad():
-                    ft_t, emb_t = slm.extract(resamp16(wav_t.float()))
-                ft_s, emb_s = slm.extract(resamp16(wav_s.float()))
+                    ft_t, emb_t = slm.extract(resamp16(wav_t[:b_slm].float()))
+                ft_s, emb_s = slm.extract(resamp16(wav_s[:b_slm].float()))
                 l_wavlm = F.l1_loss(ft_s.float(), ft_t.float()) + 0.5 * (1.0 - F.cosine_similarity(emb_s.float(), emb_t.float(), dim=-1).mean())
             else:
                 l_wavlm = torch.tensor(0.0, device=dev)
@@ -258,8 +260,8 @@ def main():
         if use_gan:
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 with torch.no_grad():
-                    _, fr_r = D_gan(wav_t[:, None])
-                df_g, fr_g = D_gan(wav_s[:, None])
+                    _, fr_r = D_gan(wav_t[:b_gan, None])
+                df_g, fr_g = D_gan(wav_s[:b_gan, None])
                 l_adv = sum(F.relu(1.0 - f.float()).mean() for f in df_g) / len(df_g)
                 l_fm = sum(F.l1_loss(b_.float(), a_.float()) for A, B in zip(fr_r, fr_g) for a_, b_ in zip(A, B)) / len(fr_r)
             loss = loss + 1.0 * l_adv + 2.0 * l_fm

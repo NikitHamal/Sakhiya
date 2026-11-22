@@ -211,10 +211,11 @@ class MSRNDWavehax(nn.Module):
         s.register_buffer("K_istft", torch.from_numpy(K_istft), persistent=False)  # (66, 1, 64)
         s.register_buffer("win", torch.from_numpy(win), persistent=False)
 
-        # Calibrated per-bin affine scale/offset on the analytical Range-Space log-magnitude envelope
+        # Calibrated per-bin affine scale/offset on the analytical Range-Space log-magnitude envelope (+3.15 matches n_fft=64 vs 1024 log scale)
         s.range_gain = nn.Parameter(torch.ones(1, s.n_bins, 1))
-        s.range_bias = nn.Parameter(torch.zeros(1, s.n_bins, 1))
-        s.null_alpha = nn.Parameter(torch.full((1, s.n_bins, 1), 0.25))
+        s.range_bias = nn.Parameter(torch.full((1, s.n_bins, 1), 3.15))
+        s.null_gain = nn.Parameter(torch.full((1, s.n_bins, 1), 0.50))
+        s.null_alpha = nn.Parameter(torch.ones(1, s.n_bins, 1))
 
         s.src = WavehaxHarmonicSource(n_mels, c1, c2, c_f0=c_f0)
         s.pre = QATConv1d(n_mels + s.n_bins, ch, 5, padding=2)
@@ -273,14 +274,22 @@ class MSRNDWavehax(nn.Module):
             x = b16(x)
 
         # 6. Range-Null Space Spectral Synthesis:
-        #    log|X| = (range_gain * A^+ y + range_bias) + P_null r_theta + null_alpha * r_theta
+        #    log|X| = (range_gain * A^+ y + range_bias) + null_gain * (P_null r_theta) + null_alpha * r_theta
         raw_out = s.post(s.post_act(x)).float()
         r_theta, ph_res = raw_out.chunk(2, dim=1)
         null_proj = torch.matmul(s.P_null.to(r_theta.dtype), r_theta)
-        log_mag = (s.range_gain.float() * range_env_16 + s.range_bias.float()) + null_proj + s.null_alpha.float() * r_theta
+        log_mag = (s.range_gain.float() * range_env_16 + s.range_bias.float()) + s.null_gain.float() * null_proj + s.null_alpha.float() * r_theta
         mag = torch.exp(log_mag.clamp(min=-11.0, max=5.0))
         ph = ph_res + s.har_phase(har16).float()
         return mag * torch.cos(ph), mag * torch.sin(ph), f0, uv
+
+    def spec_to_wav(s, re, im):
+        """Fast 1-op COLA iSTFT matching ONNX export 1:1."""
+        z = torch.zeros_like(im[:, :1, :])
+        im_sym = torch.cat([z, im[:, 1:-1, :], z], dim=1)
+        spec_cat = torch.cat([re.float(), im_sym.float()], dim=1)
+        p = (ISTFT_N_FFT - ISTFT_HOP) // 2
+        return F.conv_transpose1d(spec_cat, s.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=p)[:, 0, :]
 
     def spectrum(s, mel, shift_st=None):
         re, im, _, _ = s.spectrum_and_f0(mel, shift_st=shift_st)
@@ -288,7 +297,7 @@ class MSRNDWavehax(nn.Module):
 
     def forward(s, mel, shift_st=None):
         re, im = s.spectrum(mel, shift_st=shift_st)
-        return ola64(torch.complex(re.float(), im.float()), s.win)
+        return s.spec_to_wav(re, im)
 
     def forward_wav_onnx(s, mel):
         """Direct 24 kHz waveform ONNX export (extracts st_shift from bin 99 - bin 97 and uses 1-op COLA ConvTranspose1d)."""
@@ -296,10 +305,4 @@ class MSRNDWavehax(nn.Module):
         mel_clean = torch.cat([mel[:, :98, :], mel[:, 97:98, :], mel[:, 97:98, :]], dim=1)
         tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift).clamp(-0.85, 0.85), (2, 2), mode="replicate"), 5, stride=1)
         re, im = s.spectrum(mel_clean, shift_st=tot_shift)
-        # Zero DC/Nyquist imaginary part for exact conjugate symmetry
-        z = torch.zeros_like(im[:, :1, :])
-        im_sym = torch.cat([z, im[:, 1:-1, :], z], dim=1)
-        spec_cat = torch.cat([re.float(), im_sym.float()], dim=1)
-        p = (ISTFT_N_FFT - ISTFT_HOP) // 2
-        wav = F.conv_transpose1d(spec_cat, s.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=p)[:, 0, :]
-        return wav
+        return s.spec_to_wav(re, im)
