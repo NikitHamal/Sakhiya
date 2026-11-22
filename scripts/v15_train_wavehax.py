@@ -9,7 +9,7 @@ Features:
 4. Straight-Through Estimator (STE) Per-Channel INT8 QAT polish in the final 20% of the budget.
 5. Hard --max-minutes cap + Step-50 throughput gate + real text->AM->vocoder UTMOS checkpointing."""
 import argparse, copy, json, math, os, random, sys, time
-import torch, torch.nn.functional as F
+import torch, torch.nn as nn, torch.nn.functional as F
 
 R = "/work/tts"
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
