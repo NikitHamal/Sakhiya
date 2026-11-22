@@ -18,10 +18,29 @@ sys.path.insert(0, REPO)
 from sakhiya.v15_rnd_wavehax import MSRNDWavehax
 from sakhiya.v2_vocoder import VocoderV2, mel_spec_24k, ola64
 from sakhiya.v4_slm import WavLMSLMHelper
-from scripts.train_v2_voc import DiscV2, mr_complex_stft_loss, phase_loss
+from scripts.train_v2_voc import DiscV2, mr_complex_stft_loss
 from scripts.train_v3_voc import resamp16
 from scripts.v2_full_eval import load_utmos
 from scripts.v8_voc_gta import load_am, export_mel, val_mels, cache_student
+
+
+def spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t):
+    """Wrap-free unit-phasor Phase + Instantaneous-Frequency (time diff) + Group-Delay (freq diff) loss."""
+    w = (mag_t / (mag_t.mean(dim=(1, 2), keepdim=True) + 1e-5)).clamp(max=3.0).detach()
+    nr = re_s / (mag_s + 1e-5); ni = im_s / (mag_s + 1e-5)
+    tr = re_t / (mag_t + 1e-5); ti = im_t / (mag_t + 1e-5)
+    l_cos = ((1.0 - (nr * tr + ni * ti)) * w).mean()
+    if_sr = nr[:, :, 1:] * nr[:, :, :-1] + ni[:, :, 1:] * ni[:, :, :-1]
+    if_si = ni[:, :, 1:] * nr[:, :, :-1] - nr[:, :, 1:] * ni[:, :, :-1]
+    if_tr = tr[:, :, 1:] * tr[:, :, :-1] + ti[:, :, 1:] * ti[:, :, :-1]
+    if_ti = ti[:, :, 1:] * tr[:, :, :-1] - tr[:, :, 1:] * ti[:, :, :-1]
+    l_if = ((1.0 - (if_sr * if_tr + if_si * if_ti)) * w[:, :, 1:]).mean()
+    gd_sr = nr[:, 1:, :] * nr[:, :-1, :] + ni[:, 1:, :] * ni[:, :-1, :]
+    gd_si = ni[:, 1:, :] * nr[:, :-1, :] - nr[:, 1:, :] * ni[:, :-1, :]
+    gd_tr = tr[:, 1:, :] * tr[:, :-1, :] + ti[:, 1:, :] * ti[:, :-1, :]
+    gd_ti = ti[:, 1:, :] * tr[:, :-1, :] - tr[:, 1:, :] * ti[:, :-1, :]
+    l_gd = ((1.0 - (gd_sr * gd_tr + gd_si * gd_ti)) * w[:, 1:, :]).mean()
+    return (l_cos + l_if + l_gd) * 0.3333
 
 
 def warm_init_f0(s_voc, t_voc, pools, dev):
@@ -217,7 +236,7 @@ def main():
         mag_s = torch.sqrt(re_s ** 2 + im_s ** 2 + 1e-9)
         l_lmag = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
         l_cplx = ((re_s - re_t).abs() + (im_s - im_t).abs()).mean() / (mag_t.mean() + 1e-6)
-        l_ph = phase_loss(re_s, im_s, re_t, im_t)
+        l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t)
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             l_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
