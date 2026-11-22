@@ -1,5 +1,5 @@
 {
- "note": "Measured values only (scripts/build_pareto.py -> docs/pareto.json).",
+ "note": "Measured values only (scripts/forensic_audio_gate.py --tiny + docs/models_*/size.json).",
  "tiers": [
   {
    "id": "v1",
@@ -9,11 +9,11 @@
    "variant": "tiny",
    "mb": 15.981,
    "rtf": 0.1884,
-   "utmos": 3.898,
-   "ne_pcer": 0.0251,
-   "sa_pcer": 0.0331,
+   "utmos": 3.957,
+   "ne_pcer": 0.014,
+   "sa_pcer": 0.0245,
    "ready": true,
-   "desc": "Flagship V5 Final · Best studio quality · Unified Nepali & Sanskrit female voice"
+   "desc": "Flagship v15 Chandas · UTMOS 3.957 (Vedic 3.75+) · 0 drops, 0 stutters, 0 clicks across all 6 styles"
   },
   {
    "id": "nano",
@@ -24,10 +24,10 @@
    "mb": 8.932,
    "rtf": 0.0217,
    "utmos": 3.253,
-   "ne_pcer": null,
-   "sa_pcer": null,
+   "ne_pcer": 0.0273,
+   "sa_pcer": 0.0456,
    "ready": true,
-   "desc": "Small model · fully trained student + V1 vocoder · clean voice"
+   "desc": "Compact student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~46× real-time"
   },
   {
    "id": "atom",
@@ -37,25 +37,25 @@
    "variant": "tiny",
    "mb": 6.509,
    "rtf": 0.0189,
-   "utmos": 3.236,
-   "ne_pcer": null,
-   "sa_pcer": null,
+   "utmos": 3.262,
+   "ne_pcer": 0.0165,
+   "sa_pcer": 0.0676,
    "ready": true,
-   "desc": "Smallest model · fully trained student + V1 vocoder · clean voice"
+   "desc": "Small student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~53× real-time"
   },
   {
    "id": "atom_lite",
    "label": "Sakhiya-V1-Atom-Lite",
    "prec": "int8",
-   "dir": "docs/models_atom_lite/",
+   "dir": "models_atom_lite/",
    "variant": "tiny",
    "mb": 2.717,
-   "rtf": null,
-   "utmos": 2.909,
-   "ne_pcer": null,
-   "sa_pcer": null,
+   "rtf": 0.0155,
+   "utmos": 2.944,
+   "ne_pcer": 0.0169,
+   "sa_pcer": 0.0395,
    "ready": true,
-   "desc": "Under 3 MB · Atom acoustic model + 1.2M-param distilled vocoder · a little rougher than Atom (audio test 2.91 vs 3.24)"
+   "desc": "Under 3 MB · Atom acoustic model + 1.25 MB distilled vocoder · 0 stutters, 0 clicks"
   }
  ],
  "voices": {
@@ -64,6 +64,9 @@
  "styles": {
   "news": "ready",
   "storytelling": "ready",
+  "conversational": "ready",
+  "warm_soft": "ready",
+  "expressive": "ready",
   "vedic_chant": "ready"
  }
 }

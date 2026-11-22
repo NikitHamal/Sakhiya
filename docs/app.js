@@ -8,10 +8,13 @@ let TIERS = { tiers: [], voices: {}, styles: {} }, CFG = null;
 // v6 focused scope: Nepali + Sanskrit + Auto (Mixed) only; ONE unified female voice `sakhiya`; 3 mastered delivery modes.
 const LANGS = [["auto", "Auto (Mixed)"], ["ne", "नेपाली"], ["sa", "संस्कृतम्"]];
 const VOICES = { sakhiya: ["सखिया", "Sakhiya", "Unified Expressive Nepali & Musical Vedic Female Voice (WavLM-SV ≥ 0.96)", "f"] };
-const STYLE_ORDER = [["news", "News"], ["storytelling", "Storytelling"], ["vedic_chant", "Vedic Chant"]];
+const STYLE_ORDER = [["news", "News"], ["storytelling", "Storytelling"], ["conversational", "Conversational"], ["warm_soft", "Warm & Soft"], ["expressive", "Expressive"], ["vedic_chant", "Vedic Chant"]];
 const STYLE_NOTE = {
   news: "Crisp, clear native Nepali & Sanskrit broadcast reading.",
   storytelling: "Warm, living human narration & emotional dialogue (genuine joy on 'वाह!', rising questions '?', natural comma breaths).",
+  conversational: "Natural everyday Nepali chat & friendly dialogue with lively turn-taking.",
+  warm_soft: "Gentle, calm, soothing voice for mindfulness, poetry, and reflective prose.",
+  expressive: "High-energy, joyful exclamation and vivid descriptive narration.",
   vedic_chant: "Musical Vedic & Shloka chanting with real human sur, metrical laya, and deep resonant prolonged ॐ."
 };
 const PRESETS = [["Auto mix", "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः । मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय ॥ आज मौसम निकै रमाइलो र शान्त छ।", "auto"],
