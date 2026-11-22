@@ -196,12 +196,12 @@ class MSRNDWavehax(nn.Module):
     def __init__(s, variant="lite", n_mels=NMEL, ch=None, c1=None, c2=None, c_2d=None, c_f0=None, n_2d=None, n_4x=None, n_16x=None):
         super().__init__()
         if variant == "pro":
-            ch = ch or 160; c1 = c1 or 128; c2 = c2 or 80; c_2d = c_2d or 28; c_f0 = c_f0 or 128; n_2d = n_2d or 6; n_4x = n_4x or 7; n_16x = n_16x or 7
+            ch = ch or 104; c1 = c1 or 88; c2 = c2 or 60; c_2d = c_2d or 24; c_f0 = c_f0 or 128; n_2d = n_2d or 6; n_4x = n_4x or 6; n_16x = n_16x or 6
         else:
-            ch = ch or 112; c1 = c1 or 88; c2 = c2 or 56; c_2d = c_2d or 20; c_f0 = c_f0 or 64; n_2d = n_2d or 5; n_4x = n_4x or 5; n_16x = n_16x or 5
+            ch = ch or 72; c1 = c1 or 60; c2 = c2 or 44; c_2d = c_2d or 16; c_f0 = c_f0 or 56; n_2d = n_2d or 5; n_4x = n_4x or 4; n_16x = n_16x or 4
         s.variant = variant
         s.n_bins = ISTFT_N_FFT // 2 + 1  # 33
-        s.f_sub = 16
+        s.f_sub = 8  # 8 frequency subbands x c_2d channels in the 2D Time-Frequency stream
 
         # Analytical Range-Null Space Decomposition matrices (0 trainable parameters)
         A, A_pinv, P_null = _build_rnd_matrices(n_mels, s.n_bins)
@@ -217,7 +217,7 @@ class MSRNDWavehax(nn.Module):
         s.null_alpha = nn.Parameter(torch.full((1, s.n_bins, 1), 0.25))
 
         s.src = WavehaxHarmonicSource(n_mels, c1, c2, c_f0=c_f0)
-        s.pre = QATConv1d(n_mels + s.n_bins, ch, 7, padding=3)
+        s.pre = QATConv1d(n_mels + s.n_bins, ch, 5, padding=2)
 
         # Stage 1: 4x temporal upsampling (hop=256 -> hop=64) + 2D Subband ConvNeXt-V2 stream + 1D Snake-MRF stream
         s.up1_act = Snake1d(ch)

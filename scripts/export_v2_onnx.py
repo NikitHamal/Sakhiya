@@ -282,16 +282,26 @@ def main():
             if lid != sa_id:
                 am.enc.lang.weight[lid].copy_(am.enc.lang.weight[0])
 
-    voc = VocoderV2(ch=tc["v_ch"], res_kernels=tc["v_rk"]).eval()
-    voc.src.use_hpn = tc["hpn"]
-    if os.path.exists(a.voc):
-        vck = torch.load(a.voc, map_location="cpu", weights_only=False)
-        voc.load_state_dict(vck.get("G_ema", vck.get("G", vck)) if isinstance(vck, dict) and ("G_ema" in vck or "G" in vck) else vck)
-    voc.fuse_weight_norm()
+    vck = torch.load(a.voc, map_location="cpu", weights_only=False) if os.path.exists(a.voc) else {}
+    is_wavehax = isinstance(vck, dict) and vck.get("arch") == "ms_rnd_wavehax"
+    if is_wavehax:
+        from sakhiya.v15_rnd_wavehax import MSRNDWavehax
+        voc = MSRNDWavehax(variant=vck.get("variant", "lite")).eval()
+        voc.load_state_dict(vck.get("G_ema", vck.get("G", vck)), strict=False)
+        class _WavehaxWavExport(nn.Module):
+            def __init__(self, v): super().__init__(); self.v = v
+            def forward(self, mel): return self.v.forward_wav_onnx(mel)
+        voc_w = _WavehaxWavExport(voc).eval()
+    else:
+        voc = VocoderV2(ch=tc["v_ch"], res_kernels=tc["v_rk"]).eval()
+        voc.src.use_hpn = tc["hpn"]
+        if vck:
+            voc.load_state_dict(vck.get("G_ema", vck.get("G", vck)) if isinstance(vck, dict) and ("G_ema" in vck or "G" in vck) else vck)
+        voc.fuse_weight_norm()
+        voc_w = VocSpecExport(voc).eval()
 
     enc_w = EncExport(am).eval()
     dec_w = DecExport(am, steps=tc["steps"], temp=tc["temp"]).eval()
-    voc_w = VocSpecExport(voc).eval()
 
     ids = torch.tensor([[1, 14, 22, 18, 2, 4]], dtype=torch.long)
     spk = torch.tensor([0], dtype=torch.long)
@@ -319,12 +329,20 @@ def main():
         opset_version=17, dynamo=False,
     )
     mel_dummy = torch.randn(1, 100, 32)
-    torch.onnx.export(
-        voc_w, (mel_dummy,), p_voc32,
-        input_names=["mel"], output_names=["real", "imag"],
-        dynamic_axes={"mel": {2: "T"}, "real": {2: "F16"}, "imag": {2: "F16"}},
-        opset_version=17, dynamo=False,
-    )
+    if is_wavehax:
+        torch.onnx.export(
+            voc_w, (mel_dummy,), p_voc32,
+            input_names=["mel"], output_names=["wav"],
+            dynamic_axes={"mel": {2: "T"}, "wav": {1: "W"}},
+            opset_version=17, dynamo=False,
+        )
+    else:
+        torch.onnx.export(
+            voc_w, (mel_dummy,), p_voc32,
+            input_names=["mel"], output_names=["real", "imag"],
+            dynamic_axes={"mel": {2: "T"}, "real": {2: "F16"}, "imag": {2: "F16"}},
+            opset_version=17, dynamo=False,
+        )
 
     for name, src in (("encoder", p_enc32), ("decoder", p_dec32), ("vocoder", p_voc32)):
         to_fp16_weights(src, f"{a.out}/{name}.onnx")
