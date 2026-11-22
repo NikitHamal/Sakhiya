@@ -196,7 +196,7 @@ class MSRNDWavehax(nn.Module):
     def __init__(s, variant="lite", n_mels=NMEL, ch=None, c1=None, c2=None, c_2d=None, c_f0=None, n_2d=None, n_4x=None, n_16x=None):
         super().__init__()
         if variant == "pro":
-            ch = ch or 104; c1 = c1 or 88; c2 = c2 or 60; c_2d = c_2d or 24; c_f0 = c_f0 or 128; n_2d = n_2d or 6; n_4x = n_4x or 6; n_16x = n_16x or 6
+            ch = ch or 84; c1 = c1 or 68; c2 = c2 or 48; c_2d = c_2d or 20; c_f0 = c_f0 or 128; n_2d = n_2d or 5; n_4x = n_4x or 5; n_16x = n_16x or 5
         else:
             ch = ch or 64; c1 = c1 or 56; c2 = c2 or 40; c_2d = c_2d or 16; c_f0 = c_f0 or 128; n_2d = n_2d or 4; n_4x = n_4x or 4; n_16x = n_16x or 4
         s.variant = variant
