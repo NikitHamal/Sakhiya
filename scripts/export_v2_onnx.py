@@ -79,12 +79,9 @@ def to_int8_qdq_weights(src, dst):
     for init in m.graph.initializer:
         arr = numpy_helper.to_array(init)
         op = use.get(init.name, "")
-        skip_fp16 = (
-            arr.shape in ((66, 1, 64), (33, 100), (33, 33), (2, 128, 3), (2, 64, 3))
-            or (arr.ndim == 3 and arr.shape[0] == 66)
-        )
-        if init.data_type == TensorProto.FLOAT and op in ("Conv", "ConvTranspose", "Gemm", "MatMul") and arr.size >= 256 and arr.ndim >= 2 and not skip_fp16:
-            ax = 1 if (op in ("ConvTranspose", "MatMul") and arr.shape[1] > 1) else 0
+        skip_fp16 = arr.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3))
+        if init.data_type == TensorProto.FLOAT and op in ("Conv", "ConvTranspose", "Gemm", "MatMul") and arr.size >= 128 and arr.ndim >= 2 and not skip_fp16:
+            ax = 1 if (op == "ConvTranspose" and arr.shape[1] > 1) else 0
             if arr.shape[ax] > 1:
                 red = tuple(i for i in range(arr.ndim) if i != ax)
                 sc = np.maximum(np.abs(arr).max(axis=red), 1e-8) / 127.0
