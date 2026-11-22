@@ -202,8 +202,9 @@ def main():
         warm_m = min(1.0, (step + 1) / 250.0)
         for g_ in opt_am.param_groups:
             g_["lr"] = a.lr_am * warm_m * cos_mult
+        voc_mult = 1.35 if frac < 0.45 else 0.25
         for g_ in opt_voc.param_groups:
-            g_["lr"] = a.lr_voc * warm_m * cos_mult
+            g_["lr"] = a.lr_voc * warm_m * cos_mult * voc_mult
         step += 1
 
         if step == 5:

@@ -136,7 +136,7 @@ class SakhiyaWeb {
           dur[t - 2] = 12;
           for (let b = 0; b < 100; b++) xs[(t - 2) * d + b] = xs[(T - 1) * d + b];
         }
-        dur[t - 1] = Math.max(16, dur[t - 1]); dur[t] = 7; dur[t + 1] = Math.max(15, dur[t + 1]);
+        dur[t - 1] = Math.max(19, dur[t - 1]); dur[t] = 7; dur[t + 1] = Math.max(18, dur[t + 1]);
         for (let b = 0; b < 100; b++) {
           const vNext = xs[(t + 1) * d + b], vSil = xs[(T - 1) * d + b];
           xs[(t - 1) * d + b] = vNext;
