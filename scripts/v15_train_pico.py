@@ -305,20 +305,27 @@ def main():
             x_t = export_mel(torch.stack(mel_t_segs))
 
             with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                re_t, im_t, _, _ = t_voc.spectrum_and_f0(x_t)
-            re_t, im_t = re_t.float(), im_t.float()
-            wav_t = s_voc.spec_to_wav(re_t, im_t)[:, :L_wav]
+                re_t_gt, im_t_gt, _, _ = t_voc.spectrum_and_f0(x_t)
+                re_t_same, im_t_same, _, _ = t_voc.spectrum_and_f0(x_s.detach())
+            re_t_gt, im_t_gt = re_t_gt.float(), im_t_gt.float()
+            re_t_same, im_t_same = re_t_same.float(), im_t_same.float()
+            wav_t = s_voc.spec_to_wav(re_t_gt, im_t_gt)[:, :L_wav]
+            wav_t_same = s_voc.spec_to_wav(re_t_same, im_t_same)[:, :L_wav]
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 re_s, im_s, _, _ = s_voc.spectrum_and_f0(x_s)
             re_s, im_s = re_s.float(), im_s.float()
             wav_s = s_voc.spec_to_wav(re_s, im_s)[:, :L_wav]
 
-            mag_t = torch.sqrt(re_t ** 2 + im_t ** 2 + 1e-9)
+            mag_t_gt = torch.sqrt(re_t_gt ** 2 + im_t_gt ** 2 + 1e-9)
+            mag_t_same = torch.sqrt(re_t_same ** 2 + im_t_same ** 2 + 1e-9)
             mag_s = torch.sqrt(re_s ** 2 + im_s ** 2 + 1e-9)
-            l_lmag = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
-            l_cplx = ((re_s - re_t).abs() + (im_s - im_t).abs()).mean() / (mag_t.mean() + 1e-6)
-            l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t)
+            w_bin = torch.ones((1, 33, 1), device=dev, dtype=torch.float32)
+            w_bin[:, :14, :] = 3.5
+            w_bin = w_bin / w_bin.mean()
+            l_lmag = 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_same + 1e-5), reduction="none") * w_bin).mean() + 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_gt + 1e-5), reduction="none") * w_bin).mean()
+            l_cplx = (((re_s - re_t_same).abs() + (im_s - im_t_same).abs()) * w_bin).mean() / (mag_t_same.mean() + 1e-6) + 0.5 * F.l1_loss(wav_s, wav_t_same)
+            l_ph = spec_phase_gd_loss(re_s[:, :16], im_s[:, :16], re_t_same[:, :16], im_t_same[:, :16], mag_s[:, :16], mag_t_same[:, :16])
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 l_wav_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
