@@ -199,11 +199,11 @@ class SakhiyaONNX:
                 if idx_p >= 2 and ph_valid[idx_p - 2] == "|":
                     dur[idx_p - 2] = 12
                     x[0, idx_p - 2, :100] = x[0, -1, :100]
-                dur[idx_p - 1] = max(int(dur[idx_p - 1]), 17)
-                dur[idx_p] = 6
-                dur[idx_p + 1] = max(int(dur[idx_p + 1]), 16)
+                dur[idx_p - 1] = max(int(dur[idx_p - 1]), 16)
+                dur[idx_p] = 7
+                dur[idx_p + 1] = max(int(dur[idx_p + 1]), 15)
                 x[0, idx_p - 1, :100] = x[0, idx_p + 1, :100]
-                x[0, idx_p, :100] = 0.35 * x[0, idx_p + 1, :100] + 0.65 * x[0, -1, :100]
+                x[0, idx_p, :100] = 0.45 * x[0, idx_p + 1, :100] + 0.55 * x[0, -1, :100]
             if lang == "sa" and p == "o" and idx_p + 1 < len(ph_valid) and ph_valid[idx_p + 1] == "m" and (idx_p == 0 or ph_valid[idx_p - 1] in ("|", ",", ";", ".")):
                 dur[idx_p] = int(np.clip(dur[idx_p], 34, 44))
                 dur[idx_p + 1] = int(np.clip(dur[idx_p + 1], 16, 22))

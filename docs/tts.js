@@ -136,11 +136,11 @@ class SakhiyaWeb {
           dur[t - 2] = 12;
           for (let b = 0; b < 100; b++) xs[(t - 2) * d + b] = xs[(T - 1) * d + b];
         }
-        dur[t - 1] = Math.max(17, dur[t - 1]); dur[t] = 6; dur[t + 1] = Math.max(16, dur[t + 1]);
+        dur[t - 1] = Math.max(16, dur[t - 1]); dur[t] = 7; dur[t + 1] = Math.max(15, dur[t + 1]);
         for (let b = 0; b < 100; b++) {
           const vNext = xs[(t + 1) * d + b], vSil = xs[(T - 1) * d + b];
           xs[(t - 1) * d + b] = vNext;
-          xs[t * d + b] = 0.35 * vNext + 0.65 * vSil;
+          xs[t * d + b] = 0.45 * vNext + 0.55 * vSil;
         }
       }
       if (o.lang === "sa" && phValid[t] === "o" && phValid[t + 1] === "m" && (t === 0 || ["|", ",", ";", "."].includes(phValid[t - 1]))) {

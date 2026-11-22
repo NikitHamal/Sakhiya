@@ -336,12 +336,12 @@ def main():
             l_ph = spec_phase_gd_loss(re_s[:, :16], im_s[:, :16], re_t_same[:, :16], im_t_same[:, :16], mag_s[:, :16], mag_t_same[:, :16])
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                l_wav_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
-                l_wav_stft = mr_complex_stft_loss(wav_s, wav_t, dev)
+                l_wav_mel = 0.6 * F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t_same, dev)[:, :, :a.seg].float()) + 0.4 * F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
+                l_wav_stft = 0.7 * mr_complex_stft_loss(wav_s, wav_t_same, dev) + 0.3 * mr_complex_stft_loss(wav_s, wav_t, dev)
                 if step % 2 == 0:
                     b_slm = min(8, B)
                     with torch.no_grad():
-                        ft_t, emb_t = slm.extract(resamp16(wav_t[:b_slm].float()))
+                        ft_t, emb_t = slm.extract(resamp16(wav_t_same[:b_slm].float()))
                     ft_s, emb_s = slm.extract(resamp16(wav_s[:b_slm].float()))
                     l_wavlm = F.l1_loss(ft_s.float(), ft_t.float()) + 0.5 * (1.0 - F.cosine_similarity(emb_s.float(), emb_t.float(), dim=-1).mean())
                 else:
