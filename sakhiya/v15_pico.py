@@ -29,7 +29,7 @@ class QATLinear(nn.Linear):
 
 class UniversalEncBlock(nn.Module):
     """Universal RoPE Self-Attention + Conv1D FFN block using QATConv1d (stored ONCE in ONNX when looped!)."""
-    def __init__(s, d=96, h=4, ff=144, k=5, n_loops=4):
+    def __init__(s, d=96, h=4, ff=112, k=5, n_loops=4):
         super().__init__()
         s.h = h
         s.n1 = nn.LayerNorm(d)
@@ -37,7 +37,7 @@ class UniversalEncBlock(nn.Module):
         s.o = QATConv1d(d, d, 1)
         s.n2 = nn.LayerNorm(d)
         s.c1 = QATConv1d(d, ff, k, padding=k // 2)
-        s.c2 = QATConv1d(ff, d, k, padding=k // 2)
+        s.c2 = QATConv1d(ff, d, 3, padding=1)
         # Per-iteration FiLM modulation (gamma_k, beta_k) for attention and FFN sublayers
         s.attn_gamma = nn.Parameter(torch.zeros(n_loops, 1, d))
         s.attn_beta = nn.Parameter(torch.zeros(n_loops, 1, d))
@@ -58,7 +58,7 @@ class UniversalEncBlock(nn.Module):
 
 class PicoTextEncoder(nn.Module):
     """Pruned single-speaker + 6-style Looped Universal Text Encoder (~195K params -> ~215 KB int8 ONNX)."""
-    def __init__(s, n_mel=100, d=96, L=4, n_spk=2, n_lang=6, n_sty=6, ff=144):
+    def __init__(s, n_mel=100, d=96, L=4, n_spk=2, n_lang=6, n_sty=6, ff=112):
         super().__init__()
         s.d = d
         s.L = L
@@ -136,12 +136,12 @@ class PicoDurFlow(nn.Module):
 
 class UniversalVelBlock(nn.Module):
     """Universal ConvNeXt-1D Velocity Block using QATConv1d for all projections (stored ONCE in ONNX!)."""
-    def __init__(s, d=112, c=96, k=7, ff=3):
+    def __init__(s, d=112, c=96, k=7, h_ff=256):
         super().__init__()
         s.dw = QATConv1d(d, d, k, padding=k // 2, groups=d)
         s.n = nn.GroupNorm(1, d)
-        s.p1 = QATConv1d(d, d * ff, 1)
-        s.p2 = QATConv1d(d * ff, d, 1)
+        s.p1 = QATConv1d(d, h_ff, 1)
+        s.p2 = QATConv1d(h_ff, d, 1)
         s.film = QATConv1d(c, 2 * d, 1)
 
     def forward(s, x, c_3d, m, out_gamma, out_beta):
@@ -164,8 +164,8 @@ class PicoVelocity(nn.Module):
         s.inp = QATConv1d(2 * n_mel, d, 1)
         s.tm1 = QATConv1d(c, c, 1)
         s.tm2 = QATConv1d(c, c, 1)
-        s.ublock_early = UniversalVelBlock(d=d, c=c, k=7, ff=3)
-        s.ublock_late = UniversalVelBlock(d=d, c=c, k=7, ff=3)
+        s.ublock_early = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
+        s.ublock_late = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
         s.step_emb = nn.Parameter(torch.zeros(nb, c, 1))
         s.out_gamma = nn.Parameter(torch.zeros(nb, d, 1))
         s.out_beta = nn.Parameter(torch.zeros(nb, d, 1))
@@ -186,8 +186,8 @@ class PicoVelocity(nn.Module):
 
 
 class SakhiyaPicoAM(nn.Module):
-    """Sakhiya-Pico Sub-1 MB Acoustic Model (`d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64`)."""
-    def __init__(s, d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64):
+    """Sakhiya-Pico Sub-1 MB Acoustic Model (`d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64`)."""
+    def __init__(s, d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64):
         super().__init__()
         s.enc = PicoTextEncoder(d=d_enc, L=L_enc, ff=ff_enc)
         s.vel = PicoVelocity(d=d_vel, nb=nb_vel, c=d_enc)
@@ -235,9 +235,10 @@ class SakhiyaPicoAM(nn.Module):
             sd["enc.ublock.o.bias"].copy_(sano_sd["enc.layers.1.o.bias"].float())
             sd["enc.ublock.n2.weight"].copy_(sano_sd["enc.layers.1.n2.weight"].float())
             sd["enc.ublock.n2.bias"].copy_(sano_sd["enc.layers.1.n2.bias"].float())
-            sd["enc.ublock.c1.weight"].copy_(sano_sd["enc.layers.1.c1.weight"].float())
-            sd["enc.ublock.c1.bias"].copy_(sano_sd["enc.layers.1.c1.bias"].float())
-            sd["enc.ublock.c2.weight"].copy_(sano_sd["enc.layers.1.c2.weight"].float())
+            ff_d = sd["enc.ublock.c1.weight"].shape[0]
+            sd["enc.ublock.c1.weight"].copy_(sano_sd["enc.layers.1.c1.weight"].float()[:ff_d])
+            sd["enc.ublock.c1.bias"].copy_(sano_sd["enc.layers.1.c1.bias"].float()[:ff_d])
+            sd["enc.ublock.c2.weight"].copy_(sano_sd["enc.layers.1.c2.weight"].float()[:, :ff_d, 1:4])
             sd["enc.ublock.c2.bias"].copy_(sano_sd["enc.layers.1.c2.bias"].float())
         # 3. Initialize universal velocity blocks from Sano velocity blocks 1 (early) and 3 (late)
         if "vel.tm.0.weight" in sano_sd:
@@ -250,7 +251,9 @@ class SakhiyaPicoAM(nn.Module):
             pfx_d = f"vel.{dst_name}."
             if pfx_s + "dw.weight" in sano_sd:
                 for sub in ("dw.weight", "dw.bias", "n.weight", "n.bias", "p1.weight", "p1.bias", "p2.weight", "p2.bias"):
-                    sd[pfx_d + sub].copy_(sano_sd[pfx_s + sub].float())
+                    dt, st = sd[pfx_d + sub], sano_sd[pfx_s + sub].float()
+                    sl = tuple(slice(0, min(a, b)) for a, b in zip(dt.shape, st.shape))
+                    dt[sl].copy_(st[sl])
                 sd[pfx_d + "film.weight"].copy_(sano_sd[pfx_s + "film.weight"].float()[:, :, None])
                 sd[pfx_d + "film.bias"].copy_(sano_sd[pfx_s + "film.bias"].float())
         s.load_state_dict(sd, strict=False)

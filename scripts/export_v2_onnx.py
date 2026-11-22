@@ -232,7 +232,7 @@ TIER_CFG = {
     "nanov10": dict(d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=11.0, max_int8=5.6),
     "atomv10": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=144, v_rk=(3, 7, 11), steps=1, temp=0.0, hpn=False, max_fp16=6.0, max_int8=2.99),
     "atom": dict(d_enc=64, L_enc=3, ff_enc=96, d_vel=80, nb_vel=4, h_dur=48, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=True, max_fp16=1.9, max_int8=0.95),
-    "pico": dict(d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=False, max_fp16=2.0, max_int8=0.99),
+    "pico": dict(d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=64, v_rk=(3, 7), steps=1, temp=0.0, hpn=False, max_fp16=2.0, max_int8=0.99),
 }
 
 
