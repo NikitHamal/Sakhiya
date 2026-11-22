@@ -5,13 +5,13 @@ import onnxruntime as ort
 from . import g2p, symbols as S
 
 STYLES = {
-    "neutral": dict(style_id=0, rate=1.0, pitch_shift=0.0, pitch_scale=1.075, energy_scale=1.0, pause_scale=1.0),
-    "news": dict(style_id=0, rate=1.0, pitch_shift=-0.05, pitch_scale=0.90, energy_scale=1.08, pause_scale=1.0),
-    "conversational": dict(style_id=1, rate=1.07, pitch_shift=0.08, pitch_scale=1.18, energy_scale=1.02, pause_scale=0.82),
+    "neutral": dict(style_id=0, rate=0.96, pitch_shift=0.0, pitch_scale=1.12, energy_scale=1.0, pause_scale=1.0),
+    "news": dict(style_id=0, rate=0.96, pitch_shift=-0.03, pitch_scale=1.12, energy_scale=1.06, pause_scale=1.0),
+    "conversational": dict(style_id=1, rate=1.00, pitch_shift=0.04, pitch_scale=1.32, energy_scale=1.02, pause_scale=0.88),
     "storytelling": dict(style_id=2, rate=0.90, pitch_shift=0.02, pitch_scale=1.32, energy_scale=1.04, pause_scale=1.35),
-    "warm_soft": dict(style_id=3, rate=0.92, pitch_shift=-0.04, pitch_scale=0.95, energy_scale=0.88, pause_scale=1.20),
+    "warm_soft": dict(style_id=3, rate=0.96, pitch_shift=-0.03, pitch_scale=1.18, energy_scale=0.92, pause_scale=1.15),
     "slow_clear": dict(style_id=3, rate=0.78, pitch_shift=0.0, pitch_scale=1.0, energy_scale=1.0, pause_scale=1.3),
-    "expressive": dict(style_id=4, rate=1.03, pitch_shift=0.14, pitch_scale=1.42, energy_scale=1.15, pause_scale=0.90),
+    "expressive": dict(style_id=4, rate=1.00, pitch_shift=0.08, pitch_scale=1.32, energy_scale=1.08, pause_scale=0.92),
     "vedic_chant": dict(style_id=5, rate=0.90, pitch_shift=0.0, pitch_scale=0.92, energy_scale=1.04, pause_scale=1.28),
     "chant": dict(style_id=5, rate=0.90, pitch_shift=0.0, pitch_scale=0.92, energy_scale=1.04, pause_scale=1.28),
 }
@@ -138,7 +138,7 @@ class SakhiyaONNX:
                 ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
                 w[:128] *= ramp; w[-128:] *= ramp[::-1]
             return w
-        is_v2 = str(self.cfg.get("arch", "")).startswith(("sakhiya-v2", "sakhiya-v3", "sakhiya-v4", "sakhiya-v6", "sakhiya-nano", "sakhiya-atom"))
+        is_v2 = str(self.cfg.get("arch", "")).startswith(("sakhiya-v2", "sakhiya-v3", "sakhiya-v4", "sakhiya-v6", "sakhiya-v15", "sakhiya-nano", "sakhiya-atom", "sakhiya-pico"))
         chandas_info = None
         if lang == "sa":
             from . import chandas as _ch
@@ -154,9 +154,9 @@ class SakhiyaONNX:
         lang_id = self.cfg.get("lang2id", {**S.LANG2ID, "sa": 0}).get(eff_lang, 0)
         feeds_add = {}
         trace_p = np.array([o * 2.40 * k.get("svara", 1.0) for o, i in zip(off, sid) if i >= 0], np.float32)
-        if "pitch_add" in self.enc_in:      # Calibrated svara scale (1.65 for explicit Vedic svara marks, 1.15 for classical shlokas)
+        if "pitch_add" in self.enc_in:      # Training-matched svara scale (0.52 for explicit Vedic svara marks, 0.48 for classical shlokas)
             has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
-            sv_sc = (1.65 if has_vm else 1.15) if is_v2 else 1.12
+            sv_sc = ((0.52 if has_vm else 0.48) if lang == "sa" else 1.15) if is_v2 else 1.12
             feeds_add["pitch_add"] = np.array([[o * sv_sc * k.get("svara", 1.0) for o, i in zip(off, sid) if i >= 0]], np.float32)
         if "style" in self.enc_in or "style2id" in self.cfg:
             feeds_add["style"] = np.array([int(k.get("style_id", 0))], dtype=np.int64)
@@ -197,13 +197,18 @@ class SakhiyaONNX:
                 dur[idx_p] = min(int(dur[idx_p]), 6)
             if idx_p >= 1 and idx_p + 1 < len(ph_valid) and p == "|" and ph_valid[idx_p - 1] == ph_valid[idx_p + 1] and ph_valid[idx_p - 1] in ("a", "i", "u", "e", "o", "ʌ"):
                 if idx_p >= 2 and ph_valid[idx_p - 2] == "|":
-                    dur[idx_p - 2] = 10
+                    dur[idx_p - 2] = 12
                     x[0, idx_p - 2, :100] = x[0, -1, :100]
-                dur[idx_p - 1] = max(int(dur[idx_p - 1]), 15)
-                dur[idx_p] = 6
-                dur[idx_p + 1] = max(int(dur[idx_p + 1]), 15)
+                dur[idx_p - 1] = max(int(dur[idx_p - 1]), 17)
+                dur[idx_p] = 5
+                dur[idx_p + 1] = max(int(dur[idx_p + 1]), 16)
                 x[0, idx_p - 1, :100] = x[0, idx_p + 1, :100]
-                x[0, idx_p, :100] = 0.35 * x[0, idx_p + 1, :100] + 0.65 * x[0, -1, :100]
+                x[0, idx_p, :100] = 0.45 * x[0, idx_p + 1, :100] + 0.55 * x[0, -1, :100]
+            if lang == "sa" and p == "o" and idx_p + 1 < len(ph_valid) and ph_valid[idx_p + 1] == "m" and (idx_p == 0 or ph_valid[idx_p - 1] in ("|", ",", ";", ".")):
+                dur[idx_p] = int(np.clip(dur[idx_p], 34, 44))
+                dur[idx_p + 1] = int(np.clip(dur[idx_p + 1], 16, 22))
+                if idx_p + 2 < len(ph_valid) and ph_valid[idx_p + 2] == ",":
+                    dur[idx_p + 2] = int(np.clip(dur[idx_p + 2], 14, 22))
             if idx_p >= 1 and idx_p + 2 < len(ph_valid) and ph_valid[idx_p - 1] in ("|", ",") and ph_valid[idx_p + 2] in ("|", ",") and p in ("r", "t̪", "n", "m", "h", "tsʰ") and ph_valid[idx_p + 1] in ("ʌ", "o"):
                 dur[idx_p] = int(np.clip(dur[idx_p], 5, 9))
                 dur[idx_p + 1] = int(np.clip(dur[idx_p + 1], 6, 11))
@@ -261,7 +266,7 @@ class SakhiyaONNX:
         speaker = speaker or self.cfg.get("default_speaker")     # speaker ids are no longer 0/1 once the multi-speaker mix is exported
         spk = self.cfg["spk2id"].get(speaker, 0) if speaker else 0
         use_sa = (lang == "sa" and self.sa is not None)
-        if lang == "sa" and style != "chant" and "rate" not in ctl:
+        if lang == "sa" and style not in ("chant", "vedic_chant", "storytelling") and "rate" not in ctl:
             k["rate"] = (0.98 if spk not in (1, 6, 20, 21) else 1.00) if use_sa else k["rate"] * 0.96
             k["pause_scale"] *= 1.05
             if "pitch_scale" not in ctl: k["pitch_scale"] = 1.00

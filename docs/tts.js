@@ -1,13 +1,13 @@
 // In-browser Sakhiya synthesis: onnxruntime-web (WASM) + iSTFT + WebAudio. No server involved.
 const ORT_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";
 const STYLES = {
-  neutral: { style_id: 0, rate: 1.0, pitch_shift: 0.0, pitch_scale: 1.075, energy_scale: 1.0, pause_scale: 1.0 },
-  news: { style_id: 0, rate: 1.0, pitch_shift: -0.05, pitch_scale: 0.90, energy_scale: 1.08, pause_scale: 1.0 },
-  conversational: { style_id: 1, rate: 1.07, pitch_shift: 0.08, pitch_scale: 1.18, energy_scale: 1.02, pause_scale: 0.82 },
+  neutral: { style_id: 0, rate: 0.96, pitch_shift: 0.0, pitch_scale: 1.12, energy_scale: 1.0, pause_scale: 1.0 },
+  news: { style_id: 0, rate: 0.96, pitch_shift: -0.03, pitch_scale: 1.12, energy_scale: 1.06, pause_scale: 1.0 },
+  conversational: { style_id: 1, rate: 1.00, pitch_shift: 0.04, pitch_scale: 1.32, energy_scale: 1.02, pause_scale: 0.88 },
   storytelling: { style_id: 2, rate: 0.90, pitch_shift: 0.02, pitch_scale: 1.32, energy_scale: 1.04, pause_scale: 1.35 },
-  warm_soft: { style_id: 3, rate: 0.92, pitch_shift: -0.04, pitch_scale: 0.95, energy_scale: 0.88, pause_scale: 1.20 },
+  warm_soft: { style_id: 3, rate: 0.96, pitch_shift: -0.03, pitch_scale: 1.18, energy_scale: 0.92, pause_scale: 1.15 },
   slow_clear: { style_id: 3, rate: 0.78, pitch_shift: 0.0, pitch_scale: 1.0, energy_scale: 1.0, pause_scale: 1.3 },
-  expressive: { style_id: 4, rate: 1.03, pitch_shift: 0.14, pitch_scale: 1.42, energy_scale: 1.15, pause_scale: 0.90 },
+  expressive: { style_id: 4, rate: 1.00, pitch_shift: 0.08, pitch_scale: 1.32, energy_scale: 1.08, pause_scale: 0.92 },
   vedic_chant: { style_id: 5, rate: 0.90, pitch_shift: 0.0, pitch_scale: 0.92, energy_scale: 1.04, pause_scale: 1.28 },
   chant: { style_id: 5, rate: 0.90, pitch_shift: 0.0, pitch_scale: 0.92, energy_scale: 1.04, pause_scale: 1.28 },  // Sanskrit recitation: flat tonic, measured laya, pada pauses
 };
@@ -85,11 +85,11 @@ class SakhiyaWeb {
   async chunk(ph, o) {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
     const i64 = v => new ort.Tensor("int64", BigInt64Array.of(BigInt(v)), [1]);
-    const isV2 = /^sakhiya-(v2|v3|v4|v6|nano|atom)/.test(String((this.cfg && this.cfg.arch) || ""));
+    const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
     const lock = !!(o.lock_voice ?? (this.cfg && this.cfg.lock_voice)), effLang = (isV2 && (String(o.lang) !== "sa" || lock)) ? "ne" : o.lang;
     const feeds = { ids: new ort.Tensor("int64", ids, [1, ids.length]), spk: i64(o.spk), lang: i64((this.cfg.lang2id || SK.F.lang2id)[effLang] ?? 0), pitch_shift: f32(o.pitch_shift), pitch_scale: f32(o.pitch_scale), energy_scale: f32(o.energy_scale) };
     if (this.sess.encoder.inputNames.includes("pitch_add")) {   // Sanskrit svara + laya melody: per-phone pitch offsets
-      const svScale = isV2 ? 1.28 : 1.12;
+      const svScale = isV2 ? (o.lang === "sa" ? (o.has_vedic_marks ? 0.52 : 0.48) : 1.15) : 1.12;
       const keep = ph.map(p => S.indexOf(p) >= 0), off = (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => v * svScale * (o.svara ?? 1)); o._dm = (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]);
       feeds.pitch_add = new ort.Tensor("float32", Float32Array.from(off), [1, off.length]);
     }
@@ -130,16 +130,25 @@ class SakhiyaWeb {
       if (p === "h" && (t + 1 === T || pSet.has(phValid[t + 1]))) d = Math.min(d, 6);
       dur[t] = d;
     }
-    for (let t = 1; t + 1 < T; t++) {
-      if (phValid[t] === "|" && phValid[t - 1] === phValid[t + 1] && ["a","i","u","e","o","ʌ"].includes(phValid[t - 1])) {
-        dur[t - 1] = Math.max(14, dur[t - 1]); dur[t] = 5; dur[t + 1] = Math.max(14, dur[t + 1]);
+    for (let t = 0; t + 1 < T; t++) {
+      if (t >= 1 && phValid[t] === "|" && phValid[t - 1] === phValid[t + 1] && ["a","i","u","e","o","ʌ"].includes(phValid[t - 1])) {
+        if (t >= 2 && phValid[t - 2] === "|") {
+          dur[t - 2] = 12;
+          for (let b = 0; b < 100; b++) xs[(t - 2) * d + b] = xs[(T - 1) * d + b];
+        }
+        dur[t - 1] = Math.max(17, dur[t - 1]); dur[t] = 5; dur[t + 1] = Math.max(16, dur[t + 1]);
         for (let b = 0; b < 100; b++) {
           const vNext = xs[(t + 1) * d + b], vSil = xs[(T - 1) * d + b];
           xs[(t - 1) * d + b] = vNext;
-          xs[t * d + b] = 0.60 * vNext + 0.40 * vSil;
+          xs[t * d + b] = 0.45 * vNext + 0.55 * vSil;
         }
       }
-      if (t + 2 < T && (phValid[t - 1] === "|" || phValid[t - 1] === ",") && (phValid[t + 2] === "|" || phValid[t + 2] === ",") && ["r","t̪","n","m","h","tsʰ"].includes(phValid[t]) && ["ʌ","o"].includes(phValid[t + 1])) {
+      if (o.lang === "sa" && phValid[t] === "o" && phValid[t + 1] === "m" && (t === 0 || ["|", ",", ";", "."].includes(phValid[t - 1]))) {
+        dur[t] = Math.min(44, Math.max(34, dur[t]));
+        dur[t + 1] = Math.min(22, Math.max(16, dur[t + 1]));
+        if (t + 2 < T && phValid[t + 2] === ",") dur[t + 2] = Math.min(22, Math.max(14, dur[t + 2]));
+      }
+      if (t >= 1 && t + 2 < T && (phValid[t - 1] === "|" || phValid[t - 1] === ",") && (phValid[t + 2] === "|" || phValid[t + 2] === ",") && ["r","t̪","n","m","h","tsʰ"].includes(phValid[t]) && ["ʌ","o"].includes(phValid[t + 1])) {
         dur[t] = Math.min(9, Math.max(5, dur[t]));
         dur[t + 1] = Math.min(11, Math.max(6, dur[t + 1]));
       }
@@ -221,7 +230,7 @@ class SakhiyaWeb {
   async say(text, opt = {}) {
     if (opt.lang === "auto") return this.sayMixed(text, opt);
     const o = Object.assign({ lang: "ne", spk: 0 }, STYLES[opt.style || "neutral"], opt), useSa = o.lang === "sa" && this.sess.sanskrit && window.SA && window.SA.phonemizeSlp1, sr = useSa ? 24000 : this.cfg.sample_rate, t0 = performance.now();
-    if (o.lang === "sa" && opt.style !== "chant" && !opt.rate) { o.rate = useSa ? ([1, 6, 20, 21].includes(Number(o.spk)) ? 1.00 : 0.98) : o.rate * 0.96; o.pause_scale *= 1.05; if (!opt.pitch_scale) o.pitch_scale = 1.00; }
+    if (o.lang === "sa" && !["chant", "vedic_chant", "storytelling"].includes(opt.style) && !opt.rate) { o.rate = useSa ? ([1, 6, 20, 21].includes(Number(o.spk)) ? 1.00 : 0.98) : o.rate * 0.96; o.pause_scale *= 1.05; if (!opt.pitch_scale) o.pitch_scale = 1.00; }
     if (String(o.lang).startsWith("thr")) {
       if (o.lang === "thr_rana" || o.lang === "thr_chitwania") { o.rate *= 0.90; o.pitch_scale = 1.00; o.pause_scale *= 1.05; }
       else { o.rate *= 0.90; o.pitch_scale = 1.00; o.pause_scale *= 1.00; }
@@ -233,7 +242,7 @@ class SakhiyaWeb {
       let cur = []; for (let i = 0; i < ws.length; i++) { cur.push(ws[i]); if ((FIN.has(ws[i]) && cur.length >= 4 && ws.length - i - 1 >= 3) || cur.length >= 12) { parts.push(cur.join(" ")); cur = []; } }
       if (cur.length) { if (parts.length && cur.length < 3) parts[parts.length - 1] += " " + cur.join(" "); else parts.push(cur.join(" ")); }
     }
-    const isV2 = /^sakhiya-(v2|v3|v4|v6|nano|atom)/.test(String((this.cfg && this.cfg.arch) || ""));
+    const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
     let lastChandas = null;
     for (let i = 0; i < parts.length; i++) {
       if (useSa) { const c = await this.chunkSanskrit(parts[i], o); phs.push(c.phs); outs.push(c); continue; }
@@ -246,7 +255,7 @@ class SakhiyaWeb {
       } else if (SK.textToPhonesAcc) {
         acc = SK.textToPhonesAcc(parts[i], o.lang);
       }
-      const ph = acc ? acc.ph : SK.textToPhones(parts[i], o.lang), dm = acc ? acc.dm : (SK.phoneDm ? SK.phoneDm(ph) : null); phs.push(ph.join(" ")); outs.push(await this.chunk(ph, Object.assign({}, o, { is_last: i === parts.length - 1, off: acc ? acc.off : null, dm })));
+      const ph = acc ? acc.ph : SK.textToPhones(parts[i], o.lang), dm = acc ? acc.dm : (SK.phoneDm ? SK.phoneDm(ph) : null); phs.push(ph.join(" ")); outs.push(await this.chunk(ph, Object.assign({}, o, { is_last: i === parts.length - 1, off: acc ? acc.off : null, dm, has_vedic_marks: acc ? !!acc.has_vedic_marks : false })));
     }
     const total = outs.reduce((n, c) => n + c.wav.length, 0), wav = new Float32Array(total); let p = 0;
     outs.forEach(c => { wav.set(c.wav, p); p += c.wav.length; });

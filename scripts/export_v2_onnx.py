@@ -242,7 +242,12 @@ def main():
 
     # Unlock 5 real studio voices (sakhiya, sandesh, aanchal, acharya, kiran) + 6 true styles (news=0 lossless, conversational=1, storytelling=2, warm_soft=3, expressive=4, vedic_chant=5)
     with torch.no_grad():
-      if not (os.path.exists(a.am) and torch.load(a.am, map_location="cpu", weights_only=False).get("pre_baked_v25", False)):
+      if os.path.exists(a.am) and torch.load(a.am, map_location="cpu", weights_only=False).get("pre_baked_v25", False):
+        w0 = am.enc.sty.weight[0].clone(); w2 = am.enc.sty.weight[2].clone()
+        am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
+        am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
+        am.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)
+      else:
         w_spk = am.enc.spk.weight.clone(); w_sty = am.enc.sty.weight.clone()
         # 5 voices in slots 0..4 (cross-lingually locked via g_vel speaker-only conditioning)
         v_sakhiya = (1.0 - a.native_blend) * w_spk[0] + a.native_blend * w_spk[4:13].mean(0) if a.native_blend > 0 else w_spk[0]
@@ -255,14 +260,16 @@ def main():
         am.enc.spk.weight[2].copy_(v_aanchal)
         am.enc.spk.weight[3].copy_(v_acharya)
         am.enc.spk.weight[4].copy_(v_kiran)
-        # 6 canonical styles in slots 0..5 with zero-mean CFG extrapolation (1.45x) around slot 0 ('news' baseline)
+        # 6 canonical styles in slots 0..5: in-manifold convex combinations of clean studio anchors (zero out-of-manifold 1.45x extrapolation)
         w0 = 0.65 * w_sty[10] + 0.35 * w_sty[3]
-        am.enc.sty.weight[0].copy_(w0)                                                      # 0: news / neutral (100% lossless)
-        am.enc.sty.weight[1].copy_(w0 + 1.45 * ((0.75 * w_sty[4] + 0.25 * w_sty[13]) - w0)) # 1: conversational (CONV + UMANG)
-        am.enc.sty.weight[2].copy_(w0 + 1.45 * ((0.75 * w_sty[3] + 0.25 * w_sty[2]) - w0))  # 2: storytelling (BOOK + BB)
-        am.enc.sty.weight[3].copy_(w0 + 1.15 * ((0.60 * w_sty[5] + 0.40 * w_sty[3]) - w0))  # 3: warm_soft (DIGI + BOOK)
-        am.enc.sty.weight[4].copy_(w0 + 1.45 * ((0.65 * w_sty[8] + 0.35 * w_sty[12]) - w0)) # 4: expressive (HAPPY + SURPRISE)
-        am.enc.sty.weight[5].copy_(w0 + 1.35 * ((0.55 * w_sty[3] + 0.45 * w_sty[14]) - w0)) # 5: vedic_chant (BOOK + WIKI)
+        w2 = w0 + 1.15 * ((0.75 * w_sty[3] + 0.25 * w_sty[2]) - w0)
+        w5 = 0.60 * w0 + 0.40 * (0.55 * w_sty[3] + 0.45 * w_sty[14])
+        am.enc.sty.weight[0].copy_(w0)                        # 0: news / neutral
+        am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)     # 1: conversational (in-manifold)
+        am.enc.sty.weight[2].copy_(w2)                        # 2: storytelling
+        am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)     # 3: warm_soft (in-manifold)
+        am.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)     # 4: expressive (in-manifold)
+        am.enc.sty.weight[5].copy_(w5)                        # 5: vedic_chant (in-manifold)
         # Root-cause Vedic ळ (SYM2ID["ɽ"]) lateral-retroflex blend & Tharu/Nepali nasal हों (SYM2ID["õ"]) vector calibration
         w_e = am.enc.emb.weight
         id_l, id_r = SYM2ID["l"], SYM2ID["ɽ"]
