@@ -1,0 +1,21 @@
+{
+  "phase": "phase0_audit",
+  "box_a": "https://sb-b9067f39bf1a412c.sb.molab.run",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition (98 GB)",
+  "hf_backup_daemon": "running every 900s (15 min) to NikitHamal/sakhiya-v1-train under box6_v15/",
+  "box5_am_cont_c1_check": {
+    "utmos_15": 3.705,
+    "ne_pcer": 0.0752,
+    "sa_pcer": 0.2375,
+    "ne_wer": 0.3737,
+    "word_drop_count": 1,
+    "word_drops": ["ne_unseen_narrative:drop:आआफ्नो"],
+    "ltas_mcd_ne_sa": 27.325,
+    "kathmandu_nasal_prob": 0.0776,
+    "verdict": "REJECTED — from-scratch mined IA audio degraded Sanskrit pCER (23.75%), Nepali WER (37.37%), and nasalization (0.078)."
+  },
+  "om_and_v1_style_diagnosis": {
+    "why_v1_om_was_plain": "V1 duration predictor outputs [39, 19] frames on initial ॐ ('o', 'm') followed by a 34-frame comma pause, whereas Nano/Atom (distilled on anchor bank) sustain 'o' for 63-67 frames with a 21-26 frame pause. In addition, onnx_tts.py and docs/tts.js did not enforce the chandas.py resonant Pranava floor or Gamaka F0 contour on ॐ.",
+    "why_v1_styles_1_4_5_degraded": "v5_c1/am.pt had pre_baked_v25=True with 1.45x out-of-manifold extrapolation on untrained style slots, and EncExport forced sty_emb=2 for styles 1,3,4 while applying an uncalibrated sin/cos pitch arch across styles 1,2,4."
+  }
+}
