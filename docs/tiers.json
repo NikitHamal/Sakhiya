@@ -44,6 +44,20 @@
    "desc": "Smallest model · fully trained student + V1 vocoder · clean voice"
   },
   {
+   "id": "atom_lite",
+   "label": "Sakhiya-V1-Atom-Lite",
+   "prec": "int8",
+   "dir": "docs/models_atom_lite/",
+   "variant": "tiny",
+   "mb": 2.717,
+   "rtf": null,
+   "utmos": 2.909,
+   "ne_pcer": null,
+   "sa_pcer": null,
+   "ready": true,
+   "desc": "Under 3 MB · Atom acoustic model + 1.2M-param distilled vocoder · a little rougher than Atom (audio test 2.91 vs 3.24)"
+  },
+  {
    "id": "exp_scratch",
    "label": "Experimental · Scratch-NeSa + V1 vocoder",
    "prec": "int8",
