@@ -75,8 +75,8 @@ class HarmonicSource(nn.Module):
         s.proj16 = nn.Conv1d(2 * n_har, c16, 3, padding=1)
 
     def forward(s, mel, shift_st=None):
-        raw = s.f0_net(mel)
-        rf = raw.float()
+        with torch.amp.autocast("cuda", enabled=False):
+            rf = s.f0_net(mel.float()).float()
         f0 = 60.0 + 440.0 * torch.sigmoid(rf[:, 0:1])         # (B, 1, T) in [60, 500] Hz in fp32
         uv = torch.sigmoid(rf[:, 1:2])                        # (B, 1, T) in [0, 1] in fp32
         # Voiced-weighted local log-F0 interpolation + soft-ramped vuv (eliminates voiced/unvoiced phase snaps & clicks!)

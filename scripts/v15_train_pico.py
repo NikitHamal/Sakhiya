@@ -22,11 +22,11 @@ from sakhiya.v15_pico import SakhiyaPicoAM
 from sakhiya.v15_rnd_wavehax import MSRNDWavehax
 from sakhiya.v2_vocoder import VocoderV2, mel_spec_24k
 from sakhiya.v4_slm import WavLMSLMHelper
-from sakhiya.v6_distill import _expand_batch_durs, build_teacher_anchor_bank
+from sakhiya.v6_distill import _expand_batch_durs, apply_hiatus_mu_rule, build_teacher_anchor_bank
 from scripts.export_v2_onnx import TIER_CFG
-from scripts.train_nano_atom import _bake
 from scripts.train_v2_voc import mr_complex_stft_loss
 from scripts.train_v3_voc import resamp16
+from scripts.v15_e2e_distill import _calibrate_v15_styles
 from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0, snap_f0_int8
 from scripts.v2_full_eval import load_utmos
 from scripts.v8_voc_gta import export_mel, val_mels
@@ -57,8 +57,8 @@ def main():
     ap.add_argument("--max-minutes", type=float, default=65.0)
     ap.add_argument("--bs", type=int, default=28)
     ap.add_argument("--seg", type=int, default=48)
-    ap.add_argument("--lr_am", type=float, default=6.0e-4)
-    ap.add_argument("--lr_voc", type=float, default=1.5e-4)
+    ap.add_argument("--lr_am", type=float, default=9.0e-4)
+    ap.add_argument("--lr_voc", type=float, default=6.0e-5)
     ap.add_argument("--eval_every", type=int, default=1000)
     ap.add_argument("--smoke", type=int, default=0)
     a = ap.parse_args()
@@ -67,7 +67,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     dev = "cuda"
     tag = "v15-pico"
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = False
 
     D = torch.load(f"{R}/feats/v6_expressive_vedic_24k.pt", weights_only=False)
     mean, std = float(D.get("mean", -5.5028)), float(D.get("std", 2.1869))
@@ -92,19 +92,18 @@ def main():
     t_am = SakhiyaAM().to(dev).eval()
     t_am.load_state_dict(t_sd, strict=False)
     t_am.stats.copy_(torch.tensor([mean, std], device=dev))
-    _bake(t_am)
+    _calibrate_v15_styles(t_am)
     for p in t_am.parameters():
         p.requires_grad_(False)
 
     c_sano = TIER_CFG["sano"]
     sano_am = SakhiyaAM(**{k: c_sano[k] for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur")}).to(dev).eval()
     sano_am.stats.copy_(torch.tensor([mean, std], device=dev))
-    _bake(sano_am)
     if os.path.exists(a.sano_init):
         ck_sano = torch.load(a.sano_init, map_location=dev, weights_only=False)
         sano_sd = {k: v.float() for k, v in ck_sano.get("ema", ck_sano.get("net", ck_sano)).items()}
         sano_am.load_state_dict(sano_sd, strict=False)
-    _bake(sano_am)
+    _calibrate_v15_styles(sano_am)
     for p in sano_am.parameters():
         p.requires_grad_(False)
 
@@ -116,9 +115,9 @@ def main():
 
     # Build clean Teacher anchor bank + studio training pool
     anchors = build_teacher_anchor_bank(t_am, mean, std, ctc, dev)
-    base_tr = [x for x in D["items"] if x.get("split") == "train" and 3 <= len(x["ids"]) and 28 <= x["mel"].shape[1] <= 750]
+    base_tr = [x for x in D["items"] if x.get("split") == "train" and 3 <= len(x["ids"]) and 28 <= x["mel"].shape[1] <= 440]
     exp_tr = [x for x in base_tr if x.get("v3_style_id", 0) in (2, 5)]
-    pool = base_tr + exp_tr * 2 + anchors * 35
+    pool = base_tr + exp_tr * 2 + anchors * 30
 
     # Build & Warm-Start SakhiyaPicoAM + MSRNDWavehax("lite")
     s_am = SakhiyaPicoAM().to(dev)
@@ -201,8 +200,10 @@ def main():
             g_["lr"] = a.lr_voc * warm_m * cos_mult
         step += 1
 
-        if step == 50:
-            sps = 50.0 / max(time.time() - t0, 1e-6)
+        if step == 5:
+            t_gate = time.time()
+        if step == 55:
+            sps = 50.0 / max(time.time() - t_gate, 1e-6)
             print(f"[GATE] step-50 throughput {sps:.2f} steps/s -> ~{sps * budget / 1000:.1f}k steps inside {a.max_minutes:.0f} min cap", flush=True)
             if sps < 4.0:
                 print("[GATE] throughput too low, aborting", flush=True)
@@ -210,8 +211,8 @@ def main():
 
         xs = random.sample(pool, a.bs - 6) + random.sample(anchors, min(6, len(anchors)))
         B = len(xs)
-        L = max(len(x["ids"]) for x in xs)
-        T = min(max(int(x["dur_ctc"].sum().item()) for x in xs), 650)
+        L = ((max(len(x["ids"]) for x in xs) + 15) // 16) * 16
+        T = min(((max(int(x["dur_ctc"].sum().item()) for x in xs) + 63) // 64) * 64, 448)
         ids = torch.zeros(B, L, dtype=torch.long, device=dev)
         durs = torch.zeros(B, L, dtype=torch.long, device=dev)
         po = torch.zeros(B, L, dtype=torch.float32, device=dev)
@@ -244,11 +245,12 @@ def main():
                 h_ref, mu_ref, g_ref = sano_am.enc(ids, spks, langs, stys, stud, im, pitch_add=po, prosody=pros_b, sty_mask=ones_m)
                 f0_t = sano_am.enc.f0_pred(h_ref)
                 eng_t = sano_am.enc.energy_pred(h_ref)
-                mu_y_ref = _expand_batch_durs(mu_ref, durs, T) * ymf
+                mu_ref_h = apply_hiatus_mu_rule(ids, mu_ref)
+                mu_y_ref = _expand_batch_durs(mu_ref_h, durs, T) * ymf
                 t0_z = torch.zeros((B,), device=dev, dtype=torch.float32)
                 y_sano = (mu_y_ref + sano_am.vel(mu_y_ref, t0_z, mu_y_ref, g_ref, ymf)) * ymf
                 # Blend studio GT mel and clean 1-step teacher mel for crisp, un-blurred targets
-                y_tgt = 0.55 * y_gt + 0.45 * y_sano.float()
+                y_tgt = 0.50 * y_gt + 0.50 * y_sano.float()
                 ld_tgt = torch.log(durs.float().clamp(min=1.0)) * im.float()
 
             h_s, mu_s, g_s = s_am.enc(ids, spks, langs, stys, stud, im, pitch_add=po, prosody=pros_b, sty_mask=ones_m)
@@ -267,7 +269,8 @@ def main():
                 d_pred_c = torch.exp(ld_pred[:, 1:-2].clamp(max=4.0))
                 l_dur = l_dur + 0.5 * (F.relu(5.2 - d_pred_c) * is_func_c.float()).sum() / is_func_c.float().sum().clamp(min=1.0)
 
-            mu_y_s = _expand_batch_durs(mu_s, durs, T) * ymf
+            mu_s_h = apply_hiatus_mu_rule(ids, mu_s)
+            mu_y_s = _expand_batch_durs(mu_s_h, durs, T) * ymf
             y_pred = (mu_y_s + s_am.vel(mu_y_s, t0_z, mu_y_s, g_s, ymf)) * ymf
 
             denom = (ymf.sum() * 100.0).clamp(min=1.0)
@@ -281,9 +284,13 @@ def main():
             cep_t = torch.fft.rfft(y_tgt.float(), dim=1).abs()[:, 4:48, :]
             l_cep = ((cep_p - cep_t).abs() * ymf).sum() / (ymf.sum() * 44.0).clamp(min=1.0)
 
-            hinge_floor = max(0.0, 0.22 * (1.0 - frac / 0.70))
-            l_ctc_raw = ctc.ctc_loss(0.25 * mu_y_s.float() + 0.75 * y_pred.float(), yl, ids, il)
-            l_ctc = F.relu(l_ctc_raw - hinge_floor) if torch.isfinite(l_ctc_raw) else torch.tensor(0.0, device=dev)
+            if step % 2 == 1:
+                b_c = min(10, B)
+                hinge_floor = max(0.0, 0.22 * (1.0 - frac / 0.70))
+                l_ctc_raw = ctc.ctc_loss(0.25 * mu_y_s[:b_c].float() + 0.75 * y_pred[:b_c].float(), yl[:b_c], ids[:b_c], il[:b_c])
+                l_ctc = F.relu(l_ctc_raw - hinge_floor) if torch.isfinite(l_ctc_raw) else torch.tensor(0.0, device=dev)
+            else:
+                l_ctc = torch.tensor(0.0, device=dev)
 
         loss = l_mel_am + 2.4 * l_df + 1.2 * l_dt + 0.65 * l_cep + l_prior + 0.8 * l_hid + l_heads + 0.75 * l_dur + 0.25 * l_ctc
         l_wav_mel = l_wav_stft = l_cplx = l_wavlm = torch.tensor(0.0, device=dev)
@@ -351,6 +358,7 @@ def main():
             opt_voc.step()
 
         with torch.no_grad():
+            _calibrate_v15_styles(s_am)
             k_ema = 1.0 - min(0.996, (1.0 + step) / (10.0 + step))
             for pe, p in zip(ema_am.parameters(), s_am.parameters()):
                 pe.lerp_(p, k_ema)

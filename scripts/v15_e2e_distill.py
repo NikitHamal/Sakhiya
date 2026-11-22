@@ -24,14 +24,27 @@ from sakhiya.symbols import SYM2ID, LANG2ID
 from sakhiya.v15_rnd_wavehax import MSRNDWavehax, ste_int8_weight
 from sakhiya.v2_vocoder import VocoderV2, mel_spec_24k
 from sakhiya.v4_slm import WavLMSLMHelper
-from sakhiya.v6_distill import _expand_batch_durs, build_teacher_anchor_bank
+from sakhiya.v6_distill import _expand_batch_durs, apply_hiatus_mu_rule, build_teacher_anchor_bank
 from scripts.export_v2_onnx import TIER_CFG
-from scripts.train_nano_atom import _bake
 from scripts.train_v2_voc import mr_complex_stft_loss
 from scripts.train_v3_voc import resamp16
 from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0, snap_f0_int8
 from scripts.v2_full_eval import load_utmos
 from scripts.v8_voc_gta import export_mel, val_mels
+
+
+def _calibrate_v15_styles(m):
+    """Exact in-manifold style & language calibration matching export_v2_onnx.py for pre_baked_v25=True models."""
+    with torch.no_grad():
+        w0 = m.enc.sty.weight[0].clone()
+        w2 = m.enc.sty.weight[2].clone()
+        m.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
+        m.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
+        m.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)
+        w_l = m.enc.lang.weight
+        for lid in range(w_l.shape[0]):
+            if lid != 4:
+                w_l[lid].copy_(w_l[0])
 
 
 def apply_am_ste_qat(am):
@@ -64,8 +77,8 @@ def main():
     ap.add_argument("--max-minutes", type=float, default=55.0)
     ap.add_argument("--bs", type=int, default=24)
     ap.add_argument("--seg", type=int, default=48)
-    ap.add_argument("--lr_am", type=float, default=3.5e-4)
-    ap.add_argument("--lr_voc", type=float, default=2.0e-4)
+    ap.add_argument("--lr_am", type=float, default=3.0e-4)
+    ap.add_argument("--lr_voc", type=float, default=6.0e-5)
     ap.add_argument("--eval_every", type=int, default=1000)
     ap.add_argument("--smoke", type=int, default=0)
     a = ap.parse_args()
@@ -76,7 +89,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     dev = "cuda"
     tag = f"v15-e2e-{a.tier}-{voc_var}"
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = False
 
     D = torch.load(f"{R}/feats/v6_expressive_vedic_24k.pt", weights_only=False)
     mean, std = float(D.get("mean", -5.5028)), float(D.get("std", 2.1869))
@@ -101,7 +114,7 @@ def main():
     t_am = SakhiyaAM().to(dev).eval()
     t_am.load_state_dict(t_sd, strict=False)
     t_am.stats.copy_(torch.tensor([mean, std], device=dev))
-    _bake(t_am)
+    _calibrate_v15_styles(t_am)
     for p in t_am.parameters():
         p.requires_grad_(False)
 
@@ -113,21 +126,20 @@ def main():
 
     # Build clean Teacher anchor bank + studio training pool (100% pure studio sakhiya timbre — ZERO noisy IA audio!)
     anchors = build_teacher_anchor_bank(t_am, mean, std, ctc, dev)
-    base_tr = [x for x in D["items"] if x.get("split") == "train" and 3 <= len(x["ids"]) and 28 <= x["mel"].shape[1] <= 750]
+    base_tr = [x for x in D["items"] if x.get("split") == "train" and 3 <= len(x["ids"]) and 28 <= x["mel"].shape[1] <= 440]
     exp_tr = [x for x in base_tr if x.get("v3_style_id", 0) in (2, 5)]
-    pool = base_tr + exp_tr * 2 + anchors * 35
+    pool = base_tr + exp_tr * 2 + anchors * 30
 
     # Load Student AM (`v9_voca_am.pt` or `v9_sano_am.pt`)
     c = TIER_CFG[a.tier]
     s_am = SakhiyaAM(**{k: c[k] for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur")}).to(dev)
     s_am.stats.copy_(torch.tensor([mean, std], device=dev))
-    _bake(s_am)
     am_path = a.am_init or (f"{R}/ck/v9_voca_am.pt" if a.tier == "voca" else f"{R}/ck/v9_sano_am.pt")
     if os.path.exists(am_path):
         ck_s = torch.load(am_path, map_location=dev, weights_only=False)
         s_am.load_state_dict({k: v.float() for k, v in ck_s.get("ema", ck_s.get("net", ck_s)).items()}, strict=False)
         print(f"[{tag}] Loaded student AM from {am_path} (step={ck_s.get('step', 0)})", flush=True)
-    _bake(s_am)
+    _calibrate_v15_styles(s_am)
     apply_am_ste_qat(s_am)
     ema_am = copy.deepcopy(s_am).eval()
 
@@ -194,8 +206,10 @@ def main():
             g_["lr"] = a.lr_voc * warm_m * cos_mult
         step += 1
 
-        if step == 50:
-            sps = 50.0 / max(time.time() - t0, 1e-6)
+        if step == 5:
+            t_gate = time.time()
+        if step == 55:
+            sps = 50.0 / max(time.time() - t_gate, 1e-6)
             print(f"[GATE] step-50 throughput {sps:.2f} steps/s -> ~{sps * budget / 1000:.1f}k steps inside {a.max_minutes:.0f} min cap", flush=True)
             if sps < 3.5:
                 print("[GATE] throughput too low, aborting", flush=True)
@@ -203,8 +217,8 @@ def main():
 
         xs = random.sample(pool, a.bs - 6) + random.sample(anchors, min(6, len(anchors)))
         B = len(xs)
-        L = max(len(x["ids"]) for x in xs)
-        T = min(max(int(x["dur_ctc"].sum().item()) for x in xs), 650)
+        L = ((max(len(x["ids"]) for x in xs) + 15) // 16) * 16
+        T = min(((max(int(x["dur_ctc"].sum().item()) for x in xs) + 63) // 64) * 64, 448)
         ids = torch.zeros(B, L, dtype=torch.long, device=dev)
         durs = torch.zeros(B, L, dtype=torch.long, device=dev)
         po = torch.zeros(B, L, dtype=torch.float32, device=dev)
@@ -254,7 +268,8 @@ def main():
                 d_pred_c = torch.exp(ld_pred[:, 1:-2].clamp(max=4.0))
                 l_dur = l_dur + 0.5 * (F.relu(5.2 - d_pred_c) * is_func_c.float()).sum() / is_func_c.float().sum().clamp(min=1.0)
 
-            mu_y_s = _expand_batch_durs(mu_s, durs, T) * ymf
+            mu_s_h = apply_hiatus_mu_rule(ids, mu_s)
+            mu_y_s = _expand_batch_durs(mu_s_h, durs, T) * ymf
             t0_z = torch.zeros((B,), device=dev, dtype=torch.float32)
             y_pred = (mu_y_s + s_am.vel(mu_y_s, t0_z, mu_y_s, g_s, ymf)) * ymf
 
@@ -269,10 +284,14 @@ def main():
             cep_t = torch.fft.rfft(y_gt.float(), dim=1).abs()[:, 4:48, :]
             l_cep = ((cep_p - cep_t).abs() * ymf).sum() / (ymf.sum() * 44.0).clamp(min=1.0)
 
-            # Differentiable Pronunciation-CTC Loss with hinge floor annealed 0.22 -> 0.00
-            hinge_floor = max(0.0, 0.22 * (1.0 - frac / 0.70))
-            l_ctc_raw = ctc.ctc_loss(0.25 * mu_y_s.float() + 0.75 * y_pred.float(), yl, ids, il)
-            l_ctc = F.relu(l_ctc_raw - hinge_floor) if torch.isfinite(l_ctc_raw) else torch.tensor(0.0, device=dev)
+            # Differentiable Pronunciation-CTC Loss with hinge floor annealed 0.22 -> 0.00 (computed on odd steps)
+            if step % 2 == 1:
+                b_c = min(10, B)
+                hinge_floor = max(0.0, 0.22 * (1.0 - frac / 0.70))
+                l_ctc_raw = ctc.ctc_loss(0.25 * mu_y_s[:b_c].float() + 0.75 * y_pred[:b_c].float(), yl[:b_c], ids[:b_c], il[:b_c])
+                l_ctc = F.relu(l_ctc_raw - hinge_floor) if torch.isfinite(l_ctc_raw) else torch.tensor(0.0, device=dev)
+            else:
+                l_ctc = torch.tensor(0.0, device=dev)
 
         # Slice active voiced segment of length `a.seg` for End-to-End Vocoder-in-the-Loop Waveform Co-Distillation
         mel_s_segs, mel_t_segs = [], []
@@ -339,7 +358,7 @@ def main():
             opt_voc.step()
 
         with torch.no_grad():
-            _bake(s_am)
+            _calibrate_v15_styles(s_am)
             k_ema = 1.0 - min(0.996, (1.0 + step) / (10.0 + step))
             for pe, p in zip(ema_am.parameters(), s_am.parameters()):
                 pe.lerp_(p, k_ema)

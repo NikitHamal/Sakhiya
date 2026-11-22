@@ -30,9 +30,34 @@ def _expand_batch_durs(mu, durs, T_max):
     return out
 
 
+def apply_hiatus_mu_rule(ids, mu):
+    """Apply exact reduplicated vowel hiatus mu rule (matching onnx_tts.py / docs/tts.js 1:1) on batch (B, L, 100)."""
+    VOW_IDS = {SYM2ID[p] for p in ("a", "i", "u", "e", "o", "ʌ") if p in SYM2ID}
+    WB_ID = SYM2ID.get("|", 1)
+    B, L, _ = mu.shape
+    mu_out = mu.clone()
+    ids_cpu = ids.detach().cpu().tolist()
+    for b in range(B):
+        row = ids_cpu[b]
+        last_valid = max((i for i, v in enumerate(row) if v > 0), default=L - 1)
+        for t in range(1, last_valid):
+            if row[t] == WB_ID and row[t - 1] == row[t + 1] and row[t - 1] in VOW_IDS:
+                if t >= 2 and row[t - 2] == WB_ID:
+                    mu_out[b, t - 2] = mu[b, last_valid]
+                mu_out[b, t - 1] = mu[b, t + 1]
+                mu_out[b, t] = 0.35 * mu[b, t + 1] + 0.65 * mu[b, last_valid]
+    return mu_out
+
+
 def build_teacher_anchor_bank(t_am, mean, std, ctc, dev="cuda"):
-    """Synthesize clean single-mode Teacher distillation anchors across all 15 master clips + expressive/Vedic phrases."""
+    """Synthesize clean Teacher distillation anchors across all 15 master clips (clause-split matching SakhiyaONNX._segment)
+    using exact EncExport + reduplicated hiatus / Pranava Om / function-word floor + DecExport."""
+    from .onnx_tts import _segment, STYLES, PAUSE
+    from . import chandas as _ch
+    from scripts.export_v2_onnx import EncExport, DecExport
     extra_sents = [
+        ("ne", "storytelling", "गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।"),
+        ("ne", "storytelling", "आआफ्नो जिम्मेवारी पूरा गर्न हामी सबै आआफ्नो ठाउँबाट लाग्नुपर्छ।"),
         ("ne", "storytelling", "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!"),
         ("ne", "storytelling", "अरे! तिमी आज कति चाँडो आइपुग्यौ? आऊ, सँगै बसेर मिठो चिया खाऔँ!"),
         ("ne", "storytelling", "ओहो! पहाडको टुप्पोबाट झरेको झरना कस्तो सुन्दर देखिएको छ, हगि?"),
@@ -40,25 +65,78 @@ def build_teacher_anchor_bank(t_am, mean, std, ctc, dev="cuda"):
         ("sa", "vedic_chant", "ॐ असतो मा सद्गमय। तमसो मा ज्योतिर्गमय। मृत्योर्मा अमृतं गमय॥"),
         ("sa", "vedic_chant", "यदा यदा हि धर्मस्य ग्लानिर्भवति भारत। अभ्युत्थानमधर्मस्य तदात्मानं सृजाम्यहम्॥"),
     ]
-    all_s = [(lg, st, tx) for _, lg, st, tx in MASTER_15_CLIPS if lg != "auto"] + extra_sents
-    st_map = {"news": 0, "conversational": 2, "storytelling": 2, "warm_soft": 2, "expressive": 2, "vedic_chant": 5}
+    raw_s = [(lg, st, tx) for _, lg, st, tx in MASTER_15_CLIPS if lg != "auto"] + extra_sents
+    all_s = []
+    for lg, st_name, full_txt in raw_s:
+        for seg_txt in _segment(full_txt):
+            all_s.append((lg, st_name, seg_txt))
+        if len(_segment(full_txt)) > 1:
+            all_s.append((lg, st_name, full_txt))
+    enc_w = EncExport(t_am).to(dev).eval()
+    dec_w = DecExport(t_am, steps=8, temp=0.5).to(dev).eval()
     anchors = []
     with torch.no_grad():
         for lg, st_name, txt in all_s:
-            ph, off, dm = SA.laya_scales(txt, v2=True) if lg == "sa" else (*g2p.text_to_phones_acc(txt, "ne"), g2p.phone_dm(g2p.text_to_phones(txt, "ne")))
+            k = STYLES.get(st_name, STYLES["neutral"])
+            sty_i = int(k.get("style_id", 0))
+            if lg == "sa":
+                ci = _ch.compile_chandas(txt, bpm=75.0, tonic_hz=215.0)
+                ph, off, dm = ci["ph"], ci["off"], ci["dm"]
+                sv_sc = 0.52 if ci.get("has_vedic_marks") else 0.48
+            else:
+                ph, off = g2p.text_to_phones_acc(txt, "ne")
+                dm = g2p.phone_dm(ph)
+                sv_sc = 1.15
             vi = [i for i, p in enumerate(ph) if p in SYM2ID]
-            ids = torch.tensor([[SYM2ID[ph[i]] for i in vi]], dtype=torch.long, device=dev)
-            po = torch.tensor([[float(off[i]) * 0.48 for i in vi]], dtype=torch.float32, device=dev)
-            dm_t = torch.tensor([[float(dm[i]) for i in vi]], dtype=torch.float32, device=dev)
-            sty_i = st_map.get(st_name, 0)
-            mel_a = t_am.synth(ids, torch.tensor([0], device=dev), torch.tensor([0], device=dev),
-                               torch.tensor([sty_i], device=dev), torch.tensor([1], device=dev),
-                               rate=0.92 if lg == "sa" else 1.0, steps=8, temp=0.5, pitch_add=po, dm=dm_t)[0]
-            log_p = ctc((mel_a[None].float() - mean) / std)
-            from .ctc_aligner import batch_viterbi_ctc_durations
-            durs, _ = batch_viterbi_ctc_durations(log_p, ids, torch.tensor([mel_a.shape[1]], device=dev), torch.tensor([ids.shape[1]], device=dev))
-            anchors.append(dict(ids=ids[0].cpu(), po=po[0].cpu(), dur_ctc=durs[0].cpu().long(), mel=mel_a.half().cpu(),
-                                spk=0, lang=lg, v3_style_id=sty_i, phones=[ph[i] for i in vi], text=txt, split="train", anchor=True))
+            if len(vi) < 3:
+                continue
+            ph_valid = [ph[i] for i in vi]
+            ids = torch.tensor([[SYM2ID[p] for p in ph_valid]], dtype=torch.long, device=dev)
+            po = torch.tensor([[float(off[i]) * sv_sc for i in vi]], dtype=torch.float32, device=dev)
+            dm_arr = np.array([float(dm[i]) for i in vi], dtype=np.float32)
+            z_long = torch.zeros((1,), dtype=torch.long, device=dev)
+            sty_t = torch.tensor([sty_i], dtype=torch.long, device=dev)
+            x_enc, ld = enc_w(
+                ids, z_long, z_long,
+                torch.tensor(float(k["pitch_shift"]), dtype=torch.float32, device=dev),
+                torch.tensor(float(k["pitch_scale"]), dtype=torch.float32, device=dev),
+                torch.tensor(float(k["energy_scale"]), dtype=torch.float32, device=dev),
+                po, sty_t,
+            )
+            ld_np = ld[0].cpu().numpy()
+            ids_np = ids[0].cpu().numpy()
+            dur = np.clip(np.exp(ld_np) - 1.0, 1.0, None) * dm_arr
+            dur = np.where(np.isin(ids_np, PAUSE), dur * float(k["pause_scale"]), dur)
+            dur = np.maximum(np.round(dur / float(k["rate"])), 1).astype(int)
+            for idx_p, p in enumerate(ph_valid):
+                if p not in ("|", ",", ".", "?", "!", ";"):
+                    dur[idx_p] = max(int(dur[idx_p]), 3)
+                if p == "h" and (idx_p + 1 == len(ph_valid) or ph_valid[idx_p + 1] in ("|", ",", ".", "?", "!", ";")):
+                    dur[idx_p] = min(int(dur[idx_p]), 6)
+                if idx_p >= 1 and idx_p + 1 < len(ph_valid) and p == "|" and ph_valid[idx_p - 1] == ph_valid[idx_p + 1] and ph_valid[idx_p - 1] in ("a", "i", "u", "e", "o", "ʌ"):
+                    if idx_p >= 2 and ph_valid[idx_p - 2] == "|":
+                        dur[idx_p - 2] = 12
+                        x_enc[0, idx_p - 2, :100] = x_enc[0, -1, :100]
+                    dur[idx_p - 1] = max(int(dur[idx_p - 1]), 17)
+                    dur[idx_p] = 6
+                    dur[idx_p + 1] = max(int(dur[idx_p + 1]), 16)
+                    x_enc[0, idx_p - 1, :100] = x_enc[0, idx_p + 1, :100]
+                    x_enc[0, idx_p, :100] = 0.35 * x_enc[0, idx_p + 1, :100] + 0.65 * x_enc[0, -1, :100]
+                if lg == "sa" and p == "o" and idx_p + 1 < len(ph_valid) and ph_valid[idx_p + 1] == "m" and (idx_p == 0 or ph_valid[idx_p - 1] in ("|", ",", ";", ".")):
+                    dur[idx_p] = int(np.clip(dur[idx_p], 34, 44))
+                    dur[idx_p + 1] = int(np.clip(dur[idx_p + 1], 16, 22))
+                    if idx_p + 2 < len(ph_valid) and ph_valid[idx_p + 2] == ",":
+                        dur[idx_p + 2] = int(np.clip(dur[idx_p + 2], 14, 22))
+                if idx_p >= 1 and idx_p + 2 < len(ph_valid) and ph_valid[idx_p - 1] in ("|", ",") and ph_valid[idx_p + 2] in ("|", ",") and p in ("r", "t̪", "n", "m", "h", "tsʰ") and ph_valid[idx_p + 1] in ("ʌ", "o"):
+                    dur[idx_p] = int(np.clip(dur[idx_p], 5, 9))
+                    dur[idx_p + 1] = int(np.clip(dur[idx_p + 1], 6, 11))
+            durs_t = torch.from_numpy(dur).to(dev).long()
+            xe = torch.repeat_interleave(x_enc[0], durs_t, dim=0)[None]
+            mel_a = dec_w(xe)[0]
+            # Strip side-channel bins 98,99 back to clean bin 97 for ground-truth mel target y_gt
+            mel_a[98:100] = mel_a[97:98]
+            anchors.append(dict(ids=ids[0].cpu(), po=po[0].cpu(), dur_ctc=durs_t.cpu().long(), mel=mel_a.half().cpu(),
+                                spk=0, lang=lg, v3_style_id=sty_i, phones=ph_valid, text=txt, split="train", anchor=True))
     return anchors
 
 
