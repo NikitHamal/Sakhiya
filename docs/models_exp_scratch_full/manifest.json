@@ -1,0 +1,7 @@
+{
+  "version": "4.0",
+  "arch": "sakhiya-v4-disentangled-slm24k",
+  "fp16_mb": 31.013,
+  "int8_mb": 15.977,
+  "generated_utc": "2026-11-22T08:47:32Z"
+}

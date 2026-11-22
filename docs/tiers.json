@@ -42,6 +42,36 @@
    "sa_pcer": null,
    "ready": true,
    "desc": "Smallest model · fully trained student + V1 vocoder · clean voice"
+  },
+  {
+   "id": "exp_scratch",
+   "label": "Experimental · Scratch-NeSa + V1 vocoder",
+   "prec": "int8",
+   "dir": "models_exp_scratch/",
+   "variant": "tiny",
+   "mb": 15.977,
+   "rtf": null,
+   "utmos": 2.301,
+   "ne_pcer": null,
+   "sa_pcer": null,
+   "ready": true,
+   "experimental": true,
+   "desc": "New acoustic model trained from scratch (no V1 weights) on 24 h of mined real Nepali + verse-matched Sanskrit, with V1's vocoder · audio-test UTMOS 2.30, 0 dropped words"
+  },
+  {
+   "id": "exp_scratch_full",
+   "label": "Experimental · Scratch-NeSa + scratch vocoder",
+   "prec": "int8",
+   "dir": "models_exp_scratch_full/",
+   "variant": "tiny",
+   "mb": 15.977,
+   "rtf": null,
+   "utmos": 1.31,
+   "ne_pcer": null,
+   "sa_pcer": null,
+   "ready": true,
+   "experimental": true,
+   "desc": "Acoustic model AND vocoder both trained from scratch on mined real data only (vocoder ~1.5 h of training) · audio-test UTMOS 1.31, expect buzz/noise"
   }
  ],
  "voices": {

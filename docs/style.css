@@ -134,3 +134,5 @@ pre{white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,monosp
 .bar.off i{background:var(--md-outline)}
 .bar span:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.tier-exp-head{margin:14px 0 6px;padding-top:10px;border-top:1px dashed var(--line,#d0d7de);font-size:13px;opacity:.85}

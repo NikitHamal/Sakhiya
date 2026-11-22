@@ -47,7 +47,9 @@ function renderVoices() {
 }
 function renderTiers() {
   const box = $("#tiers"); box.innerHTML = "";
+  let expHead = false;
   TIERS.tiers.forEach(t => {
+    if (t.experimental && !expHead) { expHead = true; box.appendChild(el("div", "tier-exp-head", "<b>Experimental</b> · trained from scratch on mined real data · not production quality")); }
     const b = el("button", "tier", `<span class="radio"></span><span class="tx"><b>${t.label} ${t.prec}${t.ready ? "" : ' <span class="tag">not ready</span>'}</b><small>${t.desc}</small></span><span class="mb">${t.mb < 1 ? Math.round(t.mb * 1000) + " KB" : t.mb.toFixed(1) + " MB"}</span>`);
     b.type = "button"; b.disabled = !t.ready; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(st.tier === t.id));
     b.onclick = () => { st.tier = t.id; [...box.children].forEach(c => c.setAttribute("aria-checked", String(c === b))); put("#mdl", "loads on next Speak"); };
