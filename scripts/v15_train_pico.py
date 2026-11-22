@@ -178,6 +178,14 @@ def main():
         frac = (time.time() - t0) / budget
         if frac >= 0.40 and not stage_b_active:
             stage_b_active = True
+            if os.path.exists(a.voc_init):
+                ck_v = torch.load(a.voc_init, map_location=dev, weights_only=False)
+                s_voc.load_state_dict({k: v.float() for k, v in ck_v.get("G_ema", ck_v.get("G", ck_v)).items()}, strict=False)
+                s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
+                for p in s_voc.src.f0_net.parameters():
+                    p.requires_grad_(False)
+                ema_voc.load_state_dict(s_voc.state_dict())
+                print(f"[{tag}] Hot-reloaded latest Wavehax-lite from {a.voc_init} (step={ck_v.get('step', 0)}) for Stage B!", flush=True)
             print(f"[{tag}] step={step} Transitioning Stage A -> Stage B (End-to-End Vocoder-in-the-Loop + WavLM Co-Distillation)!", flush=True)
         if frac >= 0.80 and not qat_active:
             s_am.set_qat(True)
@@ -348,6 +356,13 @@ def main():
 
         done_smoke = a.smoke and step >= a.smoke
         if step % a.eval_every == 0 or done_smoke:
+            if not stage_b_active and os.path.exists(a.voc_init):
+                try:
+                    ck_v = torch.load(a.voc_init, map_location=dev, weights_only=False)
+                    s_voc.load_state_dict({k: v.float() for k, v in ck_v.get("G_ema", ck_v.get("G", ck_v)).items()}, strict=False)
+                    ema_voc.load_state_dict(s_voc.state_dict())
+                except Exception:
+                    pass
             cur = eval_e2e(ema_am, ema_voc)
             ck_am = dict(arch="sakhiya_pico", ema=ema_am.state_dict(), net=s_am.state_dict(), step=step, mean=mean, std=std, pre_baked_v25=True, e2e_utmos=cur)
             ck_voc = dict(arch="ms_rnd_wavehax", variant="lite", G_ema=ema_voc.state_dict(), G=s_voc.state_dict(), step=step, utmos={"e2e": cur})
