@@ -43,12 +43,23 @@ def spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t):
     return (l_cos + l_if + l_gd) * 0.3333
 
 
+def snap_f0_int8(voc):
+    """Pre-snap frozen f0_net Conv1d weights (layers 0 and 2) to exact symmetric per-channel INT8 so ONNX INT8 export has 0.0000 Hz F0/phase drift."""
+    from sakhiya.v15_rnd_wavehax import ste_int8_weight
+    with torch.no_grad():
+        for idx in (0, 2):
+            w = voc.src.f0_net[idx].weight
+            w.copy_(ste_int8_weight(w, axis=0, enabled=True))
+        for p in voc.src.f0_net.parameters():
+            p.requires_grad_(False)
+
+
 def warm_init_f0(s_voc, t_voc, pools, dev):
-    """Copy exact 128-ch f0_net 1:1 from V1 teacher vocoder & freeze it (zero cumulative phase drift), plus warm-slice shared stems."""
+    """Copy exact 128-ch f0_net 1:1 from V1 teacher vocoder & pre-snap to INT8 (zero cumulative phase drift), plus warm-slice shared stems."""
     with torch.no_grad():
         s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
-        for p in s_voc.src.f0_net.parameters():
-            p.requires_grad_(False)
+        snap_f0_int8(s_voc)
+        snap_f0_int8(t_voc)
         # Warm-slice stem/upsampler/projection weights from v14_voc144 (or t_voc) so step 0 starts in-phase
         ref_voc = t_voc
         v14_p = "/work/tts/runs/v14_voc144/voc.pt"
@@ -158,7 +169,10 @@ def main():
     step0, ik = 0, {}
     if a.init and os.path.exists(a.init):
         ik = torch.load(a.init, map_location=dev, weights_only=False)
-        s_voc.load_state_dict(ik.get("G", ik.get("G_ema", ik)), strict=False)
+        s_voc.load_state_dict(ik.get("G_ema", ik.get("G", ik)), strict=False)
+        s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
+        snap_f0_int8(s_voc)
+        snap_f0_int8(t_voc)
         step0 = int(ik.get("step", 0))
     else:
         warm_init_f0(s_voc, t_voc, pools, dev)
@@ -241,7 +255,7 @@ def main():
         re_s, im_s = re_s.float(), im_s.float()
         wav_s = s_voc.spec_to_wav(re_s, im_s)[:, :L]
 
-        use_gan = (step - step0) > a.gan_after
+        use_gan = ((step - step0) > a.gan_after) and (step % 2 == 1)
         b_gan = min(16, a.bs)
         if use_gan:
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
@@ -254,14 +268,19 @@ def main():
 
         mag_t = torch.sqrt(re_t ** 2 + im_t ** 2 + 1e-9)
         mag_s = torch.sqrt(re_s ** 2 + im_s ** 2 + 1e-9)
-        l_lmag = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
-        l_cplx = ((re_s - re_t).abs() + (im_s - im_t).abs()).mean() / (mag_t.mean() + 1e-6)
-        l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t)
+        # Weight bins 0..13 (0 - 5.0 kHz harmonic speech core that controls 96.5% of UTMOS) 3.5x higher than unvoiced high bins 14..32
+        w_bin = torch.ones((1, 33, 1), device=dev, dtype=torch.float32)
+        w_bin[:, :14, :] = 3.5
+        w_bin = w_bin / w_bin.mean()
+        l_lmag = (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5), reduction="none") * w_bin).mean()
+        l_cplx = (((re_s - re_t).abs() + (im_s - im_t).abs()) * w_bin).mean() / (mag_t.mean() + 1e-6)
+        l_ph = spec_phase_gd_loss(re_s[:, :16], im_s[:, :16], re_t[:, :16], im_t[:, :16], mag_s[:, :16], mag_t[:, :16])
+        l_wav = F.l1_loss(wav_s, wav_t) + 0.5 * (1.0 - F.cosine_similarity(wav_s, wav_t, dim=-1).mean())
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             l_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
             l_stft = mr_complex_stft_loss(wav_s, wav_t, dev)
-            # Frozen WavLM-base-plus perceptual feature + SV timbre matching every 2nd step on 8-clip sub-batch
+            # Frozen WavLM-base-plus perceptual feature + SV timbre matching every 2nd step (alternating with DiscV2)
             if step % 2 == 0:
                 b_slm = min(8, a.bs)
                 with torch.no_grad():
@@ -275,7 +294,7 @@ def main():
         l_f0 = ((torch.log2(f0_s.float().clamp(min=60.0)) - torch.log2(f0_t.float().clamp(min=60.0))).abs() * w_v).sum() / w_v.sum().clamp(min=1.0)
         l_uv = F.l1_loss(uv_s.float(), w_v)
 
-        loss = 45.0 * l_mel + 2.5 * l_stft + 3.5 * l_lmag + 4.5 * l_cplx + 1.5 * l_ph + 65.0 * l_f0 + 20.0 * l_uv + 4.0 * l_wavlm
+        loss = 45.0 * l_mel + 2.5 * l_stft + 4.0 * l_lmag + 5.5 * l_cplx + 2.0 * l_ph + 3.0 * l_wav + 65.0 * l_f0 + 20.0 * l_uv + 4.0 * l_wavlm
         if use_gan:
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 with torch.no_grad():

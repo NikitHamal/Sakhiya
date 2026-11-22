@@ -27,7 +27,7 @@ from scripts.export_v2_onnx import TIER_CFG
 from scripts.train_nano_atom import _bake
 from scripts.train_v2_voc import mr_complex_stft_loss
 from scripts.train_v3_voc import resamp16
-from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0
+from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0, snap_f0_int8
 from scripts.v2_full_eval import load_utmos
 from scripts.v8_voc_gta import export_mel, val_mels
 
@@ -131,8 +131,8 @@ def main():
         ck_v = torch.load(a.voc_init, map_location=dev, weights_only=False)
         s_voc.load_state_dict({k: v.float() for k, v in ck_v.get("G_ema", ck_v.get("G", ck_v)).items()}, strict=False)
         s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
-        for p in s_voc.src.f0_net.parameters():
-            p.requires_grad_(False)
+        snap_f0_int8(s_voc)
+        snap_f0_int8(t_voc)
         print(f"[{tag}] Loaded Wavehax-lite vocoder from {a.voc_init} (step={ck_v.get('step', 0)})", flush=True)
     else:
         warm_init_f0(s_voc, t_voc, [[x["mel"].half().to(dev) for x in base_tr[:256]]], dev)
@@ -182,8 +182,8 @@ def main():
                 ck_v = torch.load(a.voc_init, map_location=dev, weights_only=False)
                 s_voc.load_state_dict({k: v.float() for k, v in ck_v.get("G_ema", ck_v.get("G", ck_v)).items()}, strict=False)
                 s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
-                for p in s_voc.src.f0_net.parameters():
-                    p.requires_grad_(False)
+                snap_f0_int8(s_voc)
+                snap_f0_int8(t_voc)
                 ema_voc.load_state_dict(s_voc.state_dict())
                 print(f"[{tag}] Hot-reloaded latest Wavehax-lite from {a.voc_init} (step={ck_v.get('step', 0)}) for Stage B!", flush=True)
             print(f"[{tag}] step={step} Transitioning Stage A -> Stage B (End-to-End Vocoder-in-the-Loop + WavLM Co-Distillation)!", flush=True)

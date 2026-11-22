@@ -71,7 +71,7 @@ def to_fp16_weights(src, dst):
 
 
 def to_int8_qdq_weights(src, dst):
-    """Weight-only per-channel int8 QDQ (DequantizeLinear) for all weight tensors > 128 elements; zero ConvInteger."""
+    """Weight-only per-channel int8 QDQ (DequantizeLinear) for Conv/ConvTranspose/Gemm/MatMul weights; preserves Snake1d alphas, analytical iSTFT/RND matrices, and final 66-ch spectral projection in FP16."""
     m = onnx.load(src); _dedup_initializers(m); use = {}
     for n in m.graph.node:
         for i in n.input: use.setdefault(i, n.op_type)
@@ -79,20 +79,21 @@ def to_int8_qdq_weights(src, dst):
     for init in m.graph.initializer:
         arr = numpy_helper.to_array(init)
         op = use.get(init.name, "")
-        if init.data_type == TensorProto.FLOAT and arr.size >= 64 and arr.ndim >= 2:
-            ax = 1 if op in ("ConvTranspose", "MatMul") else 0
-            red = tuple(i for i in range(arr.ndim) if i != ax)
-            sc = np.maximum(np.abs(arr).max(axis=red), 1e-8) / 127.0
-            shp = [1] * arr.ndim; shp[ax] = -1
-            q = np.clip(np.round(arr / sc.reshape(shp)), -127, 127).astype(np.int8)
-            keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc.astype(np.float32), init.name + "_s")]
-            new_nodes.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
-        elif init.data_type == TensorProto.FLOAT and arr.ndim == 1 and arr.size >= 128:
-            sc = np.float32(max(float(np.abs(arr).max()), 1e-8) / 127.0)
-            q = np.clip(np.round(arr / sc), -127, 127).astype(np.int8)
-            keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(np.array(sc, dtype=np.float32), init.name + "_s")]
-            new_nodes.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], name=init.name + "_dq"))
-        elif init.data_type == TensorProto.FLOAT and arr.size > 8:
+        skip_fp16 = (
+            arr.shape in ((66, 1, 64), (33, 100), (33, 33), (2, 128, 3))
+            or (arr.ndim == 3 and arr.shape[0] == 66)
+        )
+        if init.data_type == TensorProto.FLOAT and op in ("Conv", "ConvTranspose", "Gemm", "MatMul") and arr.size >= 256 and arr.ndim >= 2 and not skip_fp16:
+            ax = 1 if (op in ("ConvTranspose", "MatMul") and arr.shape[1] > 1) else 0
+            if arr.shape[ax] > 1:
+                red = tuple(i for i in range(arr.ndim) if i != ax)
+                sc = np.maximum(np.abs(arr).max(axis=red), 1e-8) / 127.0
+                shp = [1] * arr.ndim; shp[ax] = -1
+                q = np.clip(np.round(arr / sc.reshape(shp)), -127, 127).astype(np.int8)
+                keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc.astype(np.float32), init.name + "_s")]
+                new_nodes.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
+                continue
+        if init.data_type == TensorProto.FLOAT and arr.size > 16:
             h = numpy_helper.from_array(arr.astype(np.float16), init.name + "_fp16")
             keep.append(h)
             new_nodes.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast"))

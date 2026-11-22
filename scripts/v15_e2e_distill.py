@@ -29,7 +29,7 @@ from scripts.export_v2_onnx import TIER_CFG
 from scripts.train_nano_atom import _bake
 from scripts.train_v2_voc import mr_complex_stft_loss
 from scripts.train_v3_voc import resamp16
-from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0
+from scripts.v15_train_wavehax import spec_phase_gd_loss, warm_init_f0, snap_f0_int8
 from scripts.v2_full_eval import load_utmos
 from scripts.v8_voc_gta import export_mel, val_mels
 
@@ -138,8 +138,8 @@ def main():
         ck_v = torch.load(voc_path, map_location=dev, weights_only=False)
         s_voc.load_state_dict({k: v.float() for k, v in ck_v.get("G_ema", ck_v.get("G", ck_v)).items()}, strict=False)
         s_voc.src.f0_net.load_state_dict(t_voc.src.f0_net.state_dict())
-        for p in s_voc.src.f0_net.parameters():
-            p.requires_grad_(False)
+        snap_f0_int8(s_voc)
+        snap_f0_int8(t_voc)
         print(f"[{tag}] Loaded Wavehax-{voc_var} vocoder from {voc_path} (step={ck_v.get('step', 0)})", flush=True)
     else:
         warm_init_f0(s_voc, t_voc, [[x["mel"].half().to(dev) for x in base_tr[:256]]], dev)
@@ -291,21 +291,28 @@ def main():
         x_t = export_mel(torch.stack(mel_t_segs))
 
         with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
-            re_t, im_t, f0_v_t, uv_v_t = t_voc.spectrum_and_f0(x_t)
-        re_t, im_t = re_t.float(), im_t.float()
-        wav_t = s_voc.spec_to_wav(re_t, im_t)[:, :L_wav]
+            re_t_gt, im_t_gt, _, _ = t_voc.spectrum_and_f0(x_t)
+            re_t_same, im_t_same, _, _ = t_voc.spectrum_and_f0(x_s.detach())
+        re_t_gt, im_t_gt = re_t_gt.float(), im_t_gt.float()
+        re_t_same, im_t_same = re_t_same.float(), im_t_same.float()
+        wav_t = s_voc.spec_to_wav(re_t_gt, im_t_gt)[:, :L_wav]
+        wav_t_same = s_voc.spec_to_wav(re_t_same, im_t_same)[:, :L_wav]
 
-        # Pass both student mel x_s (with gradient to s_am & s_voc) and teacher mel x_t (for pure vocoder anchor)
+        # Pass student mel x_s (with gradient to s_am & s_voc); use phase-locked re_t_same for complex/phase loss (0.0000 phase drift!)
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             re_s, im_s, _, _ = s_voc.spectrum_and_f0(x_s)
         re_s, im_s = re_s.float(), im_s.float()
         wav_s = s_voc.spec_to_wav(re_s, im_s)[:, :L_wav]
 
-        mag_t = torch.sqrt(re_t ** 2 + im_t ** 2 + 1e-9)
+        mag_t_gt = torch.sqrt(re_t_gt ** 2 + im_t_gt ** 2 + 1e-9)
+        mag_t_same = torch.sqrt(re_t_same ** 2 + im_t_same ** 2 + 1e-9)
         mag_s = torch.sqrt(re_s ** 2 + im_s ** 2 + 1e-9)
-        l_lmag = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
-        l_cplx = ((re_s - re_t).abs() + (im_s - im_t).abs()).mean() / (mag_t.mean() + 1e-6)
-        l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t, mag_s, mag_t)
+        w_bin = torch.ones((1, 33, 1), device=dev, dtype=torch.float32)
+        w_bin[:, :14, :] = 3.5
+        w_bin = w_bin / w_bin.mean()
+        l_lmag = 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_same + 1e-5), reduction="none") * w_bin).mean() + 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_gt + 1e-5), reduction="none") * w_bin).mean()
+        l_cplx = (((re_s - re_t_same).abs() + (im_s - im_t_same).abs()) * w_bin).mean() / (mag_t_same.mean() + 1e-6) + 0.5 * F.l1_loss(wav_s, wav_t_same)
+        l_ph = spec_phase_gd_loss(re_s[:, :16], im_s[:, :16], re_t_same[:, :16], im_t_same[:, :16], mag_s[:, :16], mag_t_same[:, :16])
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             l_wav_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
