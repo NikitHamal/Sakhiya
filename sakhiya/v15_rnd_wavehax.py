@@ -184,7 +184,7 @@ class WavehaxHarmonicSource(nn.Module):
         t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=ph.dtype)[None, None, :]
         ap_freqs = torch.tensor([1.41421, 1.73205, 2.23607, 2.64575, 3.14159, 3.60555, 4.12311, 4.58258], device=ph.device, dtype=ph.dtype)[None, :, None]
         ap = torch.cat([torch.sin(t_idx * ap_freqs), torch.cos(t_idx * (ap_freqs * 1.17))], dim=1)
-        har = (har + (1.0 - uv_16) * 0.14 * ap).to(raw.dtype)
+        har = (har + (1.0 - uv_16) * 0.14 * ap).to(mel.dtype)
         return s.proj4(har), s.proj16(har), f0, uv, har
 
 
