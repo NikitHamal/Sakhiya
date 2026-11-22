@@ -77,8 +77,8 @@ def main():
     ap.add_argument("--max-minutes", type=float, default=55.0)
     ap.add_argument("--bs", type=int, default=24)
     ap.add_argument("--seg", type=int, default=48)
-    ap.add_argument("--lr_am", type=float, default=3.0e-4)
-    ap.add_argument("--lr_voc", type=float, default=6.0e-5)
+    ap.add_argument("--lr_am", type=float, default=8.0e-5)
+    ap.add_argument("--lr_voc", type=float, default=3.0e-5)
     ap.add_argument("--eval_every", type=int, default=1000)
     ap.add_argument("--smoke", type=int, default=0)
     a = ap.parse_args()
@@ -246,12 +246,24 @@ def main():
         pros_b = pros_tbl[stys]
         ones_m = torch.ones((B, 1), dtype=torch.float32, device=dev)
 
+        is_anchor = torch.tensor([1.0 if x.get("anchor") else 0.0 for x in xs], device=dev)[:, None, None]
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             with torch.no_grad():
                 h_t, mu_t, g_t = t_am.enc(ids, spks, langs, stys, stud, im, pitch_add=po, prosody=pros_b, sty_mask=ones_m)
                 f0_t = t_am.enc.f0_pred(h_t)
                 eng_t = t_am.enc.energy_pred(h_t)
                 ld_tgt = torch.log(durs.float().clamp(min=1.0)) * im.float()
+                mu_t_h = apply_hiatus_mu_rule(ids, mu_t)
+                mu_y_t = _expand_batch_durs(mu_t_h, durs, T) * ymf
+                c_idx = torch.arange(100, device=dev, dtype=torch.float32)[None, :, None]
+                t_idx = torch.arange(T, device=dev, dtype=torch.float32)[None, None, :]
+                xt = (torch.sin(c_idx * 12.9898 + t_idx * 78.233) * torch.cos(c_idx * 39.346 + t_idx * 11.135) * 0.7071).expand(B, 100, T).to(mu_y_t.dtype)
+                for i_o in range(2):
+                    to = torch.full((B,), i_o * 0.5, device=dev)
+                    k1 = t_am.vel(xt, to, mu_y_t, g_t, ymf)
+                    k2 = t_am.vel(xt + 0.25 * k1, to + 0.25, mu_y_t, g_t, ymf)
+                    xt = (xt + 0.5 * k2) * ymf
+                y_tgt = (is_anchor * y_gt + (1.0 - is_anchor) * (0.75 * xt.float() + 0.25 * y_gt)) * ymf
 
             h_s, mu_s, g_s = s_am.enc(ids, spks, langs, stys, stud, im, pitch_add=po, prosody=pros_b, sty_mask=ones_m)
             l_heads = 0.5 * (((s_am.enc.f0_pred(h_s) - f0_t) ** 2 + (s_am.enc.energy_pred(h_s) - eng_t) ** 2) * im[:, :, None]).sum() / im.sum().clamp(min=1)
@@ -274,14 +286,14 @@ def main():
             y_pred = (mu_y_s + s_am.vel(mu_y_s, t0_z, mu_y_s, g_s, ymf)) * ymf
 
             denom = (ymf.sum() * 100.0).clamp(min=1.0)
-            l_mel_am = ((1.5 * (y_pred - y_gt).abs() + (y_pred - y_gt) ** 2) * ymf).sum() / denom
+            l_mel_am = ((1.5 * (y_pred - y_tgt).abs() + (y_pred - y_tgt) ** 2) * ymf).sum() / denom
             df_p = y_pred[:, 1:, :] - y_pred[:, :-1, :]
-            df_t = y_gt[:, 1:, :] - y_gt[:, :-1, :]
+            df_t = y_tgt[:, 1:, :] - y_tgt[:, :-1, :]
             l_df = ((df_p - df_t).abs() * ymf).sum() / denom
             ym_t = ymf[:, :, 1:] * ymf[:, :, :-1]
-            l_dt = (((y_pred[:, :, 1:] - y_pred[:, :, :-1]) - (y_gt[:, :, 1:] - y_gt[:, :, :-1])).abs() * ym_t).sum() / (ym_t.sum() * 100.0 + 1.0)
+            l_dt = (((y_pred[:, :, 1:] - y_pred[:, :, :-1]) - (y_tgt[:, :, 1:] - y_tgt[:, :, :-1])).abs() * ym_t).sum() / (ym_t.sum() * 100.0 + 1.0)
             cep_p = torch.fft.rfft(y_pred.float(), dim=1).abs()[:, 4:48, :]
-            cep_t = torch.fft.rfft(y_gt.float(), dim=1).abs()[:, 4:48, :]
+            cep_t = torch.fft.rfft(y_tgt.float(), dim=1).abs()[:, 4:48, :]
             l_cep = ((cep_p - cep_t).abs() * ymf).sum() / (ymf.sum() * 44.0).clamp(min=1.0)
 
             # Differentiable Pronunciation-CTC Loss with hinge floor annealed 0.22 -> 0.00 (computed on odd steps)
@@ -299,7 +311,7 @@ def main():
             valid_T = max(a.seg, min(int(yl[k].item()), xs[k]["mel"].shape[1]))
             s0 = random.randint(0, max(0, valid_T - a.seg))
             s_slice = (y_pred[k, :, s0:s0 + a.seg].float() * std + mean)
-            t_slice = (y_gt[k, :, s0:s0 + a.seg].float() * std + mean)
+            t_slice = (y_tgt[k, :, s0:s0 + a.seg].float() * std + mean)
             if s_slice.shape[1] < a.seg:
                 s_slice = F.pad(s_slice, (0, a.seg - s_slice.shape[1]), value=mean)
                 t_slice = F.pad(t_slice, (0, a.seg - t_slice.shape[1]), value=mean)
@@ -317,7 +329,7 @@ def main():
         wav_t = s_voc.spec_to_wav(re_t_gt, im_t_gt)[:, :L_wav]
         wav_t_same = s_voc.spec_to_wav(re_t_same, im_t_same)[:, :L_wav]
 
-        # Pass student mel x_s (with gradient to s_am & s_voc); use phase-locked re_t_same for complex/phase loss (0.0000 phase drift!)
+        # Pass student mel x_s (with gradient to s_am & s_voc); use phase-locked re_t_same/wav_t_same for 0.0000 phase drift!
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             re_s, im_s, _, _ = s_voc.spectrum_and_f0(x_s)
         re_s, im_s = re_s.float(), im_s.float()
@@ -329,25 +341,25 @@ def main():
         w_bin = torch.ones((1, 33, 1), device=dev, dtype=torch.float32)
         w_bin[:, :14, :] = 3.5
         w_bin = w_bin / w_bin.mean()
-        l_lmag = 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_same + 1e-5), reduction="none") * w_bin).mean() + 0.5 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_gt + 1e-5), reduction="none") * w_bin).mean()
-        l_cplx = (((re_s - re_t_same).abs() + (im_s - im_t_same).abs()) * w_bin).mean() / (mag_t_same.mean() + 1e-6) + 0.5 * F.l1_loss(wav_s, wav_t_same)
+        l_lmag = 0.7 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_same + 1e-5), reduction="none") * w_bin).mean() + 0.3 * (F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t_gt + 1e-5), reduction="none") * w_bin).mean()
+        l_cplx = (((re_s - re_t_same).abs() + (im_s - im_t_same).abs()) * w_bin).mean() / (mag_t_same.mean() + 1e-6)
         l_ph = spec_phase_gd_loss(re_s[:, :16], im_s[:, :16], re_t_same[:, :16], im_t_same[:, :16], mag_s[:, :16], mag_t_same[:, :16])
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-            l_wav_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
-            l_wav_stft = mr_complex_stft_loss(wav_s, wav_t, dev)
+            l_wav_mel = 0.6 * F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t_same, dev)[:, :, :a.seg].float()) + 0.4 * F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
+            l_wav_stft = 0.7 * mr_complex_stft_loss(wav_s, wav_t_same, dev) + 0.3 * mr_complex_stft_loss(wav_s, wav_t, dev)
             if step % 2 == 0:
                 b_slm = min(8, B)
                 with torch.no_grad():
-                    ft_t, emb_t = slm.extract(resamp16(wav_t[:b_slm].float()))
+                    ft_t, emb_t = slm.extract(resamp16(wav_t_same[:b_slm].float()))
                 ft_s, emb_s = slm.extract(resamp16(wav_s[:b_slm].float()))
                 l_wavlm = F.l1_loss(ft_s.float(), ft_t.float()) + 0.5 * (1.0 - F.cosine_similarity(emb_s.float(), emb_t.float(), dim=-1).mean())
             else:
                 l_wavlm = torch.tensor(0.0, device=dev)
 
         loss_am_core = l_mel_am + 2.4 * l_df + 1.2 * l_dt + 0.65 * l_cep + l_prior + l_heads + 0.75 * l_dur + 0.25 * l_ctc
-        loss_e2e_wav = 12.0 * l_wav_mel + 1.2 * l_wav_stft + 1.5 * l_lmag + 2.0 * l_cplx + 0.8 * l_ph + 2.5 * l_wavlm
-        loss = loss_am_core + loss_e2e_wav
+        loss_e2e_wav = 6.0 * l_wav_mel + 0.8 * l_wav_stft + 1.2 * l_lmag + 1.8 * l_cplx + 0.5 * l_ph + 1.5 * l_wavlm
+        loss = loss_am_core + 0.25 * loss_e2e_wav
 
         opt_am.zero_grad(set_to_none=True)
         opt_voc.zero_grad(set_to_none=True)
@@ -359,11 +371,10 @@ def main():
 
         with torch.no_grad():
             _calibrate_v15_styles(s_am)
-            k_ema = 1.0 - min(0.996, (1.0 + step) / (10.0 + step))
             for pe, p in zip(ema_am.parameters(), s_am.parameters()):
-                pe.lerp_(p, k_ema)
+                pe.lerp_(p, 0.005)
             for pe, p in zip(ema_voc.parameters(), s_voc.parameters()):
-                pe.lerp_(p, k_ema)
+                pe.lerp_(p, 0.003)
 
         if step % 200 == 0:
             print(f"[{tag}] step={step} {step / (time.time() - t0):.1f} st/s t={(time.time() - t0) / 60:.1f}m mel_am={l_mel_am.item():.3f} dur={l_dur.item():.3f} ctc={l_ctc.item():.3f} wav_mel={l_wav_mel.item():.3f} stft={l_wav_stft.item():.3f} cplx={l_cplx.item():.3f} wavlm={l_wavlm.item():.3f} qat={int(qat_active)}", flush=True)

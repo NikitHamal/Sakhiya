@@ -249,8 +249,9 @@ def main():
                 mu_y_ref = _expand_batch_durs(mu_ref_h, durs, T) * ymf
                 t0_z = torch.zeros((B,), device=dev, dtype=torch.float32)
                 y_sano = (mu_y_ref + sano_am.vel(mu_y_ref, t0_z, mu_y_ref, g_ref, ymf)) * ymf
-                # Blend studio GT mel and clean 1-step teacher mel for crisp, un-blurred targets
-                y_tgt = 0.50 * y_gt + 0.50 * y_sano.float()
+                # Use clean 1-step Sano teacher mel + exact V1 anchor mel for crisp, un-blurred targets
+                is_anchor = torch.tensor([1.0 if x.get("anchor") else 0.0 for x in xs], device=dev)[:, None, None]
+                y_tgt = (is_anchor * y_gt + (1.0 - is_anchor) * (0.80 * y_sano.float() + 0.20 * y_gt)) * ymf
                 ld_tgt = torch.log(durs.float().clamp(min=1.0)) * im.float()
 
             h_s, mu_s, g_s = s_am.enc(ids, spks, langs, stys, stud, im, pitch_add=po, prosody=pros_b, sty_mask=ones_m)
@@ -346,7 +347,7 @@ def main():
                 else:
                     l_wavlm = torch.tensor(0.0, device=dev)
 
-            loss = loss + 12.0 * l_wav_mel + 1.2 * l_wav_stft + 1.5 * l_lmag + 2.0 * l_cplx + 0.8 * l_ph + 2.5 * l_wavlm
+            loss = loss + 0.25 * (6.0 * l_wav_mel + 0.8 * l_wav_stft + 1.2 * l_lmag + 1.8 * l_cplx + 0.5 * l_ph + 1.5 * l_wavlm)
 
         opt_am.zero_grad(set_to_none=True)
         if stage_b_active:
@@ -364,7 +365,7 @@ def main():
                 pe.lerp_(p, k_ema)
             if stage_b_active:
                 for pe, p in zip(ema_voc.parameters(), s_voc.parameters()):
-                    pe.lerp_(p, k_ema)
+                    pe.lerp_(p, 0.003)
 
         if step % 200 == 0:
             print(f"[{tag}] step={step} {step / (time.time() - t0):.1f} st/s t={(time.time() - t0) / 60:.1f}m stg={'B' if stage_b_active else 'A'} mel_am={l_mel_am.item():.3f} hid={l_hid.item():.3f} dur={l_dur.item():.3f} ctc={l_ctc.item():.3f} wav_mel={l_wav_mel.item():.3f} cplx={l_cplx.item():.3f} qat={int(qat_active)}", flush=True)
