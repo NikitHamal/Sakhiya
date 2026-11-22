@@ -222,9 +222,12 @@ def main():
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             l_mel = F.l1_loss(mel_spec_24k(wav_s, dev)[:, :, :a.seg].float(), mel_spec_24k(wav_t, dev)[:, :, :a.seg].float())
             l_stft = mr_complex_stft_loss(wav_s, wav_t, dev)
-            # Frozen WavLM-base-plus perceptual feature matching every 2nd step
+            # Frozen WavLM-base-plus perceptual feature + SV timbre matching every 2nd step
             if step % 2 == 0:
-                l_wavlm = slm.feature_loss(wav_s, wav_t)
+                with torch.no_grad():
+                    ft_t, emb_t = slm.extract(resamp16(wav_t.float()))
+                ft_s, emb_s = slm.extract(resamp16(wav_s.float()))
+                l_wavlm = F.l1_loss(ft_s.float(), ft_t.float()) + 0.5 * (1.0 - F.cosine_similarity(emb_s.float(), emb_t.float(), dim=-1).mean())
             else:
                 l_wavlm = torch.tensor(0.0, device=dev)
 
