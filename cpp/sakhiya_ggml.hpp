@@ -1031,12 +1031,13 @@ public:
                 lf0_mix[t] = 0.50f * lf0_raw[t] + 0.50f * lf0_loc;
             }
             auto lf0_sm = avg_pool1d_rep(lf0_mix, 1, T, 5, 2);
-            for (int t = 0; t < T; ++t) f0[t] = std::pow(2.0f, lf0_sm[t]);
+            for (int t = 0; t < T; ++t) {
+                float l_tot = lf0_sm[t] + tot_shift[t] * (1.0f / 12.0f);
+                float l_q = std::nearbyint(l_tot * 256.0f) * 0.00390625f;
+                f0[t] = std::nearbyint(std::pow(2.0f, l_q) * 16.0f) * 0.0625f;
+            }
             uv = avg_pool1d_rep(uv, 1, T, 3, 1);
-        }
-        for (int t = 0; t < T; ++t) {
-            float sh_q = std::nearbyint(tot_shift[t] * 32.0f) * 0.03125f;
-            f0[t] = f0[t] * std::pow(2.0f, sh_q / 12.0f);
+            for (int t = 0; t < T; ++t) uv[t] = std::nearbyint(uv[t] * 1024.0f) * 0.0009765625f;
         }
 
         // 16x linear interpolation (align_corners=False) matching ATen UpSampleLinear1d double-precision weights

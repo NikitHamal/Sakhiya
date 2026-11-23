@@ -87,12 +87,14 @@ class HarmonicSource(nn.Module):
             den = F.avg_pool1d(F.pad(w_v, (3, 3), mode="replicate"), 7, stride=1).clamp(min=1e-3)
             lf0_loc = num / den
             lf0_sm = F.avg_pool1d(F.pad(0.50 * lf0_raw + 0.50 * lf0_loc, (2, 2), mode="replicate"), 5, stride=1)
-            f0 = torch.pow(2.0, lf0_sm)
-            uv = F.avg_pool1d(F.pad(uv, (1, 1), mode="replicate"), 3, stride=1)
+            uv = torch.round(F.avg_pool1d(F.pad(uv, (1, 1), mode="replicate"), 3, stride=1) * 1024.0) * 0.0009765625
+        else:
+            lf0_sm = lf0_raw
         sh = shift_st if shift_st is not None else getattr(s, "shift_st", None)
         if sh is not None:
-            sh_q = torch.round(sh.to(f0.dtype) * 32.0) * 0.03125
-            f0 = f0 * torch.pow(2.0, sh_q / 12.0)
+            lf0_sm = lf0_sm + sh.to(f0.dtype) * (1.0 / 12.0)
+        lf0_q = torch.round(lf0_sm * 256.0) * 0.00390625
+        f0 = torch.round(torch.pow(2.0, lf0_q) * 16.0) * 0.0625
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         # Wrapped cumulative cycles in [0, 1) so long utterances never suffer float32 cumsum phase drift
