@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Sakhiya-Pro Studio: any text prompt -> broadcast-mastered voiceover -> captioned MP4.
+"""Sakhiya-Pro Studio: any text prompt -> broadcast-mastered MP3 (optionally + captioned MP4).
 
 Worker for the MoLab "Sakhiya-Pro Studio" card (monitor/cells_studio.py). One job = one directory:
-  <job>/job.json     input  {text, model, lang, takes, steps, pace, fmt, title}
+  <job>/job.json     input  {text, model, lang, takes, steps, pace, bitrate, master, video, fmt, title, variation}
   <job>/status.json  live progress (stage, done/total, per-chunk log) - polled by the card
-  <job>/voice.wav / voice.mp3 / video.mp4 / captions.ass / meta.json   outputs
+  <job>/voice.mp3 / voice.wav / [video.mp4 captions.ass] / meta.json   outputs
+
+Modes:
+  python3 scripts/sakhiya_pro_studio.py --serve [/work/sp/studio]   warm daemon: model stays loaded, picks up queued jobs
+                                                                    (heartbeat in <root>/server.json, exits after 60 min idle)
+  python3 scripts/sakhiya_pro_studio.py <job_dir>                   one-shot (loads the model, renders one job)
+  python3 scripts/sakhiya_pro_studio.py --text "नमस्ते।" --out /tmp/x.mp3     CLI: text -> mp3
 
 Pipeline: sentence/clause chunking -> Best-of-N takes per chunk (Kriti ASR CER, clicks, Hindi leak, pace, UTMOS,
 speaker similarity) -> natural pauses -> optional pace -> ffmpeg broadcast chain (80 Hz HPF, warmth/presence EQ,
@@ -12,7 +18,7 @@ gentle compression, -14 LUFS) -> 1280x720 or 720x1280 MP4 (waveform + libass-sha
 
 usage: python3 scripts/sakhiya_pro_studio.py /work/sp/studio/jobs/<id>
 """
-import json, os, re, subprocess, sys, time, traceback
+import glob, json, os, re, subprocess, sys, tempfile, time, traceback
 import numpy as np, soundfile as sf
 
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -20,12 +26,43 @@ FONTS = '/usr/share/fonts/truetype/noto'
 VEDIC = re.compile('[\u0951-\u0954ॐ॥]')
 
 
+ROOT_DIR = '/work/sp/studio'
+ABBR = re.compile(r'(?:\b[A-Z]|\b(?:Dr|Mr|Mrs|Ms|Prof|St|Rs|No|vs|etc|Inc|Ltd))\.$')
+
+
+def normalize_text(text):
+    """Make pasted text safe for the model: strip markdown/URLs/zero-width junk, Latin '.'/'|' -> '।'/'॥' after Devanagari,
+    tidy spacing before punctuation and guarantee a closing mark per paragraph (gives the downward sentence closure)."""
+    t = text.replace('\r', '')
+    t = re.sub(r'https?://\S+|www\.\S+', '', t)
+    t = re.sub(r'[`*_#>~]+', '', t)
+    t = re.sub('[\u200b\u2060\ufeff]', '', t)
+    t = t.replace('\u2026', ',').replace('...', ',').replace('\u201c', '"').replace('\u201d', '"').replace('\u2018', "'").replace('\u2019', "'")
+    t = t.replace('||', '॥').replace('|', '।')
+    t = re.sub(r'(?<=[\u0900-\u097f])\s*\.(?=\s|$)', '।', t)
+    t = re.sub(r'(?<=\d)\s*%', ' प्रतिशत' if re.search(r'[\u0900-\u097f]', t) else '%', t)
+    t = re.sub(r'[ \t]+', ' ', t)
+    t = re.sub(r'\s+([।॥?!,;:])', r'\1', t)
+    paras = []
+    for p in re.split(r'\n\s*\n|\n', t):
+        p = p.strip(' -•\t')
+        if not p: continue
+        if not re.search(r'[।॥?!.:;]["\')]*$', p):
+            p += '।' if len(re.findall(r'[\u0900-\u097f]', p)) >= len(re.findall(r'[A-Za-z]', p)) else '.'
+        paras.append(p)
+    return '\n\n'.join(paras)
+
+
 def split_text(text, max_len=190):
-    """-> list of dict(text, pause_after). Splits on । ? ! ॥ and '. ' ; long sentences split at commas/spaces."""
+    """-> list of dict(text, pause). Splits on । ? ! ॥ and '. '; long sentences split at commas/spaces. Abbreviations (Dr. Rs.) are kept whole."""
     out = []
-    paras = [p.strip() for p in re.split(r'\n\s*\n|\n', text.replace('\r', '')) if p.strip()]
+    paras = [p.strip() for p in re.split(r'\n\s*\n|\n', text) if p.strip()]
     for pi, para in enumerate(paras):
-        sents = [s.strip() for s in re.split(r'(?<=[।॥?!])\s*|(?<=[.])\s+', para) if s.strip()]
+        raw = [s.strip() for s in re.split(r'(?<=[।॥?!])\s*|(?<=[.])\s+', para) if s.strip()]
+        sents = []
+        for s in raw:   # glue pieces that were split after an abbreviation
+            if sents and ABBR.search(sents[-1]): sents[-1] += ' ' + s
+            else: sents.append(s)
         for si, s in enumerate(sents):
             parts = [s]
             while len(parts[-1]) > max_len:
@@ -37,14 +74,14 @@ def split_text(text, max_len=190):
                 parts += [t[:cut].strip(), t[cut:].strip()]
             for k, p in enumerate(parts):
                 last_part = k == len(parts) - 1
-                pause = 0.20 if not last_part else (0.38 if re.search(r'[।॥?!.]$', p) else 0.28)
+                pause = 0.20 if not last_part else (0.38 if re.search(r'[।॥?!.]["\')]*$', p) else 0.28)
                 if last_part and si == len(sents) - 1: pause = 0.75 if pi < len(paras) - 1 else 0.0
                 out.append(dict(text=p, pause=pause))
     return out
 
 
 def resolve_model(m):
-    if m and os.path.isdir(m): return m
+    if m and os.path.isdir(m) and os.path.exists(os.path.join(m, 'model.safetensors')): return m
     return '/work/sp/final/sakhiya_pro_v1'
 
 
@@ -93,49 +130,117 @@ def lufs_of(path):
     return float(m.group(1)) if m else None
 
 
-def main(job):
+def encode_mp3(src_wav, dst, bitrate='256k', title='Sakhiya-Pro'):
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src_wav, '-codec:a', 'libmp3lame', '-b:a', bitrate, '-ar', '48000', '-ac', '1',
+                    '-id3v2_version', '3', '-metadata', f'title={title}', '-metadata', 'artist=Sakhiya-Pro', '-metadata', 'comment=Generated by Sakhiya-Pro (NEBians)', dst], check=True)
+
+
+def plain_master(src, dst):
+    """Mastering OFF: just peak-safe 48 kHz mono 16-bit (no EQ / compression / loudness change beyond -1 dBFS peak)."""
+    x, sr = sf.read(src, dtype='float32'); pk = float(np.abs(x).max()) or 1.0
+    sf.write(dst, (x * min(1.0, 0.89 / pk)).astype(np.float32), sr, subtype='PCM_16')
+
+
+class Engine:
+    """Holds the loaded Renderer so repeated jobs skip the ~20 s model load."""
+    def __init__(self): self.R = None; self.model = None; self.SR = None
+    def get(self, model, takes, steps):
+        if self.SR is None:
+            import sakhiya_pro_render as SR; self.SR = SR
+        if self.R is None or self.model != model:
+            if self.R is not None:
+                import gc, torch; self.R = None; gc.collect(); torch.cuda.empty_cache()
+            self.R = self.SR.Renderer(model, n_take=takes, num_step=steps); self.model = model
+        self.R.n = takes; self.R.ns = steps
+        return self.R
+
+
+def run_job(job, eng):
     J = json.load(open(f'{job}/job.json')); st = dict(stage='starting', done=0, total=0, log=[], started=time.time(), error=None)
+    cancel = f'{job}/cancel'
     def save(**k):
         st.update(k); st['updated'] = time.time(); json.dump(st, open(f'{job}/status.json.tmp', 'w'), ensure_ascii=False); os.replace(f'{job}/status.json.tmp', f'{job}/status.json')
     try:
-        chunks = split_text(J['text'])
+        text = normalize_text(J['text']) if J.get('normalize', True) else J['text']
+        chunks = split_text(text)
         if not chunks: raise ValueError('empty text')
-        save(stage='loading model', total=len(chunks))
-        import sakhiya_pro_render as SR
-        model = resolve_model(J.get('model'))
-        R = SR.Renderer(model, n_take=int(J.get('takes', 3)), num_step=int(J.get('steps', 32)))
-        seeds_all = [11, 22, 33, 44, 55][:R.n]
-        sr = None; track = []; t = 0.0; caps = []; meta = []; pace = float(J.get('pace', 1.0))
+        save(stage='loading model', total=len(chunks), text_used=text)
+        model = resolve_model(J.get('model')); takes = max(1, min(5, int(J.get('takes', 3)))); steps = int(J.get('steps', 32))
+        R = eng.get(model, takes, steps); SR = eng.SR
+        var = int(J.get('variation', 0))
+        seeds_all = [s + 100 * var for s in (11, 22, 33, 44, 55)][:takes]
+        sr = None; track = []; t = 0.0; caps = []; meta = []; pace = float(J.get('pace', 1.0)); t_syn = time.time()
         for i, c in enumerate(chunks):
+            if os.path.exists(cancel): raise RuntimeError('cancelled by user')
             lang = J.get('lang', 'auto')
             if lang == 'auto': lang = 'sa' if VEDIC.search(c['text']) else 'npi'
-            save(stage=f'synthesizing {i + 1}/{len(chunks)}', done=i)
+            eta = (time.time() - t_syn) / i * (len(chunks) - i) if i else None
+            save(stage=f'synthesizing {i + 1}/{len(chunks)}', done=i, eta=eta)
             w, sr, info = R.take(c['text'], lang=lang, seeds=seeds_all)
             ch = [x for x in info['cands'] if x['seed'] == info['chosen']][0]
+            if ch['cer'] > 0.45 or ch['hindi'] > 1:   # safety net: dropped words / Hindi leak -> try a fresh set of seeds
+                w2, sr2, info2 = R.take(c['text'], lang=lang, seeds=[s + 1000 for s in seeds_all])
+                ch2 = [x for x in info2['cands'] if x['seed'] == info2['chosen']][0]
+                if ch2['sel'] > ch['sel']: w, sr, info, ch = w2, sr2, info2, ch2; st['log'].append(f'   ↻ line {i + 1} re-rolled (better take found)')
             c0 = t; track.append(w); t += len(w) / sr
             caps.append(dict(text=c['text'], t0=c0 / pace, t1=t / pace))
             if c['pause'] > 0: track.append(np.zeros(int(c['pause'] * sr), np.float32)); t += c['pause']
             meta.append(dict(text=c['text'], lang=lang, chosen_seed=info['chosen'], cer=round(ch['cer'], 3), utmos=round(ch['utmos'], 2), clicks=ch['clicks'], hindi=ch['hindi'], dur=round(len(w) / sr, 2)))
             st['log'].append(f"{i + 1}. [{lang}] take {info['chosen']} · CER {ch['cer']:.2f} · UTMOS {ch['utmos']:.2f} · clicks {ch['clicks']:.0f} · {len(w) / sr:.1f}s")
             save(done=i + 1)
-        save(stage='mastering (-14 LUFS)')
+        save(stage='mastering', eta=None)
         raw = f'{job}/raw.wav'; x = np.concatenate(track).astype(np.float32); sf.write(raw, x, sr)
         src = raw
         if abs(pace - 1.0) > 0.005:
             src = f'{job}/paced.wav'; subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', raw, '-af', f'atempo={pace:.3f}', src], check=True)
-        SR.master(src, f'{job}/voice.wav'); SR.master(src, f'{job}/voice.mp3')
+        if J.get('master', True): SR.master(src, f'{job}/voice.wav')
+        else: plain_master(src, f'{job}/voice.wav')
+        save(stage='encoding MP3')
+        encode_mp3(f'{job}/voice.wav', f'{job}/voice.mp3', J.get('bitrate', '256k'), J.get('title') or 'Sakhiya-Pro')
         total = len(x) / sr / pace
         lufs = lufs_of(f'{job}/voice.wav')
-        save(stage='rendering MP4')
-        make_video(job, f'{job}/voice.wav', caps, total, J.get('fmt', 'land'), J.get('title') or 'Sakhiya-Pro')
+        if J.get('video'):
+            save(stage='rendering MP4')
+            make_video(job, f'{job}/voice.wav', caps, total, J.get('fmt', 'land'), J.get('title') or 'Sakhiya-Pro')
         for f in ('raw.wav', 'paced.wav'):
             if os.path.exists(f'{job}/{f}'): os.remove(f'{job}/{f}')
-        json.dump(dict(job=J, model=model, duration_s=round(total, 2), lufs=lufs, chunks=meta, secs=round(time.time() - st['started'], 1)), open(f'{job}/meta.json', 'w'), ensure_ascii=False, indent=1)
-        save(stage='done', done=len(chunks), finished=time.time(), duration_s=round(total, 2), lufs=lufs)
+        json.dump(dict(job=J, text_used=text, model=model, duration_s=round(total, 2), lufs=lufs, chunks=meta, secs=round(time.time() - st['started'], 1)), open(f'{job}/meta.json', 'w'), ensure_ascii=False, indent=1)
+        save(stage='done', done=len(chunks), finished=time.time(), duration_s=round(total, 2), lufs=lufs, eta=None)
+        return True
     except Exception as e:
-        traceback.print_exc(); save(stage='error', error=f'{type(e).__name__}: {e}')
-        sys.exit(1)
+        traceback.print_exc(); save(stage='error', error=f'{type(e).__name__}: {e}', finished=time.time())
+        return False
+
+
+def serve(root=ROOT_DIR, idle_exit=3600):
+    os.makedirs(f'{root}/jobs', exist_ok=True); eng = Engine(); last = time.time()
+    def beat(state):
+        json.dump(dict(pid=os.getpid(), ts=time.time(), state=state, model=eng.model), open(f'{root}/server.json.tmp', 'w')); os.replace(f'{root}/server.json.tmp', f'{root}/server.json')
+    beat('idle'); print('studio server up, pid', os.getpid(), flush=True)
+    while time.time() - last < idle_exit:
+        queued = []
+        for d in sorted(glob.glob(f'{root}/jobs/*')):
+            try:
+                if json.load(open(f'{d}/status.json')).get('stage') == 'queued' and os.path.exists(f'{d}/job.json'): queued.append(d)
+            except Exception: pass
+        if not queued: beat('idle'); time.sleep(1.0); continue
+        d = queued[0]; beat('busy ' + os.path.basename(d)); print('job', d, flush=True)
+        run_job(d, eng); last = time.time()
+        import torch; torch.cuda.empty_cache()
+    beat('exited (idle)'); os.remove(f'{root}/server.json')
+
+
+def main(job):
+    sys.exit(0 if run_job(job, Engine()) else 1)
 
 
 if __name__ == '__main__':
-    main(os.path.abspath(sys.argv[1]))
+    a = sys.argv[1:]
+    if a and a[0] == '--serve': serve(a[1] if len(a) > 1 else ROOT_DIR)
+    elif a and a[0] == '--text':
+        import argparse; ap = argparse.ArgumentParser(); ap.add_argument('--text'); ap.add_argument('--out', default='/tmp/sakhiya_pro.mp3'); ap.add_argument('--model', default=''); ap.add_argument('--takes', type=int, default=3); ap.add_argument('--pace', type=float, default=1.0)
+        o = ap.parse_args(a); jd = tempfile.mkdtemp(prefix='studio_cli_')
+        json.dump(dict(text=o.text, model=o.model, takes=o.takes, pace=o.pace), open(f'{jd}/job.json', 'w'), ensure_ascii=False)
+        ok = run_job(jd, Engine()); print('ok' if ok else 'FAILED', jd)
+        if ok: import shutil; shutil.copy(f'{jd}/voice.mp3', o.out); print('wrote', o.out)
+    else: main(os.path.abspath(a[0]))
