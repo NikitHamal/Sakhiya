@@ -37,6 +37,15 @@
 #include <omp.h>
 #endif
 
+#if defined(__x86_64__) && defined(__GLIBC__)
+extern "C" {
+__attribute__((__simd__("notinbranch"))) float erff(float x) noexcept;
+__attribute__((__simd__("notinbranch"))) float sinf(float x) noexcept;
+__attribute__((__simd__("notinbranch"))) float cosf(float x) noexcept;
+__attribute__((__simd__("notinbranch"))) float expf(float x) noexcept;
+}
+#endif
+
 namespace sakhiya {
 
 struct StageDump {
@@ -98,6 +107,9 @@ public:
 
     void load_model(const std::string & model_path, int threads = 4) {
         n_threads = std::max(1, threads);
+#if defined(__linux__)
+        setenv("OMP_WAIT_POLICY", "ACTIVE", 0);
+#endif
 #ifdef _OPENMP
         omp_set_num_threads(n_threads);
 #endif
@@ -191,9 +203,12 @@ public:
     }
 
     // ---------------- Core Math & Neural Primitives ----------------
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma omp declare simd notinbranch
+#endif
     static inline float gelu_exact(float x) {
         // PyTorch F.gelu(x) exact erf formula
-        return 0.5f * x * (1.0f + std::erff(x * 0.7071067811865475f));
+        return 0.5f * x * (1.0f + ::erff(x * 0.7071067811865475f));
     }
 
     static inline float silu(float x) {
@@ -271,7 +286,8 @@ public:
     // Conv1d: x [C_in, T], weight [C_out, C_in / groups, K], bias [C_out] -> out [C_out, T_out]
     static std::vector<float> conv1d(const std::vector<float> & x, int C_in, int T,
                                      const std::vector<float> & weight, const std::vector<float> & bias,
-                                     int C_out, int K, int stride = 1, int pad = 0, int dilation = 1, int groups = 1) {
+                                     int C_out, int K, int stride = 1, int pad = 0, int dilation = 1, int groups = 1,
+                                     bool apply_gelu = false) {
         int T_out = (T + 2 * pad - dilation * (K - 1) - 1) / stride + 1;
         std::vector<float> out(static_cast<size_t>(C_out) * T_out);
         int cin_per_g = C_in / groups;
@@ -299,99 +315,82 @@ public:
         }
 
         if (K == 1 && stride == 1 && pad == 0 && groups == 1) {
-            // Pointwise 1x1 conv1d with L1-cache time tiling & 8-channel register blocking (100% bit-identical summation order)
-            const int T_TILE = 256;
-            const int n_tiles = (T + T_TILE - 1) / T_TILE;
-            if (C_out % 8 == 0) {
-                const int n_co8 = C_out / 8;
-#pragma omp parallel for collapse(2) schedule(static) if (C_out * T >= 4096)
-                for (int cb = 0; cb < n_co8; ++cb) {
-                    for (int tb = 0; tb < n_tiles; ++tb) {
-                        int co8 = cb * 8;
-                        int t0 = tb * T_TILE;
-                        int t1 = std::min(T, t0 + T_TILE);
-                        const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co8 + 0) * C_in;
-                        const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co8 + 1) * C_in;
-                        const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co8 + 2) * C_in;
-                        const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co8 + 3) * C_in;
-                        const float * __restrict__ w4 = weight.data() + static_cast<size_t>(co8 + 4) * C_in;
-                        const float * __restrict__ w5 = weight.data() + static_cast<size_t>(co8 + 5) * C_in;
-                        const float * __restrict__ w6 = weight.data() + static_cast<size_t>(co8 + 6) * C_in;
-                        const float * __restrict__ w7 = weight.data() + static_cast<size_t>(co8 + 7) * C_in;
-                        float * __restrict__ o0 = out.data() + static_cast<size_t>(co8 + 0) * T;
-                        float * __restrict__ o1 = out.data() + static_cast<size_t>(co8 + 1) * T;
-                        float * __restrict__ o2 = out.data() + static_cast<size_t>(co8 + 2) * T;
-                        float * __restrict__ o3 = out.data() + static_cast<size_t>(co8 + 3) * T;
-                        float * __restrict__ o4 = out.data() + static_cast<size_t>(co8 + 4) * T;
-                        float * __restrict__ o5 = out.data() + static_cast<size_t>(co8 + 5) * T;
-                        float * __restrict__ o6 = out.data() + static_cast<size_t>(co8 + 6) * T;
-                        float * __restrict__ o7 = out.data() + static_cast<size_t>(co8 + 7) * T;
-                        for (int t = t0; t < t1; ++t) {
-                            o0[t] = 0.0f; o1[t] = 0.0f; o2[t] = 0.0f; o3[t] = 0.0f;
-                            o4[t] = 0.0f; o5[t] = 0.0f; o6[t] = 0.0f; o7[t] = 0.0f;
-                        }
+            // Pointwise 1x1 conv1d with 32x4 register blocking (keeps accumulators in ZMM/YMM registers across C_in)
+            if (C_out % 4 == 0) {
+#pragma omp parallel for schedule(static) if (C_out * T >= 4096)
+                for (int co4 = 0; co4 < C_out; co4 += 4) {
+                    const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in;
+                    const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in;
+                    const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in;
+                    const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in;
+                    float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
+                    float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
+                    float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
+                    float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
+                    float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T;
+                    float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T;
+                    float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T;
+                    float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T;
+                    int t0 = 0;
+                    for (; t0 + 32 <= T; t0 += 32) {
+                        alignas(64) float a0[32] = {0}, a1[32] = {0}, a2[32] = {0}, a3[32] = {0};
                         for (int ci = 0; ci < C_in; ++ci) {
                             float v0 = w0[ci], v1 = w1[ci], v2 = w2[ci], v3 = w3[ci];
-                            float v4 = w4[ci], v5 = w5[ci], v6 = w6[ci], v7 = w7[ci];
-                            const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
-                            for (int t = t0; t < t1; ++t) {
-                                float xv = x_ci[t];
-                                o0[t] += v0 * xv; o1[t] += v1 * xv; o2[t] += v2 * xv; o3[t] += v3 * xv;
-                                o4[t] += v4 * xv; o5[t] += v5 * xv; o6[t] += v6 * xv; o7[t] += v7 * xv;
+                            const float * __restrict__ xc = x.data() + static_cast<size_t>(ci) * T + t0;
+                            for (int dt = 0; dt < 32; ++dt) {
+                                float xv = xc[dt];
+                                a0[dt] += v0 * xv;
+                                a1[dt] += v1 * xv;
+                                a2[dt] += v2 * xv;
+                                a3[dt] += v3 * xv;
                             }
                         }
-                        float b0 = bias.empty() ? 0.0f : bias[co8 + 0];
-                        float b1 = bias.empty() ? 0.0f : bias[co8 + 1];
-                        float b2 = bias.empty() ? 0.0f : bias[co8 + 2];
-                        float b3 = bias.empty() ? 0.0f : bias[co8 + 3];
-                        float b4 = bias.empty() ? 0.0f : bias[co8 + 4];
-                        float b5 = bias.empty() ? 0.0f : bias[co8 + 5];
-                        float b6 = bias.empty() ? 0.0f : bias[co8 + 6];
-                        float b7 = bias.empty() ? 0.0f : bias[co8 + 7];
-                        for (int t = t0; t < t1; ++t) {
-                            o0[t] += b0; o1[t] += b1; o2[t] += b2; o3[t] += b3;
-                            o4[t] += b4; o5[t] += b5; o6[t] += b6; o7[t] += b7;
+                        if (apply_gelu) {
+#pragma omp simd
+                            for (int dt = 0; dt < 32; ++dt) {
+                                float u0 = a0[dt] + b0, u1 = a1[dt] + b1, u2 = a2[dt] + b2, u3 = a3[dt] + b3;
+                                o0[t0 + dt] = 0.5f * u0 * (1.0f + ::erff(u0 * 0.7071067811865475f));
+                                o1[t0 + dt] = 0.5f * u1 * (1.0f + ::erff(u1 * 0.7071067811865475f));
+                                o2[t0 + dt] = 0.5f * u2 * (1.0f + ::erff(u2 * 0.7071067811865475f));
+                                o3[t0 + dt] = 0.5f * u3 * (1.0f + ::erff(u3 * 0.7071067811865475f));
+                            }
+                        } else {
+                            for (int dt = 0; dt < 32; ++dt) {
+                                o0[t0 + dt] = a0[dt] + b0;
+                                o1[t0 + dt] = a1[dt] + b1;
+                                o2[t0 + dt] = a2[dt] + b2;
+                                o3[t0 + dt] = a3[dt] + b3;
+                            }
                         }
                     }
-                }
-                return out;
-            }
-            if (C_out % 4 == 0) {
-                const int n_co4 = C_out / 4;
-#pragma omp parallel for collapse(2) schedule(static) if (C_out * T >= 4096)
-                for (int cb = 0; cb < n_co4; ++cb) {
-                    for (int tb = 0; tb < n_tiles; ++tb) {
-                        int co4 = cb * 4;
-                        int t0 = tb * T_TILE;
-                        int t1 = std::min(T, t0 + T_TILE);
-                        const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in;
-                        const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in;
-                        const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in;
-                        const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in;
-                        float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T;
-                        float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T;
-                        float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T;
-                        float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T;
-                        for (int t = t0; t < t1; ++t) {
+                    if (t0 < T) {
+                        for (int t = t0; t < T; ++t) {
                             o0[t] = 0.0f; o1[t] = 0.0f; o2[t] = 0.0f; o3[t] = 0.0f;
                         }
                         for (int ci = 0; ci < C_in; ++ci) {
                             float v0 = w0[ci], v1 = w1[ci], v2 = w2[ci], v3 = w3[ci];
-                            const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
-                            for (int t = t0; t < t1; ++t) {
-                                float xv = x_ci[t];
+                            const float * __restrict__ xc = x.data() + static_cast<size_t>(ci) * T;
+                            for (int t = t0; t < T; ++t) {
+                                float xv = xc[t];
                                 o0[t] += v0 * xv;
                                 o1[t] += v1 * xv;
                                 o2[t] += v2 * xv;
                                 o3[t] += v3 * xv;
                             }
                         }
-                        float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
-                        float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
-                        float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
-                        float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
-                        for (int t = t0; t < t1; ++t) {
-                            o0[t] += b0; o1[t] += b1; o2[t] += b2; o3[t] += b3;
+                        if (apply_gelu) {
+#pragma omp simd
+                            for (int t = t0; t < T; ++t) {
+                                float u0 = o0[t] + b0, u1 = o1[t] + b1, u2 = o2[t] + b2, u3 = o3[t] + b3;
+                                o0[t] = 0.5f * u0 * (1.0f + ::erff(u0 * 0.7071067811865475f));
+                                o1[t] = 0.5f * u1 * (1.0f + ::erff(u1 * 0.7071067811865475f));
+                                o2[t] = 0.5f * u2 * (1.0f + ::erff(u2 * 0.7071067811865475f));
+                                o3[t] = 0.5f * u3 * (1.0f + ::erff(u3 * 0.7071067811865475f));
+                            }
+                        } else {
+                            for (int t = t0; t < T; ++t) {
+                                o0[t] += b0; o1[t] += b1; o2[t] += b2; o3[t] += b3;
+                            }
                         }
                     }
                 }
@@ -415,126 +414,48 @@ public:
             return out;
         }
 
-        // General 1D convolution with L1-cache time tiling & 8/4-channel register blocking for stride==1, groups==1
-        if (stride == 1 && groups == 1 && C_out % 8 == 0) {
-            const int T_TILE = 512;
-            const int n_tiles = (T_out + T_TILE - 1) / T_TILE;
-            const int n_co8 = C_out / 8;
-#pragma omp parallel for collapse(2) schedule(static) if (C_out * T_out >= 2048)
-            for (int cb = 0; cb < n_co8; ++cb) {
-                for (int tb = 0; tb < n_tiles; ++tb) {
-                    int co8 = cb * 8;
-                    int t_tile0 = tb * T_TILE;
-                    int t_tile1 = std::min(T_out, t_tile0 + T_TILE);
-                    float * __restrict__ o0 = out.data() + static_cast<size_t>(co8 + 0) * T_out;
-                    float * __restrict__ o1 = out.data() + static_cast<size_t>(co8 + 1) * T_out;
-                    float * __restrict__ o2 = out.data() + static_cast<size_t>(co8 + 2) * T_out;
-                    float * __restrict__ o3 = out.data() + static_cast<size_t>(co8 + 3) * T_out;
-                    float * __restrict__ o4 = out.data() + static_cast<size_t>(co8 + 4) * T_out;
-                    float * __restrict__ o5 = out.data() + static_cast<size_t>(co8 + 5) * T_out;
-                    float * __restrict__ o6 = out.data() + static_cast<size_t>(co8 + 6) * T_out;
-                    float * __restrict__ o7 = out.data() + static_cast<size_t>(co8 + 7) * T_out;
-                    for (int to = t_tile0; to < t_tile1; ++to) {
-                        o0[to] = 0.0f; o1[to] = 0.0f; o2[to] = 0.0f; o3[to] = 0.0f;
-                        o4[to] = 0.0f; o5[to] = 0.0f; o6[to] = 0.0f; o7[to] = 0.0f;
-                    }
-                    const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co8 + 0) * C_in * K;
-                    const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co8 + 1) * C_in * K;
-                    const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co8 + 2) * C_in * K;
-                    const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co8 + 3) * C_in * K;
-                    const float * __restrict__ w4 = weight.data() + static_cast<size_t>(co8 + 4) * C_in * K;
-                    const float * __restrict__ w5 = weight.data() + static_cast<size_t>(co8 + 5) * C_in * K;
-                    const float * __restrict__ w6 = weight.data() + static_cast<size_t>(co8 + 6) * C_in * K;
-                    const float * __restrict__ w7 = weight.data() + static_cast<size_t>(co8 + 7) * C_in * K;
-                    for (int ci = 0; ci < C_in; ++ci) {
-                        const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
-                        const float * __restrict__ wk0 = w0 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk1 = w1 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk2 = w2 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk3 = w3 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk4 = w4 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk5 = w5 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk6 = w6 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk7 = w7 + static_cast<size_t>(ci) * K;
-                        for (int k = 0; k < K; ++k) {
-                            float v0 = wk0[k], v1 = wk1[k], v2 = wk2[k], v3 = wk3[k];
-                            float v4 = wk4[k], v5 = wk5[k], v6 = wk6[k], v7 = wk7[k];
-                            int offset = k * dilation - pad;
-                            int to_start = std::max(t_tile0, -offset);
-                            int to_end = std::min(t_tile1, T - offset);
-                            const float * __restrict__ x_ptr = x_ci + offset;
-                            for (int to = to_start; to < to_end; ++to) {
-                                float xv = x_ptr[to];
-                                o0[to] += v0 * xv; o1[to] += v1 * xv; o2[to] += v2 * xv; o3[to] += v3 * xv;
-                                o4[to] += v4 * xv; o5[to] += v5 * xv; o6[to] += v6 * xv; o7[to] += v7 * xv;
-                            }
+        // General 1D convolution with 4-channel register blocking for stride==1, groups==1
+        if (stride == 1 && groups == 1 && C_out % 4 == 0) {
+#pragma omp parallel for schedule(static) if (C_out * T_out >= 2048)
+            for (int co4 = 0; co4 < C_out; co4 += 4) {
+                float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
+                float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
+                float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
+                float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
+                float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T_out;
+                float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T_out;
+                float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T_out;
+                float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T_out;
+                for (int to = 0; to < T_out; ++to) {
+                    o0[to] = 0.0f; o1[to] = 0.0f; o2[to] = 0.0f; o3[to] = 0.0f;
+                }
+                const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in * K;
+                const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in * K;
+                const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in * K;
+                const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in * K;
+                for (int ci = 0; ci < C_in; ++ci) {
+                    const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
+                    const float * __restrict__ wk0 = w0 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk1 = w1 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk2 = w2 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk3 = w3 + static_cast<size_t>(ci) * K;
+                    for (int k = 0; k < K; ++k) {
+                        float v0 = wk0[k], v1 = wk1[k], v2 = wk2[k], v3 = wk3[k];
+                        int offset = k * dilation - pad;
+                        int to_start = std::max(0, -offset);
+                        int to_end = std::min(T_out, T - offset);
+                        const float * __restrict__ x_ptr = x_ci + offset;
+                        for (int to = to_start; to < to_end; ++to) {
+                            float xv = x_ptr[to];
+                            o0[to] += v0 * xv;
+                            o1[to] += v1 * xv;
+                            o2[to] += v2 * xv;
+                            o3[to] += v3 * xv;
                         }
-                    }
-                    float b0 = bias.empty() ? 0.0f : bias[co8 + 0];
-                    float b1 = bias.empty() ? 0.0f : bias[co8 + 1];
-                    float b2 = bias.empty() ? 0.0f : bias[co8 + 2];
-                    float b3 = bias.empty() ? 0.0f : bias[co8 + 3];
-                    float b4 = bias.empty() ? 0.0f : bias[co8 + 4];
-                    float b5 = bias.empty() ? 0.0f : bias[co8 + 5];
-                    float b6 = bias.empty() ? 0.0f : bias[co8 + 6];
-                    float b7 = bias.empty() ? 0.0f : bias[co8 + 7];
-                    for (int to = t_tile0; to < t_tile1; ++to) {
-                        o0[to] += b0; o1[to] += b1; o2[to] += b2; o3[to] += b3;
-                        o4[to] += b4; o5[to] += b5; o6[to] += b6; o7[to] += b7;
                     }
                 }
-            }
-            return out;
-        }
-        if (stride == 1 && groups == 1 && C_out % 4 == 0) {
-            const int T_TILE = 512;
-            const int n_tiles = (T_out + T_TILE - 1) / T_TILE;
-            const int n_co4 = C_out / 4;
-#pragma omp parallel for collapse(2) schedule(static) if (C_out * T_out >= 2048)
-            for (int cb = 0; cb < n_co4; ++cb) {
-                for (int tb = 0; tb < n_tiles; ++tb) {
-                    int co4 = cb * 4;
-                    int t_tile0 = tb * T_TILE;
-                    int t_tile1 = std::min(T_out, t_tile0 + T_TILE);
-                    float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
-                    float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
-                    float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
-                    float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
-                    float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T_out;
-                    float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T_out;
-                    float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T_out;
-                    float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T_out;
-                    for (int to = t_tile0; to < t_tile1; ++to) {
-                        o0[to] = 0.0f; o1[to] = 0.0f; o2[to] = 0.0f; o3[to] = 0.0f;
-                    }
-                    const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in * K;
-                    const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in * K;
-                    const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in * K;
-                    const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in * K;
-                    for (int ci = 0; ci < C_in; ++ci) {
-                        const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
-                        const float * __restrict__ wk0 = w0 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk1 = w1 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk2 = w2 + static_cast<size_t>(ci) * K;
-                        const float * __restrict__ wk3 = w3 + static_cast<size_t>(ci) * K;
-                        for (int k = 0; k < K; ++k) {
-                            float v0 = wk0[k], v1 = wk1[k], v2 = wk2[k], v3 = wk3[k];
-                            int offset = k * dilation - pad;
-                            int to_start = std::max(t_tile0, -offset);
-                            int to_end = std::min(t_tile1, T - offset);
-                            const float * __restrict__ x_ptr = x_ci + offset;
-                            for (int to = to_start; to < to_end; ++to) {
-                                float xv = x_ptr[to];
-                                o0[to] += v0 * xv;
-                                o1[to] += v1 * xv;
-                                o2[to] += v2 * xv;
-                                o3[to] += v3 * xv;
-                            }
-                        }
-                    }
-                    for (int to = t_tile0; to < t_tile1; ++to) {
-                        o0[to] += b0; o1[to] += b1; o2[to] += b2; o3[to] += b3;
-                    }
+                for (int to = 0; to < T_out; ++to) {
+                    o0[to] += b0; o1[to] += b1; o2[to] += b2; o3[to] += b3;
                 }
             }
             return out;
@@ -652,10 +573,11 @@ public:
         for (int c = 0; c < C; ++c) {
             float a = std::max(alpha[c], 0.1f);
             float inv_a = 1.0f / a;
-            float * xc = x.data() + static_cast<size_t>(c) * T;
+            float * __restrict__ xc = x.data() + static_cast<size_t>(c) * T;
+#pragma omp simd
             for (int t = 0; t < T; ++t) {
                 float v = xc[t];
-                float s = std::sin(a * v);
+                float s = ::sinf(a * v);
                 xc[t] = v + inv_a * (s * s);
             }
         }
@@ -1033,15 +955,27 @@ public:
 
             auto y = conv1d(h, d_vel, T, W(bpfx + "dw.weight"), W(bpfx + "dw.bias"), d_vel, 7, 1, 3, 1, d_vel);
 
-            // GroupNorm(1, d_vel) across all d_vel * T elements
+            // GroupNorm(1, d_vel) across all d_vel * T elements (parallelized across channels)
             size_t tot = static_cast<size_t>(d_vel) * T;
             double sum = 0.0;
-            for (size_t i = 0; i < tot; ++i) sum += y[i];
+#pragma omp parallel for reduction(+:sum) schedule(static)
+            for (int ch = 0; ch < d_vel; ++ch) {
+                const float * y_ch = y.data() + static_cast<size_t>(ch) * T;
+                double c_sum = 0.0;
+                for (int t = 0; t < T; ++t) c_sum += y_ch[t];
+                sum += c_sum;
+            }
             float mean = static_cast<float>(sum / tot);
             double sq = 0.0;
-            for (size_t i = 0; i < tot; ++i) {
-                float diff = y[i] - mean;
-                sq += static_cast<double>(diff) * diff;
+#pragma omp parallel for reduction(+:sq) schedule(static)
+            for (int ch = 0; ch < d_vel; ++ch) {
+                const float * y_ch = y.data() + static_cast<size_t>(ch) * T;
+                double c_sq = 0.0;
+                for (int t = 0; t < T; ++t) {
+                    float diff = y_ch[t] - mean;
+                    c_sq += static_cast<double>(diff) * diff;
+                }
+                sq += c_sq;
             }
             float inv_std = 1.0f / std::sqrt(static_cast<float>(sq / tot) + 1e-5f);
 
@@ -1057,11 +991,11 @@ public:
                 }
             }
 
-            auto p1 = conv1d(y, d_vel, T, W(bpfx + "p1.weight"), W(bpfx + "p1.bias"), d_vel * 3, 1, 1, 0);
-#pragma omp parallel for schedule(static) if (p1.size() >= 4096)
-            for (size_t i = 0; i < p1.size(); ++i) p1[i] = gelu_exact(p1[i]);
+            auto p1 = conv1d(y, d_vel, T, W(bpfx + "p1.weight"), W(bpfx + "p1.bias"), d_vel * 3, 1, 1, 0, 1, 1, true);
             auto p2 = conv1d(p1, d_vel * 3, T, W(bpfx + "p2.weight"), W(bpfx + "p2.bias"), d_vel, 1, 1, 0);
-            for (size_t i = 0; i < h.size(); ++i) h[i] += p2[i];
+            const int h_n = static_cast<int>(h.size());
+#pragma omp parallel for simd schedule(static)
+            for (int i = 0; i < h_n; ++i) h[i] += p2[i];
         }
 
         return conv1d(h, d_vel, T, W("am.vel.out.weight"), W("am.vel.out.bias"), C, 1, 1, 0);
@@ -1541,6 +1475,7 @@ public:
             }
             int L = (n_frames - 1) * hop + n_fft;
             std::vector<float> y(L, 0.0f), env(L, 0.0f);
+            std::vector<std::complex<float>> buf(n_fft);
             for (int t = 0; t < n_frames; ++t) {
                 buf[0] = std::complex<float>(S[0 * n_frames + t].real(), 0.0f);
                 buf[n_fft / 2] = std::complex<float>(S[(n_fft / 2) * n_frames + t].real(), 0.0f);

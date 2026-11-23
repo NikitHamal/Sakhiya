@@ -11,18 +11,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 0.0,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 3.4570693969726562e-06,
-      "logdur_max_diff": 1.8894672393798828e-05,
-      "mel_max_abs_diff": 4.220008850097656e-05,
-      "spec_re_max_diff": 0.00023436546325683594,
-      "spec_im_max_diff": 0.00016641616821289062,
-      "wav_max_abs_diff": 2.6579946279525757e-05,
-      "wav_cosine_sim": 0.9999999999550183,
-      "cpp_synth_ms": 688.37,
-      "py_synth_ms": 666.01,
-      "cpp_rtf": 0.1109,
+      "x_enc_max_diff": 2.7418136596679688e-06,
+      "logdur_max_diff": 3.5762786865234375e-06,
+      "mel_max_abs_diff": 3.123283386230469e-05,
+      "spec_re_max_diff": 0.00026297569274902344,
+      "spec_im_max_diff": 0.00018894672393798828,
+      "wav_max_abs_diff": 2.0740553736686707e-05,
+      "wav_cosine_sim": 0.9999999999421835,
+      "cpp_synth_ms": 624.72,
+      "py_synth_ms": 664.47,
+      "cpp_rtf": 0.1007,
       "audio_sec": 6.205,
-      "wav_mean_abs_diff": 6.874121254440979e-07
+      "wav_mean_abs_diff": 7.07105868968938e-07
     },
     {
       "id": "ne_expressive",
@@ -35,18 +35,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 0.0001150369644165039,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 0.00010246038436889648,
-      "logdur_max_diff": 5.7220458984375e-06,
-      "mel_max_abs_diff": 0.00022935867309570312,
-      "spec_re_max_diff": 0.001961350440979004,
-      "spec_im_max_diff": 0.0023512840270996094,
-      "wav_max_abs_diff": 0.00015972554683685303,
-      "wav_cosine_sim": 0.9999999996618527,
-      "cpp_synth_ms": 802.57,
-      "py_synth_ms": 695.68,
-      "cpp_rtf": 0.1096,
+      "x_enc_max_diff": 0.00010251998901367188,
+      "logdur_max_diff": 6.198883056640625e-06,
+      "mel_max_abs_diff": 0.00022172927856445312,
+      "spec_re_max_diff": 0.0019049644470214844,
+      "spec_im_max_diff": 0.0022656917572021484,
+      "wav_max_abs_diff": 0.00015217065811157227,
+      "wav_cosine_sim": 0.9999999996274817,
+      "cpp_synth_ms": 677.39,
+      "py_synth_ms": 684.71,
+      "cpp_rtf": 0.0925,
       "audio_sec": 7.325,
-      "wav_mean_abs_diff": 8.963785376181477e-07
+      "wav_mean_abs_diff": 1.2568216334329918e-06
     },
     {
       "id": "ne_loan_num",
@@ -59,18 +59,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 0.0,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 4.76837158203125e-06,
-      "logdur_max_diff": 4.5299530029296875e-06,
-      "mel_max_abs_diff": 4.9591064453125e-05,
-      "spec_re_max_diff": 0.0005192570388317108,
-      "spec_im_max_diff": 0.00037610530853271484,
-      "wav_max_abs_diff": 2.9906630516052246e-05,
-      "wav_cosine_sim": 0.9999999999480155,
-      "cpp_synth_ms": 756.28,
-      "py_synth_ms": 680.08,
-      "cpp_rtf": 0.1086,
+      "x_enc_max_diff": 4.410743713378906e-06,
+      "logdur_max_diff": 3.814697265625e-06,
+      "mel_max_abs_diff": 5.435943603515625e-05,
+      "spec_re_max_diff": 0.0006591677665710449,
+      "spec_im_max_diff": 0.00048553943634033203,
+      "wav_max_abs_diff": 5.914270877838135e-05,
+      "wav_cosine_sim": 0.9999999998388484,
+      "cpp_synth_ms": 627.97,
+      "py_synth_ms": 689.2,
+      "cpp_rtf": 0.0902,
       "audio_sec": 6.963,
-      "wav_mean_abs_diff": 4.4972347268412705e-07
+      "wav_mean_abs_diff": 1.4448868341787602e-06
     },
     {
       "id": "ne_hiatus",
@@ -83,18 +83,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 0.0,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 4.082918167114258e-06,
-      "logdur_max_diff": 1.6689300537109375e-06,
-      "mel_max_abs_diff": 0.0001068115234375,
-      "spec_re_max_diff": 0.0003714561462402344,
-      "spec_im_max_diff": 0.00033664703369140625,
-      "wav_max_abs_diff": 3.9637088775634766e-05,
-      "wav_cosine_sim": 0.9999999998438207,
-      "cpp_synth_ms": 563.92,
-      "py_synth_ms": 591.38,
-      "cpp_rtf": 0.1194,
+      "x_enc_max_diff": 3.129243850708008e-06,
+      "logdur_max_diff": 2.1457672119140625e-06,
+      "mel_max_abs_diff": 8.96453857421875e-05,
+      "spec_re_max_diff": 0.0005543231964111328,
+      "spec_im_max_diff": 0.0004315376281738281,
+      "wav_max_abs_diff": 6.0930848121643066e-05,
+      "wav_cosine_sim": 0.9999999998381677,
+      "cpp_synth_ms": 442.39,
+      "py_synth_ms": 598.03,
+      "cpp_rtf": 0.0937,
       "audio_sec": 4.723,
-      "wav_mean_abs_diff": 1.305834643972048e-06
+      "wav_mean_abs_diff": 1.3203106163928169e-06
     },
     {
       "id": "sa_om",
@@ -107,18 +107,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 5.960464477539063e-08,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 3.337860107421875e-06,
-      "logdur_max_diff": 5.7220458984375e-06,
-      "mel_max_abs_diff": 6.151199340820312e-05,
-      "spec_re_max_diff": 0.0004894733428955078,
-      "spec_im_max_diff": 0.00040772557258605957,
-      "wav_max_abs_diff": 3.129243850708008e-05,
-      "wav_cosine_sim": 0.9999999999546758,
-      "cpp_synth_ms": 1119.94,
-      "py_synth_ms": 773.56,
-      "cpp_rtf": 0.1102,
+      "x_enc_max_diff": 2.4437904357910156e-06,
+      "logdur_max_diff": 3.5762786865234375e-06,
+      "mel_max_abs_diff": 5.745887756347656e-05,
+      "spec_re_max_diff": 0.0005514621734619141,
+      "spec_im_max_diff": 0.0005165934562683105,
+      "wav_max_abs_diff": 3.662705421447754e-05,
+      "wav_cosine_sim": 0.9999999999515695,
+      "cpp_synth_ms": 945.97,
+      "py_synth_ms": 751.64,
+      "cpp_rtf": 0.0931,
       "audio_sec": 10.162,
-      "wav_mean_abs_diff": 5.620163960884383e-07
+      "wav_mean_abs_diff": 5.49129254068248e-07
     },
     {
       "id": "sa_rv",
@@ -132,17 +132,17 @@
       "pitch_add_max_diff": 5.960464477539063e-08,
       "dm_max_diff": 0.0,
       "x_enc_max_diff": 2.7418136596679688e-06,
-      "logdur_max_diff": 4.5299530029296875e-06,
-      "mel_max_abs_diff": 4.363059997558594e-05,
-      "spec_re_max_diff": 0.0009213685989379883,
-      "spec_im_max_diff": 0.0004787445068359375,
-      "wav_max_abs_diff": 5.790591239929199e-05,
-      "wav_cosine_sim": 0.9999999998939042,
-      "cpp_synth_ms": 748.31,
-      "py_synth_ms": 676.16,
-      "cpp_rtf": 0.11,
+      "logdur_max_diff": 5.0067901611328125e-06,
+      "mel_max_abs_diff": 8.0108642578125e-05,
+      "spec_re_max_diff": 0.0016849040985107422,
+      "spec_im_max_diff": 0.0009293556213378906,
+      "wav_max_abs_diff": 0.00010731816291809082,
+      "wav_cosine_sim": 0.9999999996920467,
+      "cpp_synth_ms": 619.82,
+      "py_synth_ms": 670.04,
+      "cpp_rtf": 0.0911,
       "audio_sec": 6.803,
-      "wav_mean_abs_diff": 7.663483643227664e-07
+      "wav_mean_abs_diff": 1.0230579619019409e-06
     },
     {
       "id": "sa_gita",
@@ -155,18 +155,18 @@
       "dur_exact": true,
       "pitch_add_max_diff": 5.960464477539063e-08,
       "dm_max_diff": 0.0,
-      "x_enc_max_diff": 3.933906555175781e-06,
-      "logdur_max_diff": 4.5299530029296875e-06,
-      "mel_max_abs_diff": 9.107589721679688e-05,
-      "spec_re_max_diff": 0.0006546974182128906,
-      "spec_im_max_diff": 0.0006591081619262695,
-      "wav_max_abs_diff": 6.861239671707153e-05,
-      "wav_cosine_sim": 0.9999999998192328,
-      "cpp_synth_ms": 1130.33,
-      "py_synth_ms": 776.43,
-      "cpp_rtf": 0.1092,
+      "x_enc_max_diff": 4.0531158447265625e-06,
+      "logdur_max_diff": 5.245208740234375e-06,
+      "mel_max_abs_diff": 9.632110595703125e-05,
+      "spec_re_max_diff": 0.0007662773132324219,
+      "spec_im_max_diff": 0.0008844137191772461,
+      "wav_max_abs_diff": 8.496269583702087e-05,
+      "wav_cosine_sim": 0.9999999997660922,
+      "cpp_synth_ms": 984.77,
+      "py_synth_ms": 789.74,
+      "cpp_rtf": 0.0951,
       "audio_sec": 10.354,
-      "wav_mean_abs_diff": 1.0449130058987066e-06
+      "wav_mean_abs_diff": 1.152808863480459e-06
     }
   ],
   "all_passed": true,
@@ -176,17 +176,17 @@
       "results": [
         {
           "id": "ne_kathmandu",
-          "mel_max_abs_diff": 4.220008850097656e-05,
-          "wav_cosine_sim": 0.9999999999550183,
-          "cpp_rtf": 0.11,
-          "cpp_synth_ms": 682.63
+          "mel_max_abs_diff": 3.123283386230469e-05,
+          "wav_cosine_sim": 0.9999999999421835,
+          "cpp_rtf": 0.0945,
+          "cpp_synth_ms": 586.17
         },
         {
           "id": "sa_om",
-          "mel_max_abs_diff": 6.151199340820312e-05,
-          "wav_cosine_sim": 0.9999999999546758,
-          "cpp_rtf": 0.1062,
-          "cpp_synth_ms": 1078.8
+          "mel_max_abs_diff": 5.745887756347656e-05,
+          "wav_cosine_sim": 0.9999999999515695,
+          "cpp_rtf": 0.0968,
+          "cpp_synth_ms": 983.27
         }
       ]
     },
@@ -195,17 +195,17 @@
       "results": [
         {
           "id": "ne_kathmandu",
-          "mel_max_abs_diff": 4.220008850097656e-05,
-          "wav_cosine_sim": 0.9999997807234452,
-          "cpp_rtf": 0.1138,
-          "cpp_synth_ms": 705.91
+          "mel_max_abs_diff": 3.123283386230469e-05,
+          "wav_cosine_sim": 0.9999997812334903,
+          "cpp_rtf": 0.0956,
+          "cpp_synth_ms": 593.37
         },
         {
           "id": "sa_om",
-          "mel_max_abs_diff": 6.151199340820312e-05,
-          "wav_cosine_sim": 0.9999997839563156,
-          "cpp_rtf": 0.1074,
-          "cpp_synth_ms": 1091.22
+          "mel_max_abs_diff": 5.745887756347656e-05,
+          "wav_cosine_sim": 0.9999997841315197,
+          "cpp_rtf": 0.0899,
+          "cpp_synth_ms": 913.63
         }
       ]
     },
@@ -214,17 +214,17 @@
       "results": [
         {
           "id": "ne_kathmandu",
-          "mel_max_abs_diff": 4.220008850097656e-05,
-          "wav_cosine_sim": 0.9999533928550921,
-          "cpp_rtf": 0.1194,
-          "cpp_synth_ms": 741.12
+          "mel_max_abs_diff": 3.123283386230469e-05,
+          "wav_cosine_sim": 0.9999533808241169,
+          "cpp_rtf": 0.0967,
+          "cpp_synth_ms": 599.78
         },
         {
           "id": "sa_om",
-          "mel_max_abs_diff": 6.151199340820312e-05,
-          "wav_cosine_sim": 0.999958106824624,
-          "cpp_rtf": 0.1127,
-          "cpp_synth_ms": 1145.45
+          "mel_max_abs_diff": 5.745887756347656e-05,
+          "wav_cosine_sim": 0.9999581074074946,
+          "cpp_rtf": 0.093,
+          "cpp_synth_ms": 944.61
         }
       ]
     }

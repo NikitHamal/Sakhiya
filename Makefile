@@ -8,8 +8,8 @@ BUILD_DIR = build
 CFLAGS   = -O3 -march=native -fPIC -pthread -fopenmp -D_GNU_SOURCE \
            -I$(BUILD_DIR) -I$(GGML_DIR)/include -I$(GGML_DIR)/src -I$(GGML_DIR)/src/ggml-cpu \
            -DGGML_USE_CPU -DGGML_USE_OPENMP -DGGML_VERSION='"1.0.0"' -DGGML_COMMIT='"d9fe7bf"'
-CXXFLAGS = -std=c++17 $(CFLAGS) -funroll-loops -Icpp
-LDFLAGS  = -pthread -fopenmp -lm -ldl
+CXXFLAGS = -std=c++17 $(CFLAGS) -funroll-loops -fno-math-errno -fno-trapping-math -Icpp
+LDFLAGS  = -pthread -fopenmp -lmvec -lm -ldl
 
 GGML_C_SRCS = \
 	$(GGML_DIR)/src/ggml.c \

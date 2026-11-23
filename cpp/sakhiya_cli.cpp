@@ -20,6 +20,13 @@ static void print_usage(const char * prog) {
               << "  -s, --style <style_name>     Style: neutral|news|conversational|storytelling|warm_soft|slow_clear|expressive|vedic_chant\n"
               << "  -o, --out <output.wav>       Output 24 kHz 16-bit PCM WAV path (default: sakhiya_cpp.wav)\n"
               << "  -j, --threads <N>            CPU threads (default: 4)\n"
+              << "  --rate <float>               Speaking speed multiplier (0.5 - 2.0)\n"
+              << "  --pitch-shift <float>        Pitch shift in semitones/octaves (-0.6 - 0.6)\n"
+              << "  --pitch-scale <float>        Expressiveness / tone scale (0.5 - 1.8)\n"
+              << "  --pause-scale <float>        Pause duration multiplier (0.3 - 2.5)\n"
+              << "  --energy-scale <float>       Projection / warmth multiplier (0.6 - 1.6)\n"
+              << "  --svara <float>              Vedic Svara depth multiplier (default: 1.0)\n"
+              << "  --batch <manifest.tsv>       Batch synthesize tab-separated lines: id\\tlang\\tstyle\\tout_wav\\ttext\n"
               << "  --dump-stages <dir>          Dump exact intermediate tensors (ids, x_enc, logdur, dur, mel, spec, wav) for diff gate\n"
               << "  --g2p-only                   Print JSON with phones, ids, pitch_add, dm, and exit\n"
               << "  --slp1-only                  Print JSON with Sanskrit phonemize_slp1 output and exit\n"
@@ -44,7 +51,11 @@ int main(int argc, char ** argv) {
     std::string style = "news";
     std::string out_wav = "sakhiya_cpp.wav";
     std::string dump_dir;
+    std::string batch_file;
     int threads = 4;
+    float svara = 1.0f;
+    bool has_override = false;
+    float ov_rate = -1.0f, ov_ps = -999.0f, ov_psc = -1.0f, ov_pause = -1.0f, ov_eng = -1.0f;
     bool g2p_only = false;
     bool slp1_only = false;
     bool laya_only = false;
@@ -57,6 +68,13 @@ int main(int argc, char ** argv) {
         else if ((a == "-s" || a == "--style") && i + 1 < argc) style = argv[++i];
         else if ((a == "-o" || a == "--out") && i + 1 < argc) out_wav = argv[++i];
         else if ((a == "-j" || a == "--threads") && i + 1 < argc) threads = std::atoi(argv[++i]);
+        else if (a == "--rate" && i + 1 < argc) { ov_rate = std::atof(argv[++i]); has_override = true; }
+        else if (a == "--pitch-shift" && i + 1 < argc) { ov_ps = std::atof(argv[++i]); has_override = true; }
+        else if (a == "--pitch-scale" && i + 1 < argc) { ov_psc = std::atof(argv[++i]); has_override = true; }
+        else if (a == "--pause-scale" && i + 1 < argc) { ov_pause = std::atof(argv[++i]); has_override = true; }
+        else if (a == "--energy-scale" && i + 1 < argc) { ov_eng = std::atof(argv[++i]); has_override = true; }
+        else if (a == "--svara" && i + 1 < argc) { svara = std::atof(argv[++i]); }
+        else if (a == "--batch" && i + 1 < argc) batch_file = argv[++i];
         else if (a == "--dump-stages" && i + 1 < argc) dump_dir = argv[++i];
         else if (a == "--g2p-only") g2p_only = true;
         else if (a == "--slp1-only") slp1_only = true;
@@ -136,11 +154,52 @@ int main(int argc, char ** argv) {
         auto t_load1 = std::chrono::high_resolution_clock::now();
         double load_ms = std::chrono::duration<double, std::milli>(t_load1 - t_load0).count();
 
+        if (!batch_file.empty()) {
+            std::ifstream bf(batch_file);
+            if (!bf) throw std::runtime_error("Cannot open batch file: " + batch_file);
+            std::string line;
+            while (std::getline(bf, line)) {
+                if (line.empty() || line[0] == '#') continue;
+                std::istringstream iss(line);
+                std::string cid, b_lang, b_style, b_out, b_text;
+                if (!std::getline(iss, cid, '\t')) continue;
+                if (!std::getline(iss, b_lang, '\t')) continue;
+                if (!std::getline(iss, b_style, '\t')) continue;
+                if (!std::getline(iss, b_out, '\t')) continue;
+                if (!std::getline(iss, b_text)) continue;
+                auto tb0 = std::chrono::high_resolution_clock::now();
+                std::vector<float> b_wav = engine.say(b_text, b_lang, b_style, svara, nullptr, nullptr);
+                auto tb1 = std::chrono::high_resolution_clock::now();
+                double b_ms = std::chrono::duration<double, std::milli>(tb1 - tb0).count();
+                double b_sec = static_cast<double>(b_wav.size()) / 24000.0;
+                double b_rtf = (b_ms / 1000.0) / std::max(b_sec, 1e-6);
+                sakhiya::write_wav_pcm16(b_out, b_wav, 24000);
+                std::cout << "[sakhiya-cli batch] id=" << cid << " out=" << b_out
+                          << " dur=" << std::fixed << std::setprecision(2) << b_sec << "s"
+                          << " synth=" << std::setprecision(1) << b_ms << "ms"
+                          << " RTF=" << std::setprecision(4) << b_rtf << "\n";
+            }
+            return 0;
+        }
+
+        sakhiya::StyleConfig ctl = sakhiya::get_style_config(style);
+        if (lang == "sa" && style != "chant" && style != "vedic_chant" && style != "storytelling") {
+            ctl.rate *= 0.96f;
+            ctl.pause_scale *= 1.05f;
+            ctl.pitch_scale = 1.00f;
+        }
+        if (ov_rate > 0.0f) ctl.rate = ov_rate;
+        if (ov_ps > -900.0f) ctl.pitch_shift = ov_ps;
+        if (ov_psc > 0.0f) ctl.pitch_scale = ov_psc;
+        if (ov_pause > 0.0f) ctl.pause_scale = ov_pause;
+        if (ov_eng > 0.0f) ctl.energy_scale = ov_eng;
+        const sakhiya::StyleConfig * ctl_ptr = has_override ? &ctl : nullptr;
+
         sakhiya::StageDump dump;
         sakhiya::StageDump * dump_ptr = dump_dir.empty() ? nullptr : &dump;
 
         auto t0 = std::chrono::high_resolution_clock::now();
-        std::vector<float> wav = engine.say(text, lang, style, 1.0f, nullptr, dump_ptr);
+        std::vector<float> wav = engine.say(text, lang, style, svara, ctl_ptr, dump_ptr);
         auto t1 = std::chrono::high_resolution_clock::now();
 
         double synth_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -148,7 +207,6 @@ int main(int argc, char ** argv) {
         double rtf = (synth_ms / 1000.0) / std::max(audio_sec, 1e-6);
 
         sakhiya::write_wav_pcm16(out_wav, wav, 24000);
-        // Also write raw float32 wav alongside if dump_dir is given
         if (dump_ptr) {
             std::string cmd = "mkdir -p \"" + dump_dir + "\"";
             int rc = std::system(cmd.c_str());
