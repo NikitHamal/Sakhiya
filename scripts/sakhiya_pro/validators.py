@@ -10,6 +10,7 @@ import jiwer
 LAT = re.compile(r'[A-Za-z0-9]+')
 _PUN = re.compile(r'[।॥,?!.\-–—:;"\'()॰ऽ\u0951-\u0954\u200c\u200d]')
 # phonetic folds: nasal/anusvara homophones, sibilants, vowel length, nukta, vocalic r, visarga -> h-less, ॐ -> ओम
+_DEV_LOAN = re.compile(r'(?:सिक्स\s*(?:पोइन्ट|प्वाइन्ट)\s*(?:टु|टू)|जेमिनाई\s*फोर\s*नियोन|एन्थ्रोपिक|ओपनएआई|नेबियन्स|निभियन्स|निबियन्स)')
 _FOLD = [('निभियन्स', 'नेबियन्स'), ('निबियन्स', 'नेबियन्स'), ('इन्थ्रोपिक', 'एन्थ्रोपिक'), ('शेयर', 'सेयर'),
          ('ॐ', 'ओम'), ('ऋ', 'रि'), ('ृ', 'ि'), ('ळ', 'ल'), ('ष', 'श'), ('श', 'स'), ('ँ', 'ं'), ('ङ', 'न'), ('ञ', 'न'), ('ण', 'न'), ('ः', ''),
          ('ी', 'ि'), ('ू', 'ु'), ('ई', 'इ'), ('ऊ', 'उ'), ('ज्ञ', 'ग्य'), ('क्ष', 'छ'), ('व', 'ब'), ('ै', 'े'), ('ौ', 'ो'), ('ऐ', 'ए'), ('औ', 'ओ'),
@@ -28,8 +29,8 @@ def norm(t, fold=False):
 
 def pron_cer(ref, hyp, lang='npi'):
     """CER used by the render gate. Sound-folded for both npi and sa (Kriti CTC is phonetic, not orthographic)."""
-    has_lat = bool(LAT.search(ref))
-    r = LAT.sub(' ', ref); h = LAT.sub(' ', hyp)
+    has_lat = bool(LAT.search(ref) or _DEV_LOAN.search(ref))
+    r = _DEV_LOAN.sub(' ', LAT.sub(' ', ref)); h = _DEV_LOAN.sub(' ', LAT.sub(' ', hyp))
     r, h = norm(r, True), norm(h, True)
     if not r: return 0.0 if h or True else 1.0   # pure-Latin line: nothing to compare, other gates (clicks/Hindi/dur) decide
     c = float(jiwer.cer(r, h or ' '))
