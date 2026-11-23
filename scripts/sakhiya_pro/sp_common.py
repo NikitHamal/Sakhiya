@@ -10,6 +10,9 @@ def kriti():
     return _cache['k']
 def utmos():
     if 'u' not in _cache:
+        if not os.path.isdir('/work/sp/SpeechMOS'):
+            import subprocess
+            subprocess.run(['git', 'clone', '-q', 'https://github.com/tarepan/SpeechMOS.git', '/work/sp/SpeechMOS'], check=False)
         _cache['u'] = torch.hub.load('/work/sp/SpeechMOS', 'utmos22_strong', source='local', trust_repo=True).cuda().eval()
     return _cache['u']
 def utmos_score(w, sr):
@@ -18,6 +21,9 @@ def utmos_score(w, sr):
         return float(utmos()(torch.from_numpy(w16)[None].cuda(), 16000).item())
 def spk():
     if 's' not in _cache:
+        import torchaudio
+        if not hasattr(torchaudio, 'list_audio_backends'):
+            torchaudio.list_audio_backends = lambda: ['soundfile']
         from speechbrain.inference.speaker import EncoderClassifier
         _cache['s'] = EncoderClassifier.from_hparams('speechbrain/spkrec-ecapa-voxceleb', savedir='/work/sp/ecapa', run_opts={'device': 'cuda'})
     return _cache['s']
