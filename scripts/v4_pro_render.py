@@ -245,16 +245,37 @@ class RendererV4:
         def run(k, sd):
             nonlocal best
             self.torch.manual_seed(sd)
+            ref_a, ref_t, txt_gen = self.ref_wav, self.ref_text, text_in
+            if lang == 'sa':
+                try:
+                    import vedic_v4 as VV
+                    txt_gen = VV.format_sanskrit_for_omnivoice(text)
+                    anc_p = '/work/sp/v4/vedic/anchors/anchors.json'
+                    if os.path.exists(anc_p):
+                        ancs = {x['key']: x for x in json.load(open(anc_p))}
+                        akey = 'rv' if ('अग्निमीळे' in text or '\u0951' in text) else ('om' if text.strip().startswith('ॐ') else 'gita')
+                        if akey in ancs and os.path.exists(ancs[akey]['path']):
+                            ref_a = ancs[akey]['path']
+                            ref_t = ancs[akey]['ref_text']
+                except Exception:
+                    pass
             a = self.m.generate(
-                text=text_in,
+                text=txt_gen,
                 language=lang,
-                ref_audio=self.ref_wav,
-                ref_text=self.ref_text,
+                ref_audio=ref_a,
+                ref_text=ref_t,
                 num_step=self.ns,
                 guidance_scale=self.gs,
                 instruct=None,
             )
             w = trim_clause(np.asarray(a[0], dtype=np.float32), self.m.sampling_rate)
+            if lang == 'sa':
+                try:
+                    import vedic_v4 as VV
+                    aw, _ = sf.read(self.ref_wav, dtype='float32')
+                    w = VV.soften_visarga_and_shape_svara(w, self.m.sampling_rate, text, aw if aw.ndim == 1 else aw.mean(1))
+                except Exception as e:
+                    print('vedic shape warn:', e, flush=True)
             p = f'{tmp}/t{k}.wav'
             sf.write(p, w, self.m.sampling_rate)
             f = self.score(p, text_orig, lang)

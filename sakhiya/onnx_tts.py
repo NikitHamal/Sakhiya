@@ -170,6 +170,26 @@ class SakhiyaONNX:
                     c_arr[0] = c_in[idx_c]
             feeds_add["contour"] = c_arr
         if self.single is not None and self.dec is None:
+            if "dur_scale" in self.enc_in:
+                has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
+                sv_sc = ((0.55 if has_vm else 0.48) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
+                ds_in = (dm_arr / float(k["rate"])).astype(np.float32)
+                ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+                w = self.single.run(None, {
+                    "ids": ids,
+                    "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),
+                    "dur_scale": ds_in,
+                    "pitch_shift": ps_in,
+                })[0][0].astype(np.float32)
+                dur_est = np.maximum(np.round(ds_in * 6.0), 5).astype(int)
+                self.trace.append((ps_in, dur_est))
+                pk = float(np.max(np.abs(w))) if w.size else 0.0
+                if pk > 1e-4:
+                    w = np.clip(w * (0.90 / pk), -1.0, 1.0)
+                if w.size > 256:
+                    ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
+                    w[:128] *= ramp; w[-128:] *= ramp[::-1]
+                return w
             dur_ov = np.maximum(np.round(dm_arr * 6.0 / k["rate"]), 3).astype(np.int64)[None, :]
             feeds_add["dur_override"] = dur_ov
             re_o, im_o, ld = self.single.run(None, {"ids": ids, "spk": np.array([spk]), "lang": np.array([lang_id]),

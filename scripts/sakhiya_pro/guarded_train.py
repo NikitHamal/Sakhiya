@@ -21,6 +21,8 @@ ap.add_argument('--init', default='/work/sp/models/OmniVoice')
 ap.add_argument('--tokens', default='/work/sp/ft/tokens')
 ap.add_argument('--lora', action='store_true')
 ap.add_argument('--prompt_ratio', type=float, default=None, help='fixed prompt ratio (v3: 0.10); default = OmniVoice (0.0,0.3)')
+ap.add_argument('--prompt_ratio_min', type=float, default=None)
+ap.add_argument('--prompt_ratio_max', type=float, default=None)
 ap.add_argument('--min_lr_ratio', type=float, default=0.0, help='cosine decays to lr*ratio (v3: 2e-6/1.4e-5)')
 ap.add_argument('--warmup_ratio', type=float, default=0.05)
 a = ap.parse_args()
@@ -31,7 +33,9 @@ cfg = json.load(open(f'{SRC}/examples/config/train_config_finetune_sdpa.json'))
 cfg.update(init_from_checkpoint=a.init, learning_rate=a.lr, steps=a.steps, batch_tokens=a.batch_tokens,
            logging_steps=10, eval_steps=a.save_steps, save_steps=a.save_steps, keep_last_n_checkpoints=-1,
            warmup_ratio=a.warmup_ratio, num_workers=4)
-if a.prompt_ratio is not None:
+if a.prompt_ratio_min is not None and a.prompt_ratio_max is not None:
+    cfg.update(prompt_ratio_range=[a.prompt_ratio_min, a.prompt_ratio_max], instruct_ratio=0.0, only_instruct_ratio=0.0)
+elif a.prompt_ratio is not None:
     cfg.update(prompt_ratio_range=[a.prompt_ratio, a.prompt_ratio], instruct_ratio=0.0, only_instruct_ratio=0.0)
 if a.lora:
     cfg.update(use_lora=True, learning_rate=1e-4)
