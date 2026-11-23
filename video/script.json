@@ -16,10 +16,10 @@
       {"id": "b6", "ne": "तपाईंले अहिले सुनिरहनुभएको आवाज मेरो पहिलो चरण हो।", "en": "The voice you hear now is my very first phase."}
     ]},
     {"id": "series", "pre": 0.5, "post": 0.8, "lines": [
-      {"id": "c1", "ne": "त्यसैले आजदेखि, हामी नेबियन्स न्युज सुरु गर्दैछौं।", "en": "So from today, we start NEBians News."},
-      {"id": "c2", "ne": "यसमा हामी संसारका प्रमुख प्रविधि र एआई समाचार ल्याउँछौं।", "en": "Top tech and AI news from around the world."},
-      {"id": "c3", "ne": "अनि नेबियन्स एन्ड्रोइड एपमा हामीले के बनाइरहेका छौं, त्यो पनि बताउँछौं।", "en": "And what we are building in the NEBians Android app."},
-      {"id": "c4", "ne": "त चलौं, आजका मुख्य समाचारतिर।", "en": "Now, today's top stories."}
+      {"id": "c1", "ne": "त्यसैले आजदेखि, हामी नेबियन्स न्युज सुरु गर्दैछौँ।", "en": "So from today, we start NEBians News."},
+      {"id": "c2", "ne": "यसमा हामी संसारका प्रमुख प्रविधि र एआई समाचार ल्याउँछौँ।", "en": "Top tech and AI news from around the world."},
+      {"id": "c3", "ne": "अनि नेबियन्स एन्ड्रोइड एपमा हामीले के बनाइरहेका छौँ, त्यो पनि बताउँछौँ।", "en": "And what we are building in the NEBians Android app."},
+      {"id": "c4", "ne": "अब लागौँ आजका मुख्य समाचारतर्फ।", "en": "Now, today's top stories."}
     ]},
     {"id": "n1", "pre": 1.2, "post": 0.6, "lines": [
       {"id": "n1a", "ne": "पहिलो समाचार। एन्थ्रोपिकको शेयर बजारमा पहिलो दिन नै सत्र प्रतिशत बढ्यो।", "en": "Anthropic's stock jumped 17 percent on IPO day."},
