@@ -52,8 +52,10 @@ class Renderer:
         self.ref_text = json.load(open(REF_JSON))['ref_text']
         rw, rsr = sf.read(REF_WAV, dtype='float32'); self.remb = C.spk_emb(rw, rsr)
 
-    def score(self, path, text):
+    def score(self, path, text, lang='npi'):
+        import validators as V
         f = self.C.score_take(path, text, self.remb)
+        f['cer_raw'] = f['cer']; f['cer'] = V.pron_cer(text, f.get('hyp', ''), lang)   # v2: sound-folded CER (Sanskrit / loanword safe)
         n = max(1, len(re.findall(r'[क-ह]', text)))
         cps_pen = 0.0 if 4.0 <= f['cps'] <= 9.5 else 0.5   # pace sanity: very rushed or dragging = bad
         f['sel'] = (-3.0 * f['cer'] - 0.25 * f['clicks'] - 0.5 * f['hindi'] - cps_pen - 0.5 * max(0, f['long_gaps'])
@@ -64,7 +66,10 @@ class Renderer:
     def take(self, text, lang='npi', seeds=None, max_extra=6):
         """Best-of-N (default 3). If the best take fails the forensic gate (CER / clicks / Hindi leak), draw up to
         `max_extra` more seeds and keep the best-scoring take overall."""
+        import nep_norm, validators as V
         text = SVARA.sub('', text)
+        if lang != 'sa': text = nep_norm.normalize(text)
+        has_lat = bool(V.LAT.search(text))
         seeds = list(seeds or [11, 22, 33][:self.n]); extra = [44, 55, 66, 77, 88, 99][:max_extra]
         tmp = tempfile.mkdtemp(); best = None; cands = []
         def run(k, sd):
@@ -73,9 +78,9 @@ class Renderer:
             a = self.m.generate(text=text, language=lang, ref_audio=REF_WAV, ref_text=self.ref_text, num_step=self.ns, guidance_scale=self.gs)
             w = trim(np.asarray(a[0], dtype=np.float32), self.m.sampling_rate)
             p = f'{tmp}/t{k}.wav'; sf.write(p, w, self.m.sampling_rate)
-            f = self.score(p, text); cands.append(dict(seed=sd, **{x: f[x] for x in ('cer', 'clicks', 'hindi', 'utmos', 'spk_sim', 'dur', 'sel')}))
+            f = self.score(p, text, lang); cands.append(dict(seed=sd, **{x: f[x] for x in ('cer', 'clicks', 'hindi', 'utmos', 'spk_sim', 'dur', 'sel')}))
             if best is None or f['sel'] > best[0]: best = (f['sel'], p, f, w)
-        def passes(f): return f['cer'] <= self.GATE['cer'] and f['clicks'] <= self.GATE['clicks'] and f['hindi'] <= self.GATE['hindi']
+        def passes(f): return V.gate(f, lang, has_lat)
         for k, sd in enumerate(seeds): run(k, sd)
         k = len(seeds)
         while not passes(best[2]) and extra:
