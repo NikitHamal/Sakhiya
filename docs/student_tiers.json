@@ -227,76 +227,76 @@
   {
     "tier": "t5",
     "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
-    "step": 7500,
+    "step": 12500,
     "qat": false,
     "int8_mb": 4.562,
     "fp32_mb": 17.46,
-    "int8_vs_fp32_mel_corr": 0.9951,
-    "rtf_1thread": 0.0169,
-    "utmos": 3.29,
-    "cer_ne": 0.04,
-    "cer_sa": 0.087,
-    "spk_sim": 0.823,
+    "int8_vs_fp32_mel_corr": 0.9952,
+    "rtf_1thread": 0.0167,
+    "utmos": 3.335,
+    "cer_ne": 0.042,
+    "cer_sa": 0.077,
+    "spk_sim": 0.819,
     "clicks": 0,
     "drops": 0,
     "stutters": 0,
     "by_style": {
       "conversational": {
         "n": 9,
-        "utmos": 3.358,
-        "cer": 0.034,
-        "spk_sim": 0.804,
+        "utmos": 3.425,
+        "cer": 0.036,
+        "spk_sim": 0.798,
         "clicks": 0
       },
       "expressive": {
         "n": 1,
-        "utmos": 2.875,
-        "cer": 0.033,
-        "spk_sim": 0.879,
+        "utmos": 2.754,
+        "cer": 0.016,
+        "spk_sim": 0.882,
         "clicks": 0
       },
       "news": {
         "n": 6,
-        "utmos": 3.354,
-        "cer": 0.057,
-        "spk_sim": 0.879,
+        "utmos": 3.352,
+        "cer": 0.064,
+        "spk_sim": 0.873,
         "clicks": 0
       },
       "storytelling": {
         "n": 3,
-        "utmos": 3.114,
-        "cer": 0.042,
-        "spk_sim": 0.825,
+        "utmos": 3.227,
+        "cer": 0.038,
+        "spk_sim": 0.82,
         "clicks": 0
       },
       "vedic": {
         "n": 4,
-        "utmos": 3.373,
-        "cer": 0.085,
-        "spk_sim": 0.785,
+        "utmos": 3.422,
+        "cer": 0.069,
+        "spk_sim": 0.792,
         "clicks": 0
       },
       "vedic_chant": {
         "n": 3,
-        "utmos": 3.153,
-        "cer": 0.097,
-        "spk_sim": 0.771,
+        "utmos": 3.226,
+        "cer": 0.09,
+        "spk_sim": 0.773,
         "clicks": 0
       },
       "warm_soft": {
         "n": 1,
-        "utmos": 3.326,
-        "cer": 0.023,
-        "spk_sim": 0.891,
+        "utmos": 3.313,
+        "cer": 0.034,
+        "spk_sim": 0.879,
         "clicks": 0
       }
     },
     "node_verify": {
       "ok": true,
       "nan_count": 0,
-      "rtf_1thread": 0.0164
+      "rtf_1thread": 0.0162
     },
     "gate_pass": true,
-    "score": 2.058
+    "score": 2.0645
   }
 ]
