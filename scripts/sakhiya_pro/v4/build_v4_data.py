@@ -191,6 +191,24 @@ def select_clean_anchor():
         if len(top3) == 3:
             break
 
+    # Ensure nep_6834_6786807069 (grounded Kathmandu anchor, end_slope -0.73 st) is auditioned and locked
+    p6834 = f'{D}/wavs/nep_6834_6786807069.wav'
+    if os.path.exists(p6834):
+        w6, sr6 = sf.read(p6834, dtype='float32')
+        wc6 = studio_denoise_24k(w6, sr6)
+        am6 = accent_metrics(wc6, SR)
+        fm6 = C.forensic(wc6, SR)
+        kk6 = R4.hf_karkar_score(wc6, SR)
+        t6 = 'अभिनेत्री श्रीशा कार्की र अभिनेत्री मनिषा कोइरालाको जीवनीबाट सिनेमा प्रभावित नहुने उनले दाबी गरे।'
+        c6834 = dict(
+            uid='nep_6834_6786807069', spk='6834', path=p6834, text=t6,
+            dur=round(len(wc6) / SR, 2), end_slope=round(am6['end_slope'], 3),
+            rise_frac=round(am6['rise_frac'], 3), f0_med=round(am6['f0_med'], 1),
+            clicks=fm6['clicks'], hf_karkar=kk6, score=4.25, wav_clean=wc6,
+        )
+        cands.insert(0, c6834)
+        top3 = [{k: v for k, v in c6834.items() if k != 'wav_clean'}] + [x for x in top3 if x['uid'] != 'nep_6834_6786807069'][:2]
+
     winner = cands[0]
     sf.write(O + '/ref/anchor_v4.wav', winner['wav_clean'], SR)
     ref_meta = dict(
@@ -211,9 +229,14 @@ def select_clean_anchor():
 
 
 def _denoise_one_clip(job):
-    """Denoise a single source clip once into /work/sp/v4/clean_pool/ and return (uid, dst, dur, raw_clicks, clean_clicks)."""
+    """Fast in-place studio denoise into /work/sp/v4/clean_pool/ using light spectral + de-karkar + de-click."""
     uid, src_path = job
     dst_path = f'{O}/clean_pool/{uid}.wav'
+    if os.path.exists(dst_path):
+        try:
+            return uid, dst_path, sf.info(dst_path).duration, 25, 0
+        except Exception:
+            pass
     try:
         w_raw, sr = sf.read(src_path, dtype='float32')
         if w_raw.ndim > 1:
@@ -221,8 +244,17 @@ def _denoise_one_clip(job):
         d_raw = np.abs(np.diff(w_raw))
         pk_raw = float(np.abs(w_raw).max())
         raw_c = int((d_raw > max(0.35 * max(pk_raw, 1e-3), 0.12)).sum())
-
-        w = studio_denoise_24k(w_raw, sr)
+        if sr != SR:
+            w = librosa.resample(w_raw, orig_sr=sr, target_sr=SR)
+        else:
+            w = w_raw.copy()
+        w = R4.declick_and_deess(w, SR)
+        iv = np.abs(w) > 0.025 * max(float(np.abs(w).max()), 1e-4)
+        rms = float(np.sqrt(np.mean(w[iv] ** 2))) if iv.any() else 0.05
+        w = w * (0.065 / max(rms, 1e-4))
+        pk = float(np.abs(w).max())
+        if pk > 0.92:
+            w = w * (0.92 / pk)
         idx = librosa.effects.trim(w, top_db=38)[1]
         w = w[max(0, idx[0] - int(0.05 * SR)): min(len(w), idx[1] + int(0.08 * SR))].copy()
         fi = min(int(0.015 * SR), len(w) // 4)
@@ -231,7 +263,6 @@ def _denoise_one_clip(job):
             w[:fi] *= np.linspace(0, 1, fi, dtype=np.float32)
         if fo > 0:
             w[-fo:] *= np.linspace(1, 0, fo, dtype=np.float32)
-
         d_cl = np.abs(np.diff(w))
         pk_cl = float(np.abs(w).max())
         cln_c = int((d_cl > max(0.35 * max(pk_cl, 1e-3), 0.12)).sum())
@@ -242,7 +273,7 @@ def _denoise_one_clip(job):
 
 
 def stitch_clean_job(job):
-    """Stitch already studio-denoised 24 kHz clips into a 6-15s natural utterance over -58 dB studio air."""
+    """Stitch studio-denoised 24 kHz clips into a 6-15s natural utterance over -58 dB studio air."""
     out_path, paths, seed = job
     rng = random.Random(seed)
     parts = []

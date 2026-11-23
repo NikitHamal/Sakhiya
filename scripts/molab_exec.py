@@ -10,8 +10,40 @@ def req(path, body=None, extra=None, timeout=600):
     if body is not None: h["Content-Type"] = "application/json"
     r = urllib.request.Request(URL + path, data=None if body is None else json.dumps(body).encode(), headers=h, method="POST")
     return urllib.request.urlopen(r, timeout=timeout).read().decode()
+_ws_sock = None
+def _wake_ws():
+    global _ws_sock
+    import socket, ssl, urllib.parse, base64, time
+    u = urllib.parse.urlparse(URL)
+    host = u.hostname
+    port = u.port or (443 if u.scheme == "https" else 80)
+    raw = socket.create_connection((host, port), timeout=15)
+    s = ssl.create_default_context().wrap_socket(raw, server_hostname=host) if u.scheme == "https" else raw
+    key = base64.b64encode(os.urandom(16)).decode()
+    sid = "s_sakhiya_v4"
+    req_ws = (
+        f"GET /ws?session_id={sid}&file=/marimo/notebook.py HTTP/1.1\r\n"
+        f"Host: {host}\r\n"
+        f"Upgrade: websocket\r\n"
+        f"Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Key: {key}\r\n"
+        f"Sec-WebSocket-Version: 13\r\n"
+        f"Authorization: Bearer {TOK}\r\n"
+        f"User-Agent: curl/8.5.0\r\n\r\n"
+    )
+    s.sendall(req_ws.encode())
+    s.recv(4096)
+    _ws_sock = s
+    time.sleep(1.5)
+    return sid
+
 def session():
-    return json.loads(req("/api/home/running_notebooks", timeout=300))["files"][0]["sessionId"]
+    files = json.loads(req("/api/home/running_notebooks", timeout=300)).get("files", [])
+    if files:
+        return files[0]["sessionId"]
+    _wake_ws()
+    files = json.loads(req("/api/home/running_notebooks", timeout=300)).get("files", [])
+    return files[0]["sessionId"] if files else "s_sakhiya_v4"
 def run_py(code, timeout=600):
     import time
     last_err = None
