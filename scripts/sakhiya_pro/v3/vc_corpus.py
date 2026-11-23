@@ -93,7 +93,8 @@ def work(i, n, deadline):
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
-            else: os.remove(dst)
+            else:
+                print('REJ', x['id'], {k: round(float(m[k]), 3) for k in ('cer', 'utmos', 'clicks', 'spk_sim', 'hindi', 'dur')}, flush=True); os.remove(dst)
         except Exception as e:
             print('ERR', x['id'], repr(e)[:160], flush=True)
         if tried % 20 == 0: print(f'[vc{i}] tried {tried} kept {kept} {round(time.time() - t0)}s', flush=True)
