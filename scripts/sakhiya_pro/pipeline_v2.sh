@@ -44,15 +44,13 @@ st 20_s1 "Stage 1: broad Nepal-native phonology" done "picked $B1"
 python3 - <<'PY'
 import json, random
 rng = random.Random(9); O = '/work/sp/ft3v2'; import os; os.makedirs(O, exist_ok=True)
-meta = json.load(open('/work/sp/ft/train_meta.json')); anchor = []; seen = set()
-for r in meta:
-    if r['src'] == 'slr43_6834' and r['id'].rsplit('_r', 1)[0] not in seen: seen.add(r['id'].rsplit('_r', 1)[0]); anchor.append(r)
-div = [json.loads(l) for l in open('/work/sp/ft2/train.jsonl')]; div = [r for r in div if not r['id'].startswith('anchor')]
+sel = json.load(open('/work/sp/ft2/selected_rows.json')); anchor = [r for r in sel if r['src'] == 'slr43_6834']
+div = [r for r in sel if r['src'] != 'slr43_6834']
 n_div = int(len(anchor) * 3 * 0.30 / 0.70)  # anchor x3 = 70 %
 rows = []
-for k in range(3): rows += [dict(id=f"{r['id'].rsplit('_r',1)[0]}_a{k}", audio_path=r['audio_path'], text=r['text'], language_id=r['language_id']) for r in anchor]
+for k in range(3): rows += [dict(id=f"{r['id']}_a{k}", audio_path=r['audio_path'], text=r['text'], language_id=r['language_id']) for r in anchor]
 rows += rng.sample(div, min(n_div, len(div))); rng.shuffle(rows)
-dev = [json.loads(l) for l in open('/work/sp/ft/dev.jsonl')][:10]
+dev = [json.loads(l) for l in open('/work/sp/ft2/dev.jsonl')][:10]
 for name, rs in (('train', rows), ('dev', dev)):
     with open(f'{O}/{name}.jsonl', 'w', encoding='utf8') as f:
         for r in rs: f.write(json.dumps({k: r[k] for k in ('id', 'audio_path', 'text', 'language_id')}, ensure_ascii=False) + '\n')

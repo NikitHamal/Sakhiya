@@ -37,16 +37,21 @@ def candidates():
     D = '/work/sp/data/slr43/ne_np_female'
     for l in open(D + '/line_index.tsv', encoding='utf8'):
         u, t = l.rstrip('\n').split('\t')[:2]
-        if u.split('_')[1] != '6834': C.append(dict(id='s43_' + u, path=f'{D}/wavs/{u}.wav', text=t, src='slr43', spk=u.split('_')[1]))
+        C.append(dict(id='s43_' + u, path=f'{D}/wavs/{u}.wav', text=t, src='slr43_6834' if u.split('_')[1] == '6834' else 'slr43', spk=u.split('_')[1]))
     # relaxed v13 (24k) news / storytelling / conversational with Gemini gold text
-    M = '/work/sp/data/v13/meta'
-    gold = json.load(open(M + '/gold_text.json'))
-    b = json.load(open(M + '/blocklist.json')); bl = set(b if isinstance(b, list) else b.keys())
-    for l in open(M + '/asr/asr.jsonl'):
-        x = json.loads(l); cid = os.path.basename(x['path'])[:-4]
-        if x.get('cat') not in ('news', 'storytelling', 'conversational') or cid not in gold: continue
-        if x.get('utmos', 0) < 1.9 or x.get('snr', 0) < 12 or x.get('clip', 0) > 0.001 or x.get('spk_min_sim', 1) < 0.75 or cid in bl: continue
-        C.append(dict(id='v13_' + cid, path=f'/work/sp/data/v13/wav/{cid}.wav', text=gold[cid], src='v13_' + x['cat'], spk=x.get('spk', 'v13'), v13=True))
+    # (Session 67 fresh box: Gemini gold text / per-clip ASR table are gone; the private dataset's meta.jsonl carries
+    #  Whisper/CTC-agreed text + utmos/snr/spk, which we use with a relaxed filter. Indian-broadcast and vedic stay out.)
+    M = '/work/sp/data/vedic/meta/meta.jsonl'
+    have = {}
+    if os.path.exists(M):
+        for l in open(M, encoding='utf8'):
+            x = json.loads(l)
+            if x.get('style') not in ('news', 'storytelling', 'conversational') or x.get('lang', 'ne') != 'ne': continue
+            if x.get('utmos', 0) < 1.9 or x.get('snr', 0) < 12 or x.get('agree', 0) < 0.70: continue
+            if str(x.get('spk', '')).startswith(('ind_', 'in_')) or 'indian' in str(x.get('tier', '')): continue
+            have[x['id']] = x
+    for cid, x in have.items():
+        C.append(dict(id='v13_' + cid, path=f'/work/sp/data/v13/wav/{cid}.wav', text=x['text'], src='v13_' + x['style'], spk=x.get('spk', 'v13'), v13=True))
     return C
 
 
@@ -120,12 +125,14 @@ def merge(target_h):
     rng.shuffle(sel)
     dev = sel[:60]; tr = sel[60:]
     # extra: previous v1 pool (anchor + VC'd + vedic) so Sanskrit/anchor stay in the mix
-    old = [json.loads(l) for l in open('/work/sp/ft/train.jsonl', encoding='utf8')]
-    om = {r['id']: r for r in json.load(open('/work/sp/ft/train_meta.json'))}
+    old = [json.loads(l) for l in open('/work/sp/ft/train.jsonl', encoding='utf8')] if os.path.exists('/work/sp/ft/train.jsonl') else []
+    om = {r['id']: r for r in json.load(open('/work/sp/ft/train_meta.json'))} if old else {}
+    old = [r for r in old if os.path.exists(r['audio_path'])]
     for r in old: tr.append(dict(id=r['id'], audio_path=r['audio_path'], text=r['text'], language_id=r['language_id'], src='v1_' + om.get(r['id'].replace('_r1', '').replace('_r2', ''), {}).get('src', 'old'), dur=om.get(r['id'], {}).get('dur', 5)))
     rng.shuffle(tr)
     bysrc = {}
     for r in tr: bysrc[r['src']] = bysrc.get(r['src'], 0) + r.get('dur', 0) / 3600
+    json.dump(tr, open(O + '/selected_rows.json', 'w'), ensure_ascii=False)
     for name, rs in (('train', tr), ('dev', dev)):
         with open(f'{O}/{name}.jsonl', 'w', encoding='utf8') as f:
             for r in rs: f.write(json.dumps({k: r[k] for k in ('id', 'audio_path', 'text', 'language_id')}, ensure_ascii=False) + '\n')
