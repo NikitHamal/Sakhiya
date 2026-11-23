@@ -74,12 +74,16 @@ def step1_corpora_and_vedic_anchors():
 
 
 def step2_build_16h_distill_corpus(vc_rows):
+    O = '/work/sp/distill_v4'
+    if os.path.exists(O + '/cache_train.pt') and os.path.getsize(O + '/cache_train.pt') > 200_000_000 and os.path.exists(O + '/corpus_report.json'):
+        rep = json.load(open(O + '/corpus_report.json'))
+        st('50_corpus_v4', '50_corpus_v4: 16-20 Hr Single-Voice 24 kHz Nepal-Native + VC-Vagdhenu Chandas Corpus', 'done', f"{rep['total_hours']:.2f} hrs ({rep['total_clips']} spotless clips) cached in /dev/shm")
+        return
     st('50_corpus_v4', '50_corpus_v4: 16-20 Hr Single-Voice 24 kHz Nepal-Native + VC-Vagdhenu Chandas Corpus', 'run', 'building cache_train.pt in /dev/shm')
     refresh_cards()
     import build_distill_v4 as BD
     from sakhiya import g2p, symbols, chandas as CH
 
-    O = '/work/sp/distill_v4'
     os.makedirs(O + '/wav', exist_ok=True)
     os.makedirs(O + '/corpus', exist_ok=True)
     os.makedirs(O + '/vc', exist_ok=True)
@@ -227,27 +231,33 @@ def step2_build_16h_distill_corpus(vc_rows):
 
 
 def step3_train_and_gate_students():
+    SL.torch = torch
     data_pt = '/work/sp/distill_v4/cache_train.pt'
     for tier, mins in [('micro', 2.4), ('pico', 2.4)]:
+        if os.path.exists(f'/work/sp/tiers_v4/{tier}/best/gate.json') and os.path.exists(f'{REPO}/docs/models_{tier}/model.int8.onnx'):
+            best_g = json.load(open(f'/work/sp/tiers_v4/{tier}/best/gate.json'))
+            st(f'60_{tier}', f'60_{tier}: {SL.TIER_META[tier]["label"]}', 'done', f"PASS: {best_g['int8_mb']} MB INT8 | corr={best_g['int8_vs_fp32_mel_corr']} | nan=0 | UTMOS={best_g['summary']['utmos']} | CER={best_g['summary']['cer_ne']}")
+            continue
         st(f'60_{tier}', f'60_{tier}: Serial GPU Training {SL.TIER_META[tier]["label"]}', 'run', 'Two-Phase + Vocoder-in-the-Loop + WavLM + QAT + Chandas')
         refresh_cards()
         out_dir = f'/work/sp/distill_v4/runs/{tier}'
         os.makedirs(out_dir, exist_ok=True)
-        t_ckpt = '/work/sp/distill_v4/runs/micro/ema_final.pt' if tier == 'pico' else ''
-        cmd = [
-            sys.executable, f'{HERE}/train_student_v4.py',
-            '--tier', tier,
-            '--data', data_pt,
-            '--out', out_dir,
-            '--minutes', str(mins),
-            '--gan_start', '60',
-            '--qat_start', '0.45',
-            '--lr_mult', '0.25',
-            '--save_every', '80',
-        ]
-        if t_ckpt and os.path.exists(t_ckpt):
-            cmd += ['--teacher_ckpt', t_ckpt]
-        subprocess.run(cmd, check=False)
+        if not os.path.exists(f'{out_dir}/ema_final.pt'):
+            t_ckpt = '/work/sp/distill_v4/runs/micro/ema_final.pt' if tier == 'pico' else ''
+            cmd = [
+                sys.executable, f'{HERE}/train_student_v4.py',
+                '--tier', tier,
+                '--data', data_pt,
+                '--out', out_dir,
+                '--minutes', str(mins),
+                '--gan_start', '60',
+                '--qat_start', '0.45',
+                '--lr_mult', '0.25',
+                '--save_every', '80',
+            ]
+            if t_ckpt and os.path.exists(t_ckpt):
+                cmd += ['--teacher_ckpt', t_ckpt]
+            subprocess.run(cmd, check=False)
 
         # Evaluate both warm-calibrated step-0 checkpoint and final QAT checkpoint to guarantee zero regression
         from student_v4 import build, TIERS

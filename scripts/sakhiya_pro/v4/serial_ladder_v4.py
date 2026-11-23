@@ -10,7 +10,7 @@ Runs ONE student model at a time on the full 98 GB Blackwell GPU (zero multi-stu
    (`sakhiya_v4_micro`, `sakhiya_v4_pico`) into `docs/samples/versions/` and `docs/samples/versions/registry.json`,
    updates `docs/student_tiers.json`, uploads to HF, and pushes to `origin HEAD:sakhiya-pro-v4`.
 """
-import os, sys, json, glob, time, shutil, subprocess, datetime
+import os, sys, json, glob, time, shutil, subprocess, datetime, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = '/work/sp/repo'
