@@ -29,7 +29,7 @@ def work(args):
             except Exception as e: errs.append(f"T={T}: {e}")
             pg.locator("#cv").screenshot(path=f"{FR}/{n:05d}.jpg", type="jpeg", quality=93)
         br.close()
-    return errs[:5]
+    return list(dict.fromkeys(e[:300] for e in errs))[:2]
 
 def main():
     a = sys.argv[1:]; fps = 30; wk = 18
@@ -39,7 +39,7 @@ def main():
         ts = [float(x) for x in a[a.index("--preview") + 1].split(",")]; shutil.rmtree(FR, ignore_errors=True); os.makedirs(FR)
         jobs = [([(i, t)], i) for i, t in enumerate(ts)]
         with Pool(min(len(jobs), 10)) as p: errs = p.map(work, jobs)
-        print("errors:", [e for e in errs if e])
+        print("errors:", [e for e in errs if e][:3])
         from PIL import Image
         cols = 3; w, h = 640, 360; rows = (len(ts) + cols - 1) // cols; sheet = Image.new("RGB", (cols * w, rows * h))
         for i in range(len(ts)): sheet.paste(Image.open(f"{FR}/{i:05d}.jpg").resize((w, h)), ((i % cols) * w, (i // cols) * h))

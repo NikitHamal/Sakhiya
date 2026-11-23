@@ -1,5 +1,5 @@
 // timeline driver: render(T) draws one deterministic frame
-const SC = {};
+
 const SCT = { hello: 'blue', about: 'light', series: 'dark', n1: 'light', n2: 'dark', n3: 'blue', n4: 'light', n5: 'dark', fast: 'blue', app: 'light', outro: 'blue' };
 const WIPE = ['flower', 'sunny', 'clover', 'cookie', 'burst', 'pebble', 'squircle'];
 const lt = (sc, id) => { for (const l of sc.lines) if (l.id === id) return l.t - sc.t0; return 0; };

@@ -1,4 +1,5 @@
 // M3X motion engine: tokens, easing, springs, shape morphing, text. No shadows, no gradients, no emoji.
+const SC = {};
 const W = 1920, H = 1080;
 const C = { blue: '#0058df', white: '#ffffff', pc: '#dbe4ff', onpc: '#001a52', bg: '#f6f8ff', ink: '#0b1530', mute: '#414b66',
   line: '#c6d0ea', low: '#f0f4fe', cont: '#e9eefb', high: '#e2e8f7', highest: '#dae1f3', azure: '#7aa2ff', azurec: '#d7e3ff',
