@@ -138,9 +138,11 @@ _out
 '''
 
 RESULT = r'''
-import os as _os, json as _json, glob as _glob, html as _html
+import os as _os, json as _json, glob as _glob, html as _html, base64 as _b64
 import marimo as _mo
 _id = studio_done_get()
+def _aud(b):   # explicit audio/mpeg data-URI: the MP3 plays in every browser (mo.audio would label it .wav)
+    return _mo.Html('<audio controls style="width:100%;max-width:640px" src="data:audio/mpeg;base64,' + _b64.b64encode(b).decode() + '"></audio>')
 _root = "/work/sp/studio/jobs"
 def _hist():
     _items = []
@@ -149,7 +151,7 @@ def _hist():
         try:
             _m = _json.load(open(_os.path.dirname(_d) + "/meta.json")); _t = _m.get("text_used", "")[:70].replace("\n", " "); _du = _m.get("duration_s", "?")
         except Exception: _t, _du = "", "?"
-        _items.append(_mo.vstack([_mo.md(f"`{_jid}` · {_du}s · {_html.escape(_t)}"), _mo.audio(src=open(_d, "rb").read())]))
+        _items.append(_mo.vstack([_mo.md(f"`{_jid}` · {_du}s · {_html.escape(_t)}"), _aud(open(_d, "rb").read())]))
     return _mo.accordion({"🕘 Recent renders (last 5)": _mo.vstack(_items) if _items else _mo.md("none yet")})
 if not _id:
     _res = _mo.vstack([_mo.md("*Finished MP3 appears here.*"), _hist()])
@@ -167,7 +169,7 @@ else:
     _rows = "".join(f"<tr><td>{i+1}</td><td>{c['lang']}</td><td>{c['dur']}s</td><td>{c['cer']}</td><td>{c['utmos']}</td><td>{c['clicks']:.0f}</td><td>{c['hindi']}</td></tr>" for i, c in enumerate(_meta.get("chunks", [])))
     _res = _mo.vstack([
         _mo.md(f"### 🎧 Result · {_id} · {_meta.get('duration_s','?')}s · {_meta.get('lufs','?')} LUFS · model `{_os.path.basename(_meta.get('model',''))}` · rendered in {_meta.get('secs','?')}s"),
-        _mo.audio(src=_mp3),
+        _aud(_mp3),
         _mo.hstack(_dls, justify="start"),
         *_vid,
         _mo.accordion({"Text actually spoken (after cleanup)": _mo.md("```\n" + _meta.get("text_used", "") + "\n```"),
