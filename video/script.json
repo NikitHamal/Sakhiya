@@ -1,0 +1,62 @@
+{
+  "title": "NEBians News - Episode 1: Meet Sakhiya",
+  "date": "23 Nov 2026",
+  "style": "news",
+  "scenes": [
+    {"id": "hello", "pre": 2.6, "post": 0.5, "lines": [
+      {"id": "a1", "ne": "नमस्ते सबैजनालाई।", "en": "Namaste, everyone."},
+      {"id": "a2", "ne": "म सखिया, तपाईंको समाचार वाचक।", "en": "I am Sakhiya, your news reader."}
+    ]},
+    {"id": "about", "pre": 0.4, "post": 0.6, "lines": [
+      {"id": "b1", "ne": "म एउटा एकदमै सानो टेक्स्ट टु स्पिच मोडेल हुँ।", "en": "I am a very small text-to-speech model."},
+      {"id": "b2", "ne": "म नेपाली र संस्कृत भाषा बोल्छु, र मेरो आकार सोह्र मेगाबाइट जति मात्र छ।", "en": "I speak Nepali and Sanskrit, in about sixteen megabytes."},
+      {"id": "b3", "ne": "म सिधै तपाईंको ब्राउजरमै चल्छु।", "en": "I run right inside your browser."},
+      {"id": "b4", "ne": "म अहिले पूर्ण रूपमा बनिसकेको छैन।", "en": "I am not fully built yet."},
+      {"id": "b5", "ne": "तर आउने दिनहरूमा म झन् राम्रो हुँदै जानेछु भन्ने मेरा निर्माताहरूको आशा छ।", "en": "My makers hope I will keep getting better."},
+      {"id": "b6", "ne": "तपाईंले अहिले सुनिरहनुभएको आवाज मेरो पहिलो चरण हो।", "en": "The voice you hear now is my very first phase."}
+    ]},
+    {"id": "series", "pre": 0.5, "post": 0.8, "lines": [
+      {"id": "c1", "ne": "त्यसैले आजदेखि, हामी नेबियन्स न्युज सुरु गर्दैछौं।", "en": "So from today, we start NEBians News."},
+      {"id": "c2", "ne": "यसमा हामी संसारका प्रमुख प्रविधि र एआई समाचार ल्याउँछौं।", "en": "Top tech and AI news from around the world."},
+      {"id": "c3", "ne": "अनि नेबियन्स एन्ड्रोइड एपमा हामीले के बनाइरहेका छौं, त्यो पनि बताउँछौं।", "en": "And what we are building in the NEBians Android app."},
+      {"id": "c4", "ne": "त चलौं, आजका मुख्य समाचारतिर।", "en": "Now, today's top stories."}
+    ]},
+    {"id": "n1", "pre": 1.2, "post": 0.6, "lines": [
+      {"id": "n1a", "ne": "पहिलो समाचार। एन्थ्रोपिकको शेयर बजारमा पहिलो दिन नै सत्र प्रतिशत बढ्यो।", "en": "Anthropic's stock jumped 17 percent on IPO day."},
+      {"id": "n1b", "ne": "तर अर्को दिन करिब चौध प्रतिशत घट्यो, र प्रविधि कम्पनीका शेयरमा ठूलो गिरावट आयो।", "en": "Then fell about 14 percent as tech stocks slid."}
+    ]},
+    {"id": "n2", "pre": 1.2, "post": 0.6, "lines": [
+      {"id": "n2a", "ne": "दोस्रो समाचार। गुगलले जेमिनाई फोर नियोन नाम गरेको नयाँ एआई मोडेल सार्वजनिक गरेको छ।", "en": "Google debuts Gemini 4 Neon."},
+      {"id": "n2b", "ne": "यो जटिल र धेरै चरण भएका कामहरू छिटो सक्न बनाइएको भनिएको छ।", "en": "Built for complex, multi-step tasks."}
+    ]},
+    {"id": "n3", "pre": 1.2, "post": 0.6, "lines": [
+      {"id": "n3a", "ne": "तेस्रो समाचार। एनभिडियाका प्रमुख जेन्सेन हुआङले राजीनामा दिएका छन्।", "en": "Jensen Huang steps down as Nvidia CEO."},
+      {"id": "n3b", "ne": "रिपोर्टहरू अनुसार कम्पनीले चीनतर्फ एआई चिप पठाउन रोकेको छ, र निर्यात नियन्त्रणको दबाब बढेको छ।", "en": "Nvidia reportedly pauses AI chip shipments to China."}
+    ]},
+    {"id": "n4", "pre": 1.2, "post": 0.6, "lines": [
+      {"id": "n4a", "ne": "चौथो समाचार। ओपनएआईले जिपिटी सिक्स पोइन्ट टु नाम गरेका नयाँ मोडेलहरू ल्याएको छ।", "en": "OpenAI launches GPT-6.2 Astra and Sol."},
+      {"id": "n4b", "ne": "साथै एआई एजेन्टले तपाईंको तर्फबाट किनमेल गर्न मिल्ने च्याटजिपिटी वालेट पनि आउँदैछ।", "en": "A ChatGPT wallet lets agents shop for you."}
+    ]},
+    {"id": "n5", "pre": 1.2, "post": 0.6, "lines": [
+      {"id": "n5a", "ne": "पाँचौं समाचार। ओपनराउटरले तीन एआई सेवा प्रदायकलाई आफ्नो प्लेटफर्मबाट हटाएको छ।", "en": "OpenRouter removes three AI providers."},
+      {"id": "n5b", "ne": "सुरक्षा अनुसन्धानकर्ताहरूको परीक्षणमा प्रयोगकर्ताका प्रम्प्ट चुहिएको फेला परेपछि यो कदम चालिएको हो।", "en": "After researchers found leaked user prompts."}
+    ]},
+    {"id": "fast", "pre": 0.8, "post": 0.6, "lines": [
+      {"id": "f1", "ne": "अब छोटकरीमा। माइक्रोसफ्टले सस्ता एआई मोडेल ल्याएको छ।", "en": "Microsoft launches cheaper AI models."},
+      {"id": "f2", "ne": "अनि गुगल डिपमाइन्डले सिग्नलको इन्क्रिप्सन परीक्षण गर्न एआई प्रयोग गरेको छ।", "en": "DeepMind used AI to test Signal's encryption."}
+    ]},
+    {"id": "app", "pre": 1.4, "post": 0.8, "lines": [
+      {"id": "d0", "ne": "अब नेबियन्स एन्ड्रोइड एपको कुरा। गत प्ले स्टोर रिलिजपछि हामीले यी कुरामा काम गरिरहेका छौं।", "en": "What we are building since the last Play Store release."},
+      {"id": "d1", "ne": "पहिलो, नयाँ लिक्विड ग्लास डक। तलको नेभिगेसनमा साँचो प्रकाश अपवर्तन हुन्छ, र लेन्स औंलाले तान्न मिल्छ।", "en": "Liquid glass dock with real refraction."},
+      {"id": "d2", "ne": "दोस्रो, नयाँ टोस्ट सन्देश। सफल, जानकारी, चेतावनी र त्रुटि, चारै थरी शान्त र स्पष्ट।", "en": "Tonal toasts: success, info, warning, error."},
+      {"id": "d3", "ne": "तेस्रो, सुरक्षित पिडिएफ डाउनलोड। फाइल सिल्ड प्रणालीले सामग्री जोगाउँछ।", "en": "Attested PDF downloads with File Shield."},
+      {"id": "d4", "ne": "चौथो, खोजी र नेभिगेसनमा नयाँ स्प्रिङ मोसन, अनि प्रोफाइल अनुसारका पाथवेज फिल्टर।", "en": "Spring motion and profile-driven Pathways filters."},
+      {"id": "d5", "ne": "यी सबै अहिले निर्माणको क्रममा छन्, र छिट्टै आउने संस्करणमा आउनेछन्।", "en": "All in progress, coming in an upcoming release."}
+    ]},
+    {"id": "outro", "pre": 1.0, "post": 3.2, "lines": [
+      {"id": "o1", "ne": "आजको नेबियन्स न्युज यहीँसम्म।", "en": "That is NEBians News for today."},
+      {"id": "o2", "ne": "सखिया अझै पहिलो चरणमै छ, र हरेक एपिसोडसँगै झन् राम्रो हुँदै जानेछ।", "en": "Sakhiya is still in phase one, and will improve every episode."},
+      {"id": "o3", "ne": "फेरि भेटौंला। नमस्ते।", "en": "See you next time. Namaste."}
+    ]}
+  ]
+}
