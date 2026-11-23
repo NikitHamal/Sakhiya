@@ -95,6 +95,8 @@ if os.path.exists(W + '/ved_sel.json'):
         if u < 2.0 or sim < 0.35: continue
         vr.append(dict(id=f"ved_{x['id']}", audio_path=q, text=x['text'], language_id='sa', src='vedic_vc', dur=len(w) / 24000, sim=sim, utmos=u))
     stats['vedic_kept'] = len(vr); dev += vr[:3]; rows += vr[3:]
+# WebDataset keys must not contain '.' -> sanitize ids
+for r in rows + dev: r['id'] = re.sub(r'[^A-Za-z0-9_\-]', '-', r['id'])
 # anchor up-weighting: 3x
 anch = [r for r in rows if r['src'] == 'slr43_6834']
 for k in (1, 2): rows += [dict(r, id=r['id'] + f'_r{k}') for r in anch]
