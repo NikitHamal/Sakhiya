@@ -1,7 +1,7 @@
 // scenes: series, n1..n5 (stories), fast
 function story(c, t, sc, th, T, o) {  // left: number + title + source ; right: visual panel
   dotgrid(c, th, T, .5); const p = sp(t, .15, .8);
-  txt(c, o.num, 110, 330, { sz: 260, w: 700, col: th.accc, a: p }); words(c, o.title, 118, 470, t - .3, { sz: 88, w: 700, col: th.fg, maxW: 760, lh: 98 });
+  txt(c, o.num, 110, 330, { sz: 260, w: 700, col: th.accc, a: p }); words(c, o.title, 118, 470, t - .3, { sz: 76, w: 700, col: th.fg, maxW: 780, lh: 86 });
   const q = sp(t, 1.0, .6); c.globalAlpha = q; chip(c, o.src, 118, 640 + (1 - q) * 20, { sz: 26, fill: th.soft, col: th.mu, line: th.line, ic: 'globe' }); c.globalAlpha = 1;
   c.save(); c.translate(1000, 150); const s = .9 + .1 * p; c.globalAlpha = clamp(p * 1.5); c.translate(410 * (1 - s), 310 * (1 - s)); c.scale(s, s);
   box(c, 0, 0, 820, 620, 44, th.card, th.line); c.save(); rr(c, 0, 0, 820, 620, 44); c.clip(); o.draw(c, t); c.restore(); c.restore(); }
@@ -11,9 +11,9 @@ SC.series = (c, t, sc, th, T) => {
   words(c, 'NEBians', 110, 300, t - c1 + .3, { sz: 230, w: 700, col: th.fg }); words(c, 'News', 110, 480, t - c1 + .1, { sz: 230, w: 700, col: th.acc, st: .1 });
   sakhiya(c, th, 1470, 330, 210 * sp(t, c1, .8), T, v, { fill: th.acc, glyphCol: th.bg, k: T * .3 });
   const cards = [['Tech & AI news', 'globe', c2, 'from around the world'], ['NEBians Android', 'phone', c3, 'what we are building'], ['Voiced by Sakhiya', 'play', c3 + 2.2, 'our own TTS model']];
-  cards.forEach(([ti, ic, st, sub], i) => { const p = sp(t, st, .8), x = 110 + i * 590, y = 600 + (1 - p) * 160; c.globalAlpha = clamp(p * 1.5);
-    box(c, x, y, 560, 280, 44, th.card, th.line); box(c, x + 40, y + 40, 96, 96, 32, i === 1 ? C.aquac : th.accc, null); icon(c, ic, x + 88, y + 88, 52, i === 1 ? C.aquad : th.onacc, 2.4);
-    txt(c, ti, x + 40, y + 200, { sz: 46, w: 700, col: th.fg }); txt(c, sub, x + 40, y + 245, { sz: 28, w: 500, col: th.mu }); c.globalAlpha = 1; });
+  cards.forEach(([ti, ic, st, sub], i) => { const p = sp(t, st, .8), x = 110 + i * 590, y = 520 + (1 - p) * 160; c.globalAlpha = clamp(p * 1.5);
+    box(c, x, y, 560, 262, 44, th.card, th.line); box(c, x + 40, y + 40, 96, 96, 32, i === 1 ? C.aquac : th.accc, null); icon(c, ic, x + 88, y + 88, 52, i === 1 ? C.aquad : th.onacc, 2.4);
+    txt(c, ti, x + 40, y + 192, { sz: 46, w: 700, col: th.fg }); txt(c, sub, x + 40, y + 236, { sz: 28, w: 500, col: th.mu }); c.globalAlpha = 1; });
   c.restore();
   if (t > c4 - .1) { txt(c, 'TODAY', W / 2, 300 + (1 - sp(t, c4, .6)) * 60, { sz: 34, w: 600, col: th.mu, al: 'center', ls: 6, a: sp(t, c4, .5) }); words(c, 'Top stories', W / 2, 440, t - c4 - .1, { sz: 150, w: 700, al: 'center', col: th.fg });
     for (let i = 0; i < 5; i++) { const p = sp(t, c4 + .4 + i * .14, .6), x = W / 2 + (i - 2) * 190, y = 620; shape(c, i === 0 ? th.acc : th.gr2 || th.soft, x, y, 74 * p, seq7[i], seq7[i], 0, T * .3);
