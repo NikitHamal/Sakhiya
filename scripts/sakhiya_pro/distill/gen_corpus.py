@@ -79,6 +79,29 @@ def texts():
             if x.get('lang') == 'sa' and x.get('agree', 0) >= 0.9 and 14 <= len(t) <= 220 and re.match(r'^[\u0900-\u097F\s,।॥ॐ]+$', t): sa.append(t)
             elif x.get('lang', 'ne') == 'ne' and x.get('style') in ('news', 'storytelling', 'conversational') and x.get('agree', 0) >= 0.8 and x.get('utmos', 0) >= 1.9 and not str(x.get('spk', '')).startswith(('ind_', 'in_')):
                 add(t, 'ne', x['style'], 'mined')
+    SAOK = re.compile(r'^[\u0900-\u097F\s,।॥ॐऽ]+$')
+    def addsa(t, src):
+        t = re.sub(r'\s+', ' ', t.replace('\n', ' ')).strip()
+        if not (16 <= len(t) <= 170) or not SAOK.match(t): return
+        k = nz(t)
+        if k in seen or k in ex: return
+        seen.add(k); out.append(dict(text=t, lang='sa', style='vedic', src=src))
+    try:
+        from datasets import load_dataset
+        g = load_dataset('yashnbx/gita_supersite_sanskrit_tts', split='train').select_columns(['text'])
+        for r in g:
+            t = re.sub(r'\s+', ' ', r['text']).strip().replace('\n', ' ')
+            if len(t) <= 120: addsa(t if t.endswith(('।', '॥')) else t + '॥', 'gita')
+            for h in re.split(r'(?<=[।॥])\s*', t):
+                if len(h) >= 20: addsa(h if h.endswith(('।', '॥')) else h + '।', 'gita')
+        print('gita ok')
+    except Exception as e: print('gita skip', e)
+    try:
+        from datasets import load_dataset
+        sw = load_dataset('wikimedia/wikipedia', '20231101.sa', split='train')
+        for r in sw:
+            for q in re.split(r'(?<=[।॥])\s+|\n+', r['text']): addsa(q if q.endswith(('।', '॥')) else q + '।', 'sa_wiki')
+    except Exception as e: print('sa wiki skip', e)
     for t in sa:
         k = nz(t)
         if k not in seen: seen.add(k); out.append(dict(text=re.sub(r'\s+', ' ', t).strip(), lang='sa', style='vedic', src='mined_sa'))
@@ -87,7 +110,7 @@ def texts():
     for t in NUM_T: out.append(dict(text=t, lang='ne', style='numbers', src='num'))
     by = {}
     for r in out: by.setdefault((r['src'] if r['src'] != 'mined' else 'mined_' + r['style']), []).append(r)
-    cap = dict(wiki=7000, slr54=2500, slr43=800, mined_news=1200, mined_storytelling=1800, mined_conversational=1800, mined_sa=3000, tech=200, num=50)
+    cap = dict(wiki=7000, slr54=2500, slr43=800, mined_news=1200, mined_storytelling=1800, mined_conversational=1800, mined_sa=60, gita=1700, sa_wiki=1500, tech=200, num=50)
     sel = []
     for k, v in by.items():
         rng.shuffle(v); sel += v[:cap.get(k, 1500)]
