@@ -72,7 +72,7 @@ import marimo as mo
 def _aud(p, label):
     try: return mo.vstack([mo.md(f"**{label}**"), mo.audio(open(p, "rb").read())])
     except Exception as e: return mo.md(f"{label}: n/a ({e})")
-tags = [t for t in ("base_zeroshot", "ft2_s900", "ft3_best") if os.path.isdir(f"/work/sp/evals/{t}")]
+tags = [t for t in ("base_zeroshot", "ft2_s900", "ft3_s200") if os.path.isdir(f"/work/sp/evals/{t}")]
 ids = ["s1_anthropic_lat", "s2_gemini_lat", "s3_jensen_lat", "s4_gpt_lat", "s5_liquid_lat", "s6_convo_dev", "s7_conjunct_dev", "s8_vedic_dev"]
 cmp_ = mo.accordion({i: mo.hstack([_aud(f"/work/sp/evals/{t}/{i}.wav", t) for t in tags]) for i in ids})
 pack = sorted(glob.glob("/work/sp/render/pack/*.mp3"))

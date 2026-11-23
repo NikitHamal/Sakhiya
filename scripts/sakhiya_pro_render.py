@@ -60,18 +60,27 @@ class Renderer:
                     + 0.3 * f['utmos'] + 0.5 * f['spk_sim'])
         return f
 
-    def take(self, text, lang='npi', seeds=None):
+    GATE = dict(cer=0.10, clicks=20, hindi=0)   # forensic gate: a take must pass all to be accepted without extra seeds
+    def take(self, text, lang='npi', seeds=None, max_extra=6):
+        """Best-of-N (default 3). If the best take fails the forensic gate (CER / clicks / Hindi leak), draw up to
+        `max_extra` more seeds and keep the best-scoring take overall."""
         text = SVARA.sub('', text)
-        seeds = seeds or [11, 22, 33][:self.n]
+        seeds = list(seeds or [11, 22, 33][:self.n]); extra = [44, 55, 66, 77, 88, 99][:max_extra]
         tmp = tempfile.mkdtemp(); best = None; cands = []
-        for k, sd in enumerate(seeds):
+        def run(k, sd):
+            nonlocal best
             self.torch.manual_seed(sd)
             a = self.m.generate(text=text, language=lang, ref_audio=REF_WAV, ref_text=self.ref_text, num_step=self.ns, guidance_scale=self.gs)
             w = trim(np.asarray(a[0], dtype=np.float32), self.m.sampling_rate)
             p = f'{tmp}/t{k}.wav'; sf.write(p, w, self.m.sampling_rate)
             f = self.score(p, text); cands.append(dict(seed=sd, **{x: f[x] for x in ('cer', 'clicks', 'hindi', 'utmos', 'spk_sim', 'dur', 'sel')}))
             if best is None or f['sel'] > best[0]: best = (f['sel'], p, f, w)
-        return best[3], self.m.sampling_rate, dict(chosen=max(cands, key=lambda c: c['sel'])['seed'], cands=cands)
+        def passes(f): return f['cer'] <= self.GATE['cer'] and f['clicks'] <= self.GATE['clicks'] and f['hindi'] <= self.GATE['hindi']
+        for k, sd in enumerate(seeds): run(k, sd)
+        k = len(seeds)
+        while not passes(best[2]) and extra:
+            run(k, extra.pop(0)); k += 1
+        return best[3], self.m.sampling_rate, dict(chosen=max(cands, key=lambda c: c['sel'])['seed'], gate_pass=bool(passes(best[2])), n_takes=len(cands), cands=cands)
 
 def render_ep01(R, out, final_mp3=True):
     os.makedirs(out + '/lines', exist_ok=True)
