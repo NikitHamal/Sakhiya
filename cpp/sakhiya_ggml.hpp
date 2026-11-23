@@ -267,13 +267,13 @@ public:
             // Pointwise 1x1 conv1d: weight [C_out, C_in], x [C_in, T]
 #pragma omp parallel for schedule(static) if (C_out * T >= 4096)
             for (int co = 0; co < C_out; ++co) {
-                const float * w_co = weight.data() + static_cast<size_t>(co) * C_in;
+                const float * __restrict__ w_co = weight.data() + static_cast<size_t>(co) * C_in;
                 float b_val = bias.empty() ? 0.0f : bias[co];
-                float * o_co = out.data() + static_cast<size_t>(co) * T;
+                float * __restrict__ o_co = out.data() + static_cast<size_t>(co) * T;
                 for (int t = 0; t < T; ++t) o_co[t] = b_val;
                 for (int ci = 0; ci < C_in; ++ci) {
                     float w_val = w_co[ci];
-                    const float * x_ci = x.data() + static_cast<size_t>(ci) * T;
+                    const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
                     for (int t = 0; t < T; ++t) {
                         o_co[t] += w_val * x_ci[t];
                     }
@@ -282,27 +282,28 @@ public:
             return out;
         }
 
-        // General 1D convolution optimized with channel-outer loop & contiguous time inner loop
+        // General 1D convolution optimized with channel-outer loop & contiguous SIMD time inner loop
 #pragma omp parallel for schedule(static) if (C_out * T_out >= 2048)
         for (int co = 0; co < C_out; ++co) {
             int g = co / cout_per_g;
             int ci_start = g * cin_per_g;
             float b_val = bias.empty() ? 0.0f : bias[co];
-            float * o_co = out.data() + static_cast<size_t>(co) * T_out;
+            float * __restrict__ o_co = out.data() + static_cast<size_t>(co) * T_out;
             for (int to = 0; to < T_out; ++to) o_co[to] = b_val;
 
-            const float * w_co = weight.data() + static_cast<size_t>(co) * cin_per_g * K;
+            const float * __restrict__ w_co = weight.data() + static_cast<size_t>(co) * cin_per_g * K;
             for (int ci = 0; ci < cin_per_g; ++ci) {
-                const float * x_ci = x.data() + static_cast<size_t>(ci_start + ci) * T;
-                const float * w_cik = w_co + static_cast<size_t>(ci) * K;
+                const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci_start + ci) * T;
+                const float * __restrict__ w_cik = w_co + static_cast<size_t>(ci) * K;
                 if (stride == 1) {
                     for (int k = 0; k < K; ++k) {
                         float wk = w_cik[k];
                         int offset = k * dilation - pad;
                         int to_start = std::max(0, -offset);
                         int to_end = std::min(T_out, T - offset);
+                        const float * __restrict__ x_ptr = x_ci + offset;
                         for (int to = to_start; to < to_end; ++to) {
-                            o_co[to] += wk * x_ci[to + offset];
+                            o_co[to] += wk * x_ptr[to];
                         }
                     }
                 } else {
@@ -330,12 +331,12 @@ public:
 #pragma omp parallel for schedule(static)
         for (int co = 0; co < C_out; ++co) {
             float b_val = bias.empty() ? 0.0f : bias[co];
-            float * o_co = out.data() + static_cast<size_t>(co) * T_out;
+            float * __restrict__ o_co = out.data() + static_cast<size_t>(co) * T_out;
             for (int to = 0; to < T_out; ++to) o_co[to] = b_val;
 
             for (int ci = 0; ci < C_in; ++ci) {
-                const float * x_ci = x.data() + static_cast<size_t>(ci) * T;
-                const float * w_cico = weight.data() + (static_cast<size_t>(ci) * C_out + co) * K;
+                const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
+                const float * __restrict__ w_cico = weight.data() + (static_cast<size_t>(ci) * C_out + co) * K;
                 for (int k = 0; k < K; ++k) {
                     float wk = w_cico[k];
                     for (int ti = 0; ti < T; ++ti) {

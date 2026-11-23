@@ -129,8 +129,15 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
         target_type = GGML_TYPE_F32
         if dtype == "f16" and allow_quant and arr.ndim >= 2 and arr.size > 128:
             target_type = GGML_TYPE_F16
-        elif dtype == "q8_0" and allow_quant and arr.ndim >= 2 and arr.size >= 256 and (arr.shape[-1] % 32 == 0):
-            target_type = GGML_TYPE_Q8_0
+        elif dtype == "q8_0" and allow_quant and arr.ndim >= 2 and arr.size >= 256:
+            # Flatten 3D conv weights [C_out, C_in, K] -> 2D [C_out, C_in * K] so innermost dim is divisible by 32
+            if arr.ndim == 3 and (arr.shape[1] * arr.shape[2]) % 32 == 0:
+                arr = arr.reshape(arr.shape[0], arr.shape[1] * arr.shape[2])
+                ggml_dims = tuple(int(d) for d in reversed(arr.shape))
+            if arr.shape[-1] % 32 == 0:
+                target_type = GGML_TYPE_Q8_0
+            else:
+                target_type = GGML_TYPE_F16
 
         if target_type == GGML_TYPE_F32:
             raw = arr.tobytes()
