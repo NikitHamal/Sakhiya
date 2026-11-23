@@ -1017,7 +1017,7 @@ public:
         std::vector<float> f0(T), uv(T), w_v(T), lf0_raw(T), lf0_wv(T);
         for (int t = 0; t < T; ++t) {
             f0[t] = std::nearbyint(60.0f + 440.0f * sigmoid_f(rf[0 * T + t]));
-            uv[t] = std::nearbyint(sigmoid_f(rf[1 * T + t]) * 64.0f) * 0.015625f;
+            uv[t] = std::nearbyint(sigmoid_f(rf[1 * T + t]) * 32.0f) * 0.03125f;
             w_v[t] = (uv[t] > 0.35f ? 1.0f : 0.0f) * uv[t] + 0.04f;
             lf0_raw[t] = std::log2(std::min(380.0f, std::max(130.0f, f0[t])));
             lf0_wv[t] = lf0_raw[t] * w_v[t];
@@ -1035,8 +1035,8 @@ public:
             uv = avg_pool1d_rep(uv, 1, T, 3, 1);
         }
         for (int t = 0; t < T; ++t) {
-            float sh_q = std::nearbyint(tot_shift[t] * 64.0f) * 0.015625f;
-            f0[t] = std::nearbyint((f0[t] * std::pow(2.0f, sh_q / 12.0f)) * 16.0f) * 0.0625f;
+            float sh_q = std::nearbyint(tot_shift[t] * 32.0f) * 0.03125f;
+            f0[t] = f0[t] * std::pow(2.0f, sh_q / 12.0f);
         }
 
         // 16x linear interpolation (align_corners=False) matching ATen UpSampleLinear1d double-precision weights
