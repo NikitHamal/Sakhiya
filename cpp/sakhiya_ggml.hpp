@@ -795,14 +795,19 @@ public:
             auto v0 = run_velocity(mu_y, 0.0f, mu_y, g, T);
             for (size_t i = 0; i < xt.size(); ++i) xt[i] = mu_y[i] + v0[i];
         } else {
-            const float scale_z = temp * 1.4142f;
+            const float scale_z = static_cast<float>(static_cast<double>(temp) * 1.4142);
             for (int c = 0; c < C; ++c) {
                 float fc = static_cast<float>(c);
+                float c1_val = fc * 12.9898f;
+                float c2_val = fc * 39.346f;
                 float * xtc = xt.data() + static_cast<size_t>(c) * T;
                 for (int t = 0; t < T; ++t) {
                     float ft = static_cast<float>(t);
-                    xtc[t] = std::sin(fc * 12.9898f + ft * 78.233f) *
-                             std::cos(fc * 39.346f + ft * 11.135f) * scale_z;
+                    float t1_val = ft * 78.233f;
+                    float t2_val = ft * 11.135f;
+                    float a1 = c1_val + t1_val;
+                    float a2 = c2_val + t2_val;
+                    xtc[t] = (std::sin(a1) * std::cos(a2)) * scale_z;
                 }
             }
             float dt = 1.0f / static_cast<float>(steps);
