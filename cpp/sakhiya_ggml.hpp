@@ -944,11 +944,13 @@ public:
             1.41421f, 1.73205f, 2.23607f, 2.64575f, 3.14159f, 3.60555f, 4.12311f, 4.58258f
         };
         std::vector<float> har(static_cast<size_t>(16) * T16);
-        float cyc_acc = 0.0f;
+        double cyc_acc = 0.0;
         std::vector<float> ph_arr(T16);
         for (int t = 0; t < T16; ++t) {
-            cyc_acc += f0_16[t] * inv_fps16;
-            float cyc_wrapped = cyc_acc - std::floor(cyc_acc);
+            float step_cyc = f0_16[t] * inv_fps16;
+            cyc_acc += static_cast<double>(step_cyc);
+            float cyc_f = static_cast<float>(cyc_acc);
+            float cyc_wrapped = cyc_f - std::floor(cyc_f);
             ph_arr[t] = two_pi * cyc_wrapped;
         }
 
@@ -1424,7 +1426,7 @@ public:
         while (iss >> tmp_w) ++word_cnt;
 
         std::vector<std::string> chunks;
-        if (lang == "sa" && word_cnt <= 45 && sa_segs.size() <= 2) {
+        if (dump || (lang == "sa" && word_cnt <= 45 && sa_segs.size() <= 2)) {
             chunks = {trim_str(text)};
         } else {
             chunks = sa_segs;
