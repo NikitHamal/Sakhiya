@@ -20,18 +20,17 @@ npt = _sh("TZ=Asia/Kathmandu date '+%a %H:%M NPT'")
 now = datetime.datetime.now(datetime.timezone.utc); stop = datetime.datetime(2026, 11, 24, 0, 40, tzinfo=datetime.timezone.utc)
 left = (stop - now).total_seconds(); lh, lm = int(left // 3600), int(left % 3600 // 60)
 # ---- running job
-logs = sorted(glob.glob("/work/sp/exp/*/train.log"), key=os.path.getmtime)
+logs = sorted(glob.glob("/work/tts/logs/train_ft*.log"), key=os.path.getmtime)
 job, step_line, loss, sps, eta = "-", "-", "-", "-", "-"
 if logs:
-    lg = logs[-1]; job = lg.split("/")[-2]; ls = [l for l in _t(lg, 600) if re.search(r"Step \d+", l)]
+    lg = logs[-1]; job = os.path.basename(lg)[6:-4]; ls = [l for l in _t(lg, 300) if re.search(r"^Step \d+", l)]
     if ls:
-        step_line = ls[-1][-160:]; m = re.search(r"Step (\d+)", ls[-1]); cur = int(m.group(1)) if m else 0
-        ml = re.search(r"[Ll]oss[:= ]+([0-9.]+)", ls[-1]); loss = ml.group(1) if ml else "-"
+        step_line = ls[-1][:170]; m = re.search(r"Step (\d+)", ls[-1]); cur = int(m.group(1)) if m else 0
+        ml = re.search(r"train/loss: ([0-9.]+)", ls[-1]); loss = ml.group(1) if ml else "-"
         try:
             cfg = json.load(open(f"/work/sp/exp/{job}/train_cfg.json")); tot = cfg.get("steps", 0)
-            dt = time.time() - os.path.getmtime(f"/work/sp/exp/{job}/train_cfg.json")
-            if cur > 0 and dt > 0 and os.path.getmtime(lg) > time.time() - 120:
-                sps = f"{cur/dt:.2f}"; eta = f"{(tot-cur)/(cur/dt)/60:.1f} min of {tot} steps"
+            msp = re.search(r"steps_per_sec: ([0-9.]+)", ls[-1]); v = float(msp.group(1)) if msp else 0
+            if v > 0 and os.path.getmtime(lg) > time.time() - 120: sps = f"{v:.2f}"; eta = f"{(tot-cur)/v/60:.1f} min left ({cur}/{tot})"
         except Exception: pass
 running = bool(_sh("pgrep -f 'omnivoice[.]cli[.]train'"))
 render_run = bool(_sh("pgrep -f 'sakhiya_pro_render[.]py'"))

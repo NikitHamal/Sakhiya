@@ -53,7 +53,8 @@ t_first = None; checked = False
 while p.poll() is None:
     time.sleep(5)
     if time.time() - t0 > budget: kill(f'hard cap {a.budget_min} min', 4)
-    txt = open(f'{out}/train.log', errors='ignore').read() if os.path.exists(f'{out}/train.log') else ''
+    lp = f'/work/tts/logs/train_{a.name}.log'  # 'Step N |' lines go to stdout log (not out/train.log)
+    txt = open(lp, errors='ignore').read() if os.path.exists(lp) else ''
     steps = [(int(m.group(1))) for m in re.finditer(r'Step (\d+) \|', txt)]
     if steps and t_first is None:
         t_first = (time.time(), steps[0])
