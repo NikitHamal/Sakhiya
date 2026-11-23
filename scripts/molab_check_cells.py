@@ -10,7 +10,7 @@ async with cm.get_context() as ctx:
     for c in ctx.cells.values():
         errs = [str(e)[:300] for e in (c.errors or [])]
         o = c.output; d = str(getattr(o, "data", ""))
-        con = " | ".join(str(getattr(x, "data", ""))[:200] for x in (c.console_outputs or []))
+        con = " | ".join(str(getattr(x, "data", ""))[:200] for x in (c.console_outputs or []) if "hooks_lens" not in str(getattr(x, "data", "")) and "marimo-lens" not in str(getattr(x, "data", "")) and "ipywidgets" not in str(getattr(x, "data", "")))
         isbad = bool(errs) or "Traceback" in d or "Traceback" in con or "error" in str(c.status).lower()
         bad += isbad
         print(c.name, c.status, getattr(o, "mimetype", None), len(d), "ERR" if isbad else "ok", errs, con[:300])
