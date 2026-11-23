@@ -79,6 +79,8 @@ def load(ck):
     cfg = S.get("cfg", {})
     m = Student(**cfg)
     m.load_state_dict(S["ema"], strict=False)
+    if hasattr(m.am, "fold_time_embeddings"):
+        m.am.fold_time_embeddings()
     snap_f0_int8(m.voc)
     snap_am_int8(m.am)
     return m.eval(), S

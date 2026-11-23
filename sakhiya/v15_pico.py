@@ -108,6 +108,7 @@ class PicoDurFlow(nn.Module):
         super().__init__()
         s.i = QATConv1d(d + 1, h, 1)
         s.t = QATConv1d(d, h, 1)
+        s.t_steps = nn.Parameter(torch.zeros(4, h, 1), requires_grad=False)
         s.cv = nn.ModuleList([QATConv1d(h, h, 3, padding=1) for _ in range(n_conv)])
         s.step_gamma = nn.Parameter(torch.zeros(4, h, 1))
         s.step_beta = nn.Parameter(torch.zeros(4, h, 1))
@@ -116,8 +117,12 @@ class PicoDurFlow(nn.Module):
 
     def forward(s, x, t, hs, m, step_idx: int = 0):
         hs_in = 0.85 * hs.detach() + 0.15 * hs
-        tb = temb(t, s.d).to(hs.dtype)[:, :, None]
-        z = s.i(torch.cat([hs_in.transpose(1, 2), x[:, None].to(hs.dtype)], 1)) + s.t(tb)
+        if isinstance(s.t, nn.Identity):
+            t_add = s.t_steps[step_idx].to(hs.dtype)[None, :, :]
+        else:
+            tb = temb(t, s.d).to(hs.dtype)[:, :, None]
+            t_add = s.t(tb)
+        z = s.i(torch.cat([hs_in.transpose(1, 2), x[:, None].to(hs.dtype)], 1)) + t_add
         for idx_c in range(4):
             c_layer = s.cv[idx_c % len(s.cv)]
             z_in = (z * (1.0 + s.step_gamma[idx_c]) + s.step_beta[idx_c]) * m[:, None]
@@ -174,8 +179,11 @@ class PicoVelocity(nn.Module):
         nn.init.zeros_(s.out.bias)
 
     def forward(s, x, t, mu, g, m):
-        tb = temb(t, s.c).to(x.dtype)[:, :, None]
-        c_base = s.tm2(F.silu(s.tm1(tb))) + g[:, :, None]
+        if isinstance(s.tm1, nn.Identity):
+            c_base = g[:, :, None]
+        else:
+            tb = temb(t, s.c).to(x.dtype)[:, :, None]
+            c_base = s.tm2(F.silu(s.tm1(tb))) + g[:, :, None]
         h = s.inp(torch.cat([x, mu], 1)) * m
         n_early = (s.nb + 1) // 2  # 3 iterations of early block, 2 iterations of late block
         for k in range(s.nb):
@@ -193,6 +201,23 @@ class SakhiyaPicoAM(nn.Module):
         s.vel = PicoVelocity(d=d_vel, nb=nb_vel, c=d_enc)
         s.dur = PicoDurFlow(d=d_enc, h=h_dur)
         s.register_buffer("stats", torch.tensor([-5.5028, 2.1869]))
+
+    @torch.no_grad()
+    def fold_time_embeddings(s):
+        """Fold constant 1-step velocity time embedding (t=0) and 4-step duration time embeddings into step parameters."""
+        dev = next(s.parameters()).device
+        if not isinstance(s.vel.tm1, nn.Identity):
+            tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)[:, :, None]
+            tm_out = s.vel.tm2(F.silu(s.vel.tm1(tb0)))[0]  # [c, 1]
+            s.vel.step_emb.data.add_(tm_out[None, :, :])
+            s.vel.tm1 = nn.Identity()
+            s.vel.tm2 = nn.Identity()
+        if not isinstance(s.dur.t, nn.Identity):
+            ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
+            tbs = temb(ts, s.dur.d)[:, :, None]  # [4, d, 1]
+            s.dur.t_steps.data.copy_(s.dur.t(tbs))
+            s.dur.t = nn.Identity()
+        return s
 
     def set_qat(s, enabled=True):
         for m in s.modules():

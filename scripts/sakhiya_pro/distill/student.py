@@ -40,7 +40,7 @@ TIERS = {
     "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=104,  r_voc_k7=None, r_voc_k11=136),
     "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
-    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=46,   r_voc_k11=26),
+    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=54,   r_voc_k11=34),
 }
 
 
@@ -332,6 +332,14 @@ class Student(nn.Module):
         wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
         comb_gain = 0.12 if self.steps == 1 else 0.08
         mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
+        if self.arch == "sakhiya_pico":
+            mel_mu = mel_w.mean(dim=(1, 2), keepdim=True)
+            mel_w = (mel_w - mel_mu) * 1.04 + mel_mu - 0.08
+            env_f = F.avg_pool1d(F.pad(mel_w.transpose(1, 2), (2, 2), mode="replicate"), 5, stride=1).transpose(1, 2)
+            wf = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)[None, :, None]
+            mel_w = mel_w + 0.18 * wf * (mel_w - env_f)
+            env_t2 = F.avg_pool1d(F.pad(mel_w, (2, 2), mode="replicate"), 5, stride=1)
+            mel_w = mel_w + 0.08 * (mel_w - env_t2)
         st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
         tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode="replicate"), 5, stride=1)
