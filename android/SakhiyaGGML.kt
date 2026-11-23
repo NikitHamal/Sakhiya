@@ -13,7 +13,7 @@ import java.nio.FloatBuffer
  * Sakhiya GGML C++ engine for Android (Nepali + Sanskrit TTS, 24 kHz mono float32 PCM).
  *
  * Build: add `cpp/CMakeLists.txt` as an externalNativeBuild (target `sakhiya_jni`, no third-party dependency), ship a
- * `.gguf` (e.g. `sakhiya_atom_lite_q8_0.gguf`, ~3.5 MB) in assets or download it from
+ * `.gguf` (e.g. `sakhiya_atom_lite_q8_0.gguf`, ~3.0 MB) in assets or download it from
  * https://huggingface.co/NikitHamal/sakhiya-gguf, then:
  *
  *     val tts = SakhiyaGGML.fromFile(File(filesDir, "sakhiya_atom_lite_q8_0.gguf"), threads = 2)

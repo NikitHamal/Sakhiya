@@ -26,13 +26,15 @@
     "f32": 10157440,
     "f16": 5458912,
     "q8_0": 3480864,
-    "q8_0_exact": 7311552
+    "q8_0_exact": 7311552,
+    "q8_0_tiny": 2998112
    },
    "sizes_mb": {
     "f32": 10.157,
     "f16": 5.459,
     "q8_0": 3.481,
-    "q8_0_exact": 7.312
+    "q8_0_exact": 7.312,
+    "q8_0_tiny": 2.998
    },
    "sentences": [
     {
@@ -68,6 +70,14 @@
       "len_match": true,
       "max_abs_diff": 0.022944606840610504,
       "stft_mag_cosine": 0.99993,
+      "nan_count": 0
+     },
+     "q8_0_tiny": {
+      "cosine_sim": 0.107603,
+      "samples": 126396,
+      "len_match": false,
+      "max_abs_diff": 1.1894845962524414,
+      "stft_mag_cosine": 0.945104,
       "nan_count": 0
      }
     },
@@ -105,6 +115,14 @@
       "max_abs_diff": 0.022496579214930534,
       "stft_mag_cosine": 0.999941,
       "nan_count": 0
+     },
+     "q8_0_tiny": {
+      "cosine_sim": 0.155088,
+      "samples": 167100,
+      "len_match": false,
+      "max_abs_diff": 1.3583343029022217,
+      "stft_mag_cosine": 0.971155,
+      "nan_count": 0
      }
     },
     {
@@ -140,6 +158,14 @@
       "len_match": true,
       "max_abs_diff": 0.023793332278728485,
       "stft_mag_cosine": 0.999956,
+      "nan_count": 0
+     },
+     "q8_0_tiny": {
+      "cosine_sim": 0.150749,
+      "samples": 273084,
+      "len_match": false,
+      "max_abs_diff": 1.3362394571304321,
+      "stft_mag_cosine": 0.963336,
       "nan_count": 0
      }
     },
@@ -177,32 +203,41 @@
       "max_abs_diff": 0.032227061688899994,
       "stft_mag_cosine": 0.999946,
       "nan_count": 0
+     },
+     "q8_0_tiny": {
+      "cosine_sim": 0.136655,
+      "samples": 268220,
+      "len_match": false,
+      "max_abs_diff": 0.9766145348548889,
+      "stft_mag_cosine": 0.927382,
+      "nan_count": 0
      }
     }
    ],
    "rtf": {
-    "q8_0_t1": 0.0663,
-    "q8_0_t2": 0.0409,
-    "q8_0_t4": 0.0259,
-    "f16_t1": 0.0698,
-    "f16_t2": 0.04,
-    "f16_t4": 0.0263
+    "q8_0_t1": 0.0676,
+    "q8_0_t4": 0.0262,
+    "q8_0_tiny_t1": 0.0716,
+    "q8_0_tiny_t4": 0.0317,
+    "f16_t1": 0.0659,
+    "f16_t4": 0.0257
    },
    "min_cosine": {
     "f32": 1.0,
     "f16": 0.890696,
     "q8_0": 0.043354,
-    "q8_0_exact": 0.99983
+    "q8_0_exact": 0.99983,
+    "q8_0_tiny": 0.107603
    },
    "nan_count": 0,
    "min_stft_mag_cosine": {
     "f32": 1.0,
     "f16": 0.998109,
     "q8_0": 0.9359,
-    "q8_0_exact": 0.99993
+    "q8_0_exact": 0.99993,
+    "q8_0_tiny": 0.927382
    },
-   "passed": true,
-   "rtf_note": "idle 4-vCPU sandbox, best of 4, sentence ne_kathmandu (5.3 s audio), sakhiya-cli (ggml-linked, -march=native)"
+   "passed": true
   },
   {
    "tier": "atom",

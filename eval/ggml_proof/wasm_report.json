@@ -14,9 +14,9 @@
    "sample_rate": 24000,
    "nan_count": 0,
    "cosine_sim": 1,
-   "load_ms": 105,
-   "synth_ms": 643,
-   "wasm_rtf": 0.1221,
+   "load_ms": 61,
+   "synth_ms": 736,
+   "wasm_rtf": 0.1397,
    "ok": true
   },
   {
@@ -32,9 +32,9 @@
    "sample_rate": 24000,
    "nan_count": 0,
    "cosine_sim": 1,
-   "load_ms": 105,
-   "synth_ms": 1268,
-   "wasm_rtf": 0.1115,
+   "load_ms": 61,
+   "synth_ms": 1659,
+   "wasm_rtf": 0.1458,
    "ok": true
   },
   {
@@ -56,9 +56,9 @@
    "sample_rate": 24000,
    "nan_count": 0,
    "cosine_sim": 1,
-   "load_ms": 39,
-   "synth_ms": 2083,
-   "wasm_rtf": 0.3956,
+   "load_ms": 42,
+   "synth_ms": 2604,
+   "wasm_rtf": 0.4944,
    "ok": true
   },
   {
@@ -74,9 +74,9 @@
    "sample_rate": 24000,
    "nan_count": 0,
    "cosine_sim": 1,
-   "load_ms": 39,
-   "synth_ms": 4831,
-   "wasm_rtf": 0.4246,
+   "load_ms": 42,
+   "synth_ms": 5677,
+   "wasm_rtf": 0.4989,
    "ok": true
   },
   {

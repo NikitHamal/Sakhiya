@@ -85,12 +85,12 @@
    "desc": "Under 3 MB · Atom acoustic model + 1.25 MB distilled vocoder · 0 stutters, 0 clicks",
    "onnx_mb": 2.717,
    "gguf_file": "sakhiya_atom_lite_q8_0.gguf",
-   "gguf_mb": 3.481,
+   "gguf_mb": 2.998,
    "gguf_exact_mb": 7.312,
    "gguf_f16_mb": 5.459,
    "rtf_onnx": 0.0155,
-   "rtf_ggml_1t": 0.0663,
-   "rtf_ggml_mt": 0.0259,
+   "rtf_ggml_1t": 0.0716,
+   "rtf_ggml_mt": 0.0317,
    "ggml_min_cosine_exact": 0.99983
   }
  ],

@@ -1,5 +1,5 @@
 // GGML C++ / WASM runtime for the Studio: runs docs/wasm/sakhiya.wasm (single-threaded SIMD128, no COOP/COEP needed) on a
-// Sakhiya .gguf (Atom-Lite Q8_0 ~3.5 MB by default). GGUFs come from Hugging Face (CORS-enabled) and are cached in IndexedDB.
+// Sakhiya .gguf (Atom-Lite Q8_0 ~3.0 MB by default). GGUFs come from Hugging Face (CORS-enabled) and are cached in IndexedDB.
 // Falls back to ONNX Runtime Web automatically when WASM SIMD / the download / the engine is unavailable.
 import { createSakhiyaEngine, wasmSimdSupported } from './wasm/sakhiya_engine.js';
 
@@ -14,7 +14,8 @@ const idbPut = async (k, v) => { try { const d = await idb(); await new Promise(
 
 async function fetchGguf(file, expectBytes, note) {
   const hit = await idbGet(file);
-  if (hit && hit.byteLength > 1e5) { note(`${file} from IndexedDB cache`); return { buf: hit, cached: true }; }
+  // a stale cached revision (e.g. the 3.48 MB compact Atom-Lite) is dropped when its size no longer matches tiers.json (gguf_mb is rounded to 1 KB)
+  if (hit && hit.byteLength > 1e5 && (!expectBytes || Math.abs(hit.byteLength - expectBytes) < 4000)) { note(`${file} from IndexedDB cache`); return { buf: hit, cached: true }; }
   let lastErr;
   for (const base of HF) {
     try {
@@ -79,7 +80,7 @@ function mountEngineCard() {
   aside.insertBefore(card, aside.children[3] || null);
   chips().forEach((c) => (c.onclick = () => {
     window.st.engine = c.dataset.engine; syncUI();
-    if (c.dataset.engine === 'ggml') {   // recommended default for the browser: Atom-Lite Q8_0 (~3.5 MB)
+    if (c.dataset.engine === 'ggml') {   // recommended default for the browser: Atom-Lite Q8_0 (~3.0 MB)
       const lite = [...document.querySelectorAll('#tiers .tier')].find((b) => /Atom-Lite/.test(b.textContent));
       if (lite && !lite.disabled) lite.click();
     }

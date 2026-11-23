@@ -39,7 +39,7 @@ Controls: `lang` (`auto`/`ne`/`sa`), `style` (`news`, `storytelling`, `conversat
 
 ## GGUF tiers, WebAssembly, Python, Android (sakhiya.cpp)
 ```bash
-# models: https://huggingface.co/NikitHamal/sakhiya-gguf  (atom_lite 3.5 MB, atom 7.4 MB, nano 10.1 MB, v1 37.5 MB; *_q8_0_exact = waveform-exact)
+# models: https://huggingface.co/NikitHamal/sakhiya-gguf  (atom_lite 3.0 MB, atom 7.4 MB, nano 10.1 MB, v1 37.5 MB; *_q8_0_exact = waveform-exact)
 python convert_sakhiya_gguf.py --tier atom_lite --am am.pt --voc voc.pt --dtype q8_0 --out sakhiya_atom_lite_q8_0.gguf   # --profile exact for waveform parity
 cmake -S cpp -B build-lib -DCMAKE_BUILD_TYPE=Release && cmake --build build-lib -j   # libsakhiya + sakhiya-cli-lite, no ggml needed
 source emsdk_env.sh && scripts/build_wasm.sh                                          # docs/wasm/sakhiya.wasm (single-thread SIMD128)

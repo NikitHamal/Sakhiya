@@ -239,10 +239,12 @@ def convert_to_gguf(
     tier: str = "v1",
     arch_override: Optional[str] = None,
     keep_fp32: Optional[str] = None,
+    tiny=False,  # False | True (= src,post) | comma list of {dur, src, post}
 ):
     """keep_fp32: comma list of groups kept in full FP32 even for f16/q8_0 files (enc, dur, vel, emb, voc).
     Default: the per-tier policy in TIER_CONFIGS["<tier>"]["keep_fp32"] (parity-tuned so waveform cosine_sim >= 0.999)."""
     tier_key = resolve_tier(tier)
+    tiny_set = {"src", "post"} if tiny is True else (set(str(tiny).split(",")) if tiny else set())
     am, voc, adapter, tcfg = load_tier_models(am_path, voc_path, tier=tier_key)
     if arch_override:
         tcfg["arch"] = arch_override
@@ -318,7 +320,7 @@ def convert_to_gguf(
             # Keep DurFlow (am.dur.*) and 1D norms/biases in FP32 so predicted durations remain 100% identical;
             # quantize 2D/3D encoder & velocity weights to Q8_0 (or F16) and embeddings to F16.
             if k.startswith("dur."):
-                q_mode = "f16" if (dtype in ("f16", "q8_0") and v.ndim >= 2 and v.numel() >= 256) else "none"
+                q_mode = (dtype if "dur" in tiny_set else "f16") if (dtype in ("f16", "q8_0") and v.ndim >= 2 and v.numel() >= 256) else "none"
             elif k.endswith(".emb.weight") or k.endswith(".spk.weight") or k.endswith(".sty.weight"):
                 q_mode = "f16" if dtype in ("f16", "q8_0") else "none"
             elif v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in (".n.", ".n1.", ".n2.", ".nf.")):
@@ -340,9 +342,14 @@ def convert_to_gguf(
     for k, v in voc.state_dict().items():
         # Keep Snake1d alphas, HarmonicSource, and final 66-ch spectral projection in FP32;
         # Upsamplers and MRF ResBlocks use F16 (--dtype f16) or Q8_0 (--dtype q8_0).
-        is_voc_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in ("alpha", "src.", "post.")))
+        # "tiny" profile (smallest file, Atom-Lite ~2.99 MB): HarmonicSource f0_net (src) + final spectral projection (post) are quantized too.
+        # (quantizing the duration net costs STFT-mag cosine 0.80 -> not part of tiny)
+        voc_skip = tuple(x for x in ("alpha", "src.", "post.") if not (x[:-1] in tiny_set and x != "alpha"))
+        is_voc_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in voc_skip))
         voc_dtype = "f16" if (dtype == "q8_0" and "voc" in f16_groups) else dtype
         q_mode = voc_dtype if (dtype in ("f16", "q8_0") and is_voc_heavy and "voc" not in fp32_groups) else "none"
+        if q_mode == "q8_0" and k.startswith("post.") and dtype == "q8_0":
+            q_mode = "q8_0"  # non-multiple-of-32 rows fall back to F16 inside add_tensor
         add_tensor(f"voc.{k}", v, quant_mode=q_mode)
 
     # Hann window (64-pt) for ola64
@@ -434,13 +441,13 @@ def main():
     ap.add_argument("--am", default="/work/tts/runs/v5_c1/am.pt", help="Path to SakhiyaAM or SakhiyaV6Teacher checkpoint")
     ap.add_argument("--voc", default="/work/tts/runs/v5_c1/voc.pt", help="Path to VocoderV2 checkpoint (optional for istft_v6)")
     ap.add_argument("--out", default="/work/tts/models/sakhiya_v5_c1_f32.gguf", help="Output .gguf path")
-    ap.add_argument("--profile", default="compact", choices=["compact", "exact"],
+    ap.add_argument("--profile", default="compact", choices=["compact", "exact", "tiny"],
                     help="exact: keep the whole acoustic model FP32 and quantize only the vocoder (waveform cosine_sim >= 0.999 vs PyTorch, "
-                         "like V1); compact: quantize everything (smallest file; durations may flip by 1 frame, so phase-invariant parity only)")
+                         "like V1); tiny: compact + Q8_0 duration net and HarmonicSource (smallest file); compact: quantize everything (smallest file; durations may flip by 1 frame, so phase-invariant parity only)")
     ap.add_argument("--keep-fp32", default=None, help="comma list of groups kept FP32 (enc,dur,vel,emb,voc); default per-tier policy")
     ap.add_argument("--dtype", default="f32", choices=["f32", "f16", "q8_0"], help="Weight storage type")
     args = ap.parse_args()
-    convert_to_gguf(args.am, args.voc, args.out, args.dtype, tier=args.tier, arch_override=args.arch, keep_fp32=(args.keep_fp32 if args.keep_fp32 is not None else (EXACT_KEEP if args.profile == "exact" else None)))
+    convert_to_gguf(args.am, args.voc, args.out, args.dtype, tier=args.tier, arch_override=args.arch, keep_fp32=(args.keep_fp32 if args.keep_fp32 is not None else (EXACT_KEEP if args.profile == "exact" else None)), tiny=(args.profile == "tiny"))
 
 
 if __name__ == "__main__":

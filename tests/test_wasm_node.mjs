@@ -16,8 +16,22 @@ const SENT = [
 ];
 
 const { createSakhiyaEngine } = await import(pathToFileURL(path.join(ROOT, 'docs/wasm/sakhiya_engine.js')).href);
-// The shipped glue is web,worker only; the node-capable glue (build/wasm_node) wraps the byte-identical sakhiya.wasm.
-const factory = (await import(pathToFileURL(path.join(ROOT, 'build/wasm_node/sakhiya_wasm.js')).href)).default;
+// The shipped glue is web,worker only (no emsdk needed here): run it unmodified in Node by presenting a Worker-like global and
+// a file:// capable fetch (the glue resolves sakhiya.wasm next to itself). build/wasm_node/ (scripts/build_wasm.sh) is used if present.
+const nodeGlue = path.join(ROOT, 'build/wasm_node/sakhiya_wasm.js');
+let glue = pathToFileURL(path.join(ROOT, 'docs/wasm/sakhiya_wasm.js')).href;
+if (fs.existsSync(nodeGlue) && !process.env.SAKHIYA_SHIM) glue = pathToFileURL(nodeGlue).href;
+else {
+  globalThis.WorkerGlobalScope = function WorkerGlobalScope() {};
+  globalThis.self = globalThis;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    const url = String(u);
+    if (url.startsWith('file:')) { const b = fs.readFileSync(new URL(url)); return new Response(b, { status: 200, headers: { 'content-type': 'application/wasm' } }); }
+    return realFetch(u, o);
+  };
+}
+const factory = (await import(glue)).default;
 const wasmBinary = fs.readFileSync(path.join(ROOT, 'docs/wasm/sakhiya.wasm'));
 
 function readWav(p) {

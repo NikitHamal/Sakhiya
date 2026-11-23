@@ -1,7 +1,7 @@
 """Python wrapper for the Sakhiya GGML C++ engine (``cpp/sakhiya.h``) — drop-in sibling of ``SakhiyaONNX``.
 
     from sakhiya.ggml_tts import SakhiyaGGML
-    tts = SakhiyaGGML.from_pretrained("atom-lite")            # downloads + caches sakhiya_atom_lite_q8_0.gguf (~3.5 MB)
+    tts = SakhiyaGGML.from_pretrained("atom-lite")            # downloads + caches sakhiya_atom_lite_q8_0.gguf (~3.0 MB)
     wav, sr = tts.say("नेपालको राजधानी काठमाडौँ हो।", style="news", speed=1.0, pitch=0.0, energy=1.0)
     wavs = tts.say_batch([("नमस्ते", "ne", "warm_soft"), ("ॐ भूर्भुवः स्वः।", "sa", "vedic_chant")])
 

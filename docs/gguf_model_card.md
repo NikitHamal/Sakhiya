@@ -10,7 +10,7 @@ Single-file GGUF v3 models for every shipped Sakhiya tier, run by the zero-depen
 
 | file | tier | notes |
 |---|---|---|
-| `sakhiya_<tier>_q8_0.gguf` | v1 / nano / atom / atom_lite | compact Q8_0 (default; V1's Q8_0 is already waveform-exact) |
+| `sakhiya_<tier>_q8_0.gguf` | v1 / nano / atom / atom_lite | compact Q8_0 (default; V1's Q8_0 is already waveform-exact). **Atom-Lite = `--profile tiny`: 2,998,112 bytes (2.998 MB)**; the previous 3.48 MB compact file is kept as `sakhiya_atom_lite_q8_0_compact.gguf` |
 | `sakhiya_<tier>_q8_0_exact.gguf` | nano / atom / atom_lite | acoustic model FP32 + Q8_0 vocoder: waveform cosine >= 0.999 vs PyTorch |
 | `sakhiya_<tier>_f16.gguf` | all | FP16 |
 

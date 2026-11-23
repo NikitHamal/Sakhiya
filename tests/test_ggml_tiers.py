@@ -42,7 +42,7 @@ SENTENCES = [
 COS_GATE = 0.999          # waveform cosine_sim gate for F32 and the "exact" Q8_0 profile
 # Phase-invariant STFT-magnitude cosine gates for the lossy compact profiles. Compact Q8_0 may flip a few phoneme durations by
 # one 10.7 ms frame (and shifts every later sample), which wrecks waveform cosine but not the audible result.
-MAG_GATE = {"f32": 0.999, "q8_0_exact": 0.999, "f16": 0.98, "q8_0": 0.90}
+MAG_GATE = {"f32": 0.999, "q8_0_exact": 0.999, "f16": 0.98, "q8_0": 0.90, "q8_0_tiny": 0.90}
 EXACT = ("f32", "q8_0_exact")
 
 
@@ -75,15 +75,15 @@ def read_gguf_meta(path):
         return meta
 
 
-def convert_all(tier, ckpt_dir, gguf_dir, dtypes=("f32", "f16", "q8_0", "q8_0_exact")):
+def convert_all(tier, ckpt_dir, gguf_dir, dtypes=("f32", "f16", "q8_0", "q8_0_exact", "q8_0_tiny")):
     from convert_sakhiya_gguf import convert_to_gguf, EXACT_KEEP
     am, voc = TIERS[tier][:2]
     out = {}
     for d in dtypes:
         p = os.path.join(gguf_dir, f"sakhiya_{tier}_{d}.gguf")
         if not os.path.exists(p):
-            convert_to_gguf(os.path.join(ckpt_dir, am), os.path.join(ckpt_dir, voc), p, d.replace("_exact", ""), tier=tier,
-                            keep_fp32=EXACT_KEEP if d.endswith("_exact") else None)
+            convert_to_gguf(os.path.join(ckpt_dir, am), os.path.join(ckpt_dir, voc), p, d.replace("_exact", "").replace("_tiny", ""), tier=tier,
+                            keep_fp32=EXACT_KEEP if d.endswith("_exact") else None, tiny=d.endswith("_tiny"))
         out[d] = p
     return out
 
@@ -131,7 +131,7 @@ def evaluate_tier(tier, ckpt_dir, gguf_dir, cli, threads, sentences=SENTENCES):
         rep["sentences"].append(row)
     # speed: Q8_0 + F16, 1 thread vs N threads, best of 3 on the first sentence
     _, lang, style, text = sentences[0]
-    for d in ("q8_0", "f16"):
+    for d in ("q8_0", "q8_0_tiny", "f16"):
         for th in (1, threads):
             best = min(run_cli(cli, ggufs[d], text, lang, style, os.devnull if False else "/tmp/_rtf.wav", th) for _ in range(3))
             rep["rtf"][f"{d}_t{th}"] = round(best, 4)
