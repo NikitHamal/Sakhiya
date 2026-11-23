@@ -24,6 +24,6 @@ ECAPA similarity to the anchor, Hindi-leak count, click forensics.
 
 ## Known limits
 * Fine-tune data is ~1.9 h, mostly read speech (SLR43); news-style prosody comes from the base model, not from new news data.
-* The base model has higher UTMOS / lower Vedic CER than the fine-tune; the fine-tune buys speaker lock (ECAPA sim 0.55 → ~0.7).
+* The base model has higher UTMOS / lower Vedic CER than the fine-tune; the fine-tune buys speaker lock (ECAPA sim 0.55 → 0.745) at equal UTMOS (~4.0) — selected checkpoint `ft3_s200` (light 200-step, LR 3e-6 adaptation).
 * ai4bharat/IndicF5 was gated (403); Swar (F5-Base fine-tune) represented the F5 family in the bake-off.
 * No human listening test was run by the assistant; please listen to `samples/` before broadcast use.
