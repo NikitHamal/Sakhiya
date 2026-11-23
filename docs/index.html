@@ -18,6 +18,7 @@
   <nav class="tabs" aria-label="Sections">
     <a href="#studio" class="on"><span class="ms">graphic_eq</span><b>Studio</b></a>
     <a href="#samples"><span class="ms">headphones</span><b>Samples</b></a>
+    <a href="#ampixa"><span class="ms">fact_check</span><b>Ampixa Test (365)</b></a>
     <a href="clips.html" id="tab-clips"><span class="ms">library_music</span><b>Clips</b></a>
     <a href="#about"><span class="ms">info</span><b>About</b></a>
   </nav>
@@ -104,8 +105,22 @@
     <div class="card dev-card" style="grid-column:1/-1"><div class="card-h"><span class="ms">integration_instructions</span><h2>Native C++ / Python / Android (<code>sakhiya.cpp</code>)</h2></div><p class="muted">One zero-dependency C++17 engine and one C ABI (<code>cpp/sakhiya.h</code>) power <code>sakhiya-cli</code>, <code>libsakhiya.so</code>, the Android JNI wrapper, the Python wrapper and the <code>sakhiya.wasm</code> that runs this page. Single-file GGUF models (Atom-Lite Q8_0 3.0 MB &middot; Atom 7.4 MB &middot; Nano 10.1 MB &middot; V1 37.5 MB) live on <a href="https://huggingface.co/NikitHamal/sakhiya-gguf" rel="noopener">Hugging Face</a> and the <a href="https://github.com/NikitHamal/Sakhiya/releases/tag/v15-ggml-gguf" rel="noopener">v15-ggml-gguf release</a>.</p><div id="dev-sakhiya-cpp"></div></div>
   </div>
 </section>
+
+<section id="ampixa">
+  <div class="page-head">
+    <div>
+      <h1>Ampixa NepTTS-Bench · 365-Prompt Self-Test Suite</h1>
+      <p>Interactive local self-test of all 365 official prompts from <code>ampixa.benchmarks.cloud/#submit</code> across 9 linguistic &amp; prosodic categories. Synthesizes 100% on-device — nothing is uploaded or submitted.</p>
+    </div>
+    <div class="status"><span class="pill tone"><span class="ms">verified</span><i>365 Official Prompts · Local Self-Test Only</i></span></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="ms">fact_check</span><h2>Audition &amp; Self-Rate All 365 Prompts Across Sakhiya Tiers</h2></div>
+    <div id="ampixa-mount">Loading 365 official Ampixa benchmark prompts…</div>
+  </div>
+</section>
 </main>
 
-<script type="module" src="ggml_engine.js?v=53"></script><script src="nav.js?v=52"></script><script src="buildbadge.js?v=52"></script><script src="g2p.js?v=52"></script><script src="sanskrit.js?v=52"></script><script src="mixed.js?v=52"></script><script src="roman.js?v=52"></script><script src="chandas.js?v=53"></script><script src="tanpura.js?v=53"></script><script src="tts.js?v=53"></script><script src="app.js?v=53"></script><script src="studio_v6.js?v=53"></script><script src="samples.js?v=52"></script>
+<script type="module" src="ggml_engine.js?v=54"></script><script src="nav.js?v=54"></script><script src="buildbadge.js?v=54"></script><script src="g2p.js?v=54"></script><script src="sanskrit.js?v=54"></script><script src="mixed.js?v=54"></script><script src="roman.js?v=54"></script><script src="chandas.js?v=54"></script><script src="tanpura.js?v=54"></script><script src="tts.js?v=54"></script><script src="app.js?v=54"></script><script src="studio_v6.js?v=54"></script><script src="samples.js?v=54"></script><script src="ampixa_test.js?v=54"></script>
 </body>
 </html>

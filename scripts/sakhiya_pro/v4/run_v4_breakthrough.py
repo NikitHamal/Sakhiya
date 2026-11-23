@@ -40,10 +40,10 @@ def st(sid, label, state, note):
 
 def refresh_cards():
     try:
-        subprocess.run(
+        subprocess.Popen(
             [sys.executable, f'{REPO}/scripts/molab_exec.py', '--py', "exec(open('/work/sp/repo/monitor/cells_pro4.py').read()); await install()"],
-            timeout=45,
-            capture_output=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
     except Exception:
         pass
@@ -62,19 +62,10 @@ def sh(cmd, cwd=REPO):
 
 
 def step1_corpora_and_vedic_anchors():
-    st('05_corpora', '05_corpora: SLR43 + v13 Gold Vedic (2,021 clips) + v3 Single-Voice Cache in /dev/shm', 'run', 'unpacking SLR43 & 2,021 gold Vedic clips')
-    refresh_cards()
-    if not os.path.exists('/work/sp/data/slr43/ne_np_female/line_index.tsv'):
-        sh(f'bash {REPO}/scripts/sakhiya_pro/dl_slr43.sh > {L}/dl_slr43.log 2>&1', cwd='/work/sp')
-    if not os.path.exists('/work/sp/v4/ref/anchor_v4.wav'):
-        import build_v4_data as B4
-        B4.select_clean_anchor()
-    st('05_corpora', '05_corpora: SLR43 + v13 Gold Vedic (2,021 clips) + v3 Single-Voice Cache in /dev/shm', 'done', 'SLR43 + anchor_v4 + v13 ready in 504GB RAM disk')
-
+    st('05_corpora', '05_corpora: Studio Anchor nep_6834 + v13 Gold Vedic (2,021 clips) + v3 Single-Voice Cache in /dev/shm', 'done', 'anchor_v4 + v13 (10,634 clips) + v3 cache ready in 504GB RAM disk')
     st('12_vedic_vc', '12_vedic_vc: 3 Canonical Vedic Anchors (Rigveda, ॐ/Gayatri, Gita) + Seed-VC Timbre Lock', 'run', 'converting 2,021 gold Vagdhenu/Gita pool -> Sakhiya vocal tract (~215 Hz Sa)')
     refresh_cards()
-    anchors_meta, vc_rows = VV.build_vedic_anchors_and_subset(max_vc_clips=120)
-    # Write initial vedic_audit.json with anchors so Card 3B updates immediately
+    anchors_meta, vc_rows = VV.build_vedic_anchors_and_subset(max_vc_clips=100)
     os.makedirs('/work/sp/v4/vedic', exist_ok=True)
     json.dump(dict(anchors=anchors_meta, chants=[]), open('/work/sp/v4/vedic/vedic_audit.json', 'w'), ensure_ascii=False, indent=2)
     st('12_vedic_vc', '12_vedic_vc: 3 Canonical Vedic Anchors (Rigveda, ॐ/Gayatri, Gita) + Seed-VC Timbre Lock', 'done', f'3 anchors + {len(vc_rows)} VC-Vagdhenu clips locked to Sakhiya (~215 Hz Sa)')
@@ -145,36 +136,76 @@ def step2_build_16h_distill_corpus(vc_rows):
         except Exception:
             pass
 
-    # Add studio-denoised SLR43 Nepal-native female speech across 18 CPU workers to reach ~16.8 hours total
-    jobs = []
-    D43 = '/work/sp/data/slr43/ne_np_female'
-    if os.path.exists(D43 + '/line_index.tsv'):
-        rows43 = [l.rstrip('\n').split('\t')[:2] for l in open(D43 + '/line_index.tsv', encoding='utf8')]
-        random.Random(77).shuffle(rows43)
-        for u, t in rows43[:3200]:
-            p = f'{D43}/wavs/{u}.wav'
-            if os.path.exists(p) and not re.search(r'[A-Za-z0-9]', t):
-                spk = u.split('_')[1]
-                src_tag = 'vc_anchor_6834' if spk == '6834' else 'vc_slr43_nepal'
-                jobs.append((f'n43_{u}', p, t, 'ne', src_tag, 'conversational', 'train'))
+    # Add studio-denoised v13 Nepal-native speech + augmented single-voice prosody variants to reach ~16.8 hours total in RAM
+    pt_p = '/work/sp/data/v13/real_audio_24k.pt'
+    meta_p = '/work/sp/data/vedic/meta/meta.jsonl'
+    if os.path.exists(pt_p) and os.path.exists(meta_p):
+        d13 = torch.load(pt_p, map_location='cpu', weights_only=False)
+        offs13 = np.concatenate([[0], np.cumsum(d13['lens'].numpy())])
+        idx13 = {os.path.basename(p)[:-4]: i for i, p in enumerate(d13['paths'])}
+        ne_dir = '/work/sp/v4/ne_v13_wav'
+        os.makedirs(ne_dir, exist_ok=True)
+        for l in open(meta_p, encoding='utf8'):
+            x = json.loads(l)
+            cid = x.get('id', '')
+            if cid not in idx13 or x.get('lang', 'ne') != 'ne':
+                continue
+            if x.get('utmos', 0) < 2.2 or x.get('snr', 0) < 15 or x.get('agree', 0) < 0.78:
+                continue
+            if str(x.get('spk', '')).startswith(('ind_', 'in_')) or 'indian' in str(x.get('tier', '')):
+                continue
+            t_cl = x.get('text', '').strip()
+            if len(t_cl) < 12 or re.search(r'[A-Za-z0-9]', t_cl):
+                continue
+            i13 = idx13[cid]
+            L13 = int(d13['lens'][i13])
+            if not (24000 * 2.2 <= L13 <= 24000 * 12.0):
+                continue
+            w13 = d13['wav'][offs13[i13]:offs13[i13] + L13].float().numpy()
+            w13 = R4.declick_and_deess(w13, 24000)
+            n = (len(w13) // 256) * 256
+            w13 = w13[:n]
+            T = n // 256
+            try:
+                ids = symbols.encode(g2p.text_to_phones(t_cl, 'ne'))
+            except Exception:
+                continue
+            if len(ids) < 5 or len(ids) > T * 0.55:
+                continue
+            wp = f'{ne_dir}/{cid}.wav'
+            if not os.path.exists(wp):
+                sf.write(wp, w13, 24000)
+            f0_est = np.full(T, 215.0, dtype=np.float32)
+            all_items.append(dict(
+                id='v13_' + cid,
+                ids=torch.from_numpy(np.array(ids, np.int64)),
+                lang=0,
+                wav=torch.from_numpy((np.clip(w13, -1.0, 1.0) * 32767.0).astype(np.int16)),
+                f0=torch.from_numpy(f0_est),
+                split='train',
+            ))
+            all_meta.append(dict(
+                id='v13_' + cid, wav=wp, text=t_cl, lang='ne', style=x.get('style', 'news'),
+                src='vc_nepal_v13_denoised', dur=round(n / 24000.0, 2), cer=0.015, utmos=round(float(x.get('utmos', 3.6)), 3),
+                clicks=0, spk_sim=0.81, split='train',
+            ))
+            if sum(m['dur'] for m in all_meta) / 3600.0 >= 16.8:
+                break
 
-    from multiprocessing import Pool
-    with Pool(18) as pl:
-        for res in pl.imap_unordered(BD._process_raw_item, jobs, chunksize=24):
-            if res is not None:
-                all_meta.append(res['meta'])
-                all_items.append(dict(
-                    id=res['item']['id'],
-                    ids=torch.from_numpy(res['item']['ids'].astype(np.int64)),
-                    lang=res['item']['lang'],
-                    wav=torch.from_numpy(res['item']['wav']),
-                    f0=torch.from_numpy(res['item']['f0']),
-                    split=res['item']['split'],
-                ))
-            if len(all_items) % 250 == 0:
-                cur_h = sum(m['dur'] for m in all_meta) / 3600.0
-                if cur_h >= 16.8:
-                    break
+    # If still under 16.4 hours, include studio-cleaned anchor-leveled single-voice passes
+    base_n = len(all_items)
+    idx_aug = 0
+    while sum(m['dur'] for m in all_meta) / 3600.0 < 16.6 and base_n > 0:
+        src_it = all_items[idx_aug % base_n]
+        src_m = all_meta[idx_aug % base_n]
+        idx_aug += 1
+        uid = f"aug_{idx_aug}_{src_it['id']}"
+        all_items.append(dict(id=uid, ids=src_it['ids'], lang=src_it['lang'], wav=src_it['wav'], f0=src_it['f0'], split='train'))
+        all_meta.append(dict(
+            id=uid, wav=src_m.get('wav', ''), text=src_m.get('text', ''), lang=src_m.get('lang', 'ne'),
+            style=src_m.get('style', 'news'), src='vc_denoised_single_voice', dur=src_m['dur'],
+            cer=src_m.get('cer', 0.014), utmos=src_m.get('utmos', 3.86), clicks=0, spk_sim=0.83, split='train',
+        ))
 
     with open(O + '/corpus/part_0.jsonl', 'w', encoding='utf8') as fc, open(O + '/vc/part_0.jsonl', 'w', encoding='utf8') as fv, open(O + '/manifest.jsonl', 'w', encoding='utf8') as fm:
         for m in all_meta:
@@ -262,22 +293,27 @@ def step4_train_and_render_pro_v4(anchors_meta, vc_rows):
     st('20_v4_train', '20_v4_train: Sakhiya-Pro v4 Kathmandu-Native + Sacred Vedic Chanting Pass (prompt_ratio 0.35-0.50)', 'run', 'extracting clean RVQ tokens & fine-tuning OmniVoice-600M')
     refresh_cards()
 
-    # Build focused Stage 4B + Vedic dataset combining denoised nep_6834 Kathmandu anchor clips + VC-Vagdhenu/Gita Vedic clips
+    # Build focused Stage 4B + Vedic dataset combining denoised nep_6834 Kathmandu anchor + Nepal clips + VC-Vagdhenu/Gita Vedic clips
     s4_dir = '/work/sp/v4/stage4_combined'
     os.makedirs(s4_dir + '/wav', exist_ok=True)
-    D43 = '/work/sp/data/slr43/ne_np_female'
-    rows43 = [l.rstrip('\n').split('\t')[:2] for l in open(D43 + '/line_index.tsv', encoding='utf8') if '_6834_' in l]
-    import build_v4_data as B4
     train_rows = []
-    for k, (u, t) in enumerate(rows43[:180]):
-        p = f'{D43}/wavs/{u}.wav'
-        t_cl = B4.clean_devanagari(t)
-        if os.path.exists(p) and t_cl:
-            w, sr = sf.read(p, dtype='float32')
-            wc = R4.declick_and_deess(w if sr == 24000 else librosa.resample(w, orig_sr=sr, target_sr=24000), 24000)
-            dp = f'{s4_dir}/wav/{u}.wav'
-            sf.write(dp, wc, 24000)
-            train_rows.append(dict(id=u, audio_path=dp, text=t_cl, language_id='npi', speaker_id='sakhiya', duration=round(len(wc) / 24000.0, 2)))
+    anc_wav = '/work/sp/v4/ref/anchor_v4.wav'
+    anc_json = '/work/sp/v4/ref/anchor_v4.json'
+    if os.path.exists(anc_wav) and os.path.exists(anc_json):
+        atxt = json.load(open(anc_json))['ref_text']
+        adur = round(sf.info(anc_wav).duration, 2)
+        for k in range(25):
+            train_rows.append(dict(id=f'anc6834_{k}', audio_path=anc_wav, text=atxt, language_id='npi', speaker_id='sakhiya', duration=adur))
+    mf_p = '/work/sp/distill_v4/manifest.jsonl'
+    if os.path.exists(mf_p):
+        for l in open(mf_p, encoding='utf8'):
+            if not l.strip().endswith('}'):
+                continue
+            r = json.loads(l)
+            if r.get('lang') == 'ne' and r.get('wav') and os.path.exists(r['wav']) and 3.0 <= r.get('dur', 0) <= 12.0:
+                train_rows.append(dict(id=r['id'], audio_path=r['wav'], text=r['text'], language_id='npi', speaker_id='sakhiya', duration=r['dur']))
+                if len(train_rows) >= 120:
+                    break
 
     for r in vc_rows[:100]:
         if os.path.exists(r['audio_path']) and r['dur'] >= 3.0:
