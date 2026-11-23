@@ -37,7 +37,7 @@ N_LANG = 2
 
 TIERS = {
     "t30": dict(tier="t30", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=96,   r_voc_k7=None, r_voc_k11=None),
+    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=104,  r_voc_k7=None, r_voc_k11=136),
     "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
     "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=44,   r_voc_k7=52,   r_voc_k11=30),
@@ -153,8 +153,6 @@ class Student(nn.Module):
     def _init_raw_submodules(self, d_enc, L_enc, ff_enc, d_vel, nb_vel, h_dur, voc_ch):
         if self.arch == "sakhiya_pico":
             self.am = SakhiyaPicoAM(d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur)
-            self.am.vel.ublock_late = self.am.vel.ublock_early
-            self.am.dur.cv = nn.ModuleList([self.am.dur.cv[0]])
         else:
             self.am = SakhiyaAM(d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur)
             if hasattr(self.am, "ctc_rec"):
@@ -166,6 +164,10 @@ class Student(nn.Module):
         self.voc.fuse_weight_norm()
 
     def _apply_svd_structure(self):
+        if self.arch == "sakhiya_pico":
+            self.am.vel.ublock_late = self.am.vel.ublock_early
+            if len(self.am.dur.cv) > 1:
+                self.am.dur.cv = nn.ModuleList([self.am.dur.cv[0]])
         if self.r_enc is not None:
             if self.arch == "sakhiya_pico":
                 if isinstance(self.am.enc.ublock.c1, nn.Conv1d):
