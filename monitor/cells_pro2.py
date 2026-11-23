@@ -130,6 +130,37 @@ if os.path.exists("/work/sp/distill/cache_train.pt"):
     csz = os.path.getsize("/work/sp/distill/cache_train.pt") / 1e6
     cache_info = f"✅ READY ({csz:.1f} MB in RAM/SSD)"
 
+
+# --- Panel 2b: Sakhiya-Pro v3 accent-fix status (audit -> data -> train A/B -> eval) ---
+def _trainline(name, total):
+    lg = f"/work/tts/logs/train_{name}.log"
+    try:
+        tx = open(lg, errors="ignore").read()[-6000:]
+        ms = re.findall(r"Step (\d+) \| train/loss: ([0-9.]+) \| train/learning_rate: ([0-9.e+-]+).*?steps_per_sec: ([0-9.]+)", tx)
+        if not ms:
+            return None
+        stp, loss, lr_, sps = ms[-1]
+        live = time.time() - os.path.getmtime(lg) < 120
+        eta = (total - int(stp)) / max(float(sps), 1e-6) / 60.0
+        return f"{'🟢' if live else '⏹'} <b>{name}</b> step <b>{stp}/{total}</b> · {sps} steps/s · loss {loss} · lr {lr_} · ETA {eta:.1f} min"
+    except Exception:
+        return None
+tl = [x for x in (_trainline("v3a", 3200), _trainline("v3b", 600)) if x]
+aud = _j("/work/sp/v3/audit_v2/audit.json") or {}
+anc = _j("/work/sp/v3/ref/anchor_v3.json") or {}
+acc_rows = []
+for tag, pth in [("v2 baseline", "/work/sp/v3/eval/v2/eval.json")] + [(os.path.basename(os.path.dirname(q)), q) for q in sorted(glob.glob("/work/sp/v3/eval/v3*/eval.json"))]:
+    e = _j(pth)
+    if e:
+        sm = e["summary"]
+        acc_rows.append(f"<tr><td><b>{html.escape(tag)}</b></td><td align=right>{sm['end_slope']:+.2f}</td><td align=right>{sm['rise_frac']:.2f}</td><td align=right>{sm['spk_sim']:.3f}</td><td align=right>{sm['cer']:.3f}</td><td align=right>{sm['utmos']:.2f}</td><td align=right>{sm['f0_med_std']:.1f}</td><td align=right>{sm['rms_std_db']:.2f}</td><td align=right><b>{sm['score']:.2f}</b></td></tr>")
+acc_html = (
+    f"<div style='margin-top:6px;padding-top:6px;border-top:1px dashed #9db8f0'><b>🇳🇵 Accent-fix (Sakhiya-Pro v3):</b> lang tag <code>{html.escape(str(aud.get('language','npi')))}</code> · instruct <code>None</code> · "
+    f"anchor <code>{html.escape(str(anc.get('uid','-')))}</code> · guidance <b>{aud.get('best_gs','-')}</b> · spelling <b>{html.escape(str(aud.get('best_spelling','-')))}</b> · real-native end-slope median <b>{aud.get('real_end_slope_median', 0):+.2f} st</b></div>"
+    + ("<div>" + "<br>".join(tl) + "</div>" if tl else "<div style='color:#666'>training not started yet</div>")
+    + ("<table style='border-collapse:collapse;font-size:12px;margin-top:4px' border=1 cellpadding=3><tr style='background:#e8f0ff'><th>checkpoint</th><th>end-slope st (−=native)</th><th>rising ends</th><th>spk-sim</th><th>CER</th><th>UTMOS</th><th>f0 drift Hz</th><th>level drift dB</th><th>score</th></tr>" + "".join(acc_rows) + "</table>" if acc_rows else "")
+)
+
 # --- Panel 3: Live Distillation Ladder Training Monitor ---
 TIER_SPECS = [
     ("t30", "Sakhiya-T30 (Flagship 30M)", "29.6 MB"),
@@ -179,6 +210,11 @@ SITE_BASELINES = [
     dict(name="Sakhiya-V1-Atom (Live Site)", size_mb=6.51, utmos=3.262, cer=0.017, sa_cer=0.068, drops=0, stutters=0, clicks=0, rtf=0.0189, status="🟢 Live Site Baseline (models_sano)"),
     dict(name="Sakhiya-V1-Atom-Lite (Live Site)", size_mb=2.72, utmos=2.944, cer=0.017, sa_cer=0.040, drops=0, stutters=0, clicks=0, rtf=0.0155, status="🟢 Live Site Baseline (models_atom_lite)"),
 ]
+
+_v3 = _j("/work/sp/final/sakhiya_pro_v3/eval_accent.json")
+SITE_BASELINES.insert(2, dict(name="Sakhiya-Pro v3 (native-Nepal lock · 600M Teacher)", size_mb="2400 (bf16)",
+    utmos=round(_v3["utmos"], 3) if _v3 else "-", cer=round(_v3["cer"], 3) if _v3 else "-", sa_cer="-", drops=0, stutters=0, clicks=round(_v3["clicks"], 1) if _v3 else "-", rtf="GPU",
+    status=(f"🇳🇵 spk-sim {_v3['spk_sim']:.3f} · end-slope {_v3['end_slope']:+.2f} st · rising ends {_v3['rise_frac']:.2f}" if _v3 else "⏳ training / verifying")))
 student_targets = [
     ("t30", "Student-T30 (Ladder 30 MB)", "~29.6"),
     ("t15", "Student-T15 (Ladder 14.5 MB)", "~14.5"),
@@ -241,7 +277,7 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
 </div>
 
 <div style="background:#f5f8ff;border:1px solid #bfd4ff;border-radius:8px;padding:10px 14px;margin-bottom:10px">
-  <h3 style="margin:0 0 4px 0;color:#103a8c">🎙️ Panel 2 — Live Teacher Corpus Generation & Single-Voice Cache Progress</h3>
+  <h3 style="margin:0 0 4px 0;color:#103a8c">🎙️ Panel 2 — Active Accent-Fix (Pro v3) & Teacher-Corpus Status</h3>
   <div><b>Active Workers:</b> {n_workers} · <b>Verified Clips:</b> <b>{n_clips}</b> · <b>Audio Volume:</b> <b>{tot_hrs:.2f} hours</b> (24 kHz mono) · <b>Speed:</b> {clips_per_min:.1f} clips/min · <b>ETA:</b> {html.escape(corpus_eta)}</div>
   <div><b>Quality Gate Means:</b> UTMOS <b>{mean_utmos:.3f}</b> · CER <b>{mean_cer:.3f}</b> · ECAPA Spk-Sim <b>{mean_spk:.3f}</b> · <b>RAM/SSD Shard Cache:</b> {html.escape(cache_info)}</div>
   <div style="color:#444;font-size:12.5px"><b>Sources Breakdown:</b> {html.escape(src_str)}</div>
@@ -283,19 +319,32 @@ sections = {}
 
 # 1. Episode 01 Broadcast Voiceover & Surgical Lines (c3, n1a, n2a, n4a, f1, o1)
 ep_items = {}
-for tag, ep_p in (("EP01 v2 Mastered (-14 LUFS)", "/work/sp/render/ep01_v2/voiceover_ep01.mp3"),
+for tag, ep_p in (("EP01 v3 Native-Nepal Mastered (-14 LUFS)", "/work/sp/render/ep01_v3/voiceover_ep01.mp3"),
+                  ("EP01 v2 Mastered (-14 LUFS)", "/work/sp/render/ep01_v2/voiceover_ep01.mp3"),
                   ("EP01 v1 Mastered (-14 LUFS)", "/work/sp/render/ep01/voiceover_ep01.mp3"),
                   ("EP01 Repo Frozen v2", "/work/sp/repo/docs/sakhiya_pro/ep01_v2/voiceover_ep01.mp3")):
     a = _safe_aud(ep_p)
     if a is not None:
         ep_items[tag] = a
 for lid in ("c3", "n1a", "n2a", "n4a", "f1", "o1"):
-    lp = f"/work/sp/render/ep01_v2/lines/{lid}.wav"
+    lp = f"/work/sp/render/ep01_v3/lines/{lid}.wav"
+    if not os.path.isfile(lp):
+        lp = f"/work/sp/render/ep01_v2/lines/{lid}.wav"
     a = _safe_aud(lp)
     if a is not None:
         ep_items[f"EP01 line {lid}"] = a
 if ep_items:
     sections["🎙️ NEBians News Episode 01 Broadcast Voiceover & Key Lines"] = mo.accordion(ep_items)
+
+# 1b. Accent A/B (same line, v2 vs v3)
+ab = {}
+for i in range(12):
+    for tag in ("v2", "v3a_checkpoint-3200", "v3b_checkpoint-600"):
+        a = _safe_aud(f"/work/sp/v3/eval/{tag}/wav/l{i:02d}_s11.wav", f"{tag} line {i}")
+        if a is not None:
+            ab[f"line {i:02d} · {tag}"] = a
+if ab:
+    sections["🇳🇵 Accent A/B: v2 vs v3 (same lines)"] = mo.accordion(ab)
 
 # 2. Live Listening Desk folders (/work/sp/listen/*)
 for d in sorted(glob.glob("/work/sp/listen/*/")):
