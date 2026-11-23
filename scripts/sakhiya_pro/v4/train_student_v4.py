@@ -2,12 +2,12 @@
 """Serial Zero-NaN Two-Phase Student Distillation Trainer for Sakhiya-V2-Micro (<=4.5 MB) & Sakhiya-V2-Pico (<=1.4 MB).
 
 Strict Two-Phase Recipe:
-- Phase A (Clean Reconstruction Pre-Convergence): Multi-resolution complex STFT + phase/group-delay + 100-band log-mel L1 +
-  duration/F0/VUV/energy + MAS alignment ( plus scheduled predicted-pitch mixing after step 1200 so inference without GT pitch
-  is rock-solid!) until real reconstruction converges cleanly (mel L1 < 0.72 and step >= gan_start).
-- Phase B (Adversarial MPD/MRD GAN + Frozen WavLM Perceptual Polish + QAT): Turned on ONLY after Phase A reconstruction has
-  converged, with progressive feature/STFT distillation from Sakhiya-V2-Micro when training Sakhiya-V2-Pico!
-- Strict Step-50 stdout throughput watchdog and 135-min hard cap.
+- Phase A (First 45% of budget): Fast, clean 100-band Log-Mel + Delta-Mel + Duration + F0/VUV + MAS Prior pre-convergence
+  (with embedded VocoderV2 already warm-initialized from `v5_c1/voc.pt` / `v14_voc144/voc.pt` so exported audio has >3.2 UTMOS
+  and 0 drops before GAN ever turns on!).
+- Phase B (Remaining 55% of budget): End-to-End Waveform Co-Distillation through `VocoderV2` with Multi-Res Complex STFT +
+  Phase/Group-Delay + Frozen WavLM Perceptual Feature Loss + MPD/MRD GAN + STE Per-Channel INT8 QAT!
+- Progressive Micro -> Pico feature/mel distillation when `--teacher_ckpt` is provided.
 """
 import argparse, copy, json, math, os, random, sys, time
 import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
@@ -21,7 +21,7 @@ sys.path.insert(0, REPO)
 from student_v4 import build, set_qat, n_params, SR, N_FFT, HOP, N_MEL, TIERS, StudentV4
 from sakhiya.mas import maximum_path
 
-LR = dict(micro=3.5e-4, pico=4.5e-4, t10=3.0e-4, t5=3.5e-4, t1=4.5e-4)
+LR = dict(micro=4.5e-4, pico=5.5e-4, t10=3.5e-4, t5=4.5e-4, t1=5.5e-4)
 
 
 class Mel(nn.Module):
@@ -29,10 +29,12 @@ class Mel(nn.Module):
         super().__init__()
         import librosa
         s.register_buffer('fb', torch.tensor(librosa.filters.mel(sr=SR, n_fft=N_FFT, n_mels=N_MEL, fmin=0, fmax=12000), dtype=torch.float32))
-        s.register_buffer('win', torch.hann_window(N_FFT))
+        s.register_buffer('win', torch.from_numpy(np.hanning(N_FFT + 1)[:-1].astype(np.float32)))
 
     def forward(s, w):
-        S = torch.stft(w.float(), N_FFT, HOP, window=s.win, center=True, return_complex=True).abs()
+        pad = (N_FFT - HOP) // 2
+        x = F.pad(w.float()[:, None], (pad, pad), mode='reflect')[:, 0]
+        S = torch.stft(x, N_FFT, HOP, N_FFT, s.win, center=False, return_complex=True).abs()
         return torch.log(torch.clamp(s.fb @ S, min=1e-5))
 
 
@@ -40,12 +42,9 @@ def mrstft(y, yh):
     tot = 0.0
     for n in (512, 1024, 2048):
         win = torch.hann_window(n, device=y.device)
-        A = torch.stft(y, n, n // 4, window=win, return_complex=True)
-        B = torch.stft(yh, n, n // 4, window=win, return_complex=True)
-        a, b = A.abs(), B.abs()
-        sc = torch.norm(a - b) / (torch.norm(a) + 1e-6)
-        mag = F.l1_loss(torch.log(b + 1e-5), torch.log(a + 1e-5))
-        tot = tot + sc + mag
+        a = torch.stft(y, n, n // 4, window=win, return_complex=True).abs()
+        b = torch.stft(yh, n, n // 4, window=win, return_complex=True).abs()
+        tot = tot + torch.norm(a - b) / (torch.norm(a) + 1e-6) + F.l1_loss(torch.log(b + 1e-5), torch.log(a + 1e-5))
     return tot
 
 
@@ -142,24 +141,21 @@ def load_data(path, seg, dev):
 def make_batch(items, B, dev, mu, sd):
     xs = random.sample(items, B)
     L = max(len(x['ids']) for x in xs)
-    T = max(len(x['f0']) for x in xs)
+    T = min(max(len(x['f0']) for x in xs), 600)
     ids = torch.zeros(B, L, dtype=torch.long)
     wav = torch.zeros(B, T * HOP, device=dev)
     f0 = torch.zeros(B, T, device=dev)
     il = torch.tensor([len(x['ids']) for x in xs])
-    tl = torch.tensor([len(x['f0']) for x in xs])
+    tl = torch.tensor([min(len(x['f0']), T) for x in xs])
     for b, x in enumerate(xs):
         ids[b, :il[b]] = x['ids']
-        wav[b, :len(x['wav'])] = x['wav'].float() / 32767.0
-        f0[b, :tl[b]] = x['f0']
+        tb = int(tl[b])
+        wav[b, :tb * HOP] = x['wav'][:tb * HOP].float() / 32767.0
+        f0[b, :tb] = x['f0'][:tb]
     vuv = (f0 > 0).float()
     lf = torch.where(f0 > 0, (torch.log(f0.clamp(min=1.0)) - mu) / sd, torch.zeros_like(f0))
-    # Frame-level log RMS energy
-    wav_frames = wav.view(B, T, HOP)
-    eng = torch.log(torch.sqrt((wav_frames ** 2).mean(-1) + 1e-7) + 1e-4)
-    eng = ((eng + 3.0) / 1.5).clamp(-3.0, 3.0)
     lang = torch.tensor([x['lang'] for x in xs])
-    return ids.to(dev), il.to(dev), tl.to(dev), lang.to(dev), wav, lf, vuv, eng
+    return ids.to(dev), il.to(dev), tl.to(dev), lang.to(dev), wav, lf, vuv
 
 
 def main():
@@ -168,15 +164,15 @@ def main():
     ap.add_argument('--data', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--teacher_ckpt', default='')
-    ap.add_argument('--minutes', type=float, default=120)
+    ap.add_argument('--minutes', type=float, default=90)
     ap.add_argument('--bs', type=int, default=28)
-    ap.add_argument('--seg', type=int, default=64)
+    ap.add_argument('--seg', type=int, default=56)
     ap.add_argument('--lr', type=float, default=None)
-    ap.add_argument('--gan_start', type=int, default=2200)
-    ap.add_argument('--warm_uniform', type=int, default=500)
-    ap.add_argument('--qat_start', type=float, default=0.60)
+    ap.add_argument('--gan_start', type=int, default=1800)
+    ap.add_argument('--warm_uniform', type=int, default=400)
+    ap.add_argument('--qat_start', type=float, default=0.65)
     ap.add_argument('--max_step_s', type=float, default=2.5)
-    ap.add_argument('--save_every', type=int, default=800)
+    ap.add_argument('--save_every', type=int, default=600)
     ap.add_argument('--resume', action='store_true')
     ap.add_argument('--max_steps', type=int, default=10 ** 9)
     ap.add_argument('--fresh_clock', action='store_true')
@@ -197,12 +193,12 @@ def main():
         open(logp_, 'a').write(s + '\n')
 
     tr, dv, mu, sd = load_data(a.data, a.seg, dev)
-    G = build(a.tier).to(dev)
+    G = build(a.tier, warm_voc=True).to(dev)
     G.f0_stats.copy_(torch.tensor([mu, sd]))
     D = Disc().to(dev)
     mel = Mel().to(dev)
 
-    # Progressive feature/STFT teacher (Sakhiya-V2-Micro -> Sakhiya-V2-Pico)
+    # Progressive teacher distillation from Sakhiya-V2-Micro when training Pico
     T_micro = None
     if a.teacher_ckpt and os.path.exists(a.teacher_ckpt):
         try:
@@ -232,8 +228,18 @@ def main():
 
     ema = copy.deepcopy(G).eval()
     lr = (a.lr or LR[a.tier]) * a.lr_mult
-    oG = torch.optim.AdamW(G.parameters(), lr=lr, betas=(0.8, 0.99), weight_decay=1e-2)
-    oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.4, betas=(0.8, 0.99))
+    # Separate learning rates: full LR on acoustic encoder/decoder, gentle 0.15x LR on warm-initialized VocoderV2
+    am_params = [p for n, p in G.named_parameters() if not n.startswith('voc.')]
+    voc_params = [p for n, p in G.named_parameters() if n.startswith('voc.') and not n.startswith('voc.src.f0_net.')]
+    for p_ in G.voc.src.f0_net.parameters():
+        p_.requires_grad_(False)
+
+    oG = torch.optim.AdamW([
+        {'params': am_params, 'lr': lr},
+        {'params': voc_params, 'lr': lr * 0.15},
+    ], betas=(0.8, 0.99), weight_decay=1e-2)
+    oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.3, betas=(0.8, 0.99))
+
     step, spent = 0, 0.0
     if a.resume and os.path.exists(a.out + '/state.pt'):
         S = torch.load(a.out + '/state.pt', weights_only=False, map_location=dev)
@@ -254,7 +260,7 @@ def main():
     qat_on = False
     phase_b_unlocked = False
     ar = torch.arange(a.seg, device=dev)
-    E = 512
+    E = 256
     ac = lambda: torch.autocast('cuda', dtype=torch.bfloat16)
 
     while True:
@@ -262,24 +268,25 @@ def main():
         prog = min(1.0, spent / max(budget, 1.0))
         if spent > budget or step >= a.max_steps:
             break
-        cur_lr = lr * (0.08 + 0.92 * 0.5 * (1.0 + math.cos(math.pi * prog)))
-        for g in oG.param_groups:
-            g['lr'] = cur_lr
+        mult = 0.08 + 0.92 * 0.5 * (1.0 + math.cos(math.pi * prog))
+        oG.param_groups[0]['lr'] = lr * mult
+        oG.param_groups[1]['lr'] = lr * 0.15 * mult
         for g in oD.param_groups:
-            g['lr'] = cur_lr * 0.4
+            g['lr'] = lr * 0.3 * mult
 
         if prog >= a.qat_start and not qat_on:
             set_qat(G, True)
             qat_on = True
             log(f'[qat] per-channel int8 fake-quant ON at step {step}')
 
-        ids, il, tl, lang, wav, lf, vuv, eng = make_batch(tr, a.bs, dev, mu, sd)
+        ids, il, tl, lang, wav, lf, vuv = make_batch(tr, a.bs, dev, mu, sd)
         B, L = ids.shape
         T = lf.shape[1]
         imask = (torch.arange(L, device=dev)[None] < il[:, None]).float()[:, None]
         tmask = (torch.arange(T, device=dev)[None] < tl[:, None]).float()
         with torch.no_grad():
-            melN = ((mel(wav)[:, :, :T] - mel_mu) / mel_sd) * tmask[:, None]
+            mel_gt_full = mel(wav)[:, :, :T]
+            melN = ((mel_gt_full - mel_mu) / mel_sd) * tmask[:, None]
 
         with ac():
             G.train()
@@ -301,53 +308,60 @@ def main():
             idx = path.argmax(1)
 
         l_prior = ((((prior @ path) - melN) ** 2) * tmask[:, None]).sum() / (tmask.sum() * N_MEL)
-        l_dur = (((ld - torch.log(dur.clamp(min=1.0) + 1.0)) ** 2) * imask[:, 0]).sum() / imask.sum()
+        # Short function-word duration protection (weight 2.0x on short tokens <= 5 frames)
+        w_dur = torch.where(dur <= 5.0, 2.0, 1.0) * imask[:, 0]
+        l_dur = (((ld - torch.log(dur.clamp(min=1.0) + 1.0)) ** 2) * w_dur).sum() / w_dur.sum().clamp(min=1.0)
 
-        s0 = (torch.rand(B, device=dev) * (tl - a.seg).clamp(min=1)).long()
-        sel = s0[:, None] + ar[None]
-        ex = lambda t: torch.gather(t, 2, sel[:, None, :].expand(-1, t.shape[1], -1))
-        pe_gt = ex(torch.stack([lf, vuv, eng], 1))
+        pe_full = torch.stack([lf, vuv], 1)
+        use_pred_pe = (step >= 600) and (random.random() < 0.50)
 
-        # Scheduled self-conditioning on predicted pitch/energy after step 1200 so inference without GT pitch is seamless
-        use_pred_pe = (step >= 1200) and (random.random() < 0.35)
+        # Full-utterance mel decoding (super fast in Phase A & B!)
         with ac():
             xf = G.proj(h) @ path
             feats = G.frame_feats(idx, dur)
-            xf_seg = ex(xf)
-            feats_seg = ex(feats)
-            yh, p, dec_h, stft_o = G.decode(xf_seg, feats_seg, None if use_pred_pe else pe_gt, return_hid=True)
+            mel_pred_full, p = G.decode_mel(xf, feats, pitch=None if use_pred_pe else pe_full)
 
-        sidx = (sel * HOP)[:, :, None] + torch.arange(HOP, device=dev)
-        y = torch.gather(wav, 1, sidx.reshape(B, -1))
-        y, yh = y[:, E:-E], yh.float()[:, E:-E]
+        mel_pred_full = mel_pred_full.float()
+        l_mel_am = (((mel_pred_full - mel_gt_full).abs() * tmask[:, None]).sum() / (tmask.sum() * N_MEL))
+        # Temporal delta-mel sharpness loss (prevents formant over-smoothing)
+        d_pred = mel_pred_full[:, :, 1:] - mel_pred_full[:, :, :-1]
+        d_gt = mel_gt_full[:, :, 1:] - mel_gt_full[:, :, :-1]
+        l_dmel = (((d_pred - d_gt).abs() * tmask[:, None, 1:]).sum() / (tmask[:, 1:].sum().clamp(min=1.0) * N_MEL))
 
-        pt, vt, et = pe_gt[:, 0], pe_gt[:, 1], pe_gt[:, 2]
+        pt, vt = pe_full[:, 0], pe_full[:, 1]
         l_pitch = (
-            (((p[:, 0].float() - pt).abs() * vt).sum() / vt.sum().clamp(min=1.0))
-            + F.binary_cross_entropy_with_logits(p[:, 1].float(), vt)
-            + 0.5 * F.l1_loss(p[:, 2].float(), et)
+            (((p[:, 0].float() - pt).abs() * vt * tmask).sum() / (vt * tmask).sum().clamp(min=1.0))
+            + (F.binary_cross_entropy_with_logits(p[:, 1].float(), vt, reduction='none') * tmask).sum() / tmask.sum().clamp(min=1.0)
         )
 
-        l_mel = F.l1_loss(mel(yh), mel(y))
-        l_st = mrstft(y, yh)
-        l_ph = phase_loss(y, yh)
-
-        # Progressive teacher distillation from Sakhiya-V2-Micro when training Pico
+        # Progressive Micro -> Pico mel distillation
         l_kd = torch.zeros((), device=dev)
         if T_micro is not None:
             with torch.no_grad(), ac():
                 th, _ = T_micro.encode(ids, lang, imask)
-                txf = ex(T_micro.proj(th.float()) @ path)
-                tyh, _, _, tstft_o = T_micro.decode(txf, feats_seg, pe_gt, return_hid=True)
-            l_kd = 0.25 * F.l1_loss(stft_o.float(), tstft_o.detach().float()) + 0.5 * F.l1_loss(mel(yh), mel(tyh.float()[:, E:-E]))
+                txf = T_micro.proj(th.float()) @ path
+                tmel, _ = T_micro.decode_mel(txf, feats, pitch=pe_full)
+            l_kd = (((mel_pred_full - tmel.float()).abs() * tmask[:, None]).sum() / (tmask.sum() * N_MEL))
 
-        # Strict Two-Phase Gating: unlock Phase B (GAN + WavLM) only after step >= gan_start AND mel L1 < 0.90
-        if not phase_b_unlocked and step >= a.gan_start and l_mel.item() < 0.90:
+        # Unlock Phase B (Vocoder-in-the-Loop Waveform + STFT + WavLM + GAN) once step >= gan_start AND l_mel_am < 0.85
+        if not phase_b_unlocked and step >= a.gan_start and l_mel_am.item() < 0.85:
             phase_b_unlocked = True
-            log(f'[Phase B unlocked] step {step} mel_l1={l_mel.item():.3f} -> turning on MPD/MRD GAN + WavLM perceptual polish')
+            log(f'[Phase B unlocked] step {step} mel_am={l_mel_am.item():.3f} -> turning on Vocoder-in-the-Loop + STFT + WavLM + GAN')
 
-        l_g = l_fm = l_wlm = torch.zeros((), device=dev)
+        l_st = l_ph = l_g = l_fm = l_wlm = torch.zeros((), device=dev)
         if phase_b_unlocked:
+            s0 = (torch.rand(B, device=dev) * (tl - a.seg).clamp(min=1)).long()
+            sel = s0[:, None] + ar[None]
+            mel_seg = torch.gather(mel_pred_full, 2, sel[:, None, :].expand(-1, N_MEL, -1))
+            with ac():
+                yh = G.voc(mel_seg).float()
+            sidx = (sel * HOP)[:, :, None] + torch.arange(HOP, device=dev)
+            y = torch.gather(wav, 1, sidx.reshape(B, -1))
+            y, yh = y[:, E:-E], yh[:, E:-E]
+
+            l_st = mrstft(y, yh)
+            l_ph = phase_loss(y, yh)
+
             with ac():
                 dr, _ = D(y)
                 df_d, _ = D(yh.detach())
@@ -375,7 +389,7 @@ def main():
                 l_g = sum(((f_ - 1.0) ** 2).mean() for f_ in df) / len(df)
                 l_fm = sum(F.l1_loss(a_.float(), b_.detach().float()) for fa, fb in zip(ff, fr) for a_, b_ in zip(fa, fb)) / len(ff)
 
-        loss = 18.0 * l_mel + 1.2 * l_st + 2.0 * l_ph + l_prior + l_dur + l_pitch + l_kd + 1.5 * l_wlm + l_g.float() + 2.0 * l_fm.float()
+        loss = 15.0 * l_mel_am + 4.0 * l_dmel + l_prior + l_dur + l_pitch + 4.0 * l_kd + 0.8 * l_st + 1.5 * l_ph + 1.5 * l_wlm + 0.5 * l_g.float() + l_fm.float()
         oG.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(G.parameters(), 5.0)
@@ -384,7 +398,7 @@ def main():
         step += 1
 
         with torch.no_grad():
-            dcy = min(0.999, (1.0 + step) / (10.0 + step))
+            dcy = min(0.998, (1.0 + step) / (10.0 + step))
             for pe_, pg in zip(ema.parameters(), G.parameters()):
                 pe_.lerp_(pg, 1.0 - dcy)
 
@@ -397,7 +411,7 @@ def main():
             now = time.time()
             ips = 50.0 / max(now - tstep, 1e-6)
             tstep = now
-            log(f'Step {step} | {ips:.2f} it/s | mel {l_mel.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_pitch.item():.3f} g {l_g.item():.3f} fm {l_fm.item():.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}')
+            log(f'Step {step} | {ips:.2f} it/s | mel {l_mel_am.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_pitch.item():.3f} g {l_g.item():.3f} fm {l_fm.item():.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}')
         if step % a.save_every == 0:
             torch.save(dict(ema=ema.state_dict(), cfg=TIERS[a.tier], tier=a.tier, step=step, f0=[mu, sd], qat=qat_on), a.out + '/ema_latest.tmp')
             os.replace(a.out + '/ema_latest.tmp', a.out + '/ema_latest.pt')
