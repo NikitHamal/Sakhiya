@@ -24,7 +24,7 @@ function dotgrid(c, th, t, a = 1) { c.save(); c.globalAlpha *= a; c.fillStyle = 
 function V(t) { const E = window.ENV, f = clamp(t * 30, 0, E.length - 2), i = Math.floor(f), k = f - i, a = E[i], b = E[i + 1];
   return a.map((v, j) => lerp(v, b[j], k)); }
 function sakhiya(c, th, cx, cy, R, t, v, o = {}) {  // voice-reactive avatar: morphing shape + 32 band ring
-  const L = v[0], seq = ['cookie', 'sunny', 'flower', 'clover', 'burst', 'squircle', 'pebble'], k = (o.k ?? t * .35), i = Math.floor(k) % 7, m = eio3(k % 1);
+  const L = v[0], seq = ['cookie', 'sunny', 'flower', 'clover', 'burst', 'squircle', 'pebble'], k = (o.k ?? t * .35), i = ((Math.floor(k) % 7) + 7) % 7, m = eio3(k - Math.floor(k));
   const fill = o.fill || th.acc, rot = t * .25; c.save(); c.globalAlpha *= o.a ?? 1;
   for (let j = 0; j < 32; j++) { const a = j / 32 * TAU - Math.PI / 2, b = v[1 + j] || 0, r0 = R * 1.18, len = 10 + b * R * .42;
     c.beginPath(); c.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); c.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len));
