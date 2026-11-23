@@ -15,6 +15,8 @@ sf.write(W + '/anchor_prompt_20s.wav', np.concatenate(segs), 22050); print('prom
 d = torch.load(W + '/v13/real_audio_24k.pt', weights_only=False)
 off = np.concatenate([[0], np.cumsum(d['lens'].numpy())])
 F = json.load(open(W + '/ia_filtered.json'))
+_sh = os.environ.get('VC_SHARD')
+if _sh: _i, _n = map(int, _sh.split('/')); F = F[::-1][_i::_n]
 import types
 _m = types.ModuleType('dac'); _n = types.ModuleType('dac.nn'); _q = types.ModuleType('dac.nn.quantize')
 class VectorQuantize(torch.nn.Module): pass
