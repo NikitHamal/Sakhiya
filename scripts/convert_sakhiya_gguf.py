@@ -169,7 +169,7 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
         add_tensor(f"voc.{k}", v, quant_mode=q_mode)
 
     # Hann window (64-pt) for ola64
-    add_tensor("voc.win", voc.win, allow_quant=False)
+    add_tensor("voc.win", voc.win, quant_mode="none")
 
     # 3. Metadata KVs
     kvs = [
