@@ -131,6 +131,19 @@ def main():
         print(s, flush=True); open(logp_, 'a').write(s + '\n')
     tr, dv, mu, sd = load_data(a.data, a.seg, dev)
     G = build(a.tier).to(dev); G.f0_stats.copy_(torch.tensor([mu, sd])); D = Disc().to(dev); mel = Mel().to(dev)
+    wavlm = None
+    try:
+        from transformers import WavLMModel
+        for wname in ('microsoft/wavlm-base-plus-sv', 'microsoft/wavlm-base-plus'):
+            try:
+                wavlm = WavLMModel.from_pretrained(wname).to(dev).eval()
+                for p_ in wavlm.parameters(): p_.requires_grad_(False)
+                log(f'[wavlm] loaded frozen {wname} (subsampled every 2nd step)')
+                break
+            except Exception:
+                pass
+    except Exception as e:
+        log(f'[wavlm] skipped: {e}')
     ema = copy.deepcopy(G).eval()
     lr = (a.lr or LR[a.tier]) * a.lr_mult
     oG = torch.optim.AdamW(G.parameters(), lr=lr, betas=(0.8, 0.99), weight_decay=1e-2); oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.5, betas=(0.8, 0.99))
@@ -164,7 +177,7 @@ def main():
                 m = (imask[:, 0, :, None] > 0) & (tmask[:, None, :] > 0); path = maximum_path(lp, m)
             dur = path.sum(-1); idx = path.argmax(1)
         l_prior = ((((prior @ path) - melN) ** 2) * tmask[:, None]).sum() / (tmask.sum() * N_MEL)
-        l_dur = (((ld - torch.log(dur + 1)) ** 2) * imask[:, 0]).sum() / imask.sum()
+        l_dur = (((ld - torch.log(dur.clamp(min=1.0) + 1)) ** 2) * imask[:, 0]).sum() / imask.sum()
         with ac():
             xf = G.proj(h) @ path
             feats = G.frame_feats(idx, dur)
@@ -183,7 +196,19 @@ def main():
                 l_d = sum(((r - 1) ** 2).mean() + (f_ ** 2).mean() for r, f_ in zip(dr, df)) / len(dr)
             oD.zero_grad(set_to_none=True); l_d.float().backward(); oD.step()
         l_mel = F.l1_loss(mel(yh), mel(y)); l_st = mrstft(y, yh); l_ph = phase_loss(y, yh)
-        loss = 15 * l_mel + l_st + 2 * l_ph + l_prior + l_dur + l_pitch
+        l_wlm = torch.zeros((), device=dev)
+        if wavlm is not None and (step % 2 == 0):
+            with ac():
+                n16 = (y.shape[1] * 2) // 3
+                y16 = F.interpolate(y[:, None], size=n16, mode='linear', align_corners=False)[:, 0]
+                yh16 = F.interpolate(yh[:, None], size=n16, mode='linear', align_corners=False)[:, 0]
+                y16 = (y16 - y16.mean(-1, keepdim=True)) / y16.std(-1, keepdim=True).clamp(min=1e-5)
+                yh16 = (yh16 - yh16.mean(-1, keepdim=True)) / yh16.std(-1, keepdim=True).clamp(min=1e-5)
+                with torch.no_grad():
+                    hy = wavlm(y16, output_hidden_states=True).hidden_states
+                hyh = wavlm(yh16, output_hidden_states=True).hidden_states
+                l_wlm = sum(F.l1_loss(hyh[k].float(), hy[k].detach().float()) for k in (3, 6, 9, 12) if k < len(hy)) / 4.0
+        loss = 15 * l_mel + l_st + 2 * l_ph + l_prior + l_dur + l_pitch + 1.5 * l_wlm
         l_g = l_fm = torch.zeros((), device=dev)
         if gan_on:
             with ac():

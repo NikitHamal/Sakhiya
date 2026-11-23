@@ -167,7 +167,7 @@ class Student(nn.Module):
         L = ids.shape[1]
         mask = torch.ones(1, 1, L, device=ids.device)
         h, ld = self.encode(ids, lang, mask)
-        dur = torch.clamp(torch.round((torch.exp(ld) - 1.0) * dur_scale[:, None]), min=1.0)
+        dur = torch.clamp(torch.round((torch.exp(ld) - 1.0) * dur_scale[:, None]), min=2.0)
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
         t = torch.arange(0, T, device=ids.device, dtype=torch.float32)

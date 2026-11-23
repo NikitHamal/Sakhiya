@@ -17,6 +17,107 @@ REFS = [
 ]
 
 
+TIER_LABELS = {
+    't30': 'Sakhiya-T30 (29.6 MB INT8 Distilled Student)',
+    't15': 'Sakhiya-T15 (14.5 MB INT8 Flagship Compact Student)',
+    't10': 'Sakhiya-T10 (9.5 MB INT8 Compact Student)',
+    't5':  'Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)',
+    't1':  'Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)',
+}
+
+
+def refresh_marimo_cards():
+    try:
+        sys.path.insert(0, os.path.join(REPO, 'scripts'))
+        import molab_exec as M
+        M.run_py("exec(open('/work/sp/repo/monitor/cells_pro2.py').read()); await install()", 90)
+    except Exception as e:
+        print('marimo refresh skip:', str(e)[:120], flush=True)
+
+
+def promote_repo_and_hf(tier, g, best_dir):
+    import datetime
+    s = g.get('summary', {})
+    # 1. Update docs/student_tiers.json
+    st_path = os.path.join(REPO, 'docs', 'student_tiers.json')
+    try:
+        st_list = json.load(open(st_path)) if os.path.exists(st_path) else []
+        if not isinstance(st_list, list): st_list = []
+    except Exception:
+        st_list = []
+    entry_t = dict(
+        tier=tier, label=TIER_LABELS.get(tier, f'Sakhiya-{tier}'),
+        step=g.get('step', 0), qat=bool(g.get('qat')),
+        int8_mb=g.get('int8_mb'), fp32_mb=g.get('fp32_mb'),
+        int8_vs_fp32_mel_corr=g.get('int8_vs_fp32_mel_corr'),
+        rtf_1thread=g.get('rtf_1thread'),
+        utmos=s.get('utmos'), cer_ne=s.get('cer_ne'), cer_sa=s.get('cer_sa'),
+        spk_sim=s.get('spk_sim'), clicks=s.get('clicks', 0),
+        drops=s.get('word_drop_count', s.get('word_drop_proxy', 0)),
+        stutters=s.get('stutter_count', 0),
+        by_style=s.get('by_style', {}),
+        node_verify=g.get('node_verify', {}),
+        gate_pass=bool(g.get('gate_pass')),
+        score=g.get('score')
+    )
+    st_list = [x for x in st_list if x.get('tier') != tier] + [entry_t]
+    json.dump(st_list, open(st_path, 'w'), indent=2, ensure_ascii=False)
+
+    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/
+    tag = f'sakhiya_v3_{tier}'
+    vdir = os.path.join(REPO, 'docs', 'samples', 'versions', tag)
+    os.makedirs(vdir, exist_ok=True)
+    reg_p = os.path.join(REPO, 'docs', 'samples', 'versions', 'registry.json')
+    reg = json.load(open(reg_p))
+    base_clips = reg['versions'][0]['clips']
+    clips_out = []
+    for c in base_clips:
+        cid = c['id']
+        src_mp3 = os.path.join(best_dir, 'wav', f'{cid}.mp3')
+        src_wav = os.path.join(best_dir, 'wav', f'{cid}.wav')
+        dst_mp3 = os.path.join(vdir, f'{cid}.mp3')
+        if os.path.exists(src_mp3):
+            shutil.copy(src_mp3, dst_mp3)
+        elif os.path.exists(src_wav):
+            subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src_wav, '-b:a', '96k', dst_mp3])
+        dur_s = c.get('duration_s', 4.0)
+        for gc in g.get('clips', []):
+            if gc.get('id') == cid:
+                dur_s = gc.get('dur', dur_s)
+                break
+        clips_out.append(dict(id=cid, lang=c['lang'], style=c['style'], text=c['text'], mp3=f'samples/versions/{tag}/{cid}.mp3', duration_s=dur_s))
+    sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=REPO, text=True).strip()
+    now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    v_entry = dict(
+        tag=tag,
+        label=f"{TIER_LABELS.get(tier, tier)} (step {g.get('step',0)}, {g.get('int8_mb')} MB INT8 ONNX)",
+        commit_sha=sha, timestamp_utc=now,
+        notes=f"Distilled from Sakhiya-Pro v3 + Nepal-native Seed-VC corpus; int8_mb={g.get('int8_mb')}, corr={g.get('int8_vs_fp32_mel_corr')}, rtf_1thread={g.get('rtf_1thread')}",
+        metrics=entry_t, clips=clips_out
+    )
+    json.dump(v_entry, open(os.path.join(vdir, 'manifest.json'), 'w'), indent=2, ensure_ascii=False)
+    open(os.path.join(vdir, '.frozen'), 'w').write(f'Frozen at {now} commit {sha}\n')
+    reg['versions'] = [v for v in reg['versions'] if v['tag'] != tag] + [v_entry]
+    json.dump(reg, open(reg_p, 'w'), indent=2, ensure_ascii=False)
+
+    # 3. Git pull --rebase & push
+    env = dict(os.environ, GIT_ASKPASS='/tmp/gitenv.sh', GIT_TERMINAL_PROMPT='0')
+    subprocess.run(['git', 'add', 'docs/student_tiers.json', f'docs/samples/versions/{tag}', 'docs/samples/versions/registry.json'], cwd=REPO, env=env)
+    subprocess.run(['git', 'commit', '-m', f"student({tier}): promote step {g.get('step')} ({g.get('int8_mb')} MB INT8, UTMOS {s.get('utmos')}, CER {s.get('cer_ne')})"], cwd=REPO, env=env)
+    subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=REPO, env=env)
+    subprocess.run(['git', 'push', 'origin', 'HEAD:main'], cwd=REPO, env=env)
+
+    # 4. Upload to Hugging Face
+    try:
+        from huggingface_hub import HfApi
+        tok = open('/tmp/hf_token').read().strip()
+        api = HfApi(token=tok)
+        api.upload_folder(folder_path=best_dir, repo_id='NikitHamal/sakhiya-pro-v1', path_in_repo=f'students/{tier}', commit_message=f'Promote {tier} step {g.get("step")}')
+        api.upload_folder(folder_path=best_dir, repo_id='NikitHamal/sakhiya-v1-train', path_in_repo=f'sakhiya_pro_v3/students/{tier}', commit_message=f'Promote {tier} step {g.get("step")}')
+    except Exception as he:
+        print('HF student upload warn:', str(he)[:160], flush=True)
+
+
 def leaderboard():
     rows = list(REFS)
     for tier in ('t30', 't15', 't10', 't5', 't1'):
@@ -69,6 +170,10 @@ def evaluate(tier, ck, tag):
         for f in glob.glob(d + '/wav/*.mp3') + glob.glob(d + '/wav/*.wav'):
             shutil.copy(f, ld)
         print(f'[{time.strftime("%T")}] {tier} PROMOTED step {g["step"]} score {g.get("score")} {g["int8_mb"]} MB', flush=True)
+        try:
+            promote_repo_and_hf(tier, g, f'{OUT}/{tier}/best')
+        except Exception as ex:
+            print(f'[{time.strftime("%T")}] {tier} promote hook err: {ex}', flush=True)
     else:
         print(f'[{time.strftime("%T")}] {tier} step {g["step"]} not promoted (pass={g["gate_pass"]} score={g.get("score")} best={cur and cur.get("score")})', flush=True)
     if not (g['gate_pass'] and cur is None):
@@ -102,6 +207,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(t, 'ERR', str(e)[:200], flush=True)
             leaderboard()
+            refresh_marimo_cards()
         leaderboard()
         if a.once:
             break

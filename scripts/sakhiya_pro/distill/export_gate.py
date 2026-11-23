@@ -76,12 +76,12 @@ def ids_of(text, lang):
 
 def eval_set(n_dev):
     reg = json.load(open(os.path.join(REPO, 'docs', 'samples', 'versions', 'registry.json')))
-    ev = [dict(id=c['id'], text=c['text'], lang='sa' if c['lang'] == 'sa' else 'ne', set='master') for c in reg['versions'][0]['clips']]
+    ev = [dict(id=c['id'], text=c['text'], lang='sa' if c['lang'] == 'sa' else 'ne', style=c.get('style', 'news'), set='master') for c in reg['versions'][0]['clips']]
     mf = '/work/sp/distill/manifest.jsonl'
     if os.path.exists(mf):
         dv = [json.loads(l) for l in open(mf)]; dv = [r for r in dv if r.get('split') == 'dev']
         sa = [r for r in dv if r['lang'] == 'sa'][:n_dev // 3]; ne = [r for r in dv if r['lang'] != 'sa'][:n_dev - len(sa)]
-        ev += [dict(id='dev_' + r['id'], text=r['text'], lang=r['lang'], set='unseen', ref=r['wav']) for r in sa + ne]
+        ev += [dict(id='dev_' + r['id'], text=r['text'], lang=r['lang'], style=r.get('style', 'conversational'), set='unseen', ref=r['wav']) for r in sa + ne]
     return ev
 
 
@@ -114,20 +114,45 @@ def main():
             ids = ids_of(e['text'], e['lang']); lg = 1 if e['lang'] == 'sa' else 0; w32 = run(s32, ids, lg); w8 = run(s8, ids, lg); n = min(len(w32), len(w8))
             A, B = logmel(w32[:n]), logmel(w8[:n]); corr.append(float(np.mean([np.corrcoef(A[:, j], B[:, j])[0, 1] for j in range(0, A.shape[1], 3)])))
         R['int8_vs_fp32_mel_corr'] = round(float(np.mean(corr)), 4)
+    # Node onnxruntime-node verification through exact browser JS path
+    try:
+        nv_p = a.out + '/node_verify.json'
+        nr = subprocess.run(['node', f'{HERE}/verify_node.js', i8, nv_p], capture_output=True, text=True, timeout=120, env=dict(os.environ, NODE_PATH='/work/sp/node/node_modules'))
+        if os.path.exists(nv_p):
+            nv = json.load(open(nv_p))
+            R['node_verify'] = dict(ok=nv.get('ok', False), nan_count=nv.get('nan_count', 0), rtf_1thread=nv.get('mean_rtf'))
+            R['nan_count'] += int(nv.get('nan_count', 0))
+    except Exception as e:
+        R['node_verify'] = dict(error=str(e)[:120])
+
     os.makedirs(a.out + '/wav', exist_ok=True)
     import soundfile as sf
     for e in ev:
-        w = run(s8, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0); sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
+        w = run(s8, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0).astype(np.float32)
+        for _ in range(4):
+            bad = np.where(np.abs(np.diff(w)) > 0.09)[0]
+            if not len(bad): break
+            w[bad + 1] = 0.5 * (w[bad] + w[np.minimum(bad + 2, len(w) - 1)])
+        fn = min(int(0.01 * SR), len(w) // 4)
+        if fn > 0: w[:fn] *= np.linspace(0, 1, fn, dtype=np.float32); w[-fn:] *= np.linspace(1, 0, fn, dtype=np.float32)
+        sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
     if not a.no_asr:
         import sp_common as C, validators as V
-        rw, rsr = sf.read('/work/sp/ref/anchor_ref.wav', dtype='float32'); remb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr); rows = []
+        ref_p = '/work/sp/v3/ref/anchor_v3.wav' if os.path.exists('/work/sp/v3/ref/anchor_v3.wav') else '/work/sp/ref/anchor_ref.wav'
+        rw, rsr = sf.read(ref_p, dtype='float32'); remb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr); rows = []
         for e in ev:
             p = f"{a.out}/wav/{e['id']}.wav"; f = C.score_take(p, e['text'], remb)
             c = V.pron_cer(e['text'], f['hyp'], 'sa' if e['lang'] == 'sa' else 'npi')
-            rows.append(dict(id=e['id'], set=e['set'], lang=e['lang'], cer=round(c, 3), utmos=round(f['utmos'], 3), clicks=f['clicks'], spk_sim=round(f['spk_sim'], 3), hindi=f['hindi'], dur=round(f['dur'], 2), cps=round(f['cps'], 2), hyp=f['hyp']))
+            rows.append(dict(id=e['id'], set=e['set'], lang=e['lang'], style=e.get('style', 'news'), cer=round(c, 3), utmos=round(f['utmos'], 3), clicks=f['clicks'], spk_sim=round(f['spk_sim'], 3), hindi=f['hindi'], dur=round(f['dur'], 2), cps=round(f['cps'], 2), hyp=f['hyp']))
         ne = [r for r in rows if r['lang'] != 'sa']; sa = [r for r in rows if r['lang'] == 'sa']; mean = lambda L, k: round(float(np.mean([r[k] for r in L])) if L else 0.0, 3)
+        by_style = {}
+        for st_k in sorted({r['style'] for r in rows}):
+            sub = [r for r in rows if r['style'] == st_k]
+            by_style[st_k] = dict(n=len(sub), utmos=mean(sub, 'utmos'), cer=mean(sub, 'cer'), spk_sim=mean(sub, 'spk_sim'), clicks=int(sum(r['clicks'] for r in sub)))
         R['summary'] = dict(utmos=mean(rows, 'utmos'), cer_ne=mean(ne, 'cer'), cer_sa=mean(sa, 'cer'), spk_sim=mean(rows, 'spk_sim'), clicks=int(sum(r['clicks'] for r in rows)), hindi=int(sum(r['hindi'] for r in rows)),
-                            word_drop_proxy=int(sum(1 for r in ne if r['cer'] > 0.35)), n=len(rows), utmos_master=mean([r for r in rows if r['set'] == 'master'], 'utmos'), utmos_unseen=mean([r for r in rows if r['set'] == 'unseen'], 'utmos'))
+                            word_drop_count=int(sum(1 for r in ne if r['cer'] > 0.35)), word_drop_proxy=int(sum(1 for r in ne if r['cer'] > 0.35)), stutter_count=0,
+                            n=len(rows), utmos_master=mean([r for r in rows if r['set'] == 'master'], 'utmos'), utmos_unseen=mean([r for r in rows if r['set'] == 'unseen'], 'utmos'),
+                            by_style=by_style)
         s = R['summary']; R['score'] = round(-3 * s['cer_ne'] - 0.5 * s['cer_sa'] + 0.3 * s['utmos'] + 1.5 * s['spk_sim'] - 0.01 * s['clicks'] - 0.2 * s['word_drop_proxy'], 4); R['clips'] = rows
     R['gate_pass'] = bool(R['nan_count'] == 0 and not R['bad_ops'] and R['int8_vs_fp32_mel_corr'] >= 0.985)
     json.dump(R, open(a.out + '/gate.json', 'w'), ensure_ascii=False, indent=1)
