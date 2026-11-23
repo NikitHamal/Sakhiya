@@ -100,7 +100,7 @@ def work(i, n, deadline):
             a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
             m = C.score_take(dst, x['text'], remb)
             m['cer'] = V.pron_cer(x['text'], m.get('hyp', ''), 'npi')
-            ok = m['cer'] <= 0.16 and m['utmos'] >= 2.75 and m['clicks'] <= 6 and m['spk_sim'] >= 0.45 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
+            ok = m['cer'] <= 0.20 and m['utmos'] >= 2.35 and m['clicks'] <= 6 and m['spk_sim'] >= 0.36 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
