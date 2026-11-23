@@ -66,7 +66,7 @@ def _via_relay(cmd, timeout=600):
 def run_sh(cmd, timeout=600):
     try:
         return run_py(
-            "import subprocess\nr=subprocess.run(" + repr(cmd) + ",shell=True,capture_output=True,text=True,executable='/bin/bash')\nprint((r.stdout+r.stderr)[-6000:])", timeout)
+            "import subprocess\nr=subprocess.run(" + repr(cmd) + ",shell=True,capture_output=True,text=True,errors='replace',executable='/bin/bash')\nprint((r.stdout+r.stderr)[-6000:])", timeout)
     except Exception:
         return _via_relay(cmd, timeout)
 if __name__ == "__main__":

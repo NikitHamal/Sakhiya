@@ -62,7 +62,7 @@ def tiers_sync(final=False):
         s = g.get('summary', {}); ts[t] = g
         rows.append(dict(id=f'student_{t}', label=NAMES[t], prec='int8', dir=f'models_student/{t}/', variant='student', mb=g['int8_mb'], rtf=g.get('rtf_1thread'), utmos=s.get('utmos'),
                          ne_pcer=s.get('cer_ne'), sa_pcer=s.get('cer_sa'), step=g['step'], ready=False, gate='single-graph student: audition on the Samples page / docs/student_tts.js',
-                         desc=f"Distilled from Sakhiya-Pro v2 · real int8 gate PASS (corr {g['int8_vs_fp32_mel_corr']}, nan {g['nan_count']}, clicks {s.get('clicks')}, drops {s.get('word_drop_proxy')})"))
+                         desc=f"Distilled from Sakhiya-Pro v3 · real int8 gate PASS (corr {g['int8_vs_fp32_mel_corr']}, nan {g['nan_count']}, clicks {s.get('clicks')}, drops {s.get('word_drop_proxy')})"))
     json.dump(rows, open(f'{REPO}/docs/student_tiers.json', 'w'), ensure_ascii=False, indent=1)
     tj = json.load(open(f'{REPO}/docs/tiers.json')); tj['tiers'] = [x for x in tj['tiers'] if not x['id'].startswith('student_')] + rows
     json.dump(tj, open(f'{REPO}/docs/tiers.json', 'w'), ensure_ascii=False, indent=1)
@@ -84,11 +84,11 @@ def freeze_tier(t, g):
     json.dump(meta, open(pk + '/pack_meta.json', 'w'), ensure_ascii=False); s = g.get('summary', {})
     mm = dict(int8_mb=g['int8_mb'], utmos=s.get('utmos'), cer_ne=s.get('cer_ne'), cer_sa=s.get('cer_sa'), spk_sim=s.get('spk_sim'), clicks=s.get('clicks'), word_drop_proxy=s.get('word_drop_proxy'), int8_vs_fp32_mel_corr=g['int8_vs_fp32_mel_corr'], rtf_1thread=g.get('rtf_1thread'), step=g['step'], note='real exported int8 gate; automatic metrics')
     json.dump(mm, open(pk + '/metrics.json', 'w'))
-    sh(f'python3 scripts/sakhiya_pro/freeze_pro_pack.py {pk} {pk}/metrics.json --tag {tag} --label "{NAMES[t]} · {g["int8_mb"]} MB int8 · distilled from Sakhiya-Pro v2" --notes "ladder student {t}, step {g["step"]}, best passing int8 export"')
+    sh(f'python3 scripts/sakhiya_pro/freeze_pro_pack.py {pk} {pk}/metrics.json --tag {tag} --label "{NAMES[t]} · {g["int8_mb"]} MB int8 · distilled from Sakhiya-Pro v3" --notes "ladder student {t}, step {g["step"]}, best passing int8 export"')
 
 
 def final_cleanup():
-    for pat in ('train_student.py', 'gen_corpus.py', 'ladder_daemon.py', 'distill_chain.sh', 'backup_daemon.py'):
+    for pat in ('train_student.py', 'gen_corpus.py', 'vc_corpus.py', 'ladder_daemon.py', 'chain_v3.sh', 'distill_chain.sh', 'backup_daemon.py'):
         for pid in sh(f"pgrep -f '[{pat[0]}]{pat[1:]}'", cwd='/').split():
             try: os.kill(int(pid), signal.SIGTERM)
             except Exception: pass
@@ -97,8 +97,9 @@ def final_cleanup():
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--every', type=int, default=2700); ap.add_argument('--final_utc', required=True); a = ap.parse_args()
     fin = datetime.datetime.fromisoformat(a.final_utc).replace(tzinfo=datetime.timezone.utc).timestamp()
-    try: pro_v2()
-    except Exception as e: log('pro_v2 ERR', repr(e)[:300])
+    if not os.path.exists(f'{REPO}/docs/samples/versions/sakhiya_pro_v2/.frozen'):
+        try: pro_v2()
+        except BaseException as e: log('pro_v2 ERR', repr(e)[:300])
     while time.time() < fin:
         t0 = time.time()
         try:
