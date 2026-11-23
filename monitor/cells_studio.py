@@ -72,9 +72,12 @@ if studio_form.value:
                open(f"{_job}/job.json", "w"), ensure_ascii=False)
     _json.dump(dict(stage="queued", done=0, total=0, log=[], started=_time.time()), open(f"{_job}/status.json", "w"))
     open(f"{_root}/latest.txt", "w").write(_id)
+    def _up(pid):   # alive and not a zombie (a killed child of this kernel keeps a /proc entry until reaped)
+        try: return open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[0] != "Z"
+        except Exception: return False
     _alive = False
     try:
-        _hb = _json.load(open(f"{_root}/server.json")); _alive = (_time.time() - _hb["ts"] < 20) and _os.path.exists(f"/proc/{_hb['pid']}")
+        _hb = _json.load(open(f"{_root}/server.json")); _alive = (_time.time() - _hb["ts"] < 20) and _up(_hb["pid"])
     except Exception: pass
     if not _alive:   # (re)start the warm server detached from this kernel
         _sp.Popen(["python3", "/work/sp/repo/scripts/sakhiya_pro_studio.py", "--serve", _root], stdout=open(f"{_root}/server.log", "a"), stderr=_sp.STDOUT, stdin=_sp.DEVNULL, start_new_session=True)
@@ -104,11 +107,14 @@ STATUS_VIEW = r'''
 studio_tick.value; studio_launched
 import os as _os, json as _json, time as _time, html as _html
 import marimo as _mo
+def _up(pid):
+    try: return open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[0] != "Z"
+    except Exception: return False
 _root = "/work/sp/studio"; _lt = _root + "/latest.txt"
 _id = open(_lt).read().strip() if _os.path.exists(_lt) else None
 try:
     _hb = _json.load(open(_root + "/server.json")); _age = _time.time() - _hb["ts"]
-    _srv = f"🟢 warm server · {_hb.get('state')}" if _age < 20 and _os.path.exists(f"/proc/{_hb['pid']}") else "🟠 server stopped (starts automatically on the next Generate)"
+    _srv = f"🟢 warm server · {_hb.get('state')}" if _age < 20 and _up(_hb["pid"]) else "🟠 server stopped (starts automatically on the next Generate)"
 except Exception: _srv = "⚪ server not started yet (starts on first Generate; the first job loads the model ≈ 20 s)"
 _out = _mo.md(f"*No render yet — write some text above and press **Generate MP3**.*  \n<small>{_srv}</small>")
 if _id:
