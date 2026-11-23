@@ -1,34 +1,36 @@
-"""Sakhiya v4 Unified Single-Stage Distilled Students:
-  - Sakhiya-V2-Micro (`micro`): <= 4.5 MB total INT8 ONNX (~3.75 MB)
-  - Sakhiya-V2-Pico  (`pico`):  1.0 to 1.4 MB total INT8 ONNX (~1.18 MB, Weight-Tied Looped Universal Blocks + FiLM)
-  - Sakhiya-V2-Compact (`t10`): ~9.2 MB total INT8 ONNX
+"""Sakhiya v4 Unified Single-Stage Distilled Students (`student_v4.py`):
+  - Sakhiya-V2-Micro (`micro`): <= 4.5 MB total INT8 ONNX (~3.78 MB), unifying `SakhiyaAM` (`sano`) + 16x `EmbeddedVocoderV2(ch=208)`
+  - Sakhiya-V2-Pico  (`pico`):  1.0 to 1.4 MB total INT8 ONNX (~1.24 MB), unifying `SakhiyaPicoAM` (Weight-Tied Looped Universal
+    Encoder & Velocity Decoder with 1-KB FiLM iteration adapters) + 16x `EmbeddedVocoderV2(ch=112)`
+  - Sakhiya-V2-Compact (`t10`): ~8.9 MB total INT8 ONNX, unifying `SakhiyaAM` (`voca`) + 16x `EmbeddedVocoderV2(ch=320)`
 
-Architecture:
-  phonemes (+lang) -> ConvNeXt-1D Encoder (Looped Universal + 1-KB FiLM in Pico) -> Duration Predictor -> Length Regulator
-  -> Frame-Level ConvNeXt-1D Mel Decoder (Looped Universal + 1-KB FiLM in Pico) -> 100-Band 24 kHz Log-Mel ->
-  Embedded 16x-Upsampling Harmonic-iSTFT Vocoder (`VocoderV2`: 128-ch `HarmonicSource` continuous-phase sines + `Snake1d`
-  periodic MRF ResBlocks + 1-op COLA `n_fft=64, hop=16` iSTFT) -> 24 kHz Waveform `wav`.
-
-Eliminates the 93.75 Hz frame-rate Vocos phase-lock buzz (`UTMOS 1.26` in v3) permanently by synthesizing waveform
-harmonics at 1500 Hz (`hop=16`) with `VocoderV2` warm-sliced from `v5_c1/voc.pt` / `v14_voc144/voc.pt`.
+Warm-initializes from `/work/tts/ck/v9_sano_am.pt` / `/work/tts/ck/v9_voca_am.pt` and `/work/tts/runs/v5_c1/voc.pt` /
+`/work/tts/runs/v14_voc144/voc.pt`, then adapts to Sakhiya-Pro v4's studio-denoised 24 kHz Nepal-native corpus in Two Phases
+(Phase A clean mel/duration/F0/prior + Phase B end-to-end Vocoder-in-the-Loop + Multi-Res Complex STFT + WavLM + MPD/MRD GAN + STE INT8 QAT).
 """
-import math, os
+import math, os, sys
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if REPO not in sys.path:
+    sys.path.insert(0, REPO)
+
+from sakhiya.cfm import SakhiyaAM
+from sakhiya.v15_pico import SakhiyaPicoAM
+from sakhiya.symbols import SYM2ID, LANG2ID
+
 SR, N_FFT, HOP, NB, N_MEL = 24000, 1024, 256, 513, 100
 ISTFT_N_FFT, ISTFT_HOP = 64, 16
-N_SYM = 64
-N_LANG = 2
 
 TIERS = {
-    'micro': dict(d_e=160, L_e=4, u_e=4, ff_e=2, d_d=192, L_d=6, u_d=6, ff_d=2, d_p=48, L_p=2, v_ch=192),
-    'pico':  dict(d_e=112, L_e=4, u_e=1, ff_e=2, d_d=144, L_d=6, u_d=2, ff_d=2, d_p=40, L_p=2, v_ch=112),
-    't10':   dict(d_e=224, L_e=4, u_e=4, ff_e=3, d_d=256, L_d=8, u_d=8, ff_d=3, d_p=64, L_p=2, v_ch=288),
-    't5':    dict(d_e=160, L_e=4, u_e=4, ff_e=2, d_d=192, L_d=6, u_d=6, ff_d=2, d_p=48, L_p=2, v_ch=192),
-    't1':    dict(d_e=112, L_e=4, u_e=1, ff_e=2, d_d=144, L_d=6, u_d=2, ff_d=2, d_p=40, L_p=2, v_ch=112),
+    'micro': dict(arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208),
+    'pico':  dict(arch='pico',  d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
+    't10':   dict(arch='t10',   d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=320),
+    't5':    dict(arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208),
+    't1':    dict(arch='pico',  d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
 }
 
 
@@ -42,7 +44,7 @@ class QConv1d(nn.Conv1d):
     qat = False
 
     def forward(self, x):
-        use_q = self.qat and self.training and (self.weight.numel() >= 1024) and (self.groups == 1)
+        use_q = self.qat and self.training and (self.weight.numel() >= 512) and (self.groups == 1)
         w = fq(self.weight, axis=0) if use_q else self.weight
         return self._conv_forward(x, w, self.bias)
 
@@ -51,62 +53,17 @@ class QConvTranspose1d(nn.ConvTranspose1d):
     qat = False
 
     def forward(self, x, output_size=None):
-        use_q = self.qat and self.training and (self.weight.numel() >= 1024) and (self.groups == 1)
+        use_q = self.qat and self.training and (self.weight.numel() >= 512) and (self.groups == 1)
         w = fq(self.weight, axis=1) if use_q else self.weight
         return F.conv_transpose1d(x, w, self.bias, self.stride, self.padding, self.output_padding, self.groups, self.dilation)
 
 
 def set_qat(model, flag):
+    if hasattr(model, 'am') and hasattr(model.am, 'set_qat'):
+        model.am.set_qat(flag)
     for name, m in model.named_modules():
         if isinstance(m, (QConv1d, QConvTranspose1d)):
-            # Keep f0_net unperturbed during QAT so cumulative harmonic phase stays locked
             m.qat = False if 'f0_net' in name else bool(flag)
-
-
-class ChanLN(nn.Module):
-    def __init__(self, c, eps=1e-5):
-        super().__init__()
-        self.g = nn.Parameter(torch.ones(1, c, 1))
-        self.b = nn.Parameter(torch.zeros(1, c, 1))
-        self.eps = eps
-
-    def forward(self, x):
-        m = x.mean(1, keepdim=True)
-        v = ((x - m) ** 2).mean(1, keepdim=True)
-        return (x - m) * torch.rsqrt(v + self.eps) * self.g + self.b
-
-
-class Block(nn.Module):
-    def __init__(self, d, ff, k=7):
-        super().__init__()
-        self.dw = QConv1d(d, d, k, padding=k // 2, groups=d)
-        self.ln = ChanLN(d)
-        self.p1 = QConv1d(d, d * ff, 1)
-        self.p2 = QConv1d(d * ff, d, 1)
-        self.gamma = nn.Parameter(torch.full((1, d, 1), 0.15))
-
-    def forward(self, x, mask=None, film=None):
-        h = self.dw(x if mask is None else x * mask)
-        h = self.ln(h)
-        if film is not None:
-            h = h * (1.0 + film[:, :x.shape[1]]) + film[:, x.shape[1]:]
-        return x + self.gamma * self.p2(F.gelu(self.p1(h)))
-
-
-class Stack(nn.Module):
-    """Weight-Tied Looped Universal ConvNeXt Stack with per-iteration FiLM adapters when n_unique < n_layers."""
-
-    def __init__(self, d, ff, n_layers, n_unique, k=7):
-        super().__init__()
-        self.n, self.u = n_layers, n_unique
-        self.blocks = nn.ModuleList([Block(d, ff, k) for _ in range(n_unique)])
-        self.film = nn.Parameter(torch.zeros(n_layers, 2 * d, 1)) if n_unique < n_layers else None
-
-    def forward(self, x, mask=None):
-        for i in range(self.n):
-            f = None if self.film is None else self.film[i][None]
-            x = self.blocks[i % self.u](x, mask, f)
-        return x
 
 
 class Snake1d(nn.Module):
@@ -136,8 +93,6 @@ class VocResBlock1(nn.Module):
 
 
 class VocHarmonicSource(nn.Module):
-    """16x-upsampling NSF Harmonic Source matching VocoderV2 (f0_net + 8 harmonics + shaped unvoiced sinusoids at 1500 Hz)."""
-
     def __init__(self, n_mels=N_MEL, c4=96, c16=48, n_har=8):
         super().__init__()
         self.n_har = n_har
@@ -183,9 +138,7 @@ class VocHarmonicSource(nn.Module):
 
 
 class EmbeddedVocoderV2(nn.Module):
-    """16x-upsampling Source-Filter Hybrid iSTFTNet Vocoder with 1-op COLA iSTFT64 (warm-sliced from v5_c1 or v14_voc144)."""
-
-    def __init__(self, ch=192, res_kernels=(3, 7, 11)):
+    def __init__(self, ch=208, res_kernels=(3, 7, 11)):
         super().__init__()
         self.ch = ch
         self.n_kernels = len(res_kernels)
@@ -204,7 +157,6 @@ class EmbeddedVocoderV2(nn.Module):
         self.post_act = Snake1d(c2)
         self.post = nn.Conv1d(c2, ISTFT_N_FFT + 2, 7, padding=3)
 
-        # Precompute 1-op COLA iSTFT64 kernel (66, 1, 64)
         n_fft, hop = ISTFT_N_FFT, ISTFT_HOP
         win = np.hanning(n_fft + 1)[:-1].astype(np.float32)
         k = np.arange(n_fft // 2 + 1, dtype=np.float32)[:, None]
@@ -220,7 +172,6 @@ class EmbeddedVocoderV2(nn.Module):
         self.register_buffer('K_istft', torch.from_numpy(K.astype(np.float32)), persistent=False)
 
     def warm_from_pretrained(self):
-        """Warm-slice exact weights from /work/tts/runs/v14_voc144/voc.pt (for ch<=144) or /work/tts/runs/v5_c1/voc.pt."""
         p144 = '/work/tts/runs/v14_voc144/voc.pt'
         p320 = '/work/tts/runs/v5_c1/voc.pt'
         ck_path = p144 if (self.ch <= 144 and os.path.exists(p144)) else (p320 if os.path.exists(p320) else None)
@@ -265,88 +216,144 @@ class EmbeddedVocoderV2(nn.Module):
             return F.conv_transpose1d(spec_cat, self.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=p)[:, 0, :]
 
 
+def _calibrate_am(am, is_pico=False):
+    with torch.no_grad():
+        if is_pico:
+            w0 = am.enc.sty.weight[0].clone()
+            w2 = am.enc.sty.weight[2].clone()
+            am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
+            am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
+            am.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)
+        else:
+            w_sty = am.enc.sty.weight.clone()
+            if w_sty.shape[0] > 14:
+                w0 = 0.65 * w_sty[10] + 0.35 * w_sty[3]
+                w2 = w0 + 1.15 * ((0.75 * w_sty[3] + 0.25 * w_sty[2]) - w0)
+                w5 = 0.60 * w0 + 0.40 * (0.55 * w_sty[3] + 0.45 * w_sty[14])
+                am.enc.sty.weight[0].copy_(w0)
+                am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
+                am.enc.sty.weight[2].copy_(w2)
+                am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
+                am.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)
+                am.enc.sty.weight[5].copy_(w5)
+            w_e = am.enc.emb.weight
+            id_l, id_r = SYM2ID['l'], SYM2ID['ɽ']
+            w_e[id_r].copy_(0.60 * w_e[id_l] + 0.40 * w_e[id_r])
+            nas_d = 0.5 * (w_e[SYM2ID['ũ']] - w_e[SYM2ID['u']]) + 0.5 * (w_e[SYM2ID['ã']] - w_e[SYM2ID['a']])
+            w_e[SYM2ID['õ']].copy_(0.25 * w_e[SYM2ID['õ']] + 0.75 * (w_e[SYM2ID['o']] + 1.0 * nas_d + 0.2 * (w_e[SYM2ID['ŋ']] - w_e[SYM2ID['o']])))
+            sa_id = LANG2ID['sa']
+            am.enc.lang.weight[sa_id].copy_(0.94 * am.enc.lang.weight[0] + 0.06 * am.enc.lang.weight[sa_id])
+            for lid in range(am.enc.lang.weight.shape[0]):
+                if lid != sa_id:
+                    am.enc.lang.weight[lid].copy_(am.enc.lang.weight[0])
+
+
 class StudentV4(nn.Module):
-    def __init__(self, d_e, L_e, u_e, ff_e, d_d, L_d, u_d, ff_d, d_p, L_p, v_ch=192):
+    def __init__(self, arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208, **kw):
         super().__init__()
-        self.cfg = dict(d_e=d_e, L_e=L_e, u_e=u_e, ff_e=ff_e, d_d=d_d, L_d=L_d, u_d=u_d, ff_d=ff_d, d_p=d_p, L_p=L_p, v_ch=v_ch)
-        self.emb = nn.Embedding(N_SYM, d_e)
-        self.lang = nn.Embedding(N_LANG, d_e)
-        self.enc = Stack(d_e, ff_e, L_e, u_e, k=5)
-        self.dur = nn.Sequential(QConv1d(d_e, d_e // 2, 3, padding=1), nn.ReLU(), QConv1d(d_e // 2, 1, 1))
-        self.proj = QConv1d(d_e, d_d, 1)
-        self.pos = QConv1d(2, d_d, 1)
-        self.p_in = QConv1d(d_d, d_p, 1)
-        self.p_stack = Stack(d_p, 2, L_p, L_p)
-        self.p_out = QConv1d(d_p, 2, 1)
-        self.p_emb = QConv1d(2, d_d, 1)
-        self.dec = Stack(d_d, ff_d, L_d, u_d, k=7)
-        self.dec_ln = ChanLN(d_d)
-        self.mel_head = nn.Conv1d(d_d, N_MEL, 1)
+        self.cfg = dict(arch=arch, d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur, v_ch=v_ch)
+        self.is_pico = (arch == 'pico')
+        if self.is_pico:
+            self.am = SakhiyaPicoAM(d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur)
+        else:
+            # Prune unused embedding rows on micro/t10 so only active speaker 0, langs 0..5, styles 0..5 are stored in ONNX
+            self.am = SakhiyaAM(d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur, n_spk=2, n_lang=6, n_sty=6)
+            # Remove training-only speaker-adversarial head so it never bloats exported ONNX
+            if hasattr(self.am.enc, 'spk_adv'):
+                delattr(self.am.enc, 'spk_adv')
         self.voc = EmbeddedVocoderV2(ch=v_ch, res_kernels=(3, 7, 11))
-        self.prior = nn.Conv1d(d_e, N_MEL, 1)
         self.register_buffer('f0_stats', torch.tensor([5.35, 0.25]))
         self.register_buffer('mel_stats', torch.tensor([-5.5028, 2.1869]))
 
-    def encode(self, ids, lang, mask):
-        x = (self.emb(ids) + self.lang(lang)[:, None, :]).transpose(1, 2) * mask
-        h = self.enc(x, mask) * mask
-        return h, self.dur(h * mask)[:, 0]
+    def warm_from_pretrained(self):
+        sano_p = '/work/tts/ck/v9_sano_am.pt'
+        voca_p = '/work/tts/ck/v9_voca_am.pt'
+        ck_p = voca_p if (self.cfg['d_enc'] == 144 and os.path.exists(voca_p)) else (sano_p if os.path.exists(sano_p) else None)
+        if ck_p:
+            try:
+                ck = torch.load(ck_p, map_location='cpu', weights_only=False)
+                raw_sd = {k: v.float() for k, v in ck.get('ema', ck.get('net', ck)).items() if not k.startswith(('ctc_rec.', 'enc.spk_adv.'))}
+                # Calibrate full 16-spk / 32-sty teacher before slicing into 2-spk / 6-sty student
+                full_am = SakhiyaAM(
+                    d_enc=self.cfg['d_enc'], L_enc=self.cfg['L_enc'],
+                    ff_enc=144 if self.is_pico else self.cfg['ff_enc'],
+                    d_vel=self.cfg['d_vel'], nb_vel=self.cfg['nb_vel'], h_dur=self.cfg['h_dur'],
+                ).eval()
+                full_am.load_state_dict(raw_sd, strict=False)
+                _calibrate_am(full_am, is_pico=False)
+                cal_sd = full_am.state_dict()
+                if self.is_pico:
+                    self.am.warm_from_sano(cal_sd)
+                    _calibrate_am(self.am, is_pico=True)
+                else:
+                    dsd = self.am.state_dict()
+                    with torch.no_grad():
+                        for k, dv in dsd.items():
+                            if k in cal_sd:
+                                sv = cal_sd[k].float()
+                                sl = tuple(slice(0, min(a, b)) for a, b in zip(dv.shape, sv.shape))
+                                dv[sl].copy_(sv[sl])
+            except Exception as e:
+                print('AM warm-start warn:', e, flush=True)
+        self.voc.warm_from_pretrained()
+        return self
 
-    def frame_feats(self, idx, dur):
-        d = torch.gather(dur, 1, idx)
-        start = torch.cumsum(dur, 1) - dur
-        t = torch.arange(idx.shape[1], device=idx.device, dtype=torch.float32)[None]
-        frac = (t - torch.gather(start, 1, idx) + 0.5) / d.clamp(min=1.0)
-        return torch.stack([frac, torch.log(d + 1.0) / 3.0], 1)
-
-    def decode_mel(self, xf, feats, pitch=None):
-        x = xf + self.pos(feats)
-        p = self.p_out(self.p_stack(self.p_in(x)))
-        pe = torch.cat([p[:, :1], torch.sigmoid(p[:, 1:2])], 1) if pitch is None else pitch
-        x = x + self.p_emb(pe)
-        h_dec = self.dec_ln(self.dec(x))
-        mel_pred = self.mel_head(h_dec).float()
-        return mel_pred, p
-
-    def decode(self, xf, feats, pitch=None, return_mel=False):
-        mel_pred, p = self.decode_mel(xf, feats, pitch=pitch)
-        wav = self.voc(mel_pred)
-        if return_mel:
-            return wav, p, mel_pred
-        return wav, p
+    def forward_am_train(self, ids, lang, im, path):
+        """Training forward pass: returns mu [B,100,L], ld [B,L], mel_pred [B,100,T]."""
+        B, L = ids.shape
+        T = path.shape[2]
+        spk0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
+        sty0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
+        studio1 = torch.ones((B,), dtype=torch.long, device=ids.device)
+        lang_eff = torch.where(lang == 1, torch.full_like(lang, 4), torch.zeros_like(lang))
+        im_bool = im[:, 0] > 0.5
+        h, mu, g = self.am.enc(ids, spk0, lang_eff, sty0, studio1, im_bool)
+        ld = self.am.dur.pred_logdur(ids, h, im_bool)
+        mu_t = mu.transpose(1, 2).float()
+        mu_y = torch.matmul(mu_t, path)
+        t0 = torch.zeros((B,), device=ids.device, dtype=torch.float32)
+        m_frame = (path.sum(1, keepdim=True) > 0).to(mu_y.dtype)
+        xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_frame)
+        mel_pred = xt * self.am.stats[1] + self.am.stats[0]
+        return mu_t, ld, mel_pred
 
     @torch.no_grad()
     def infer(self, ids, lang, dur_scale, pitch_shift):
-        L = ids.shape[1]
-        mask = torch.ones(1, 1, L, device=ids.device)
-        h, ld = self.encode(ids, lang, mask)
-        dur = torch.clamp(torch.round((torch.exp(ld) - 1.0) * dur_scale[:, None]), min=2.0)
+        B, L = ids.shape
+        im = torch.ones((B, L), dtype=torch.bool, device=ids.device)
+        spk0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
+        sty0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
+        studio1 = torch.ones((B,), dtype=torch.long, device=ids.device)
+        lang_eff = torch.where(lang == 1, torch.full_like(lang, 4), torch.zeros_like(lang))
+        h, mu, g = self.am.enc(ids, spk0, lang_eff, sty0, studio1, im)
+        x_d = self.am.dur.pred_logdur(ids, h, im)
+        dur = torch.clamp(torch.round(torch.exp(x_d) * dur_scale[:, None]), min=3.0, max=50.0)
+        # Protect sentence-final tokens from frame collapse
+        pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
+        is_tail = ((pos >= (float(L) - 3.0)) & (ids > 6)).float()
+        dur = torch.maximum(dur, is_tail * 5.0 + (1.0 - is_tail) * 2.0)
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
         t = torch.arange(0, T, device=ids.device, dtype=torch.float32)
         idx = (t[None, :, None] >= ends[:, None, :]).to(torch.float32).sum(-1).to(torch.int64).clamp(max=L - 1)
-        xh = self.proj(h)
-        xf = torch.gather(xh, 2, idx[:, None, :].expand(-1, xh.shape[1], -1))
-        feats = self.frame_feats(idx, dur)
-        x = xf + self.pos(feats)
-        p = self.p_out(self.p_stack(self.p_in(x)))
-        vuv = torch.sigmoid(p[:, 1:2])
-        pe = torch.cat([p[:, :1] + pitch_shift[:, None, None] * (vuv > 0.5).to(p.dtype), vuv], 1)
-        x = x + self.p_emb(pe)
-        mel_pred = self.mel_head(self.dec_ln(self.dec(x))).float()
-        return self.voc(mel_pred, shift_st=pitch_shift[:, None, None])
+        mu_t = mu.transpose(1, 2)
+        mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, N_MEL, -1))
+        m_frame = torch.ones((B, 1, T), dtype=mu_y.dtype, device=ids.device)
+        t0 = torch.zeros((B,), device=ids.device, dtype=torch.float32)
+        xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_frame)
+        mel = xt * self.am.stats[1] + self.am.stats[0]
+        return self.voc(mel, shift_st=pitch_shift[:, None, None])
 
 
 def build(tier, warm_voc=True):
     m = StudentV4(**TIERS[tier])
     if warm_voc:
-        m.voc.warm_from_pretrained()
+        m.warm_from_pretrained()
     return m
 
 
 def n_params(m, deployed=True):
-    skip = ('prior.',) if deployed else ()
-    return sum(p.numel() for n, p in m.named_parameters() if not n.startswith(skip))
+    return sum(p.numel() for p in m.parameters())
 
 
 if __name__ == '__main__':

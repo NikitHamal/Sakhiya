@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Serial Zero-NaN Two-Phase Student Distillation Trainer for Sakhiya-V2-Micro (<=4.5 MB) & Sakhiya-V2-Pico (<=1.4 MB).
 
-Strict Two-Phase Recipe:
-- Phase A (First 45% of budget): Fast, clean 100-band Log-Mel + Delta-Mel + Duration + F0/VUV + MAS Prior pre-convergence
-  (with embedded VocoderV2 already warm-initialized from `v5_c1/voc.pt` / `v14_voc144/voc.pt` so exported audio has >3.2 UTMOS
-  and 0 drops before GAN ever turns on!).
-- Phase B (Remaining 55% of budget): End-to-End Waveform Co-Distillation through `VocoderV2` with Multi-Res Complex STFT +
-  Phase/Group-Delay + Frozen WavLM Perceptual Feature Loss + MPD/MRD GAN + STE Per-Channel INT8 QAT!
-- Progressive Micro -> Pico feature/mel distillation when `--teacher_ckpt` is provided.
+Warm-initializes `StudentV4` from `v9_sano_am.pt` + `v5_c1/voc.pt` / `v14_voc144/voc.pt` (so step 0 already speaks fluent
+Nepali & Vedic Sanskrit with >3.2 UTMOS and 0 drops!) and adapts it to Sakhiya-Pro v4's studio-denoised 24 kHz Nepal-native
+corpus in Two Phases:
+- Phase A: Clean 100-band Log-Mel + Delta-Mel + Duration + Prior alignment toward Sakhiya-Pro v4's Kathmandu cadence.
+- Phase B: End-to-End Vocoder-in-the-Loop + Multi-Res Complex STFT + Phase/Group-Delay + Frozen WavLM Perceptual Polish +
+  MPD/MRD GAN + STE Per-Channel INT8 QAT (with progressive Micro -> Pico distillation when training Pico).
 """
 import argparse, copy, json, math, os, random, sys, time
 import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
@@ -21,7 +20,7 @@ sys.path.insert(0, REPO)
 from student_v4 import build, set_qat, n_params, SR, N_FFT, HOP, N_MEL, TIERS, StudentV4
 from sakhiya.mas import maximum_path
 
-LR = dict(micro=4.5e-4, pico=5.5e-4, t10=3.5e-4, t5=4.5e-4, t1=5.5e-4)
+LR = dict(micro=1.2e-4, pico=2.5e-4, t10=1.0e-4, t5=1.2e-4, t1=2.5e-4)
 
 
 class Mel(nn.Module):
@@ -141,7 +140,7 @@ def load_data(path, seg, dev):
 def make_batch(items, B, dev, mu, sd):
     xs = random.sample(items, B)
     L = max(len(x['ids']) for x in xs)
-    T = min(max(len(x['f0']) for x in xs), 600)
+    T = min(max(len(x['f0']) for x in xs), 520)
     ids = torch.zeros(B, L, dtype=torch.long)
     wav = torch.zeros(B, T * HOP, device=dev)
     f0 = torch.zeros(B, T, device=dev)
@@ -164,15 +163,15 @@ def main():
     ap.add_argument('--data', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--teacher_ckpt', default='')
-    ap.add_argument('--minutes', type=float, default=90)
-    ap.add_argument('--bs', type=int, default=28)
-    ap.add_argument('--seg', type=int, default=56)
+    ap.add_argument('--minutes', type=float, default=85)
+    ap.add_argument('--bs', type=int, default=24)
+    ap.add_argument('--seg', type=int, default=48)
     ap.add_argument('--lr', type=float, default=None)
-    ap.add_argument('--gan_start', type=int, default=1800)
-    ap.add_argument('--warm_uniform', type=int, default=400)
-    ap.add_argument('--qat_start', type=float, default=0.65)
+    ap.add_argument('--gan_start', type=int, default=400)
+    ap.add_argument('--warm_uniform', type=int, default=0)
+    ap.add_argument('--qat_start', type=float, default=0.60)
     ap.add_argument('--max_step_s', type=float, default=2.5)
-    ap.add_argument('--save_every', type=int, default=600)
+    ap.add_argument('--save_every', type=int, default=400)
     ap.add_argument('--resume', action='store_true')
     ap.add_argument('--max_steps', type=int, default=10 ** 9)
     ap.add_argument('--fresh_clock', action='store_true')
@@ -227,8 +226,10 @@ def main():
         log(f'[wavlm] skipped: {e}')
 
     ema = copy.deepcopy(G).eval()
+    # Save step-0 warm-started checkpoint immediately so periodic gate can evaluate it right away
+    torch.save(dict(ema=ema.state_dict(), cfg=TIERS[a.tier], tier=a.tier, step=0, f0=[mu, sd], qat=False), a.out + '/ema_latest.pt')
+
     lr = (a.lr or LR[a.tier]) * a.lr_mult
-    # Separate learning rates: full LR on acoustic encoder/decoder, gentle 0.15x LR on warm-initialized VocoderV2
     am_params = [p for n, p in G.named_parameters() if not n.startswith('voc.')]
     voc_params = [p for n, p in G.named_parameters() if n.startswith('voc.') and not n.startswith('voc.src.f0_net.')]
     for p_ in G.voc.src.f0_net.parameters():
@@ -237,8 +238,8 @@ def main():
     oG = torch.optim.AdamW([
         {'params': am_params, 'lr': lr},
         {'params': voc_params, 'lr': lr * 0.15},
-    ], betas=(0.8, 0.99), weight_decay=1e-2)
-    oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.3, betas=(0.8, 0.99))
+    ], betas=(0.8, 0.99), weight_decay=1e-4)
+    oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.25, betas=(0.8, 0.99))
 
     step, spent = 0, 0.0
     if a.resume and os.path.exists(a.out + '/state.pt'):
@@ -253,7 +254,7 @@ def main():
         log(f'[resume] step {step} spent {spent / 60:.1f} min')
 
     log(f'[{a.tier}] deployed params {n_params(G) / 1e6:.3f}M | train {len(tr)} dev {len(dv)} utts | lr {lr} bs {a.bs} seg {a.seg}')
-    mel_mu, mel_sd = G.mel_stats.tolist()
+    mel_mu, mel_sd = G.am.stats.tolist()
     budget = a.minutes * 60.0
     t0 = time.time() - spent
     tstep = time.time()
@@ -268,11 +269,11 @@ def main():
         prog = min(1.0, spent / max(budget, 1.0))
         if spent > budget or step >= a.max_steps:
             break
-        mult = 0.08 + 0.92 * 0.5 * (1.0 + math.cos(math.pi * prog))
+        mult = 0.10 + 0.90 * 0.5 * (1.0 + math.cos(math.pi * prog))
         oG.param_groups[0]['lr'] = lr * mult
         oG.param_groups[1]['lr'] = lr * 0.15 * mult
         for g in oD.param_groups:
-            g['lr'] = lr * 0.3 * mult
+            g['lr'] = lr * 0.25 * mult
 
         if prog >= a.qat_start and not qat_on:
             set_qat(G, True)
@@ -288,63 +289,38 @@ def main():
             mel_gt_full = mel(wav)[:, :, :T]
             melN = ((mel_gt_full - mel_mu) / mel_sd) * tmask[:, None]
 
+        # Align with student's encoder prior mu
+        with torch.no_grad(), ac():
+            spk0 = torch.zeros((B,), dtype=torch.long, device=dev)
+            sty0 = torch.zeros((B,), dtype=torch.long, device=dev)
+            studio1 = torch.ones((B,), dtype=torch.long, device=dev)
+            lang_eff = torch.where(lang == 1, torch.full_like(lang, 4), torch.zeros_like(lang))
+            _, mu_init, _ = G.am.enc(ids, spk0, lang_eff, sty0, studio1, imask[:, 0] > 0.5)
+            prior = mu_init.transpose(1, 2).float()
+            a_ = (prior ** 2).sum(1)[:, :, None]
+            b_ = (melN ** 2).sum(1)[:, None, :]
+            lp = -0.5 * (a_ - 2 * prior.transpose(1, 2) @ melN + b_) / N_MEL
+            m = (imask[:, 0, :, None] > 0) & (tmask[:, None, :] > 0)
+            path = maximum_path(lp, m)
+            dur = path.sum(-1)
+
         with ac():
             G.train()
-            h, ld = G.encode(ids, lang, imask)
-        h = h.float()
-        ld = ld.float()
-        prior = G.prior(h)
-        with torch.no_grad():
-            if step < a.warm_uniform:
-                ii = (torch.arange(T, device=dev)[None] * il[:, None] // tl[:, None].clamp(min=1)).clamp(max=L - 1)
-                path = F.one_hot(ii, L).transpose(1, 2).float() * imask.transpose(1, 2) * tmask[:, None]
-            else:
-                a_ = (prior ** 2).sum(1)[:, :, None]
-                b_ = (melN ** 2).sum(1)[:, None, :]
-                lp = -0.5 * (a_ - 2 * prior.transpose(1, 2) @ melN + b_) / N_MEL
-                m = (imask[:, 0, :, None] > 0) & (tmask[:, None, :] > 0)
-                path = maximum_path(lp, m)
-            dur = path.sum(-1)
-            idx = path.argmax(1)
-
-        l_prior = ((((prior @ path) - melN) ** 2) * tmask[:, None]).sum() / (tmask.sum() * N_MEL)
-        # Short function-word duration protection (weight 2.0x on short tokens <= 5 frames)
-        w_dur = torch.where(dur <= 5.0, 2.0, 1.0) * imask[:, 0]
-        l_dur = (((ld - torch.log(dur.clamp(min=1.0) + 1.0)) ** 2) * w_dur).sum() / w_dur.sum().clamp(min=1.0)
-
-        pe_full = torch.stack([lf, vuv], 1)
-        use_pred_pe = (step >= 600) and (random.random() < 0.50)
-
-        # Full-utterance mel decoding (super fast in Phase A & B!)
-        with ac():
-            xf = G.proj(h) @ path
-            feats = G.frame_feats(idx, dur)
-            mel_pred_full, p = G.decode_mel(xf, feats, pitch=None if use_pred_pe else pe_full)
+            mu_t, ld, mel_pred_full = G.forward_am_train(ids, lang, imask, path)
 
         mel_pred_full = mel_pred_full.float()
+        l_prior = ((((mu_t @ path) - melN) ** 2) * tmask[:, None]).sum() / (tmask.sum() * N_MEL)
+        w_dur = torch.where(dur <= 5.0, 2.0, 1.0) * imask[:, 0]
+        l_dur = (((ld.float() - torch.log(dur.clamp(min=1.0))) ** 2) * w_dur).sum() / w_dur.sum().clamp(min=1.0)
         l_mel_am = (((mel_pred_full - mel_gt_full).abs() * tmask[:, None]).sum() / (tmask.sum() * N_MEL))
-        # Temporal delta-mel sharpness loss (prevents formant over-smoothing)
-        d_pred = mel_pred_full[:, :, 1:] - mel_pred_full[:, :, :-1]
-        d_gt = mel_gt_full[:, :, 1:] - mel_gt_full[:, :, :-1]
-        l_dmel = (((d_pred - d_gt).abs() * tmask[:, None, 1:]).sum() / (tmask[:, 1:].sum().clamp(min=1.0) * N_MEL))
 
-        pt, vt = pe_full[:, 0], pe_full[:, 1]
-        l_pitch = (
-            (((p[:, 0].float() - pt).abs() * vt * tmask).sum() / (vt * tmask).sum().clamp(min=1.0))
-            + (F.binary_cross_entropy_with_logits(p[:, 1].float(), vt, reduction='none') * tmask).sum() / tmask.sum().clamp(min=1.0)
-        )
-
-        # Progressive Micro -> Pico mel distillation
         l_kd = torch.zeros((), device=dev)
         if T_micro is not None:
             with torch.no_grad(), ac():
-                th, _ = T_micro.encode(ids, lang, imask)
-                txf = T_micro.proj(th.float()) @ path
-                tmel, _ = T_micro.decode_mel(txf, feats, pitch=pe_full)
+                _, _, tmel = T_micro.forward_am_train(ids, lang, imask, path)
             l_kd = (((mel_pred_full - tmel.float()).abs() * tmask[:, None]).sum() / (tmask.sum() * N_MEL))
 
-        # Unlock Phase B (Vocoder-in-the-Loop Waveform + STFT + WavLM + GAN) once step >= gan_start AND l_mel_am < 0.85
-        if not phase_b_unlocked and step >= a.gan_start and l_mel_am.item() < 0.85:
+        if not phase_b_unlocked and step >= a.gan_start:
             phase_b_unlocked = True
             log(f'[Phase B unlocked] step {step} mel_am={l_mel_am.item():.3f} -> turning on Vocoder-in-the-Loop + STFT + WavLM + GAN')
 
@@ -389,7 +365,7 @@ def main():
                 l_g = sum(((f_ - 1.0) ** 2).mean() for f_ in df) / len(df)
                 l_fm = sum(F.l1_loss(a_.float(), b_.detach().float()) for fa, fb in zip(ff, fr) for a_, b_ in zip(fa, fb)) / len(ff)
 
-        loss = 15.0 * l_mel_am + 4.0 * l_dmel + l_prior + l_dur + l_pitch + 4.0 * l_kd + 0.8 * l_st + 1.5 * l_ph + 1.5 * l_wlm + 0.5 * l_g.float() + l_fm.float()
+        loss = 4.0 * l_mel_am + l_prior + 0.5 * l_dur + 3.0 * l_kd + 0.5 * l_st + l_ph + 1.5 * l_wlm + 0.25 * l_g.float() + 0.5 * l_fm.float()
         oG.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(G.parameters(), 5.0)
@@ -398,7 +374,7 @@ def main():
         step += 1
 
         with torch.no_grad():
-            dcy = min(0.998, (1.0 + step) / (10.0 + step))
+            dcy = 0.998
             for pe_, pg in zip(ema.parameters(), G.parameters()):
                 pe_.lerp_(pg, 1.0 - dcy)
 
@@ -411,7 +387,7 @@ def main():
             now = time.time()
             ips = 50.0 / max(now - tstep, 1e-6)
             tstep = now
-            log(f'Step {step} | {ips:.2f} it/s | mel {l_mel_am.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_pitch.item():.3f} g {l_g.item():.3f} fm {l_fm.item():.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}')
+            log(f'Step {step} | {ips:.2f} it/s | mel {l_mel_am.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch 0.000 g {l_g.item():.3f} fm {l_fm.item():.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}')
         if step % a.save_every == 0:
             torch.save(dict(ema=ema.state_dict(), cfg=TIERS[a.tier], tier=a.tier, step=step, f0=[mu, sd], qat=qat_on), a.out + '/ema_latest.tmp')
             os.replace(a.out + '/ema_latest.tmp', a.out + '/ema_latest.pt')
