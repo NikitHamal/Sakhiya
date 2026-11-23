@@ -11,7 +11,7 @@ def req(path, body=None, extra=None, timeout=600):
     r = urllib.request.Request(URL + path, data=None if body is None else json.dumps(body).encode(), headers=h, method="POST")
     return urllib.request.urlopen(r, timeout=timeout).read().decode()
 def session():
-    return json.loads(req("/api/home/running_notebooks", timeout=30))["files"][0]["sessionId"]
+    return json.loads(req("/api/home/running_notebooks", timeout=300))["files"][0]["sessionId"]
 def run_py(code, timeout=600):
     import time
     last_err = None
