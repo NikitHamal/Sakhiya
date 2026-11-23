@@ -15,7 +15,7 @@ import argparse, json, os, re, subprocess, sys, tempfile
 import numpy as np, soundfile as sf
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.path.join(HERE, '..'))
-sys.path.insert(0, os.path.join(HERE, 'sakhiya_pro')); sys.path.insert(0, '/work/sp')
+sys.path.insert(0, os.path.join(HERE, 'sakhiya_pro')); sys.path.insert(0, os.path.join(HERE, 'sakhiya_pro', 'v3')); sys.path.insert(0, '/work/sp')
 REF_WAV = os.environ.get('SP_REF_WAV', '/work/sp/ref/anchor_ref.wav'); REF_JSON = os.environ.get('SP_REF_JSON', '/work/sp/ref/anchor_ref.json')
 SVARA = re.compile('[\u0951\u0952\u0953\u0954]')
 CHAIN = ('highpass=f=80,equalizer=f=180:t=q:w=1.0:g=1.5,equalizer=f=3500:t=q:w=1.2:g=2.0,'
@@ -57,8 +57,12 @@ class Renderer:
         f = self.C.score_take(path, text, self.remb)
         f['cer_raw'] = f['cer']; f['cer'] = V.pron_cer(text, f.get('hyp', ''), lang)   # v2: sound-folded CER (Sanskrit / loanword safe)
         n = max(1, len(re.findall(r'[क-ह]', text)))
+        if os.environ.get('SP_ACCENT') == '1':   # v3: prefer takes whose clause ends close DOWN (Nepal-native), not float up
+            from accent_lib import accent_metrics
+            _w, _sr = sf.read(path, dtype='float32'); am = accent_metrics(_w if _w.ndim == 1 else _w.mean(1), _sr)
+            f['end_slope'] = am['end_slope']; f['rise_frac'] = am['rise_frac']
         cps_pen = 0.0 if 4.0 <= f['cps'] <= 9.5 else 0.5   # pace sanity: very rushed or dragging = bad
-        f['sel'] = (-3.0 * f['cer'] - 0.25 * f['clicks'] - 0.5 * f['hindi'] - cps_pen - 0.5 * max(0, f['long_gaps'])
+        f['sel'] = (-0.25 * max(0.0, f.get('end_slope', 0.0)) - 0.5 * f.get('rise_frac', 0.0) - 3.0 * f['cer'] - 0.25 * f['clicks'] - 0.5 * f['hindi'] - cps_pen - 0.5 * max(0, f['long_gaps'])
                     + 0.3 * f['utmos'] + 0.5 * f['spk_sim'])
         return f
 
@@ -68,14 +72,17 @@ class Renderer:
         `max_extra` more seeds and keep the best-scoring take overall."""
         import nep_norm, validators as V
         text = SVARA.sub('', text)
-        if lang != 'sa': text = nep_norm.normalize(text)
+        if lang != 'sa':
+            if os.environ.get('SP_NATIVIZE') == '1':
+                from nepal_loan import nativize; text = nativize(text)
+            text = nep_norm.normalize(text)
         has_lat = bool(V.LAT.search(text))
         seeds = list(seeds or [11, 22, 33][:self.n]); extra = [44, 55, 66, 77, 88, 99][:max_extra]
         tmp = tempfile.mkdtemp(); best = None; cands = []
         def run(k, sd):
             nonlocal best
             self.torch.manual_seed(sd)
-            a = self.m.generate(text=text, language=lang, ref_audio=REF_WAV, ref_text=self.ref_text, num_step=self.ns, guidance_scale=self.gs)
+            a = self.m.generate(text=text, language=lang, ref_audio=REF_WAV, ref_text=self.ref_text, num_step=self.ns, guidance_scale=self.gs, instruct=None)
             w = trim(np.asarray(a[0], dtype=np.float32), self.m.sampling_rate)
             p = f'{tmp}/t{k}.wav'; sf.write(p, w, self.m.sampling_rate)
             f = self.score(p, text, lang); cands.append(dict(seed=sd, **{x: f[x] for x in ('cer', 'clicks', 'hindi', 'utmos', 'spk_sim', 'dur', 'sel')}))
