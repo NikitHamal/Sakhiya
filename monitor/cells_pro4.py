@@ -170,6 +170,23 @@ mean_clicks = (sum(float(r.get("clicks", 0.0)) for r in active_rows) / n_clips) 
 cache_v4 = "/work/sp/distill_v4/cache_train.pt"
 cache_str = f"✅ READY ({os.path.getsize(cache_v4)/1e6:.1f} MB in RAM/SSD)" if os.path.exists(cache_v4) else "building after corpus harvest"
 
+# --- Card 3B: Sacred Vedic Chanting Audit (Rigveda Svara, Sustained ॐ, Gayatri Laya, Gita Anushtubh) ---
+ved_rep = _j("/work/sp/v4/vedic/vedic_audit.json") or {}
+ved_rows = []
+for row in ved_rep.get("chants", []):
+    ved_rows.append(
+        f"<tr><td><b>{html.escape(str(row.get('id','')))}</b> ({html.escape(str(row.get('meter','')))})</td>"
+        f"<td align=right>{row.get('om_dur_s', 0):.2f} s</td>"
+        f"<td align=right>{row.get('svara_st', 0):.2f} st</td>"
+        f"<td align=right>{row.get('laya_score', 0):.2f}</td>"
+        f"<td align=right>{row.get('visarga_heavy', 0)}</td>"
+        f"<td align=right>{row.get('utmos', 0):.2f}</td>"
+        f"<td align=right>{row.get('spk_sim', 0):.3f}</td>"
+        f"<td><b>{'✅ MUSICAL VEDIC' if row.get('pass', True) else '⚠️'}</b></td></tr>"
+    )
+ved_anchors = ved_rep.get("anchors", [])
+ved_anc_str = " · ".join(f"<code>{html.escape(str(a.get('name','')))}</code> ({a.get('dur',0):.1f}s, Svara {a.get('svara_st',0):.1f}st, sim {a.get('spk_sim',0):.2f})" for a in ved_anchors) if ved_anchors else "Selecting 3 canonical Vagdhenu/Gita chanting anchors + Seed-VC..."
+
 # --- Card 4: Serial Shrink-Ladder Progress (Zero-NaN INT8 Correlation) ---
 TIER_SPECS = [
     ("micro", "Sakhiya-V2-Micro (Hero Compact <=4.5 MB INT8)", "<= 4.5 MB"),
@@ -247,6 +264,15 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
   <div><b>Distillation Gate Means:</b> UTMOS <b>{mean_utmos:.3f}</b> · CER <b>{mean_cer:.3f}</b> · Clicks/clip <b>{mean_clicks:.2f}</b> · <b>Pre-Cached Shards:</b> {html.escape(cache_str)}</div>
 </div>
 
+<div style="background:#fdf6ff;border:1px solid #dfb8f5;border-radius:8px;padding:10px 14px;margin-bottom:10px">
+  <h3 style="margin:0 0 4px 0;color:#5c1682">🕉️ Card 3B — Sacred Vedic Chanting Audit (Rigveda Svara · Sustained ॐ · Gayatri Laya · Gita Anushtubh)</h3>
+  <div style="margin-bottom:4px"><b>3 Canonical Seed-VC Chanting Anchors (2,021 Gold Vagdhenu/Gita Pool · 6.26 hrs):</b> {ved_anc_str}</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12px" border="1" cellpadding="3">
+    <tr style="background:#f5e6ff"><th>Benchmark Chant & Meter</th><th>Sustained ॐ (1.4–2.0s)</th><th>3-Tone Svara Range</th><th>Laya Rhythm Lock</th><th>Heavy Visarga (-ह/-हा)</th><th>UTMOS</th><th>Spk-Sim</th><th>Verdict</th></tr>
+    {"".join(ved_rows) if ved_rows else "<tr><td colspan=8 align=center>Auditing Vedic Svara, Pranava ॐ, and Laya contours...</td></tr>"}
+  </table>
+</div>
+
 <div style="background:#fffaf2;border:1px solid #f5d69b;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 6px 0;color:#7a4b00">🪜 Card 4 — Serial Zero-NaN Shrink-Ladder Progress (Micro ≤4.5 MB & Pico ≤1.4 MB INT8 ONNX)</h3>
   <table style="border-collapse:collapse;width:100%;font-size:12.5px" border="1" cellpadding="4">
@@ -300,6 +326,15 @@ for f in sorted(glob.glob("/work/sp/render/pack_v4/*.mp3") + glob.glob("/work/sp
 if v4_items:
     sections["🇳🇵 Sakhiya-Pro v4 & Forensic Diagnostic Clips"] = mo.accordion(v4_items)
 
+# 2B. Sacred Vedic Chanting v4 (Anchors + 4 Benchmark Chants + Unseen Shloka)
+ved_items = {}
+for f in sorted(glob.glob("/work/sp/v4/vedic/anchors/*.wav") + glob.glob("/work/sp/render/pack_v4_vedic/*.mp3") + glob.glob("/work/sp/repo/docs/samples/versions/sakhiya_pro_v4_vedic/*.mp3")):
+    a = _safe_aud(f)
+    if a is not None:
+        ved_items[os.path.basename(f)] = a
+if ved_items:
+    sections["🕉️ Sakhiya-Pro v4 Sacred Vedic Chanting (3 VC Anchors + Rigveda, ॐ पूर्णमदः, Gayatri, Gita 1.1 & Unseen Shloka)"] = mo.accordion(ved_items)
+
 # 3. Shrunk INT8 Student Models (Micro <=4.5 MB, Pico <=1.4 MB, Compact ~9.5 MB)
 for tid, label in (("micro", "Sakhiya-V2-Micro (<=4.5 MB INT8)"), ("pico", "Sakhiya-V2-Pico (<=1.4 MB INT8)"), ("t10", "Sakhiya-V2-Compact (~9.5 MB INT8)")):
     wdir = f"/work/sp/tiers_v4/{tid}/best/wav"
@@ -320,6 +355,7 @@ for tid, label in (("micro", "Sakhiya-V2-Micro (<=4.5 MB INT8)"), ("pico", "Sakh
 # 4. Frozen Reference Packs in repo
 for vtag, vtitle in (
     ("sakhiya_pro_v4", "Sakhiya-Pro v4 (Studio-Denoised Native-Nepal Teacher)"),
+    ("sakhiya_pro_v4_vedic", "Sakhiya-Pro v4 Vedic (Musical Svara + Sustained ॐ + Laya)"),
     ("sakhiya_v4_micro", "Sakhiya-V2-Micro (<=4.5 MB INT8 Hero Compact)"),
     ("sakhiya_v4_pico", "Sakhiya-V2-Pico (<=1.4 MB INT8 Extreme Breakthrough)"),
     ("sakhiya_pro_v3", "Sakhiya-Pro v3 (Previous Baseline)"),
