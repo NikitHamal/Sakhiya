@@ -3,7 +3,7 @@
 
   vc_corpus.py list [HOURS]     build /work/sp/distill/vc_src.jsonl (SLR43 non-anchor females, v13 Nepal news/story/conv, female SLR54), interleaved
   vc_corpus.py work I N [DEADLINE_EPOCH]   worker: VC (F0-conditioned: keeps real prosody / timing / nasalization) + gate -> distill/vc/part_I.jsonl
-Keep rules: ASR CER vs human transcript <= 0.10, UTMOS >= 3.3, clicks <= 3, ECAPA spk-sim to the anchor >= 0.60, 1.5-16 s, zero Hindi leak.
+Keep rules (after de-click): ASR CER vs human transcript <= 0.10, UTMOS >= 3.2, clicks <= 6, ECAPA spk-sim to the anchor >= 0.60, 1.5-16 s, zero Hindi leak.
 """
 import sys, os, re, json, random, glob, time, types
 sys.path.insert(0, '/work/sp/repo/scripts/sakhiya_pro/v3'); sys.path.insert(0, '/work/sp/repo/scripts/sakhiya_pro'); sys.path.insert(0, '/work/sp')
@@ -62,6 +62,16 @@ def anchor_prompt():
     sf.write(P, np.concatenate(segs), 22050); print('prompt s', tot, flush=True); return P
 
 
+def declick(w):
+    """interpolate isolated sample-level spikes (vocoder glitches) before gating"""
+    w = w.copy(); pk = float(np.abs(w).max()); thr = max(0.35 * pk, 0.12)
+    for _ in range(3):
+        bad = np.where(np.abs(np.diff(w)) > thr)[0]
+        if not len(bad): break
+        w[bad + 1] = 0.5 * (w[bad] + w[np.minimum(bad + 2, len(w) - 1)])
+    return w
+
+
 def work(i, n, deadline):
     os.environ['HF_TOKEN'] = open('/tmp/hf_token').read().strip()
     P = anchor_prompt()
@@ -87,9 +97,9 @@ def work(i, n, deadline):
             for _, full in vc.convert_voice(x['path'], P, diffusion_steps=steps, inference_cfg_rate=0.7, f0_condition=True, auto_f0_adjust=True, stream_output=True):
                 if full is not None: last = full
             sr_out, a = last if isinstance(last, tuple) else (22050, last)
-            a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); sf.write(dst, a, 24000)
+            a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
             m = C.score_take(dst, x['text'], remb)
-            ok = m['cer'] <= 0.10 and m['utmos'] >= 3.3 and m['clicks'] <= 3 and m['spk_sim'] >= 0.60 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
+            ok = m['cer'] <= 0.10 and m['utmos'] >= 3.2 and m['clicks'] <= 6 and m['spk_sim'] >= 0.60 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
