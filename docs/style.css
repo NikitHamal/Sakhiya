@@ -136,3 +136,14 @@ pre{white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,monosp
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .tier-exp-head{margin:14px 0 6px;padding-top:10px;border-top:1px dashed var(--line,#d0d7de);font-size:13px;opacity:.85}
+/* ---- GGML C++/WASM engine, tier badges, developer card (M3X tonal surfaces) ---- */
+.bdg-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.bdg{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--md-shape-full);font-size:11px;font-weight:600;line-height:1;white-space:nowrap;background:var(--md-surface-container-high);color:var(--md-on-surface-variant)}
+.bdg.g{background:var(--md-tertiary-container);color:var(--md-on-tertiary-container)}
+.tier[aria-checked=true] .bdg{background:var(--md-surface-container-lowest);color:var(--md-on-surface)}
+.codebox{position:relative;margin-top:12px;border-radius:var(--md-shape-md);background:var(--md-surface-container-low);border:var(--x-line-w) solid var(--md-outline-variant)}
+.codebox pre{margin:0;padding:16px 16px 56px;overflow-x:auto;font-size:12.5px;line-height:1.55;max-width:100%;-webkit-overflow-scrolling:touch}
+.codebox code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
+.codebox .copy{position:absolute;right:10px;bottom:10px;height:36px;padding:0 14px}
+.dev-card{grid-column:1/-1}
+#dev-sakhiya-cpp .chips{margin-bottom:0}

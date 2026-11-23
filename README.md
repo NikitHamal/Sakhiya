@@ -37,6 +37,20 @@ wav, sr = tts.say("नेपालको राजधानी काठमा�
 Controls: `lang` (`auto`/`ne`/`sa`), `style` (`news`, `storytelling`, `conversational`, `warm_soft`, `expressive`, `vedic_chant`), `rate`, `pitch_shift`.
 
 
+## GGUF tiers, WebAssembly, Python, Android (sakhiya.cpp)
+```bash
+# models: https://huggingface.co/NikitHamal/sakhiya-gguf  (atom_lite 3.5 MB, atom 7.4 MB, nano 10.1 MB, v1 37.5 MB; *_q8_0_exact = waveform-exact)
+python convert_sakhiya_gguf.py --tier atom_lite --am am.pt --voc voc.pt --dtype q8_0 --out sakhiya_atom_lite_q8_0.gguf   # --profile exact for waveform parity
+cmake -S cpp -B build-lib -DCMAKE_BUILD_TYPE=Release && cmake --build build-lib -j   # libsakhiya + sakhiya-cli-lite, no ggml needed
+source emsdk_env.sh && scripts/build_wasm.sh                                          # docs/wasm/sakhiya.wasm (single-thread SIMD128)
+python tests/test_ggml_tiers.py && node tests/test_wasm_node.mjs                      # parity + size + RTF gates, WASM vs native
+```
+```python
+from sakhiya.ggml_tts import SakhiyaGGML
+wav, sr = SakhiyaGGML.from_pretrained("atom-lite").say("नेपालको राजधानी काठमाडौँ हो।", style="news", speed=1.0)
+```
+Android: `cpp/android_jni.cpp` + `android/SakhiyaGGML.kt` (target `sakhiya_jni` in `cpp/CMakeLists.txt`). Browser: `docs/wasm/sakhiya_engine.js`. Measured numbers and caveats are in STATUS.md (Session 68).
+
 ## Quickstart (GGML C/C++ Standalone CLI: `sakhiya-cli`)
 ```bash
 # 1. Convert PyTorch v5_c1 checkpoints (am.pt + voc.pt) into a single GGUF v3 file (f32, f16, or q8_0)

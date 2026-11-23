@@ -181,10 +181,12 @@
     }
    ],
    "rtf": {
-    "q8_0_t1": 0.0697,
-    "q8_0_t4": 0.027,
-    "f16_t1": 0.0702,
-    "f16_t4": 0.0258
+    "q8_0_t1": 0.0663,
+    "q8_0_t2": 0.0409,
+    "q8_0_t4": 0.0259,
+    "f16_t1": 0.0698,
+    "f16_t2": 0.04,
+    "f16_t4": 0.0263
    },
    "min_cosine": {
     "f32": 1.0,
@@ -199,7 +201,8 @@
     "q8_0": 0.9359,
     "q8_0_exact": 0.99993
    },
-   "passed": false
+   "passed": true,
+   "rtf_note": "idle 4-vCPU sandbox, best of 4, sentence ne_kathmandu (5.3 s audio), sakhiya-cli (ggml-linked, -march=native)"
   },
   {
    "tier": "atom",
@@ -380,10 +383,12 @@
     }
    ],
    "rtf": {
-    "q8_0_t1": 0.2504,
-    "q8_0_t4": 0.077,
-    "f16_t1": 0.2383,
-    "f16_t4": 0.0763
+    "q8_0_t1": 0.2459,
+    "q8_0_t2": 0.1368,
+    "q8_0_t4": 0.0779,
+    "f16_t1": 0.2539,
+    "f16_t2": 0.1374,
+    "f16_t4": 0.0767
    },
    "min_cosine": {
     "f32": 1.0,
@@ -398,7 +403,8 @@
     "q8_0": 0.936242,
     "q8_0_exact": 0.999963
    },
-   "passed": false
+   "passed": true,
+   "rtf_note": "idle 4-vCPU sandbox, best of 4, sentence ne_kathmandu (5.3 s audio), sakhiya-cli (ggml-linked, -march=native)"
   },
   {
    "tier": "nano",
@@ -579,10 +585,12 @@
     }
    ],
    "rtf": {
-    "q8_0_t1": 0.2659,
-    "q8_0_t4": 0.0798,
-    "f16_t1": 0.2544,
-    "f16_t4": 0.0771
+    "q8_0_t1": 0.2582,
+    "q8_0_t2": 0.1416,
+    "q8_0_t4": 0.0823,
+    "f16_t1": 0.2555,
+    "f16_t2": 0.1407,
+    "f16_t4": 0.0794
    },
    "min_cosine": {
     "f32": 1.0,
@@ -597,7 +605,8 @@
     "q8_0": 0.930051,
     "q8_0_exact": 0.999956
    },
-   "passed": false
+   "passed": true,
+   "rtf_note": "idle 4-vCPU sandbox, best of 4, sentence ne_kathmandu (5.3 s audio), sakhiya-cli (ggml-linked, -march=native)"
   },
   {
    "tier": "v1",
@@ -778,10 +787,12 @@
     }
    ],
    "rtf": {
-    "q8_0_t1": 0.7147,
-    "q8_0_t4": 0.2361,
-    "f16_t1": 0.6933,
-    "f16_t4": 0.2249
+    "q8_0_t1": 0.7092,
+    "q8_0_t2": 0.4019,
+    "q8_0_t4": 0.2358,
+    "f16_t1": 0.7021,
+    "f16_t2": 0.4057,
+    "f16_t4": 0.234
    },
    "min_cosine": {
     "f32": 1.0,
@@ -796,7 +807,8 @@
     "q8_0": 0.999957,
     "q8_0_exact": 0.999957
    },
-   "passed": true
+   "passed": true,
+   "rtf_note": "idle 4-vCPU sandbox, best of 4, sentence ne_kathmandu (5.3 s audio), sakhiya-cli (ggml-linked, -march=native)"
   }
  ]
 }

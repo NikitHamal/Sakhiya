@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s), el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
 window.$ = $;
 const tts = new SakhiyaWeb();
-const st = { lang: "auto", style: "storytelling", voice: "sakhiya", tier: "v1" };
+const st = { lang: "auto", style: "storytelling", voice: "sakhiya", tier: "v1", engine: "onnx" };
 window.st = st;
 let TIERS = { tiers: [], voices: {}, styles: {} }, CFG = null;
 // v6 focused scope: Nepali + Sanskrit + Auto (Mixed) only; ONE unified female voice `sakhiya`; 3 mastered delivery modes.
@@ -28,6 +28,9 @@ const PRESETS = [["Auto mix", "हेलो साथीहरू। म सख�
   ["गायत्री मन्त्र", "ॐ भूर्भुवः स्वः। तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि। धियो यो नः प्रचोदयात्॥", "sa"]];
 const SLIDERS = [["rate", "Speed", .6, 1.6, .01, 1, "×"], ["pause_scale", "Pace / Pauses", .3, 2.5, .01, 1, "×"], ["pitch_scale", "Expressiveness (Tone)", .5, 1.8, .01, 1.08, "×"], ["pitch_shift", "Pitch", -.6, .6, .01, 0, ""], ["svara", "Vedic Svara Depth", 0, 2, .05, 1, "×"], ["bpm", "Chandas Laya (BPM, Vedic)", 40, 120, 1, 75, ""], ["energy_scale", "Projection / Warmth", .6, 1.6, .01, 1, "×"]];
 const put = (id, t) => { const n = $(id).lastElementChild; if (n) n.textContent = t; };
+const fmtMb = m => m < 1 ? Math.round(m * 1000) + " KB" : m.toFixed(m < 10 ? 1 : 0) + " MB";
+const fmtRtf = r => r ? ` · RTF ${r < .1 ? r.toFixed(3) : r.toFixed(2)}` : "";
+const badges = t => t.gguf_mb ? `<span class="bdg-row"><span class="bdg" title="ONNX Runtime Web INT8 graphs (RTF measured by the ONNX forensic gate)">ONNX INT8 ${fmtMb(t.onnx_mb || t.mb)}${fmtRtf(t.rtf_onnx || t.rtf)}</span><span class="bdg g" title="GGML C++ / WASM single-file GGUF Q8_0. CPU RTF measured natively: 1 thread / 4 threads">GGUF Q8_0 ${fmtMb(t.gguf_mb)}${fmtRtf(t.rtf_ggml_1t)}${t.rtf_ggml_mt ? " (1T) / " + (t.rtf_ggml_mt < .1 ? t.rtf_ggml_mt.toFixed(3) : t.rtf_ggml_mt.toFixed(2)) + " (4T)" : ""}</span></span>` : "";
 const tag = k => k === "preview" ? ' <span class="tag">preview</span>' : "";
 
 function radio(box, items, key, cb) {   // items: [value, innerHTML]
@@ -53,7 +56,7 @@ function renderTiers() {
   let expHead = false;
   TIERS.tiers.forEach(t => {
     if (t.experimental && !expHead) { expHead = true; box.appendChild(el("div", "tier-exp-head", "<b>Experimental</b> · trained from scratch on mined real data · not production quality")); }
-    const b = el("button", "tier", `<span class="radio"></span><span class="tx"><b>${t.label} ${t.prec}${t.ready ? "" : ' <span class="tag">not ready</span>'}</b><small>${t.desc}</small></span><span class="mb">${t.mb < 1 ? Math.round(t.mb * 1000) + " KB" : t.mb.toFixed(1) + " MB"}</span>`);
+    const b = el("button", "tier", `<span class="radio"></span><span class="tx"><b>${t.label} ${t.prec}${t.ready ? "" : ' <span class="tag">not ready</span>'}</b><small>${t.desc}</small>${badges(t)}</span><span class="mb">${t.mb < 1 ? Math.round(t.mb * 1000) + " KB" : t.mb.toFixed(1) + " MB"}</span>`);
     b.type = "button"; b.disabled = !t.ready; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(st.tier === t.id));
     b.onclick = () => { st.tier = t.id; [...box.children].forEach(c => c.setAttribute("aria-checked", String(c === b))); put("#mdl", "loads on next Speak"); };
     box.appendChild(b);
@@ -90,18 +93,25 @@ function drawMel(parts) {
   for (const q of parts) { for (let f = 0; f < q.F; f++) for (let m = 0; m < M; m++) { const v = Math.pow(Math.max(0, Math.min(1, (q.d[m * q.F + f] + 9) / 8.5)), 1.4), i = (((M - 1 - m) * c.width) + x0 + f) * 4; for (let k = 0; k < 3; k++) im.data[i + k] = b[k] + (p[k] - b[k]) * v; im.data[i + 3] = 255; } x0 += q.F; }
   g.putImageData(im, 0, 0);
 }
+async function ggmlSpeak() {   // GGML C++ / WASM engine; any failure falls back to ONNX Runtime Web
+  const vals = {}; SLIDERS.forEach(([k]) => vals[k] = +$("#r_" + k).value);
+  try { return await window.GGML.say($("#text").value, st, vals, tier(), m => put("#mdl", m)); }
+  catch (e) { console.warn("GGML/WASM unavailable, falling back to ONNX:", e); st.engine = "onnx"; window.GGML.syncUI(); $("#msg").textContent = "GGML/WASM unavailable (" + e.message + ") — using ONNX Runtime Web."; return null; }
+}
 async function speak() {
   const btn = $("#go"); btn.disabled = true; btn.classList.add("busy"); $("#golbl").textContent = "Speaking…"; await new Promise(r => setTimeout(r, 30));
   try {
-    await boot();
+    let r = null; if (st.engine === "ggml" && window.GGML) r = await ggmlSpeak();
+    if (!r) { await boot();
     const spkId = (tts.cfg.spk2id || {})[st.voice] ?? 0, o = { lang: st.lang, spk: spkId, style: st.style };
     SLIDERS.forEach(([k]) => o[k] = +$("#r_" + k).value);
     if (window.StudioV6 && window.StudioV6.cartridge && window.StudioV6.cartridge() && window.StudioV6.cartridge().contour) {
       o.contour = window.StudioV6.cartridge().contour;
     }
-    const r = await tts.say($("#text").value, o); if (window.StudioV6) r.wav = window.StudioV6.postMix(r.wav, r.sr, st); const url = URL.createObjectURL(wavBlob(r.wav, r.sr));
+    r = await tts.say($("#text").value, o); if (window.StudioV6) r.wav = window.StudioV6.postMix(r.wav, r.sr, st); }
+    const url = URL.createObjectURL(wavBlob(r.wav, r.sr));
     $("#player").src = url; $("#player").play(); $("#dl").href = url; $("#dl").hidden = false;
-    drawWave(r.wav); drawMel(r.mel);
+    drawWave(r.wav); if (r.mel) drawMel(r.mel); else { const c = $("#mel"), g = c.getContext("2d"); g.clearRect(0, 0, c.width, c.height); }
     put("#rtf", `RTF ${r.rtf.toFixed(2)} · ${(r.wav.length / r.sr).toFixed(1)} s in ${(r.ms / 1000).toFixed(1)} s`);
     $("#norm").textContent = "Normalised: " + r.norm; $("#ph").textContent = r.phones; $("#msg").textContent = "";
   } catch (e) { $("#msg").textContent = "Error: " + e.message; console.error(e); }

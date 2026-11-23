@@ -13,7 +13,16 @@
    "ne_pcer": 0.014,
    "sa_pcer": 0.0245,
    "ready": true,
-   "desc": "Flagship v15 Chandas · UTMOS 3.957 (Vedic 3.75+) · 0 drops, 0 stutters, 0 clicks across all 6 styles"
+   "desc": "Flagship v15 Chandas · UTMOS 3.957 (Vedic 3.75+) · 0 drops, 0 stutters, 0 clicks across all 6 styles",
+   "onnx_mb": 15.981,
+   "gguf_file": "sakhiya_v1_q8_0.gguf",
+   "gguf_mb": 37.507,
+   "gguf_exact_mb": 37.507,
+   "gguf_f16_mb": 41.977,
+   "rtf_onnx": 0.1884,
+   "rtf_ggml_1t": 0.7092,
+   "rtf_ggml_mt": 0.2358,
+   "ggml_min_cosine_exact": 0.999869
   },
   {
    "id": "nano",
@@ -27,7 +36,16 @@
    "ne_pcer": 0.0273,
    "sa_pcer": 0.0456,
    "ready": true,
-   "desc": "Compact student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~46× real-time"
+   "desc": "Compact student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~46× real-time",
+   "onnx_mb": 8.932,
+   "gguf_file": "sakhiya_nano_q8_0.gguf",
+   "gguf_mb": 10.079,
+   "gguf_exact_mb": 20.817,
+   "gguf_f16_mb": 17.878,
+   "rtf_onnx": 0.0217,
+   "rtf_ggml_1t": 0.2582,
+   "rtf_ggml_mt": 0.0823,
+   "ggml_min_cosine_exact": 0.999865
   },
   {
    "id": "atom",
@@ -41,7 +59,16 @@
    "ne_pcer": 0.0165,
    "sa_pcer": 0.0676,
    "ready": true,
-   "desc": "Small student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~53× real-time"
+   "desc": "Small student + V1 vocoder · 0 word drops, 0 stutters, 0 clicks · ~53× real-time",
+   "onnx_mb": 6.509,
+   "gguf_file": "sakhiya_atom_q8_0.gguf",
+   "gguf_mb": 7.443,
+   "gguf_exact_mb": 11.273,
+   "gguf_f16_mb": 13.087,
+   "rtf_onnx": 0.0189,
+   "rtf_ggml_1t": 0.2459,
+   "rtf_ggml_mt": 0.0779,
+   "ggml_min_cosine_exact": 0.999882
   },
   {
    "id": "atom_lite",
@@ -55,7 +82,16 @@
    "ne_pcer": 0.0169,
    "sa_pcer": 0.0395,
    "ready": true,
-   "desc": "Under 3 MB · Atom acoustic model + 1.25 MB distilled vocoder · 0 stutters, 0 clicks"
+   "desc": "Under 3 MB · Atom acoustic model + 1.25 MB distilled vocoder · 0 stutters, 0 clicks",
+   "onnx_mb": 2.717,
+   "gguf_file": "sakhiya_atom_lite_q8_0.gguf",
+   "gguf_mb": 3.481,
+   "gguf_exact_mb": 7.312,
+   "gguf_f16_mb": 5.459,
+   "rtf_onnx": 0.0155,
+   "rtf_ggml_1t": 0.0663,
+   "rtf_ggml_mt": 0.0259,
+   "ggml_min_cosine_exact": 0.99983
   }
  ],
  "voices": {
@@ -68,5 +104,6 @@
   "warm_soft": "ready",
   "expressive": "ready",
   "vedic_chant": "ready"
- }
+ },
+ "ggml_note": "gguf_* / rtf_ggml_*: measured by tests/test_ggml_tiers.py + sakhiya-cli on a 4-vCPU sandbox (1 and 4 threads); rtf / rtf_onnx come from the original ONNX forensic gate on different hardware, so compare within an engine."
 }
