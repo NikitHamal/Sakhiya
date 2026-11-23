@@ -281,7 +281,7 @@ public:
                     float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T;
                     float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T;
                     for (int t = 0; t < T; ++t) {
-                        o0[t] = b0; o1[t] = b1; o2[t] = b2; o3[t] = b3;
+                        o0[t] = 0.0f; o1[t] = 0.0f; o2[t] = 0.0f; o3[t] = 0.0f;
                     }
                     for (int ci = 0; ci < C_in; ++ci) {
                         float v0 = w0[ci], v1 = w1[ci], v2 = w2[ci], v3 = w3[ci];
@@ -294,6 +294,9 @@ public:
                             o3[t] += v3 * xv;
                         }
                     }
+                    for (int t = 0; t < T; ++t) {
+                        o0[t] += b0; o1[t] += b1; o2[t] += b2; o3[t] += b3;
+                    }
                 }
                 return out;
             }
@@ -302,7 +305,7 @@ public:
                 const float * __restrict__ w_co = weight.data() + static_cast<size_t>(co) * C_in;
                 float b_val = bias.empty() ? 0.0f : bias[co];
                 float * __restrict__ o_co = out.data() + static_cast<size_t>(co) * T;
-                for (int t = 0; t < T; ++t) o_co[t] = b_val;
+                for (int t = 0; t < T; ++t) o_co[t] = 0.0f;
                 for (int ci = 0; ci < C_in; ++ci) {
                     float w_val = w_co[ci];
                     const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
@@ -310,6 +313,7 @@ public:
                         o_co[t] += w_val * x_ci[t];
                     }
                 }
+                for (int t = 0; t < T; ++t) o_co[t] += b_val;
             }
             return out;
         }
@@ -327,7 +331,7 @@ public:
                 float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T_out;
                 float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T_out;
                 for (int to = 0; to < T_out; ++to) {
-                    o0[to] = b0; o1[to] = b1; o2[to] = b2; o3[to] = b3;
+                    o0[to] = 0.0f; o1[to] = 0.0f; o2[to] = 0.0f; o3[to] = 0.0f;
                 }
                 const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in * K;
                 const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in * K;
@@ -353,6 +357,9 @@ public:
                             o3[to] += v3 * xv;
                         }
                     }
+                }
+                for (int to = 0; to < T_out; ++to) {
+                    o0[to] += b0; o1[to] += b1; o2[to] += b2; o3[to] += b3;
                 }
             }
             return out;
@@ -1031,23 +1038,24 @@ public:
             f0[t] *= std::pow(2.0f, tot_shift[t] / 12.0f);
         }
 
-        // 16x linear interpolation (align_corners=False)
+        // 16x linear interpolation (align_corners=False) matching ATen UpSampleLinear1d double-precision weights
         const int T4 = T * 4;
         const int T16 = T * 16;
         std::vector<float> f0_16(T16), uv_16(T16);
         for (int i = 0; i < T16; ++i) {
-            float src_x = (static_cast<float>(i) + 0.5f) / 16.0f - 0.5f;
-            if (src_x <= 0.0f) {
+            double src_x = (static_cast<double>(i) + 0.5) * 0.0625 - 0.5;
+            if (src_x <= 0.0) {
                 f0_16[i] = f0[0];
                 uv_16[i] = uv[0];
-            } else if (src_x >= static_cast<float>(T - 1)) {
+            } else if (src_x >= static_cast<double>(T - 1)) {
                 f0_16[i] = f0[T - 1];
                 uv_16[i] = uv[T - 1];
             } else {
                 int i0 = static_cast<int>(std::floor(src_x));
-                float w = src_x - static_cast<float>(i0);
-                f0_16[i] = (1.0f - w) * f0[i0] + w * f0[i0 + 1];
-                uv_16[i] = (1.0f - w) * uv[i0] + w * uv[i0 + 1];
+                double w1 = src_x - static_cast<double>(i0);
+                double w0 = 1.0 - w1;
+                f0_16[i] = static_cast<float>(w0 * static_cast<double>(f0[i0]) + w1 * static_cast<double>(f0[i0 + 1]));
+                uv_16[i] = static_cast<float>(w0 * static_cast<double>(uv[i0]) + w1 * static_cast<double>(uv[i0 + 1]));
             }
         }
 
