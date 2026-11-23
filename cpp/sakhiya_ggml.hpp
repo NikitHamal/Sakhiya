@@ -1202,19 +1202,28 @@ public:
         float w2[64];
         for (int n = 0; n < 64; ++n) w2[n] = win[n] * win[n];
 
+        std::vector<float> fr_all(static_cast<size_t>(T16) * 64);
+#pragma omp parallel for schedule(static)
         for (int t = 0; t < T16; ++t) {
             float re_t[33], im_t[33];
             for (int k = 0; k <= 32; ++k) {
                 re_t[k] = re[static_cast<size_t>(k) * T16 + t];
                 im_t[k] = (k == 0 || k == 32) ? 0.0f : im[static_cast<size_t>(k) * T16 + t];
             }
-            int base = t * hop;
+            float * __restrict__ fr_t = fr_all.data() + static_cast<size_t>(t) * 64;
             for (int n = 0; n < 64; ++n) {
                 float acc = 0.0f;
                 for (int k = 0; k <= 32; ++k) {
                     acc += re_t[k] * cosb[k][n] - im_t[k] * sinb[k][n];
                 }
-                y[base + n] += acc * win[n];
+                fr_t[n] = acc * win[n];
+            }
+        }
+        for (int t = 0; t < T16; ++t) {
+            int base = t * hop;
+            const float * __restrict__ fr_t = fr_all.data() + static_cast<size_t>(t) * 64;
+            for (int n = 0; n < 64; ++n) {
+                y[base + n] += fr_t[n];
                 env[base + n] += w2[n];
             }
         }
