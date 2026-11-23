@@ -6,7 +6,7 @@ const sandbox = { window: null, ort, navigator: { hardwareConcurrency: 1 }, perf
   fetch: async (u) => ({ json: async () => JSON.parse(fs.readFileSync(path.join(ROOT, "docs", u.split("?")[0]), "utf8")) }) };
 sandbox.window = sandbox; vm.createContext(sandbox);
 ort.env = { wasm: {} };
-for (const f of ["g2p.js", "sanskrit.js", "student_tts.js"]) vm.runInContext(fs.readFileSync(path.join(ROOT, "docs", f), "utf8"), sandbox, { filename: f });
+for (const f of ["g2p.js", "sanskrit.js", "chandas.js", "tanpura.js", "student_tts.js"]) vm.runInContext(fs.readFileSync(path.join(ROOT, "docs", f), "utf8"), sandbox, { filename: f });
 const TEXTS = [
   ["ne", "नमस्ते, म सखिया हुँ। आजको मौसम निकै राम्रो छ।"],
   ["ne", "काठमाडौँ उपत्यकामा आज बिहानै हल्का वर्षा भयो र गाउँगाउँमा किसानहरू खुसी देखिए।"],

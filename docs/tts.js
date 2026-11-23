@@ -51,6 +51,11 @@ class SakhiyaWeb {
     if (this.base !== base) { this.base = base; this.cfg = null; this.variant = null; this.sess = {}; }
     this.cfg = this.cfg || await (await fetch(base + "config.json", { cache: "no-cache" })).json();
     if (this.variant === variant) return; const suf = variant === "tiny" ? ".int8.onnx" : ".onnx", t0 = performance.now();
+    if (this.cfg && this.cfg.single_graph) {
+      try { this.sess.single = await ort.InferenceSession.create(base + "model" + suf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
+      catch (_) { this.sess.single = await ort.InferenceSession.create(base + "model.int8.onnx", { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
+      this.variant = variant; this.loadMs = performance.now() - t0; return;
+    }
     for (const n of ["encoder", "decoder", "vocoder"]) {
       try { this.sess[n] = await ort.InferenceSession.create(base + n + suf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
       catch (_) { this.sess[n] = await ort.InferenceSession.create(base + n + ".onnx", { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
@@ -84,6 +89,27 @@ class SakhiyaWeb {
   }
   async chunk(ph, o) {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
+    if (this.sess.single) {
+      const keep = ph.map(p => S.indexOf(p) >= 0), rate = o.rate || 1, basePitch = o.pitch_shift || 0, svDepth = o.svara ?? 1;
+      const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 0.55 : 0.48) : 0.35) * svDepth;
+      const dmArr = (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => v / rate);
+      const offArr = (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => basePitch + v * svScale);
+      const r = await this.sess.single.run({
+        ids: new ort.Tensor("int64", ids, [1, ids.length]),
+        lang: new ort.Tensor("int64", BigInt64Array.of(o.lang === "sa" ? 1n : 0n), [1]),
+        dur_scale: new ort.Tensor("float32", Float32Array.from(dmArr), [dmArr.length]),
+        pitch_shift: new ort.Tensor("float32", Float32Array.from(offArr), [offArr.length]),
+      });
+      const wav = new Float32Array(r.wav.data); let pk = 1e-4;
+      for (let i = 0; i < wav.length; i++) pk = Math.max(pk, Math.abs(wav[i]));
+      const sc = 0.90 / pk; for (let i = 0; i < wav.length; i++) wav[i] = Math.max(-1, Math.min(1, wav[i] * sc));
+      if (wav.length > 256) for (let i = 0; i < 128; i++) { const w = 0.5 - 0.5 * Math.cos(Math.PI * i / 128); wav[i] *= w; wav[wav.length - 1 - i] *= w; }
+      const F = Math.max(1, (wav.length / 256) | 0), mel = new Float32Array(80 * F), sre = new Float32Array(513 * F), sim = new Float32Array(513 * F);
+      this._stft(wav, F, sre, sim);
+      for (let m = 0; m < 80; m++) { const k0 = Math.floor(Math.pow(m / 80, 1.6) * 480) + 2, k1 = Math.max(k0 + 1, Math.floor(Math.pow((m + 1) / 80, 1.6) * 480) + 2);
+        for (let f = 0; f < F; f++) { let e = 1e-5; for (let k = k0; k < k1; k++) e += Math.hypot(sre[k * F + f], sim[k * F + f]); mel[m * F + f] = Math.log(e / (k1 - k0)) - 2.2; } }
+      return { mel, F, wav };
+    }
     const i64 = v => new ort.Tensor("int64", BigInt64Array.of(BigInt(v)), [1]);
     const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
     const lock = !!(o.lock_voice ?? (this.cfg && this.cfg.lock_voice)), effLang = (isV2 && (String(o.lang) !== "sa" || lock)) ? "ne" : o.lang;

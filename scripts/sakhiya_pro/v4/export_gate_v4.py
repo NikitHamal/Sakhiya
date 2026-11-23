@@ -87,11 +87,11 @@ def _strip_meta(m):
 
 def export_fp32(m, path):
     ids = torch.randint(3, 50, (1, 40))
-    args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(1), torch.zeros(1))
+    args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(40), torch.zeros(40))
     kw = dict(
         input_names=['ids', 'lang', 'dur_scale', 'pitch_shift'],
         output_names=['wav'],
-        dynamic_axes={'ids': {1: 'L'}, 'wav': {1: 'N'}},
+        dynamic_axes={'ids': {1: 'L'}, 'dur_scale': {0: 'D'}, 'pitch_shift': {0: 'P'}, 'wav': {1: 'N'}},
         opset_version=17,
         do_constant_folding=False,
     )
@@ -157,12 +157,30 @@ def sess(path, threads=1):
 
 
 def run(s, ids, lang=0, ds=1.0, ps=0.0):
+    ds_arr = np.asarray(ds, dtype=np.float32).reshape(-1)
+    ps_arr = np.asarray(ps, dtype=np.float32).reshape(-1)
     return s.run(None, {
         'ids': np.array([ids], np.int64),
         'lang': np.array([lang], np.int64),
-        'dur_scale': np.array([ds], np.float32),
-        'pitch_shift': np.array([ps], np.float32),
+        'dur_scale': ds_arr,
+        'pitch_shift': ps_arr,
     })[0][0]
+
+
+def chandas_inputs(text, lang):
+    if lang == 'sa':
+        try:
+            from sakhiya import chandas as CH, symbols as SYM
+            res = CH.compile_chandas(text, bpm=75.0, tonic_hz=215.0, add_end=True)
+            keep = [p in SYM.SYM2ID for p in res['ph']]
+            ids = SYM.encode(res['ph'])
+            dm = [float(d) for d, k in zip(res['dm'], keep) if k]
+            off = [float(o) * (0.55 if res.get('has_vedic_marks') else 0.48) for o, k in zip(res['off'], keep) if k]
+            if len(ids) == len(dm) == len(off) and len(ids) >= 2:
+                return ids, 1, np.array(dm, dtype=np.float32), np.array(off, dtype=np.float32)
+        except Exception:
+            pass
+    return ids_of(text, lang), (1 if lang == 'sa' else 0), 1.0, 0.0
 
 
 def logmel(w):
@@ -247,11 +265,10 @@ def main():
 
     corr, nan, rtf = [], 0, []
     for e in ev[:8]:
-        ids = ids_of(e['text'], e['lang'])
-        lg = 1 if e['lang'] == 'sa' else 0
-        w32 = run(s32, ids, lg)
+        ids, lg, ds_in, ps_in = chandas_inputs(e['text'], e['lang'])
+        w32 = run(s32, ids, lg, ds_in, ps_in)
         t0 = time.time()
-        w8 = run(s8, ids, lg)
+        w8 = run(s8, ids, lg, ds_in, ps_in)
         dt = time.time() - t0
         nan += int(np.isnan(w8).sum() + np.isinf(w8).sum())
         rtf.append(dt / max(len(w8) / SR, 1e-3))
@@ -267,8 +284,10 @@ def main():
         R['int8_mb'] = round(os.path.getsize(i8) / 1e6, 3)
         R['fp16_kept'] = ','.join(extra_fp16)
         s8 = sess(i8)
-        corr = [safe_mel_corr(run(s32, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0),
-                              run(s8, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0)) for e in ev[:8]]
+        corr = []
+        for e in ev[:8]:
+            ids, lg, ds_in, ps_in = chandas_inputs(e['text'], e['lang'])
+            corr.append(safe_mel_corr(run(s32, ids, lg, ds_in, ps_in), run(s8, ids, lg, ds_in, ps_in)))
         R['int8_vs_fp32_mel_corr'] = round(float(np.mean(corr)), 4)
 
     try:
@@ -285,7 +304,8 @@ def main():
     os.makedirs(a.out + '/wav', exist_ok=True)
     import soundfile as sf
     for e in ev:
-        w = run(s8, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0).astype(np.float32)
+        ids, lg, ds_in, ps_in = chandas_inputs(e['text'], e['lang'])
+        w = run(s8, ids, lg, ds_in, ps_in).astype(np.float32)
         w = R4.trim_clause(w, SR)
         sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
 

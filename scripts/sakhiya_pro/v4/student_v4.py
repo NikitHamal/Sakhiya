@@ -118,7 +118,9 @@ class VocHarmonicSource(nn.Module):
         lf0_loc = num / den
         lf0_sm = F.avg_pool1d(F.pad(0.50 * lf0_raw + 0.50 * lf0_loc, (2, 2), mode='replicate'), 5, stride=1)
         if shift_st is not None:
-            lf0_sm = lf0_sm + shift_st.to(f0.dtype) * (1.0 / 12.0)
+            t_fr = torch.arange(lf0_sm.shape[-1], device=lf0_sm.device, dtype=lf0_sm.dtype)[None, None, :]
+            gamaka_st = 0.12 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_fr) * (uv.detach() > 0.45).to(lf0_sm.dtype) * (shift_st.abs() > 0.02).to(lf0_sm.dtype)
+            lf0_sm = lf0_sm + (shift_st.to(f0.dtype) + gamaka_st) * (1.0 / 12.0)
         f0 = torch.pow(2.0, lf0_sm)
         uv = F.avg_pool1d(F.pad(uv, (1, 1), mode='replicate'), 3, stride=1)
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode='linear', align_corners=False)
@@ -322,16 +324,28 @@ class StudentV4(nn.Module):
         B, L = ids.shape
         im = torch.ones((B, L), dtype=torch.bool, device=ids.device)
         spk0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
-        sty0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
+        sty0 = torch.where(lang == 1, torch.full_like(lang, 5), torch.zeros_like(lang))
         studio1 = torch.ones((B,), dtype=torch.long, device=ids.device)
         lang_eff = torch.where(lang == 1, torch.full_like(lang, 4), torch.zeros_like(lang))
         h, mu, g = self.am.enc(ids, spk0, lang_eff, sty0, studio1, im)
         x_d = self.am.dur.pred_logdur(ids, h, im)
-        dur = torch.clamp(torch.round(torch.exp(x_d) * dur_scale[:, None]), min=3.0, max=50.0)
+        z_tok = torch.zeros((B, L), dtype=torch.float32, device=ids.device)
+        ds_tok = dur_scale.reshape(B, -1) + z_tok
+        dur = torch.clamp(torch.round(torch.exp(x_d) * ds_tok), min=3.0, max=52.0)
         # Protect sentence-final tokens from frame collapse
         pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
         is_tail = ((pos >= (float(L) - 3.0)) & (ids > 6)).float()
         dur = torch.maximum(dur, is_tail * 5.0 + (1.0 - is_tail) * 2.0)
+        # Sanskrit/Vedic Chandas safeguards: resonant Pranava Om (o + m >= 36 + 18 frames) & light breathy visarga 'h' (<= 5 frames)
+        is_sa = (lang == 1).float()[:, None]
+        id_o, id_m, id_h = SYM2ID['o'], SYM2ID['m'], SYM2ID['h']
+        next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
+        prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
+        is_om_o = ((ids == id_o) & (next_ids == id_m)).float() * is_sa
+        is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa
+        dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
+        is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa
+        dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
         t = torch.arange(0, T, device=ids.device, dtype=torch.float32)
@@ -342,7 +356,10 @@ class StudentV4(nn.Module):
         t0 = torch.zeros((B,), device=ids.device, dtype=torch.float32)
         xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_frame)
         mel = xt * self.am.stats[1] + self.am.stats[0]
-        return self.voc(mel, shift_st=pitch_shift[:, None, None])
+        ps_tok = pitch_shift.reshape(B, -1) + z_tok
+        ps_fr = torch.gather(ps_tok, 1, idx)[:, None, :]
+        ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode='replicate'), 7, stride=1)
+        return self.voc(mel, shift_st=ps_sm)
 
 
 def build(tier, warm_voc=True):
