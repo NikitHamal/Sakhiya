@@ -171,7 +171,7 @@ for tid, tlabel, tmb in TIER_SPECS:
 
 # --- Panel 4: Apples-to-Apples Size-vs-Quality Leaderboard ---
 # Always include live site baselines + Sakhiya-Pro v1/v2 + all 5 ladder students
- SITE_BASELINES = [
+SITE_BASELINES = [
     dict(name="Sakhiya-Pro v1 (ft3_s200 · 600M Teacher)", size_mb="2400 (bf16)", utmos=3.973, cer=0.064, sa_cer=0.137, drops=0, stutters=0, clicks=35, rtf="GPU", status="🏆 Best Teacher (Anchor)"),
     dict(name="Sakhiya-Pro v2 (s2_300 · 600M Teacher)", size_mb="2400 (bf16)", utmos=3.796, cer=0.066, sa_cer=0.147, drops=0, stutters=0, clicks=44, rtf="GPU", status="✅ Frozen Pack + EP01 v2"),
     dict(name="Sakhiya-V1 (Live Site Flagship)", size_mb=15.98, utmos=3.957, cer=0.014, sa_cer=0.025, drops=0, stutters=0, clicks=0, rtf=0.1884, status="🟢 Live Site Baseline (models_v2)"),
@@ -179,7 +179,7 @@ for tid, tlabel, tmb in TIER_SPECS:
     dict(name="Sakhiya-V1-Atom (Live Site)", size_mb=6.51, utmos=3.262, cer=0.017, sa_cer=0.068, drops=0, stutters=0, clicks=0, rtf=0.0189, status="🟢 Live Site Baseline (models_sano)"),
     dict(name="Sakhiya-V1-Atom-Lite (Live Site)", size_mb=2.72, utmos=2.944, cer=0.017, sa_cer=0.040, drops=0, stutters=0, clicks=0, rtf=0.0155, status="🟢 Live Site Baseline (models_atom_lite)"),
 ]
- student_targets = [
+student_targets = [
     ("t30", "Student-T30 (Ladder 30 MB)", "~29.6"),
     ("t15", "Student-T15 (Ladder 14.5 MB)", "~14.5"),
     ("t10", "Student-T10 (Ladder 9.5 MB)", "~9.5"),
