@@ -20,6 +20,9 @@ ap.add_argument('--budget_min', type=float, default=150)
 ap.add_argument('--init', default='/work/sp/models/OmniVoice')
 ap.add_argument('--tokens', default='/work/sp/ft/tokens')
 ap.add_argument('--lora', action='store_true')
+ap.add_argument('--prompt_ratio', type=float, default=None, help='fixed prompt ratio (v3: 0.10); default = OmniVoice (0.0,0.3)')
+ap.add_argument('--min_lr_ratio', type=float, default=0.0, help='cosine decays to lr*ratio (v3: 2e-6/1.4e-5)')
+ap.add_argument('--warmup_ratio', type=float, default=0.05)
 a = ap.parse_args()
 
 SRC = '/work/sp/OmniVoice_src'
@@ -27,14 +30,16 @@ out = f'/work/sp/exp/{a.name}'; os.makedirs(out, exist_ok=True)
 cfg = json.load(open(f'{SRC}/examples/config/train_config_finetune_sdpa.json'))
 cfg.update(init_from_checkpoint=a.init, learning_rate=a.lr, steps=a.steps, batch_tokens=a.batch_tokens,
            logging_steps=10, eval_steps=a.save_steps, save_steps=a.save_steps, keep_last_n_checkpoints=-1,
-           warmup_ratio=0.05, num_workers=4)
+           warmup_ratio=a.warmup_ratio, num_workers=4)
+if a.prompt_ratio is not None:
+    cfg.update(prompt_ratio_range=[a.prompt_ratio, a.prompt_ratio], instruct_ratio=0.0, only_instruct_ratio=0.0)
 if a.lora:
     cfg.update(use_lora=True, learning_rate=1e-4)
 json.dump(cfg, open(f'{out}/train_cfg.json', 'w'), indent=1)
 dcfg = dict(train=[dict(manifest_path=[f'{a.tokens}/train/data.lst'])], dev=[dict(manifest_path=[f'{a.tokens}/dev/data.lst'])])
 json.dump(dcfg, open(f'{out}/data_cfg.json', 'w'), indent=1)
 
-env = dict(os.environ, PYTHONPATH=SRC + ':' + os.environ.get('PYTHONPATH', ''), HF_TOKEN=open('/tmp/hf_token').read().strip())
+env = dict(os.environ, PYTHONPATH=SRC + ':' + os.environ.get('PYTHONPATH', ''), HF_TOKEN=open('/tmp/hf_token').read().strip(), MIN_LR_RATIO=str(a.min_lr_ratio))
 cmd = ['accelerate', 'launch', '--num_processes', '1', '--mixed_precision', 'bf16', '-m', 'omnivoice.cli.train',
        '--train_config', f'{out}/train_cfg.json', '--data_config', f'{out}/data_cfg.json', '--output_dir', out]
 logf = open(f'/work/tts/logs/train_{a.name}.log', 'w')
