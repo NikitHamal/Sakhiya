@@ -122,6 +122,7 @@ def main():
     ap.add_argument('--lr', type=float, default=None); ap.add_argument('--gan_start', type=int, default=2500); ap.add_argument('--warm_uniform', type=int, default=600)
     ap.add_argument('--qat_start', type=float, default=0.65); ap.add_argument('--max_step_s', type=float, default=3.0)
     ap.add_argument('--save_every', type=int, default=1000); ap.add_argument('--resume', action='store_true'); ap.add_argument('--max_steps', type=int, default=10 ** 9)
+    ap.add_argument('--fresh_clock', action='store_true'); ap.add_argument('--lr_mult', type=float, default=1.0)
     a = ap.parse_args(); assert a.minutes <= 135, 'hard 135 min cap'
     dev = 'cuda'; os.makedirs(a.out, exist_ok=True); random.seed(0); torch.manual_seed(0)
     torch.backends.cuda.matmul.allow_tf32 = True; torch.backends.cudnn.allow_tf32 = True
@@ -131,12 +132,12 @@ def main():
     tr, dv, mu, sd = load_data(a.data, a.seg, dev)
     G = build(a.tier).to(dev); G.f0_stats.copy_(torch.tensor([mu, sd])); D = Disc().to(dev); mel = Mel().to(dev)
     ema = copy.deepcopy(G).eval()
-    lr = a.lr or LR[a.tier]
+    lr = (a.lr or LR[a.tier]) * a.lr_mult
     oG = torch.optim.AdamW(G.parameters(), lr=lr, betas=(0.8, 0.99), weight_decay=1e-2); oD = torch.optim.AdamW(D.parameters(), lr=lr * 0.5, betas=(0.8, 0.99))
     step, spent = 0, 0.0
     if a.resume and os.path.exists(a.out + '/state.pt'):
         S = torch.load(a.out + '/state.pt', weights_only=False, map_location=dev)
-        G.load_state_dict(S['G']); ema.load_state_dict(S['ema']); D.load_state_dict(S['D']); oG.load_state_dict(S['oG']); oD.load_state_dict(S['oD']); step, spent = S['step'], S['spent']
+        G.load_state_dict(S['G']); ema.load_state_dict(S['ema']); D.load_state_dict(S['D']); oG.load_state_dict(S['oG']); oD.load_state_dict(S['oD']); step, spent = S['step'], (0.0 if a.fresh_clock else S['spent'])
         log(f'[resume] step {step} spent {spent / 60:.1f} min')
     log(f'[{a.tier}] deployed params {n_params(G) / 1e6:.3f}M (~{n_params(G) * 1.02 / 1e6:.2f} MB int8) | train {len(tr)} dev {len(dv)} utts | lr {lr} bs {a.bs} seg {a.seg}')
     mel_mu, mel_sd = G.mel_stats.tolist(); budget = a.minutes * 60; t0 = time.time() - spent; tstep = time.time(); qat_on = False; ar = torch.arange(a.seg, device=dev); E = 512
