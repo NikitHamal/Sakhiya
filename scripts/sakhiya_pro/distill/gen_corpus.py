@@ -122,6 +122,7 @@ def texts():
 
 
 def work(i, n, deadline):
+    if int(os.environ.get('BATCH', '0')) > 0: return work_batch(i, n, deadline, int(os.environ['BATCH']))
     import soundfile as sf, numpy as np
     import sakhiya_pro_render as SR
     import validators as V
@@ -148,8 +149,47 @@ def work(i, n, deadline):
     print(f'[w{i}] DONE tried {tried} kept {kept}', flush=True)
 
 
+def work_batch(i, n, deadline, B):
+    """Batched teacher worker (BATCH=<B> env): one OmniVoice generate() call renders B utterances; failures are re-rendered with new seeds (up to 3 rounds)."""
+    import soundfile as sf, numpy as np, nep_norm, validators as V
+    import sakhiya_pro_render as SR
+    os.makedirs(W + '/wav', exist_ok=True)
+    R = SR.Renderer(os.environ.get('TEACHER', '/work/sp/final/sakhiya_pro_v2'), n_take=1, num_step=int(os.environ.get('NSTEP', '32')))
+    have = set(json.loads(l)['id'] for q in glob.glob(W + '/part_*.jsonl') for l in open(q) if l.strip().endswith('}'))
+    rows = [r for r in (json.loads(l) for l in open(O + '/texts.jsonl'))][i::n]; rows = [r for r in rows if r['id'] not in have]
+    pf = f'{W}/part_b{i}.jsonl'; f = open(pf, 'a', encoding='utf8'); kept = tried = 0; tmp = f'/tmp/gcb{i}'; os.makedirs(tmp, exist_ok=True)
+    def prep(r): return SR.SVARA.sub('', r['text']) if r['lang'] == 'sa' else nep_norm.normalize(SR.SVARA.sub('', r['text']))
+    for c0 in range(0, len(rows), B * 6):
+        chunk = sorted(rows[c0:c0 + B * 6], key=lambda r: len(r['text']))
+        for b0 in range(0, len(chunk), B):
+            if time.time() > deadline: print(f'[w{i}] DONE tried {tried} kept {kept}', flush=True); return
+            pend = chunk[b0:b0 + B]; tried += len(pend)
+            for sd in (11, 22, 33):
+                if not pend: break
+                try:
+                    R.torch.manual_seed(sd); tx = [prep(r) for r in pend]
+                    outs = R.m.generate(text=tx, language=['sa' if r['lang'] == 'sa' else 'npi' for r in pend], ref_audio=SR.REF_WAV, ref_text=R.ref_text, num_step=R.ns, guidance_scale=R.gs)
+                except Exception as e: print('ERR batch', str(e)[:160], flush=True); break
+                nxt = []
+                for r, t, a in zip(pend, tx, outs):
+                    try:
+                        w = SR.trim(np.asarray(a, dtype=np.float32), R.m.sampling_rate); pth = f'{tmp}/{r["id"]}.wav'; sf.write(pth, w, R.m.sampling_rate)
+                        lang = 'sa' if r['lang'] == 'sa' else 'npi'; fs = R.score(pth, t, lang)
+                        ok = V.gate(fs, lang, bool(V.LAT.search(t))) and fs['clicks'] <= 3 and fs['utmos'] >= 3.5 and fs['spk_sim'] >= 0.55 and 1.5 <= fs['dur'] <= 16 and fs['hindi'] == 0 and fs['cer'] <= (0.25 if lang == 'sa' else 0.06)
+                    except Exception as e: print('ERR', r['id'], str(e)[:120], flush=True); ok = False; fs = None
+                    if ok:
+                        p = f"{W}/wav/{r['id']}.wav"; sf.write(p, w, R.m.sampling_rate)
+                        f.write(json.dumps(dict(id=r['id'], wav=p, text=t if r['lang'] != 'sa' else r['text'], lang=r['lang'], style=r['style'], src=r['src'], dur=fs['dur'], cer=fs['cer'], utmos=fs['utmos'], spk_sim=fs['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
+                    else: nxt.append(r)
+                    try: os.remove(f'{tmp}/{r["id"]}.wav')
+                    except Exception: pass
+                pend = nxt
+            print(f'[w{i}] tried {tried} kept {kept} {time.strftime("%T")}', flush=True)
+    print(f'[w{i}] DONE tried {tried} kept {kept}', flush=True)
+
+
 def merge():
-    rows = [json.loads(l) for p in glob.glob(W + '/part_*.jsonl') for l in open(p) if l.strip().endswith('}')]
+    rows = list({r['id']: r for p in sorted(glob.glob(W + '/part_*.jsonl')) for r in (json.loads(l) for l in open(p) if l.strip().endswith('}'))}.values())
     rng = random.Random(3); rng.shuffle(rows)
     dev_ids = set(r['id'] for r in rows if r['lang'] == 'sa')
     dev = set(list(dev_ids)[:30]) | set(r['id'] for r in [x for x in rows if x['lang'] != 'sa'][:90])
