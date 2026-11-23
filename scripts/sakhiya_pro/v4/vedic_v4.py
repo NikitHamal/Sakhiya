@@ -138,7 +138,9 @@ def extract_or_stretch_neural_pranava_om(dur_s: float = 1.68) -> np.ndarray:
     """Extract the pure neural Sakhiya Pranava `ॐ` (`ओऽऽऽम्`) from `v15_v1_chandas/sa_om.mp3` (rendered in Sakhiya's studio
     vocal tract) and phase-vocoder stretch its steady resonant `o` + `m` nucleus to `1.68s` with 5.2 Hz +/-12c Gamaka vibrato.
     100% neural waveform -> UTMOS ~3.98, ECAPA spk_sim ~0.85, zero synthetic buzz!"""
-    om_src = os.path.join(REPO, 'docs', 'samples', 'versions', 'v15_v1_chandas', 'sa_om.mp3')
+    om_src = os.path.join(REPO, 'docs', 'samples', 'versions', 'sakhiya_pro', 'sa_om.mp3')
+    if not os.path.exists(om_src):
+        om_src = os.path.join(REPO, 'docs', 'samples', 'versions', 'v15_v1_chandas', 'sa_om.mp3')
     if os.path.exists(om_src):
         w_full, _ = librosa.load(om_src, sr=SR, mono=True)
         # First 0.68s of v15_v1_chandas/sa_om.mp3 is the isolated resonant Pranava `ॐ` before the comma pause!
@@ -239,8 +241,10 @@ def build_vedic_anchors_and_subset(max_vc_clips: int = 100):
     anc_json_p = '/work/sp/v4/ref/anchor_v4.json'
     anc_ne_txt = json.load(open(anc_json_p))['ref_text'] if os.path.exists(anc_json_p) else 'अभिनेत्री श्रीशा कार्की र अभिनेत्री मनिषा कोइरालाको जीवनीबाट सिनेमा प्रभावित नहुने उनले दाबी गरे।'
 
-    # Build the 3 canonical 8-10s Vedic anchors combining Sakhiya's studio vocal-tract reference + Chandas studio chanting (`v15_v1_chandas`)
-    v15_dir = os.path.join(REPO, 'docs', 'samples', 'versions', 'v15_v1_chandas')
+    # Build the 3 canonical 8-10s Vedic anchors combining Sakhiya's studio vocal-tract reference + sakhiya_pro chanting (same nep_6834 voice!)
+    v15_dir = os.path.join(REPO, 'docs', 'samples', 'versions', 'sakhiya_pro')
+    if not os.path.isdir(v15_dir):
+        v15_dir = os.path.join(REPO, 'docs', 'samples', 'versions', 'v15_v1_chandas')
     anchor_specs = [
         ('rv', 'vedic_rv_ref.wav', f'{v15_dir}/sa_rv.mp3', 'अग्निमीळे पुरोहितं यज्ञस्य देवमृत्विजम् । होतारं रत्नधातमम् ॥'),
         ('om', 'vedic_gayatri_om_ref.wav', f'{v15_dir}/sa_gayatri.mp3', 'ॐ भूर्भुवः स्वः । तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि । धियो यो नः प्रचोदयात् ॥'),
