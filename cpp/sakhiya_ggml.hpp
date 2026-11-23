@@ -404,6 +404,43 @@ public:
                                                int C_out, int K, int stride, int pad) {
         int T_out = (T - 1) * stride - 2 * pad + K;
         std::vector<float> out(static_cast<size_t>(C_out) * T_out);
+        if (C_out % 4 == 0) {
+#pragma omp parallel for schedule(static)
+            for (int co4 = 0; co4 < C_out; co4 += 4) {
+                float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
+                float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
+                float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
+                float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
+                float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T_out;
+                float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T_out;
+                float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T_out;
+                float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T_out;
+                for (int to = 0; to < T_out; ++to) {
+                    o0[to] = b0; o1[to] = b1; o2[to] = b2; o3[to] = b3;
+                }
+                for (int ci = 0; ci < C_in; ++ci) {
+                    const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
+                    const float * __restrict__ w0 = weight.data() + (static_cast<size_t>(ci) * C_out + co4 + 0) * K;
+                    const float * __restrict__ w1 = weight.data() + (static_cast<size_t>(ci) * C_out + co4 + 1) * K;
+                    const float * __restrict__ w2 = weight.data() + (static_cast<size_t>(ci) * C_out + co4 + 2) * K;
+                    const float * __restrict__ w3 = weight.data() + (static_cast<size_t>(ci) * C_out + co4 + 3) * K;
+                    for (int k = 0; k < K; ++k) {
+                        float v0 = w0[k], v1 = w1[k], v2 = w2[k], v3 = w3[k];
+                        for (int ti = 0; ti < T; ++ti) {
+                            int to = ti * stride - pad + k;
+                            if (to >= 0 && to < T_out) {
+                                float xv = x_ci[ti];
+                                o0[to] += xv * v0;
+                                o1[to] += xv * v1;
+                                o2[to] += xv * v2;
+                                o3[to] += xv * v3;
+                            }
+                        }
+                    }
+                }
+            }
+            return out;
+        }
 #pragma omp parallel for schedule(static)
         for (int co = 0; co < C_out; ++co) {
             float b_val = bias.empty() ? 0.0f : bias[co];
