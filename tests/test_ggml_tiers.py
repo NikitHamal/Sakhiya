@@ -155,7 +155,7 @@ def _env():
 def _tier_test(tier):
     import pytest
     ck, gg, cli = _env()
-    if not (os.path.exists(cli) and os.path.exists(os.path.join(ck, TIERS[tier][0]))):
+    if not (os.path.exists(cli) and all(os.path.exists(os.path.join(ck, f)) for f in TIERS[tier][:2])):
         pytest.skip("checkpoints or sakhiya-cli not available")
     os.makedirs(gg, exist_ok=True)
     rep = evaluate_tier(tier, ck, gg, cli, threads=4, sentences=SENTENCES[:2])
