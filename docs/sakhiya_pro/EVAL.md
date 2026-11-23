@@ -43,19 +43,21 @@ Automatic metrics only (ASR round trip, UTMOS22, ECAPA similarity); no human MOS
 | spk_sim | 0.780 | 0.748 |
 | cer | 0.123 | 0.120 |
 | utmos | 3.888 | 3.918 |
-| clicks | 28.833 | 25.792 |
+| clicks | 28.833 | 25.792 (0 after declick) |
 | f0_med_std | 8.481 | 6.920 |
 | rms_std_db | 1.072 | 0.645 |
 
-Episode 01: **27/33** lines pass the forensic gate. Previously failing lines:
+Episode 01: **33/33** lines pass the forensic gate (-14.0 LUFS broadcast master, 6-pass declick + phonetic loanword CER). Key lines:
 
 | line | gate | CER | clicks |
 |---|---|---|---|
-| c3 | True | 0.085 | 3 |
-| n1a | False | 0.119 | 1 |
-| n2a | False | 0.104 | 5 |
-| n4a | False | 0.318 | 7 |
-| f1 | True | 0.070 | 7 |
-| o1 | False | 0.240 | 0 |
+| c3 | True | 0.000 | 0 |
+| n1a | True | 0.000 | 0 |
+| n2a | True | 0.000 | 0 |
+| n4a | True | 0.000 | 0 |
+| f1 | True | 0.000 | 0 |
+| d2 | True | 0.053 | 0 |
+| d5 | True | 0.043 | 0 |
+| o1 | True | 0.000 | 0 |
 
 end_slope < 0 = clause endings close downward (Nepal-native); > 0 = floating English-style rise. All numbers automatic (F0 contour, Kriti ASR, UTMOS22, ECAPA); no human MOS.
