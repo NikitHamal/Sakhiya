@@ -210,20 +210,17 @@ def select_clean_anchor():
     return ref_meta
 
 
-def stitch_clean_job(job):
-    """Denoise each source clip, trim, apply 15ms/40ms fades, and stitch into 6-15s natural utterance over -58 dB studio air."""
-    out_path, paths, seed = job
-    rng = random.Random(seed)
-    parts = []
-    raw_clicks_sum = 0
-    clean_clicks_sum = 0
-    for i, p in enumerate(paths):
-        w_raw, sr = sf.read(p, dtype='float32')
+def _denoise_one_clip(job):
+    """Denoise a single source clip once into /work/sp/v4/clean_pool/ and return (uid, dst, dur, raw_clicks, clean_clicks)."""
+    uid, src_path = job
+    dst_path = f'{O}/clean_pool/{uid}.wav'
+    try:
+        w_raw, sr = sf.read(src_path, dtype='float32')
         if w_raw.ndim > 1:
             w_raw = w_raw.mean(1)
         d_raw = np.abs(np.diff(w_raw))
         pk_raw = float(np.abs(w_raw).max())
-        raw_clicks_sum += int((d_raw > max(0.35 * max(pk_raw, 1e-3), 0.12)).sum())
+        raw_c = int((d_raw > max(0.35 * max(pk_raw, 1e-3), 0.12)).sum())
 
         w = studio_denoise_24k(w_raw, sr)
         idx = librosa.effects.trim(w, top_db=38)[1]
@@ -237,15 +234,27 @@ def stitch_clean_job(job):
 
         d_cl = np.abs(np.diff(w))
         pk_cl = float(np.abs(w).max())
-        clean_clicks_sum += int((d_cl > max(0.35 * max(pk_cl, 1e-3), 0.12)).sum())
+        cln_c = int((d_cl > max(0.35 * max(pk_cl, 1e-3), 0.12)).sum())
+        sf.write(dst_path, w, SR)
+        return uid, dst_path, len(w) / SR, raw_c, cln_c
+    except Exception:
+        return None
+
+
+def stitch_clean_job(job):
+    """Stitch already studio-denoised 24 kHz clips into a 6-15s natural utterance over -58 dB studio air."""
+    out_path, paths, seed = job
+    rng = random.Random(seed)
+    parts = []
+    for i, p in enumerate(paths):
+        w, _ = sf.read(p, dtype='float32')
         parts.append(w)
         if i < len(paths) - 1:
             gap_s = rng.uniform(0.18, 0.40)
             parts.append(R4.make_room_tone(int(gap_s * SR), SR, db=-58.0, seed=seed + i))
-
     full = np.concatenate(parts)
     sf.write(out_path, full, SR)
-    return len(full) / SR, raw_clicks_sum / max(1, len(paths)), clean_clicks_sum / max(1, len(paths))
+    return len(full) / SR
 
 
 def chunks(rows, rng, lo=6.0, hi=15.0):
@@ -343,11 +352,31 @@ def gather_pool():
 def build_4A_and_4B():
     ref_meta = select_clean_anchor()
     rows = gather_pool()
+    os.makedirs(O + '/clean_pool', exist_ok=True)
     os.makedirs(O + '/stage4A/wav', exist_ok=True)
     os.makedirs(O + '/stage4B/wav', exist_ok=True)
 
-    groups = collections.defaultdict(list)
+    # Denoise each unique source clip ONCE in parallel across 18 CPU cores
+    denoise_jobs = [(r['id'], r['audio_path']) for r in rows]
+    print(f'Studio-denoising {len(denoise_jobs)} unique Nepal-native clips across 18 CPU workers...', flush=True)
+    with Pool(18) as pl:
+        dn_res = [x for x in pl.imap_unordered(_denoise_one_clip, denoise_jobs, chunksize=32) if x is not None]
+
+    clean_map = {}
+    raw_cl_list, cln_cl_list = [], []
+    for uid, dst_path, dur_c, rc, cc in dn_res:
+        clean_map[uid] = (dst_path, dur_c)
+        raw_cl_list.append(rc)
+        cln_cl_list.append(cc)
+
+    clean_rows = []
     for r in rows:
+        if r['id'] in clean_map:
+            cp, cd = clean_map[r['id']]
+            clean_rows.append(dict(r, audio_path=cp, dur=cd))
+
+    groups = collections.defaultdict(list)
+    for r in clean_rows:
         src_key = 'v13' if r['src'].startswith('v13') else r['src']
         grp_key = (src_key, r['spk'])
         groups[grp_key].append(r)
@@ -366,15 +395,12 @@ def build_4A_and_4B():
                 jobs_A.append((out_wav, [x['audio_path'] for x in ch], hash(uid) % 10**6))
                 meta_A.append(dict(id=uid, audio_path=out_wav, text=' '.join(x['text'] for x in ch), language_id='npi', src=src_k))
 
-    print(f'Denoising & stitching {len(jobs_A)} Stage-4A utterances (6-15s)...', flush=True)
+    print(f'Stitching {len(jobs_A)} Stage-4A utterances (6-15s)...', flush=True)
     with Pool(18) as pl:
-        res_A = pl.map(stitch_clean_job, jobs_A, chunksize=16)
+        durs_A = pl.map(stitch_clean_job, jobs_A, chunksize=32)
 
-    raw_cl_list, cln_cl_list = [], []
-    for m, (dur, rc, cc) in zip(meta_A, res_A):
+    for m, dur in zip(meta_A, durs_A):
         m['dur'] = round(dur, 2)
-        raw_cl_list.append(rc)
-        cln_cl_list.append(cc)
 
     rng = random.Random(42)
     rng.shuffle(meta_A)
@@ -394,7 +420,7 @@ def build_4A_and_4B():
 
     # Build Stage 4B: tight clean-anchor cadence lock (studio-denoised anchor speaker stitched 6-15s x5 + 25% Stage-4A SLR43/v13 diversity)
     anchor_spk = ref_meta.get('spk', '6834')
-    anchor_rows = [r for r in rows if r['src'] == 'slr43' and r['spk'] == anchor_spk]
+    anchor_rows = [r for r in clean_rows if r['src'] == 'slr43' and r['spk'] == anchor_spk]
     jobs_B, meta_B = [], []
     for rep in range(5):
         rng_b = random.Random(800 + rep)
@@ -405,10 +431,10 @@ def build_4A_and_4B():
             jobs_B.append((out_wav, [x['audio_path'] for x in ch], hash(uid) % 10**6))
             meta_B.append(dict(id=uid, audio_path=out_wav, text=' '.join(x['text'] for x in ch), language_id='npi'))
 
-    print(f'Denoising & stitching {len(jobs_B)} Stage-4B anchor utterances...', flush=True)
+    print(f'Stitching {len(jobs_B)} Stage-4B anchor utterances...', flush=True)
     with Pool(18) as pl:
-        res_B = pl.map(stitch_clean_job, jobs_B, chunksize=8)
-    hrs_B = sum(r[0] for r in res_B) / 3600.0
+        durs_B = pl.map(stitch_clean_job, jobs_B, chunksize=16)
+    hrs_B = sum(durs_B) / 3600.0
 
     clean_div_pool = [m for m in train_A if m['src'] in ('slr43', 'v13')]
     div_B = random.Random(19).sample(clean_div_pool, min(len(clean_div_pool), int(len(meta_B) * 0.25 / 0.75)))
