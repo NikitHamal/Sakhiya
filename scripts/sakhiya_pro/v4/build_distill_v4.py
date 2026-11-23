@@ -38,15 +38,16 @@ def _extract_f0(w):
 
 
 def _process_raw_item(job):
-    """Denoise, de-click, level, extract WORLD F0, and encode phoneme IDs for one (id, wav_path, text, lang, src, style)."""
+    """Load studio-denoised 24 kHz clip, extract WORLD F0, and encode phoneme IDs for one (id, wav_path, text, lang, src, style)."""
     uid, wav_path, text, lang, src, style, split = job
     from sakhiya import g2p, symbols
     try:
         w, sr = sf.read(wav_path, dtype='float32')
         if w.ndim > 1:
             w = w.mean(1)
-        w = B4.studio_denoise_24k(w, sr)
-        w = R4.trim_clause(w, SR, lead=0.05, tail=0.14)
+        if sr != SR:
+            w = librosa.resample(w, orig_sr=sr, target_sr=SR)
+        w = R4.declick_and_deess(w, SR)
         n = (len(w) // HOP) * HOP
         w = w[:n]
         T = n // HOP
