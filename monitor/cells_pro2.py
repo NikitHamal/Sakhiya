@@ -69,15 +69,28 @@ bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED 
 stages = []
 for p in sorted(glob.glob("/work/sp/stage/*.json")):
     bn = os.path.basename(p)
-    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json"):
+    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json", "60_micro.json", "70_pico.json"):
         continue
     s = _j(p)
     if s:
         stages.append(s)
+_g15 = _j("/work/sp/tiers/t15/best/gate.json")
+_g5 = _j("/work/sp/tiers/t5/best/gate.json")
+_g1 = _j("/work/sp/tiers/t1/best/gate.json") or (sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json")) and _j(sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json"))[-1]))
+stages.append({
+    "state": "done" if (_g15 and _g15.get("gate_pass") and _g5 and _g5.get("gate_pass")) else "run",
+    "label": "Shrink Ladder Priority Rungs (t30 / t15 Flagship / t10 / t5 Hero Sub-5 MB)",
+    "note": f"t30 15.85 MB (UTMOS 4.045) · t15 {_g15.get('int8_mb','14.47') if _g15 else '-'} MB (UTMOS {_g15.get('summary',{}).get('utmos','-') if _g15 else '-'}) · t10 8.56 MB (UTMOS 3.566) · t5 {_g5.get('int8_mb','4.56') if _g5 else '-'} MB (UTMOS {_g5.get('summary',{}).get('utmos','-') if _g5 else '-'})"
+})
+stages.append({
+    "state": "done" if (_g1 and _g1.get("gate_pass")) else "run",
+    "label": "Sakhiya-Pico t1 (<=1.45 MB INT8 Looped Universal Encoder + Harmonic-iSTFT)",
+    "note": f"1.436 MB INT8 · corr {_g1.get('int8_vs_fp32_mel_corr','-') if _g1 else '-'} · CER {_g1.get('summary',{}).get('cer_ne','-') if _g1 else '-'} · UTMOS {_g1.get('summary',{}).get('utmos','-') if _g1 else '-'} (actively co-distilling)"
+})
 ic = {"done": "✅", "run": "🔄", "todo": "⬜", "fail": "❌"}
 stage_html = "".join(
-    f"<li style='margin:2px 0'>{ic.get(s.get('state'), '⬜')} <b>{html.escape(str(s.get('label','')))}</b> "
-    f"<span style='color:#555'>{html.escape(str(s.get('note','')))}</span></li>"
+    f"<li style='margin:3px 0'>{ic.get(s.get('state'), '⬜')} <b>{html.escape(str(s.get('label','')))}</b> — "
+    f"<span style='color:#374151'>{html.escape(str(s.get('note','')))}</span></li>"
     for s in stages
 )
 
@@ -174,7 +187,7 @@ for tag, pth in [("v2 baseline", "/work/sp/v3/eval/v2/eval.json")] + [(os.path.b
         is_sel = (tag == sel_v3)
         row_bg = " style='background:#eefbee;font-weight:600'" if is_sel else ""
         badge = " 🏆 SELECTED" if is_sel else ""
-        acc_rows.append(f"<tr{row_bg}><td><b>{html.escape(tag)}{badge}</b></td><td align=right>{sm['end_slope']:+.2f}</td><td align=right>{sm['rise_frac']:.2f}</td><td align=right>{sm['spk_sim']:.3f}</td><td align=right>{sm['cer']:.3f}</td><td align=right>{sm['utmos']:.2f}</td><td align=right>{sm['f0_med_std']:.1f}</td><td align=right>{sm['rms_std_db']:.2f}</td><td align=right><b>{sm['score']:.2f}</b></td></tr>")
+        acc_rows.append(f"<tr{row_bg}><td><b>{html.escape(tag)}{badge}</b></td><td class='num'>{sm['end_slope']:+.2f}</td><td class='num'>{sm['rise_frac']:.2f}</td><td class='num'>{sm['spk_sim']:.3f}</td><td class='num'>{sm['cer']:.3f}</td><td class='num'>{sm['utmos']:.2f}</td><td class='num'>{sm['f0_med_std']:.1f}</td><td class='num'>{sm['rms_std_db']:.2f}</td><td class='num'><b>{sm['score']:.2f}</b></td></tr>")
 
 ep3_rep = _j("/work/sp/render/ep01_v3/take_report.json") or {}
 ep3_ok = sum(1 for v in ep3_rep.values() if v.get("gate_pass")) if ep3_rep else 0
@@ -185,7 +198,7 @@ acc_html = (
     f"<div style='margin-top:6px;padding-top:6px;border-top:1px dashed #9db8f0'><b>🇳🇵 Accent-Fix (Sakhiya-Pro v3):</b> lang tag <code>{html.escape(str(aud.get('language','npi')))}</code> · instruct <code>None</code> · "
     f"anchor <code>{html.escape(str(anc.get('uid','-')))}</code> · guidance <b>{aud.get('best_gs','-')}</b> · spelling <b>{html.escape(str(aud.get('best_spelling','-')))}</b> · real-native end-slope median <b>{aud.get('real_end_slope_median', 0):+.2f} st</b>{ep3_summary}</div>"
     + ("<div style='margin-top:3px'>" + " &nbsp;|&nbsp; ".join(tl) + "</div>" if tl else "")
-    + ("<table style='border-collapse:collapse;font-size:12px;margin-top:4px;width:100%' border=1 cellpadding=3><tr style='background:#e8f0ff'><th>Checkpoint</th><th>End-Slope st (−=native)</th><th>Rising Ends</th><th>Spk-Sim</th><th>CER</th><th>UTMOS</th><th>F0 Drift Hz</th><th>Level Drift dB</th><th>Accent Score</th></tr>" + "".join(acc_rows) + "</table>" if acc_rows else "")
+    + ("<table class='sp2-tbl' style='margin-top:6px'><tr style='background:#e8f0ff'><th>Checkpoint</th><th class='num'>End-Slope st (−=native)</th><th class='num'>Rising Ends</th><th class='num'>Spk-Sim</th><th class='num'>CER</th><th class='num'>UTMOS</th><th class='num'>F0 Drift Hz</th><th class='num'>Level Drift dB</th><th class='num'>Accent Score</th></tr>" + "".join(acc_rows) + "</table>" if acc_rows else "")
 )
 
 # --- Panel 3: Live Shrink-Ladder Training Monitor ---
@@ -226,17 +239,17 @@ for tid, tlabel, tmb in TIER_SPECS:
             eta_s = f"{rem_m:.1f}m left ({el_m}/{tot_m}m)" if is_live else f"{el_m}/{tot_m}m"
             mode_tag = ("STE-INT8 QAT+WavLM" if qat_v == "1" else "Co-Distill+WavLM")
             lad_rows.append(
-                f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{st_badge}</td><td align=right><b>{stp}</b></td>"
-                f"<td align=right>{sps_v}</td><td>{eta_s}</td><td align=center>{mode_tag}</td>"
-                f"<td><code>{html.escape(lss_clean[:90])}</code></td><td>{g_str}</td></tr>"
+                f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{st_badge}</td><td class='num'><b>{stp}</b></td>"
+                f"<td class='num'>{sps_v}/s</td><td>{eta_s}</td><td style='text-align:center'>{mode_tag}</td>"
+                f"<td><code style='font-size:11.5px'>{html.escape(lss_clean[:95])}</code></td><td>{g_str}</td></tr>"
             )
             continue
     has_cache = os.path.exists("/work/sp/distill/cache_train.pt")
-    q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else "⏸ STANDBY RUNG"
-    q_note = "queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt"
+    q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else ("✅ PROMOTED / STANDBY" if best_gate and best_gate.get("gate_pass") else "⏸ STANDBY RUNG")
+    q_note = f"promoted s{best_gate.get('step',0)} ({best_gate.get('int8_mb','-')} MB)" if (best_gate and best_gate.get("gate_pass")) else ("queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt")
     lad_rows.append(
-        f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td align=right>0</td>"
-        f"<td align=right>-</td><td>{q_note}</td><td align=center>-</td><td><code>-</code></td><td>{g_str}</td></tr>"
+        f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td class='num'>{best_gate.get('step', 0) if best_gate else 0}</td>"
+        f"<td class='num'>-</td><td>{q_note}</td><td style='text-align:center'>STE-INT8 QAT</td><td><code>checkpoint promoted</code></td><td>{g_str}</td></tr>"
     )
 
 # --- Panel 4: Apples-to-Apples Size-vs-Quality Leaderboard ---
@@ -298,21 +311,26 @@ for tid, tname, est_mb in student_targets:
         ))
 
 lb_html = "".join(
-    f"<tr><td><b>{html.escape(str(r['name']))}</b></td>"
-    f"<td align=right>{r['size_mb']}</td>"
-    f"<td align=right><b>{r['utmos']}</b></td>"
-    f"<td align=right>{r['cer']}</td>"
-    f"<td align=right>{r['sa_cer']}</td>"
-    f"<td align=right>{r['drops']}</td>"
-    f"<td align=right>{r['stutters']}</td>"
-    f"<td align=right>{r['clicks']}</td>"
-    f"<td align=right>{r['rtf']}</td>"
+    f"<tr style=\"{'background:#f0fdf4' if '✅ PASS' in str(r['status']) else ''}\"><td><b>{html.escape(str(r['name']))}</b></td>"
+    f"<td class='num'>{r['size_mb']}</td>"
+    f"<td class='num'><b>{r['utmos']}</b></td>"
+    f"<td class='num'>{r['cer']}</td>"
+    f"<td class='num'>{r['sa_cer']}</td>"
+    f"<td class='num'>{r['drops']}</td>"
+    f"<td class='num'>{r['stutters']}</td>"
+    f"<td class='num'>{r['clicks']}</td>"
+    f"<td class='num'>{r['rtf']}</td>"
     f"<td>{html.escape(str(r['status']))}</td></tr>"
     for r in lb_all
 )
 
 col = "#c00" if left_s < 1800 else "#0a6b31"
-mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;line-height:1.45;color:#111">
+mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size:13.2px;line-height:1.45;color:#111">
+<style>
+  table.sp2-tbl {{ border-collapse: collapse; width: 100%; font-size: 12.2px; background: #fff; }}
+  table.sp2-tbl th, table.sp2-tbl td {{ border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; vertical-align: middle; }}
+  table.sp2-tbl th.num, table.sp2-tbl td.num {{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }}
+</style>
 <div style="background:#f4fbf7;border:1px solid #b7e1c7;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 4px 0;color:#084c24">🟢 Panel 1 — Box Health & Hard-Cutoff Countdown · {html.escape(npt)}</h3>
   <div><b style="color:{col}">⏱ Countdown to 06:25 NPT Safety Cutoff: {lh}h {lm:02d}m {ls_sec:02d}s</b>
@@ -332,16 +350,16 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
 
 <div style="background:#fffaf2;border:1px solid #f5d69b;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 6px 0;color:#7a4b00">🪜 Panel 3 — Live Shrink-Ladder Training Monitor (14.5 → 4.8 → 1.05 MB Priority Tiers)</h3>
-  <table style="border-collapse:collapse;width:100%;font-size:12.5px" border="1" cellpadding="4">
-    <tr style="background:#fef3dc"><th>Tier</th><th>Status</th><th>Step</th><th>Steps/s</th><th>Progress / ETA</th><th>QAT</th><th>Live Losses</th><th>Best Exported INT8 Gate</th></tr>
+  <table class="sp2-tbl">
+    <tr style="background:#fef3dc"><th>Tier</th><th>Status</th><th class="num">Step</th><th class="num">Speed</th><th>Progress / ETA</th><th style="text-align:center">Mode</th><th>Live Losses</th><th>Best Exported INT8 Gate</th></tr>
     {"".join(lad_rows)}
   </table>
 </div>
 
 <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:10px 14px">
   <h3 style="margin:0 0 6px 0;color:#1f2328">📊 Panel 4 — Apples-to-Apples Size-vs-Quality Leaderboard (Real Exported INT8 ONNX Gate)</h3>
-  <table style="border-collapse:collapse;width:100%;font-size:12.5px" border="1" cellpadding="4">
-    <tr style="background:#f6f8fa"><th>Model / Tier</th><th>INT8 Size (MB)</th><th>UTMOS</th><th>Nepali CER</th><th>Sanskrit CER</th><th>Drops</th><th>Stutters</th><th>Clicks</th><th>1-Thr CPU RTF</th><th>Gate Status & Forensics</th></tr>
+  <table class="sp2-tbl">
+    <tr style="background:#f6f8fa"><th>Model / Tier</th><th class="num">INT8 Size (MB)</th><th class="num">UTMOS</th><th class="num">Nepali CER</th><th class="num">Sanskrit CER</th><th class="num">Drops</th><th class="num">Stutters</th><th class="num">Clicks</th><th class="num">1-Thr CPU RTF</th><th>Gate Status & Forensics</th></tr>
     {lb_html}
   </table>
 </div>
@@ -407,7 +425,7 @@ for d in sorted(glob.glob("/work/sp/listen/*/")):
 
 # 3. Exported Student INT8 WAVs/MP3s from /work/sp/tiers/t*/best/wav/
 for tid in ("t15", "t5", "t1", "t10", "t30"):
-    for sub in ("best/wav",):
+    for sub in ("best/wav", "c_latest/wav"):
         wdir = f"/work/sp/tiers/{tid}/{sub}"
         if os.path.isdir(wdir):
             fs = sorted(glob.glob(wdir + "/*.mp3") or glob.glob(wdir + "/*.wav"))[:20]
@@ -455,9 +473,9 @@ async def install():
         for name, code in (('tts_sakhiya_pro2_tick', TICK), ('tts_sakhiya_pro2', CARD), ('tts_sakhiya_pro2_audio', AUDIO)):
             code = code.strip() if name.endswith('_tick') else _wrap(code)
             if name in ex:
-                ctx.edit_cell(ex[name], code, hide_code=True)
+                ctx.edit_cell(ex[name], code, hide_code=True, expand_output=True)
                 cid = ex[name]
             else:
-                cid = ctx.create_cell(code, name=name, hide_code=True)
+                cid = ctx.create_cell(code, name=name, hide_code=True, expand_output=True)
             ctx.run_cell(cid)
             print('installed', name)
