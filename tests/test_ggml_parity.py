@@ -178,12 +178,38 @@ def main():
     ap.add_argument("--am", default="/work/tts/runs/v5_c1/am.pt")
     ap.add_argument("--voc", default="/work/tts/runs/v5_c1/voc.pt")
     ap.add_argument("--gguf", default="/work/tts/models/sakhiya_f32.gguf")
+    ap.add_argument("--gguf-f16", default="/work/tts/models/sakhiya_f16.gguf")
+    ap.add_argument("--gguf-q8", default="/work/tts/models/sakhiya_q8_0.gguf")
     ap.add_argument("--out-dir", default=os.path.join(REPO_ROOT, "eval", "ggml_proof"))
-    ap.add_argument("--threads", type=int, default=4)
+    ap.add_argument("--threads", type=int, default=8)
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
     assert os.path.exists(args.cli), f"sakhiya-cli binary not found at {args.cli}"
+
+    print("0. Verifying all MASTER_15_CLIPS & frontend G2P / Sanskrit phoneme IDs 100% exact parity...")
+    from scripts.freeze_version_pack import MASTER_15_CLIPS
+    for cid, lg, st, txt in MASTER_15_CLIPS:
+        if lg == "auto":
+            continue
+        cpp_g2p = json.loads(subprocess.check_output([args.cli, "--g2p-only", "-t", txt, "-l", lg], text=True))
+        if lg == "sa":
+            ch_info = CH.compile_chandas(txt, bpm=75.0, tonic_hz=215.0)
+            ph, off, dm = ch_info["ph"], ch_info["off"], ch_info["dm"]
+            sv_sc = 0.52 if ch_info.get("has_vedic_marks") else 0.48
+        else:
+            ph, off = g2p.text_to_phones_acc(txt, lg)
+            dm = g2p.phone_dm(ph)
+            sv_sc = 1.15
+        sid = [S.SYM2ID.get(p, -1) for p in ph]
+        py_ids = [i for i in sid if i >= 0]
+        py_pa = np.array([o * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+        py_dm = np.array([d for d, i in zip(dm, sid) if i >= 0], dtype=np.float32)
+        assert cpp_g2p["ph"] == ph, f"MASTER_15 ph mismatch on {cid}: {cpp_g2p['ph']} vs {ph}"
+        assert cpp_g2p["ids"] == py_ids, f"MASTER_15 ids mismatch on {cid}: {cpp_g2p['ids']} vs {py_ids}"
+        assert float(np.max(np.abs(np.array(cpp_g2p["pitch_add"], dtype=np.float32) - py_pa))) < 1e-6
+        assert float(np.max(np.abs(np.array(cpp_g2p["dm"], dtype=np.float32) - py_dm))) < 1e-6
+    print("   [PASS] All MASTER_15_CLIPS phoneme IDs, pitch_add, and dm 100% exact match.")
 
     print("1. Verifying Sanskrit SLP1 & Laya Scales 100% parity...")
     for s_txt in SANSKRIT_SLP1_SENTENCES:
@@ -280,6 +306,34 @@ def main():
         assert mel_diff < 1e-3, f"Mel max_abs_diff {mel_diff} >= 1e-3 on {cid}"
         assert wav_mae < 1e-3, f"Wav mean_abs_diff {wav_mae} >= 1e-3 on {cid}"
         assert wav_cos >= 0.998, f"Wav cosine_sim {wav_cos} < 0.998 on {cid}"
+
+    # Also benchmark FP16 and Q8_0 GGUF models on ne_kathmandu and sa_om
+    report["quantized_tiers"] = {}
+    for q_tag, q_path in [("f32", args.gguf), ("f16", args.gguf_f16), ("q8_0", args.gguf_q8)]:
+        if not os.path.exists(q_path):
+            continue
+        sz_mb = round(os.path.getsize(q_path) / (1024 * 1024), 2)
+        q_items = []
+        for cid, lang, style, text in [TEST_SENTENCES[0], TEST_SENTENCES[4]]:
+            ref = pytorch_reference_stages(am, voc, text, lang, style)
+            with tempfile.TemporaryDirectory() as tmpd:
+                subprocess.run(
+                    [args.cli, "-m", q_path, "-t", text, "-l", lang, "-s", style,
+                     "-o", os.path.join(tmpd, "q.wav"), "-j", str(args.threads), "--dump-stages", tmpd],
+                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                )
+                meta = json.load(open(os.path.join(tmpd, "meta.json")))
+                cpp_mel = np.fromfile(os.path.join(tmpd, "mel.f32.bin"), dtype=np.float32).reshape(100, meta["T_mel"])
+                cpp_wav = np.fromfile(os.path.join(tmpd, "wav.f32.bin"), dtype=np.float32)
+            mel_d = float(np.max(np.abs(cpp_mel - ref["mel"])))
+            wav_cos = cosine_sim(cpp_wav, ref["wav"])
+            q_items.append(dict(
+                id=cid, mel_max_abs_diff=mel_d, wav_cosine_sim=wav_cos,
+                cpp_rtf=round(meta["rtf"], 4), cpp_synth_ms=round(meta["synth_ms"], 2)
+            ))
+            assert wav_cos >= 0.998, f"{q_tag} cosine_sim {wav_cos} < 0.998 on {cid}"
+        report["quantized_tiers"][q_tag] = dict(size_mb=sz_mb, results=q_items)
+        print(f"   [GGUF {q_tag:4s} | {sz_mb:5.2f} MB] ne_cos={q_items[0]['wav_cosine_sim']:.6f} sa_cos={q_items[1]['wav_cosine_sim']:.6f} RTF={q_items[0]['cpp_rtf']:.4f}")
 
     json.dump(report, open(os.path.join(args.out_dir, "diff_gate_report.json"), "w"), indent=2, ensure_ascii=False)
     print("\nALL STAGE-BY-STAGE DIFF GATES PASSED!")
