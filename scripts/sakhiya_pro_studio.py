@@ -178,7 +178,7 @@ def run_job(job, eng):
             save(stage=f'synthesizing {i + 1}/{len(chunks)}', done=i, eta=eta)
             w, sr, info = R.take(c['text'], lang=lang, seeds=seeds_all)
             ch = [x for x in info['cands'] if x['seed'] == info['chosen']][0]
-            if ch['cer'] > 0.45 or ch['hindi'] > 1:   # safety net: dropped words / Hindi leak -> try a fresh set of seeds
+            if 'gate_pass' not in info and (ch['cer'] > 0.45 or ch['hindi'] > 1):   # safety net for older renderers (new one gates itself): dropped words / Hindi leak -> try a fresh set of seeds
                 w2, sr2, info2 = R.take(c['text'], lang=lang, seeds=[s + 1000 for s in seeds_all])
                 ch2 = [x for x in info2['cands'] if x['seed'] == info2['chosen']][0]
                 if ch2['sel'] > ch['sel']: w, sr, info, ch = w2, sr2, info2, ch2; st['log'].append(f'   ↻ line {i + 1} re-rolled (better take found)')
