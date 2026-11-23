@@ -20,3 +20,5 @@ next-env.d.ts
 /drizzle.config.json
 /models_src/
 *.whl
+build/
+build-*/

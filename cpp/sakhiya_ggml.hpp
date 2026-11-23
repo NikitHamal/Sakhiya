@@ -1813,6 +1813,15 @@ public:
             }
         }
 
+        return synth_from_ids(ph_valid, ids, dm_arr, pitch_add, lang, k, is_last, dump);
+    }
+
+    // Model stage shared by say_one() and the WASM/JNI `synthesize_ids` entry points: phone ids (already mapped through
+    // the Sakhiya symbol table) + per-phone duration multipliers + Chandas/Svara pitch offsets -> 24 kHz float PCM.
+    std::vector<float> synth_from_ids(const std::vector<std::string> & ph_valid, const std::vector<int64_t> & ids,
+                                      const std::vector<float> & dm_arr, const std::vector<float> & pitch_add,
+                                      const std::string & lang, const StyleConfig & k, bool is_last,
+                                      StageDump * dump = nullptr) const {
         std::vector<float> x_enc, logdur;
         run_encoder(ids, k.style_id, k.pitch_shift, k.pitch_scale, k.energy_scale, pitch_add, x_enc, logdur);
 
@@ -1866,6 +1875,23 @@ public:
             dump->spec_im = im_spec;
         }
         return w;
+    }
+
+    // Phone strings for a list of symbol ids (inverse of get_sym2id()).
+    std::vector<std::string> ids_to_phones(const std::vector<int64_t> & ids) const {
+        static const std::vector<std::string> id2sym = [] {
+            std::vector<std::string> v;
+            for (const auto & kv : get_sym2id()) {
+                if (kv.second < 0) continue;
+                if (static_cast<size_t>(kv.second) >= v.size()) v.resize(kv.second + 1);
+                v[kv.second] = kv.first;
+            }
+            return v;
+        }();
+        std::vector<std::string> out;
+        out.reserve(ids.size());
+        for (int64_t id : ids) out.push_back((id >= 0 && static_cast<size_t>(id) < id2sym.size()) ? id2sym[id] : std::string());
+        return out;
     }
 
     // Top-level say() matching SakhiyaONNX.say() in sakhiya/onnx_tts.py

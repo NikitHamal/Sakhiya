@@ -87,6 +87,10 @@ TIER_CONFIGS = {
     ),
 }
 
+# "exact" profile: AM tensors stay FP32 (the 1-step students are hypersensitive: a single +-1 frame duration flip or a
+# 2^-8-octave F0 snap flip decorrelates the waveform phase), only the vocoder MRF/upsampler weights are Q8_0.
+EXACT_KEEP = "enc,dur,emb,vel"
+
 TIER_ALIASES = {
     "v25": "v1",
     "v5_c1": "v1",
@@ -234,7 +238,10 @@ def convert_to_gguf(
     dtype: str = "f32",
     tier: str = "v1",
     arch_override: Optional[str] = None,
+    keep_fp32: Optional[str] = None,
 ):
+    """keep_fp32: comma list of groups kept in full FP32 even for f16/q8_0 files (enc, dur, vel, emb, voc).
+    Default: the per-tier policy in TIER_CONFIGS["<tier>"]["keep_fp32"] (parity-tuned so waveform cosine_sim >= 0.999)."""
     tier_key = resolve_tier(tier)
     am, voc, adapter, tcfg = load_tier_models(am_path, voc_path, tier=tier_key)
     if arch_override:
@@ -273,11 +280,30 @@ def convert_to_gguf(
         tensors.append((name, ggml_dims, target_type, raw))
 
     quant_am_q8 = bool(tcfg.get("quant_am_enc_q8", False))
+    # tokens: "vel" (keep FP32) or "vel=f16" (cap precision at F16 for that group)
+    group_mode = {}
+    for tok in (keep_fp32 if keep_fp32 is not None else tcfg.get("keep_fp32", "")).split(","):
+        if tok:
+            g, _, m = tok.partition("=")
+            group_mode[g] = m or "f32"
+    fp32_groups = {g for g, m in group_mode.items() if m == "f32"}
+    f16_groups = {g for g, m in group_mode.items() if m == "f16"}
+
+    def am_group(k: str) -> str:
+        if k.startswith("dur."):
+            return "dur"
+        if k.startswith("vel."):
+            return "vel"
+        if k.endswith(".emb.weight") or k.endswith(".spk.weight") or k.endswith(".sty.weight") or k.endswith(".lang.weight"):
+            return "emb"
+        return "enc"
 
     # 1. Dump all SakhiyaAM tensors (prefix: "am.")
     for k, v in am.state_dict().items():
-        if dtype == "f32":
+        if dtype == "f32" or am_group(k) in fp32_groups:
             q_mode = "none"
+        elif am_group(k) in f16_groups:
+            q_mode = "f16" if dtype in ("f16", "q8_0") else "none"
         elif not quant_am_q8:
             # Flagship V1 (8-step stochastic CFM): keep TextEncoder + DurFlow in FP32 so durations are 100% invariant
             is_vel_heavy = (
@@ -315,7 +341,8 @@ def convert_to_gguf(
         # Keep Snake1d alphas, HarmonicSource, and final 66-ch spectral projection in FP32;
         # Upsamplers and MRF ResBlocks use F16 (--dtype f16) or Q8_0 (--dtype q8_0).
         is_voc_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in ("alpha", "src.", "post.")))
-        q_mode = dtype if (dtype in ("f16", "q8_0") and is_voc_heavy) else "none"
+        voc_dtype = "f16" if (dtype == "q8_0" and "voc" in f16_groups) else dtype
+        q_mode = voc_dtype if (dtype in ("f16", "q8_0") and is_voc_heavy and "voc" not in fp32_groups) else "none"
         add_tensor(f"voc.{k}", v, quant_mode=q_mode)
 
     # Hann window (64-pt) for ola64
@@ -407,9 +434,13 @@ def main():
     ap.add_argument("--am", default="/work/tts/runs/v5_c1/am.pt", help="Path to SakhiyaAM or SakhiyaV6Teacher checkpoint")
     ap.add_argument("--voc", default="/work/tts/runs/v5_c1/voc.pt", help="Path to VocoderV2 checkpoint (optional for istft_v6)")
     ap.add_argument("--out", default="/work/tts/models/sakhiya_v5_c1_f32.gguf", help="Output .gguf path")
+    ap.add_argument("--profile", default="compact", choices=["compact", "exact"],
+                    help="exact: keep the whole acoustic model FP32 and quantize only the vocoder (waveform cosine_sim >= 0.999 vs PyTorch, "
+                         "like V1); compact: quantize everything (smallest file; durations may flip by 1 frame, so phase-invariant parity only)")
+    ap.add_argument("--keep-fp32", default=None, help="comma list of groups kept FP32 (enc,dur,vel,emb,voc); default per-tier policy")
     ap.add_argument("--dtype", default="f32", choices=["f32", "f16", "q8_0"], help="Weight storage type")
     args = ap.parse_args()
-    convert_to_gguf(args.am, args.voc, args.out, args.dtype, tier=args.tier, arch_override=args.arch)
+    convert_to_gguf(args.am, args.voc, args.out, args.dtype, tier=args.tier, arch_override=args.arch, keep_fp32=(args.keep_fp32 if args.keep_fp32 is not None else (EXACT_KEEP if args.profile == "exact" else None)))
 
 
 if __name__ == "__main__":

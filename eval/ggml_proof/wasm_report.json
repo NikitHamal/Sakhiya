@@ -1,0 +1,90 @@
+{
+ "wasm_bytes": 761679,
+ "results": [
+  {
+   "tier": "atom_lite",
+   "id": "ne_kathmandu",
+   "tier_meta": {
+    "tier": "atom_lite",
+    "vocChannels": 144,
+    "cfmSteps": 1
+   },
+   "samples": 126396,
+   "native_samples": 126396,
+   "sample_rate": 24000,
+   "nan_count": 0,
+   "cosine_sim": 1,
+   "load_ms": 105,
+   "synth_ms": 643,
+   "wasm_rtf": 0.1221,
+   "ok": true
+  },
+  {
+   "tier": "atom_lite",
+   "id": "sa_om",
+   "tier_meta": {
+    "tier": "atom_lite",
+    "vocChannels": 144,
+    "cfmSteps": 1
+   },
+   "samples": 273084,
+   "native_samples": 273084,
+   "sample_rate": 24000,
+   "nan_count": 0,
+   "cosine_sim": 1,
+   "load_ms": 105,
+   "synth_ms": 1268,
+   "wasm_rtf": 0.1115,
+   "ok": true
+  },
+  {
+   "tier": "atom_lite",
+   "id": "synthesize_ids",
+   "cosine_sim": 0.999995,
+   "ok": true
+  },
+  {
+   "tier": "atom",
+   "id": "ne_kathmandu",
+   "tier_meta": {
+    "tier": "atom",
+    "vocChannels": 320,
+    "cfmSteps": 1
+   },
+   "samples": 126396,
+   "native_samples": 126396,
+   "sample_rate": 24000,
+   "nan_count": 0,
+   "cosine_sim": 1,
+   "load_ms": 39,
+   "synth_ms": 2083,
+   "wasm_rtf": 0.3956,
+   "ok": true
+  },
+  {
+   "tier": "atom",
+   "id": "sa_om",
+   "tier_meta": {
+    "tier": "atom",
+    "vocChannels": 320,
+    "cfmSteps": 1
+   },
+   "samples": 273084,
+   "native_samples": 273084,
+   "sample_rate": 24000,
+   "nan_count": 0,
+   "cosine_sim": 1,
+   "load_ms": 39,
+   "synth_ms": 4831,
+   "wasm_rtf": 0.4246,
+   "ok": true
+  },
+  {
+   "tier": "atom",
+   "id": "synthesize_ids",
+   "cosine_sim": 0.999996,
+   "ok": true
+  }
+ ],
+ "passed": true
+}

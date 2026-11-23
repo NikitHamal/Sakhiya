@@ -46,10 +46,10 @@ SANSKRIT_SLP1_SENTENCES = [
 ]
 
 
-def pytorch_reference_stages(am, voc, text: str, lang: str, style: str):
+def pytorch_reference_stages(am, voc, text: str, lang: str, style: str, steps: int = 8, temp: float = 0.667):
     """Run exact PyTorch reference (EncExport -> duration rules -> DecExport -> VocSpecExport -> _ola64 -> _declick_np)."""
     enc_w = EncExport(am).eval()
-    dec_w = DecExport(am, steps=8, temp=0.667).eval()
+    dec_w = DecExport(am, steps=steps, temp=temp).eval()
     voc_w = VocSpecExport(voc).eval()
 
     k = dict(STYLES[style])

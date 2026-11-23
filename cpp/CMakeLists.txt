@@ -1,0 +1,52 @@
+# Zero-dependency Sakhiya engine targets (no ggml needed): libsakhiya (shared/static), sakhiya_jni (Android NDK), sakhiya-cli-lite.
+# Android:  cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake -S cpp -B build-android
+# Gradle:   externalNativeBuild { cmake { path "../cpp/CMakeLists.txt" } }
+# Desktop:  cmake -S cpp -B build-lib -DCMAKE_BUILD_TYPE=Release && cmake --build build-lib -j
+cmake_minimum_required(VERSION 3.14)
+project(sakhiya-engine LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+option(SAKHIYA_OPENMP "Use OpenMP when available (not on Android by default)" ON)
+
+add_library(sakhiya_core OBJECT sakhiya_capi.cpp)
+target_include_directories(sakhiya_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(sakhiya_core PUBLIC SAKHIYA_STANDALONE_GGUF=1)
+target_compile_options(sakhiya_core PRIVATE -O3 -funroll-loops -fno-math-errno -fno-trapping-math -Wno-unknown-pragmas)
+
+if(ANDROID)
+  # NEON on arm64 is enabled by default; armeabi-v7a needs -mfpu=neon (NDK adds it for android-24+).
+  add_library(sakhiya_jni SHARED android_jni.cpp $<TARGET_OBJECTS:sakhiya_core>)
+  target_include_directories(sakhiya_jni PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_compile_definitions(sakhiya_jni PRIVATE SAKHIYA_STANDALONE_GGUF=1)
+  target_link_libraries(sakhiya_jni PRIVATE log)
+else()
+  find_package(OpenMP)
+  add_library(sakhiya SHARED $<TARGET_OBJECTS:sakhiya_core>)
+  add_library(sakhiya_static STATIC $<TARGET_OBJECTS:sakhiya_core>)
+  set_target_properties(sakhiya_static PROPERTIES OUTPUT_NAME sakhiya)
+  if(SAKHIYA_OPENMP AND OpenMP_CXX_FOUND)
+    target_link_libraries(sakhiya PRIVATE OpenMP::OpenMP_CXX)
+    target_compile_options(sakhiya_core PRIVATE ${OpenMP_CXX_FLAGS})
+  endif()
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    target_compile_options(sakhiya_core PRIVATE -mavx2 -mfma)
+  endif()
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(sakhiya PRIVATE m)
+  endif()
+  add_executable(sakhiya-cli-lite sakhiya_cli.cpp $<TARGET_OBJECTS:sakhiya_core>)
+  target_include_directories(sakhiya-cli-lite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_compile_definitions(sakhiya-cli-lite PRIVATE SAKHIYA_STANDALONE_GGUF=1)
+  if(SAKHIYA_OPENMP AND OpenMP_CXX_FOUND)
+    target_link_libraries(sakhiya-cli-lite PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(sakhiya-cli-lite PRIVATE m)
+  endif()
+endif()
