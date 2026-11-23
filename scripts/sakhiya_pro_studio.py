@@ -48,7 +48,7 @@ def normalize_text(text):
         p = p.strip(' -•\t')
         if not p: continue
         if not re.search(r'[।॥?!.:;]["\')]*$', p):
-            p += '।' if len(re.findall(r'[\u0900-\u097f]', p)) >= len(re.findall(r'[A-Za-z]', p)) else '.'
+            p += '।' if re.search(r'[\u0900-\u097f]', p) else '.'
         paras.append(p)
     return '\n\n'.join(paras)
 
