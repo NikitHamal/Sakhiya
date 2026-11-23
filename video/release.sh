@@ -16,7 +16,9 @@ ffmpeg -y -loglevel error -i $B/voice.wav -c:a libmp3lame -b:a 160k $O/sakhiya-v
 ffmpeg -y -loglevel error -ss 4 -i $O/nebians-news-ep1.mp4 -frames:v 1 $O/poster.jpg
 NOTES="NEBians News, episode 01: Meet Sakhiya. 3:47, 1080p30. Voice: Sakhiya V1 int8 (docs/models_v2), default news style only, no other styles. Early phase model, trained for a few days. News as reported on 23 Nov 2026 (CNBC, Yahoo Finance, Indian Express, FT, AI Weekly). Source: video/ in this repo. Rendered on MoLab (canvas + Playwright + ffmpeg)."
 API=https://api.github.com/repos/$REPO/releases
-curl -s -X DELETE -H "Authorization: token $TOK" "$API/tags/$TAG" >/dev/null || true
+OLD=$(curl -s -H "Authorization: token $TOK" "$API/tags/$TAG" | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))")
+[ -n "$OLD" ] && curl -s -X DELETE -H "Authorization: token $TOK" "$API/$OLD" >/dev/null
+curl -s -X DELETE -H "Authorization: token $TOK" "https://api.github.com/repos/$REPO/git/refs/tags/$TAG" >/dev/null || true
 ID=$(curl -s -X POST -H "Authorization: token $TOK" $API -d "$(python3 -c "import json,sys;print(json.dumps(dict(tag_name='$TAG',name='NEBians News Ep.1: Meet Sakhiya',body=sys.argv[1],target_commitish='main')))" "$NOTES")" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
 for f in nebians-news-ep1.mp4 nebians-news-ep1.srt sakhiya-voice-only.mp3 poster.jpg; do
   curl -s -X POST -H "Authorization: token $TOK" -H "Content-Type: application/octet-stream" --data-binary @$O/$f "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$f" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('name'),d.get('size'),d.get('browser_download_url'))"
