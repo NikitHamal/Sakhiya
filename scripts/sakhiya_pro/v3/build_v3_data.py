@@ -77,6 +77,19 @@ def pool_rows():
             r = json.loads(l)
             if r.get('cer', 1) > 0.12 or r.get('utmos', 0) < 2.2 or not os.path.exists(r['audio_path']): continue
             rows.append(r)
+    rows = [r for r in rows if not r['src'].startswith('v13')]
+    # real Nepal-native news / storytelling / conversational clips (Nepal speakers only, no Indian broadcast, no vedic)
+    from build_s1 import clean_text
+    n13 = 0
+    for l in open('/work/sp/data/vedic/meta/meta.jsonl', encoding='utf8'):
+        x = json.loads(l)
+        if x.get('style') not in ('news', 'storytelling', 'conversational') or x.get('lang', 'ne') != 'ne': continue
+        if x.get('utmos', 0) < 1.9 or x.get('snr', 0) < 12 or x.get('agree', 0) < 0.70: continue
+        if str(x.get('spk', '')).startswith(('ind_', 'in_')) or 'indian' in str(x.get('tier', '')): continue
+        p = f"/work/sp/data/v13/wav/{x['id']}.wav"; t = clean_text(x['text'])
+        if not os.path.exists(p) or not t or not (1.5 <= x['dur'] <= 14): continue
+        rows.append(dict(id='v13_' + x['id'], audio_path=p, text=t, src='v13_' + x['style'], spk=str(x.get('spk')), dur=float(x['dur']), cer=0.0, utmos=x['utmos'])); n13 += 1
+    print('v13 rows', n13, flush=True)
     return rows
 
 
