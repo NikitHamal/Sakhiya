@@ -53,19 +53,19 @@ refresh_cards
 INIT_4A="/work/sp/models/OmniVoice"
 if [ -d "/work/sp/hf_pro_v1/v3" ]; then INIT_4A="/work/sp/hf_pro_v1/v3"; fi
 
-st 20_v4_A "20_v4_A: Stage 4A Broad Denoised Nepal-Native Phonology Pass (prompt_ratio 0.0, lr 1.2e-5 -> 2e-6)" run "step-50 watchdog active, cap <=50 min"
+st 20_v4_A "20_v4_A: Stage 4A Broad Denoised Nepal-Native Phonology Pass (prompt_ratio 0.0, lr 1.2e-5 -> 2e-6)" run "step-50 watchdog active, cap <=45 min"
 python3 $R/guarded_train.py \
   --name v4a \
-  --steps 2400 \
+  --steps 600 \
   --lr 1.2e-5 \
   --min_lr_ratio 0.1667 \
   --prompt_ratio 0.0 \
-  --batch_tokens 16384 \
-  --save_steps 800 \
-  --budget_min 50 \
+  --batch_tokens 8192 \
+  --save_steps 300 \
+  --budget_min 45 \
   --init "$INIT_4A" \
   --tokens /work/sp/v4/stage4A/tokens
-st 20_v4_A "20_v4_A: Stage 4A Broad Denoised Nepal-Native Phonology Pass" done "2400 steps completed"
+st 20_v4_A "20_v4_A: Stage 4A Broad Denoised Nepal-Native Phonology Pass" done "600 steps completed"
 refresh_cards
 
 st 30_v4_B "30_v4_B: Stage 4B Tight Clean-Anchor Cadence Lock (eval every 200 steps: 200..1000)" run "prompt_ratio 0.0, lr 3.5e-6 -> 1e-6, cap <=35 min"
@@ -75,16 +75,16 @@ python3 $R/guarded_train.py \
   --lr 3.5e-6 \
   --min_lr_ratio 0.2857 \
   --prompt_ratio 0.0 \
-  --batch_tokens 8192 \
+  --batch_tokens 4096 \
   --save_steps 200 \
   --budget_min 35 \
-  --init /work/sp/exp/v4a/checkpoint-2400 \
+  --init /work/sp/exp/v4a/checkpoint-600 \
   --tokens /work/sp/v4/stage4B/tokens
 st 30_v4_B "30_v4_B: Stage 4B Tight Clean-Anchor Cadence Lock" done "checkpoints 200, 400, 600, 800, 1000 saved"
 refresh_cards
 
 st 40_v4_verify "40_v4_verify: Fixed Accent & Cleanliness Selector across 200/400/600/800/1000" run "penalizing rise_frac>0.14, end_slope>-0.55, clicks>3, hf_karkar"
-for c in v4a/checkpoint-2400 v4b/checkpoint-200 v4b/checkpoint-400 v4b/checkpoint-600 v4b/checkpoint-800 v4b/checkpoint-1000; do
+for c in v4a/checkpoint-600 v4b/checkpoint-200 v4b/checkpoint-400 v4b/checkpoint-600 v4b/checkpoint-800 v4b/checkpoint-1000; do
   t=${c//\//_}
   if [ -d "/work/sp/exp/$c" ]; then
     python3 $V4/accent_eval_v4.py "/work/sp/exp/$c" "/work/sp/v4/eval/$t" > "$L/eval_$t.log" 2>&1 &

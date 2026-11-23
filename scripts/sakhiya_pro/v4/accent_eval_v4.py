@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixed Accent & Cleanliness Selector for Sakhiya-Pro v4 checkpoints.
+"""Fixed Accent & Cleanliness Selector for Sakhiya-Pro v4 checkpoints (Batched OmniVoice evaluation).
 
 Evaluates a candidate checkpoint on the 12 Nepal-native audit lines (with pure Devanagari spelling + De-Karkar chain)
 and strictly penalizes:
@@ -46,12 +46,14 @@ rw, rsr = sf.read(REF, dtype='float32')
 emb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
 rows = []
 
-for i, t0 in enumerate(LINES):
-    txt = nep_norm.normalize(R4.nativize_v4(t0))
-    for sd in (11, 22):
-        torch.manual_seed(sd)
-        a = m.generate(text=txt, language='npi', instruct=None, ref_audio=REF, ref_text=RT, num_step=32, guidance_scale=2.0)
-        w = R4.trim_clause(np.asarray(a[0], np.float32), m.sampling_rate)
+txts = [nep_norm.normalize(R4.nativize_v4(t0)) for t0 in LINES]
+langs = ['npi'] * len(LINES)
+
+for sd in (11, 22):
+    torch.manual_seed(sd)
+    outs = m.generate(text=txts, language=langs, instruct=None, ref_audio=REF, ref_text=RT, num_step=24, guidance_scale=2.0)
+    for i, (t0, a) in enumerate(zip(LINES, outs)):
+        w = R4.trim_clause(np.asarray(a, np.float32), m.sampling_rate)
         p = f'{OUT}/wav/l{i:02d}_s{sd}.wav'
         sf.write(p, w, m.sampling_rate)
         f = C.score_take(p, t0, emb)

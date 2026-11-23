@@ -222,8 +222,11 @@ def run_serial_tier(tier: str, minutes: float, data_pt: str, teacher_ckpt: str =
 if __name__ == '__main__':
     import torch
     data_pt = '/work/sp/distill_v4/cache_train.pt'
-    micro_min = float(os.environ.get('MICRO_MIN', '95'))
-    pico_min = float(os.environ.get('PICO_MIN', '95'))
-    run_serial_tier('micro', micro_min, data_pt)
-    micro_best_ckpt = f'{RUNS}/micro/ema_final.pt' if os.path.exists(f'{RUNS}/micro/ema_final.pt') else f'{RUNS}/micro/ema_latest.pt'
-    run_serial_tier('pico', pico_min, data_pt, teacher_ckpt=micro_best_ckpt)
+    # Round 1: Fast serial two-phase convergence + gate + freeze + HF upload (6 min each)
+    # Round 2: Extended serial multi-hour polish (85 min each) + optional Compact t10 (45 min)
+    for rnd, (m_min, p_min) in enumerate([(6.0, 6.0), (85.0, 85.0)], 1):
+        print(f'=== SERIAL LADDER ROUND {rnd} (micro={m_min}m, pico={p_min}m) ===', flush=True)
+        run_serial_tier('micro', m_min, data_pt)
+        micro_best_ckpt = f'{RUNS}/micro/ema_final.pt' if os.path.exists(f'{RUNS}/micro/ema_final.pt') else f'{RUNS}/micro/ema_latest.pt'
+        run_serial_tier('pico', p_min, data_pt, teacher_ckpt=micro_best_ckpt)
+    run_serial_tier('t10', 45.0, data_pt)
