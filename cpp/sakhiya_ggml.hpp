@@ -264,7 +264,39 @@ public:
         }
 
         if (K == 1 && stride == 1 && pad == 0 && groups == 1) {
-            // Pointwise 1x1 conv1d: weight [C_out, C_in], x [C_in, T]
+            // Pointwise 1x1 conv1d with 4-channel register blocking: weight [C_out, C_in], x [C_in, T]
+            if (C_out % 4 == 0) {
+#pragma omp parallel for schedule(static) if (C_out * T >= 4096)
+                for (int co4 = 0; co4 < C_out; co4 += 4) {
+                    const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in;
+                    const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in;
+                    const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in;
+                    const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in;
+                    float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
+                    float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
+                    float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
+                    float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
+                    float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T;
+                    float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T;
+                    float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T;
+                    float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T;
+                    for (int t = 0; t < T; ++t) {
+                        o0[t] = b0; o1[t] = b1; o2[t] = b2; o3[t] = b3;
+                    }
+                    for (int ci = 0; ci < C_in; ++ci) {
+                        float v0 = w0[ci], v1 = w1[ci], v2 = w2[ci], v3 = w3[ci];
+                        const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
+                        for (int t = 0; t < T; ++t) {
+                            float xv = x_ci[t];
+                            o0[t] += v0 * xv;
+                            o1[t] += v1 * xv;
+                            o2[t] += v2 * xv;
+                            o3[t] += v3 * xv;
+                        }
+                    }
+                }
+                return out;
+            }
 #pragma omp parallel for schedule(static) if (C_out * T >= 4096)
             for (int co = 0; co < C_out; ++co) {
                 const float * __restrict__ w_co = weight.data() + static_cast<size_t>(co) * C_in;
@@ -276,6 +308,50 @@ public:
                     const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
                     for (int t = 0; t < T; ++t) {
                         o_co[t] += w_val * x_ci[t];
+                    }
+                }
+            }
+            return out;
+        }
+
+        // General 1D convolution with 4-channel register blocking for stride==1, groups==1
+        if (stride == 1 && groups == 1 && C_out % 4 == 0) {
+#pragma omp parallel for schedule(static) if (C_out * T_out >= 2048)
+            for (int co4 = 0; co4 < C_out; co4 += 4) {
+                float b0 = bias.empty() ? 0.0f : bias[co4 + 0];
+                float b1 = bias.empty() ? 0.0f : bias[co4 + 1];
+                float b2 = bias.empty() ? 0.0f : bias[co4 + 2];
+                float b3 = bias.empty() ? 0.0f : bias[co4 + 3];
+                float * __restrict__ o0 = out.data() + static_cast<size_t>(co4 + 0) * T_out;
+                float * __restrict__ o1 = out.data() + static_cast<size_t>(co4 + 1) * T_out;
+                float * __restrict__ o2 = out.data() + static_cast<size_t>(co4 + 2) * T_out;
+                float * __restrict__ o3 = out.data() + static_cast<size_t>(co4 + 3) * T_out;
+                for (int to = 0; to < T_out; ++to) {
+                    o0[to] = b0; o1[to] = b1; o2[to] = b2; o3[to] = b3;
+                }
+                const float * __restrict__ w0 = weight.data() + static_cast<size_t>(co4 + 0) * C_in * K;
+                const float * __restrict__ w1 = weight.data() + static_cast<size_t>(co4 + 1) * C_in * K;
+                const float * __restrict__ w2 = weight.data() + static_cast<size_t>(co4 + 2) * C_in * K;
+                const float * __restrict__ w3 = weight.data() + static_cast<size_t>(co4 + 3) * C_in * K;
+                for (int ci = 0; ci < C_in; ++ci) {
+                    const float * __restrict__ x_ci = x.data() + static_cast<size_t>(ci) * T;
+                    const float * __restrict__ wk0 = w0 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk1 = w1 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk2 = w2 + static_cast<size_t>(ci) * K;
+                    const float * __restrict__ wk3 = w3 + static_cast<size_t>(ci) * K;
+                    for (int k = 0; k < K; ++k) {
+                        float v0 = wk0[k], v1 = wk1[k], v2 = wk2[k], v3 = wk3[k];
+                        int offset = k * dilation - pad;
+                        int to_start = std::max(0, -offset);
+                        int to_end = std::min(T_out, T - offset);
+                        const float * __restrict__ x_ptr = x_ci + offset;
+                        for (int to = to_start; to < to_end; ++to) {
+                            float xv = x_ptr[to];
+                            o0[to] += v0 * xv;
+                            o1[to] += v1 * xv;
+                            o2[to] += v2 * xv;
+                            o3[to] += v3 * xv;
+                        }
                     }
                 }
             }
