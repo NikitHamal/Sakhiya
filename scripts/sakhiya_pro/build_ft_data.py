@@ -53,7 +53,9 @@ for x in F:
     if len(w) / 24000 < 2.0: drop['missing'] += 1; continue
     q = f"{O}/wav/ia_{x['id']}.wav"; sf.write(q, w, 24000)
     hyp, cf = C.kriti().read_conf([q])[0]; cer = C.cer(t, hyp)
-    if cer > 0.35: drop['cer'] += 1; continue
+    # mined radio transcripts are noisy: only trust the text if the ORIGINAL audio agrees with it, and VC must not damage content
+    ho, _ = C.kriti().read_conf([f"{W}/ia_wav/{x['id']}.wav"])[0]; cer_o = C.cer(t, ho)
+    if cer_o > 0.30 or cer > min(0.40, cer_o + 0.20): drop['cer'] += 1; continue
     sim = float(np.dot(C.spk_emb(w, 24000), remb))
     if sim < 0.5: drop['spk'] += 1; continue
     u = C.utmos_score(w, 24000)
@@ -61,6 +63,25 @@ for x in F:
     vc_rows.append(dict(id=f"ia_{x['id']}", audio_path=q, text=t, language_id='npi', src='ia_vc_' + x['cat'], dur=len(w) / 24000, cer=cer, sim=sim, utmos=u, cat=x['cat']))
 stats['ia_vc_kept'] = len(vc_rows); stats['ia_drop'] = drop
 random.Random(3).shuffle(vc_rows); dev += vc_rows[:6]; vc_rows = vc_rows[6:]; rows += vc_rows
+# B2) other SLR43 Nepal-native studio speakers unified to the anchor vocal tract by Seed-VC (clean, reliable transcripts)
+SD = W + '/slr_vc'; slr_rows = []; sdrop = dict(text=0, cer=0, spk=0, mos=0)
+if os.path.exists(W + '/slr_sel.json'):
+    for x in json.load(open(W + '/slr_sel.json')):
+        p = f"{SD}/{x['id']}.wav"
+        if not os.path.exists(p): continue
+        t = clean_text(x['text'])
+        if not t: sdrop['text'] += 1; continue
+        w, sr = sf.read(p, dtype='float32'); w = prep(w, sr)
+        q = f"{O}/wav/slr_{x['id']}.wav"; sf.write(q, w, 24000)
+        hyp, cf = C.kriti().read_conf([q])[0]; cer = C.cer(t, hyp)
+        if cer > 0.25: sdrop['cer'] += 1; continue
+        sim = float(np.dot(C.spk_emb(w, 24000), remb))
+        if sim < 0.5: sdrop['spk'] += 1; continue
+        u = C.utmos_score(w, 24000)
+        if u < 2.8: sdrop['mos'] += 1; continue
+        slr_rows.append(dict(id=f"slr_{x['id']}", audio_path=q, text=t, language_id='npi', src='slr43_vc', dur=len(w) / 24000, cer=cer, sim=sim, utmos=u))
+    stats['slr_vc_kept'] = len(slr_rows); stats['slr_drop'] = sdrop
+    random.Random(4).shuffle(slr_rows); dev += slr_rows[:4]; rows += slr_rows[4:]
 # C) Vedic (VC'd, f0-conditioned)
 if os.path.exists(W + '/ved_sel.json'):
     V = json.load(open(W + '/ved_sel.json')); vr = []
