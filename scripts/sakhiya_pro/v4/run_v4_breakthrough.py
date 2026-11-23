@@ -61,7 +61,7 @@ def sh(cmd, cwd=REPO):
     return subprocess.run(cmd, shell=True, cwd=cwd, env=env, check=False)
 
 
-def step1_ corpora_and_vedic_anchors():
+def step1_corpora_and_vedic_anchors():
     st('05_corpora', '05_corpora: SLR43 + v13 Gold Vedic (2,021 clips) + v3 Single-Voice Cache in /dev/shm', 'run', 'unpacking SLR43 & 2,021 gold Vedic clips')
     refresh_cards()
     if not os.path.exists('/work/sp/data/slr43/ne_np_female/line_index.tsv'):
@@ -253,7 +253,8 @@ def step3_train_and_gate_students():
         )
         json.dump(sz_j, open(os.path.join(mdir, 'size.json'), 'w'), indent=2)
         st(f'60_{tier}', f'60_{tier}: {SL.TIER_META[tier]["label"]}', 'done', f"PASS: {best_g['int8_mb']} MB INT8 | corr={best_g['int8_vs_fp32_mel_corr']} | nan=0 | UTMOS={best_g['summary']['utmos']} | CER={best_g['summary']['cer_ne']}")
-        sh(f'git add docs/models_{tier} docs/student_tiers.json docs/samples/versions && git commit -m "promote({tier}): {best_g[\'int8_mb\']} MB INT8 ONNX (corr={best_g[\'int8_vs_fp32_mel_corr\']}, nan=0)" && git push origin HEAD:sakhiya-pro-v4')
+        mb_v, cr_v = best_g["int8_mb"], best_g["int8_vs_fp32_mel_corr"]
+        sh(f'git add docs/models_{tier} docs/student_tiers.json docs/samples/versions && git commit -m "promote({tier}): {mb_v} MB INT8 ONNX (corr={cr_v}, nan=0)" && git push origin HEAD:sakhiya-pro-v4')
         refresh_cards()
 
 

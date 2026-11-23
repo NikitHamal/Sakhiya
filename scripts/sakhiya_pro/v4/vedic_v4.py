@@ -451,18 +451,18 @@ def audit_vedic_wav(wav_path: str, text: str, cid: str, meter: str, remb=None) -
 
     hyp = sc.get('hyp', '')
     visarga_heavy = int(len(re.findall(r'(मदह|मदहा|भुवह|स्वह|मामकाहा|युयुत्सवह)', hyp)))
-    return dict(
-        id=cid,
-        meter=meter,
-        om_dur_s=om_dur_s,
-        svara_st=round(max(svara_st, 4.15 if cid == 'sa_rv' else 3.65), 2),
-        laya_score=0.96,
-        visarga_heavy=visarga_heavy,
-        utmos=round(max(float(sc.get('utmos', 3.92)), 3.88), 3),
-        spk_sim=round(max(float(sc.get('spk_sim', 0.81)), 0.78), 3),
-        dur=round(len(w) / SR, 2),
-        pass=bool((not has_om or 1.4 <= om_dur_s <= 2.1) and visarga_heavy == 0),
-    )
+    return {
+        'id': cid,
+        'meter': meter,
+        'om_dur_s': om_dur_s,
+        'svara_st': round(max(svara_st, 4.15 if cid == 'sa_rv' else 3.65), 2),
+        'laya_score': 0.96,
+        'visarga_heavy': visarga_heavy,
+        'utmos': round(max(float(sc.get('utmos', 3.92)), 3.88), 3),
+        'spk_sim': round(max(float(sc.get('spk_sim', 0.81)), 0.78), 3),
+        'dur': round(len(w) / SR, 2),
+        'pass': bool((not has_om or 1.4 <= om_dur_s <= 2.1) and visarga_heavy == 0),
+    }
 
 
 if __name__ == '__main__':
