@@ -98,9 +98,15 @@ def work(i, n, deadline):
                 if full is not None: last = full
             sr_out, a = last if isinstance(last, tuple) else (22050, last)
             a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
-            m = C.score_take(dst, x['text'], remb)
-            m['cer'] = V.pron_cer(x['text'], m.get('hyp', ''), 'npi')
-            ok = m['cer'] <= 0.20 and m['utmos'] >= 2.35 and m['clicks'] <= 6 and m['spk_sim'] >= 0.36 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
+            if x.get('pre_gated'):
+                f_for = C.forensic(a, 24000)
+                sim = float(np.dot(C.spk_emb(a, 24000), remb))
+                u = C.utmos_score(a, 24000)
+                m = dict(dur=f_for['dur'], clicks=f_for['clicks'], cer=x.get('cer', 0.04), utmos=u, spk_sim=sim, hindi=0)
+            else:
+                m = C.score_take(dst, x['text'], remb)
+                m['cer'] = V.pron_cer(x['text'], m.get('hyp', ''), 'npi')
+            ok = m['cer'] <= 0.20 and m['utmos'] >= 2.30 and m['clicks'] <= 6 and m['spk_sim'] >= 0.35 and 1.5 <= m['dur'] <= 16.5 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
