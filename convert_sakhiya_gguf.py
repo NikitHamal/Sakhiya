@@ -210,8 +210,12 @@ def load_tier_models(am_path: str, voc_path: Optional[str] = None, tier: str = "
 
     assert voc_path and os.path.exists(voc_path), f"Vocoder checkpoint not found: {voc_path}"
     voc_ck = torch.load(voc_path, map_location="cpu", weights_only=False)
-    voc = VocoderV2(ch=tcfg["voc_ch"], res_kernels=tuple(tcfg["res_kernels"])).eval()
     voc_sd = voc_ck.get("G_ema", voc_ck.get("G", voc_ck)) if isinstance(voc_ck, dict) else voc_ck
+    # The vocoder checkpoint is authoritative for its own width: a student AM cfg["v_ch"] describes the
+    # student's *own* (not-shipped) vocoder, whereas Nano/Atom ship the V1 (320) vocoder and Atom-Lite the 144-ch one.
+    if "up_acts.0.alpha" in voc_sd:
+        tcfg["voc_ch"] = int(voc_sd["up_acts.0.alpha"].shape[1])
+    voc = VocoderV2(ch=tcfg["voc_ch"], res_kernels=tuple(tcfg["res_kernels"])).eval()
     voc.load_state_dict({k: v.float() if torch.is_tensor(v) else v for k, v in voc_sd.items()})
     voc.fuse_weight_norm()
     return am, voc, None, tcfg
