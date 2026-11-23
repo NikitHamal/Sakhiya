@@ -119,7 +119,7 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
 
     tensors = []  # list of (name, ggml_dims, ggml_type, raw_bytes)
 
-    def add_tensor(name: str, t: torch.Tensor, allow_quant: bool = True):
+    def add_tensor(name: str, t: torch.Tensor, quant_mode: str = "none"):
         assert len(name.encode("utf-8")) < 64, f"Tensor name too long for ggml (<64 bytes): {name}"
         arr = np.ascontiguousarray(t.detach().cpu().float().numpy(), dtype=np.float32)
         if arr.ndim == 0:
@@ -127,9 +127,9 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
         # In GGML, ne[0] is the innermost contiguous dimension (reversed from numpy shape)
         ggml_dims = tuple(int(d) for d in reversed(arr.shape))
         target_type = GGML_TYPE_F32
-        if dtype == "f16" and allow_quant and arr.ndim >= 2 and arr.size > 128:
+        if quant_mode == "f16" and arr.ndim >= 2 and arr.size > 128:
             target_type = GGML_TYPE_F16
-        elif dtype == "q8_0" and allow_quant and arr.ndim >= 2 and arr.size >= 256:
+        elif quant_mode == "q8_0" and arr.ndim >= 2 and arr.size >= 256:
             # Flatten 3D conv weights [C_out, C_in, K] -> 2D [C_out, C_in * K] so innermost dim is divisible by 32
             if arr.ndim == 3 and (arr.shape[1] * arr.shape[2]) % 32 == 0:
                 arr = arr.reshape(arr.shape[0], arr.shape[1] * arr.shape[2])
@@ -151,18 +151,22 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
 
     # 1. Dump all SakhiyaAM tensors (prefix: "am.")
     for k, v in am.state_dict().items():
-        # Keep embeddings, norms, biases, stats, and 1D/small convs in FP32 for exact numerical stability
-        is_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in ("emb.", "spk.", "lang.", "sty.", "studio.", "stats", ".n1.", ".n2.", ".nf.", ".n.")))
-        add_tensor(f"am.{k}", v, allow_quant=is_heavy)
+        # Keep TextEncoder + DurFlow in FP32 so phoneme durations and prior mu are 100% invariant;
+        # Velocity ConvNeXt stack uses FP16 in f16/q8_0 modes (zero ODE trajectory drift).
+        is_vel_heavy = (k.startswith("vel.") and v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in (".n.", ".dw.", ".film.", "inp.", "out.", "tm.")))
+        q_mode = "f16" if (dtype in ("f16", "q8_0") and is_vel_heavy) else "none"
+        add_tensor(f"am.{k}", v, quant_mode=q_mode)
 
     # Style prosody targets table [6, 4]
-    add_tensor("am.pros_tbl", torch.tensor(STYLE_PROSODY_TARGETS, dtype=torch.float32), allow_quant=False)
+    add_tensor("am.pros_tbl", torch.tensor(STYLE_PROSODY_TARGETS, dtype=torch.float32), quant_mode="none")
 
     # 2. Dump all VocoderV2 tensors (prefix: "voc.")
     for k, v in voc.state_dict().items():
-        # Keep Snake1d alphas, F0 estimator, and final 66-ch spectral projection in FP32
-        is_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in ("alpha", "src.f0_net", "post.")))
-        add_tensor(f"voc.{k}", v, allow_quant=is_heavy)
+        # Keep Snake1d alphas, HarmonicSource, and final 66-ch spectral projection in FP32;
+        # Upsamplers and MRF ResBlocks use F16 (--dtype f16) or Q8_0 (--dtype q8_0).
+        is_voc_heavy = (v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in ("alpha", "src.", "post.")))
+        q_mode = dtype if (dtype in ("f16", "q8_0") and is_voc_heavy) else "none"
+        add_tensor(f"voc.{k}", v, quant_mode=q_mode)
 
     # Hann window (64-pt) for ola64
     add_tensor("voc.win", voc.win, allow_quant=False)
