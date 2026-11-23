@@ -162,7 +162,7 @@ else:
     if _os.path.exists(f"{_job}/video.mp4"):
         _mp4 = open(f"{_job}/video.mp4", "rb").read()
         _dls.append(_mo.download(data=_mp4, filename=f"sakhiya_pro_{_id}.mp4", mimetype="video/mp4", label="⬇️ MP4"))
-        _vid = [_mo.video(src=_mp4, controls=True, rounded=True, max_height="520px")]
+        _vid = [_mo.video(src=_mp4, controls=True, rounded=True, height=520)]
     _meta = _json.load(open(f"{_job}/meta.json")) if _os.path.exists(f"{_job}/meta.json") else {}
     _rows = "".join(f"<tr><td>{i+1}</td><td>{c['lang']}</td><td>{c['dur']}s</td><td>{c['cer']}</td><td>{c['utmos']}</td><td>{c['clicks']:.0f}</td><td>{c['hindi']}</td></tr>" for i, c in enumerate(_meta.get("chunks", [])))
     _res = _mo.vstack([
