@@ -99,7 +99,7 @@ def work(i, n, deadline):
             sr_out, a = last if isinstance(last, tuple) else (22050, last)
             a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
             m = C.score_take(dst, x['text'], remb)
-            ok = m['cer'] <= 0.10 and m['utmos'] >= 3.2 and m['clicks'] <= 6 and m['spk_sim'] >= 0.60 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
+            ok = m['cer'] <= 0.15 and m['utmos'] >= 3.0 and m['clicks'] <= 6 and m['spk_sim'] >= 0.55 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
