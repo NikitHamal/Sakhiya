@@ -304,6 +304,7 @@ def main():
         assert x_diff < 1e-3, f"x_enc max_abs_diff {x_diff} >= 1e-3 on {cid}"
         assert ld_diff < 1e-3, f"logdur max_abs_diff {ld_diff} >= 1e-3 on {cid}"
         assert mel_diff < 1e-3, f"Mel max_abs_diff {mel_diff} >= 1e-3 on {cid}"
+        assert wav_diff < 1e-3, f"Wav max_abs_diff {wav_diff} >= 1e-3 on {cid}"
         assert wav_mae < 1e-3, f"Wav mean_abs_diff {wav_mae} >= 1e-3 on {cid}"
         assert wav_cos >= 0.998, f"Wav cosine_sim {wav_cos} < 0.998 on {cid}"
 

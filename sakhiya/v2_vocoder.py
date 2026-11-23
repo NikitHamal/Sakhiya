@@ -77,8 +77,8 @@ class HarmonicSource(nn.Module):
     def forward(s, mel, shift_st=None):
         with torch.amp.autocast("cuda", enabled=False):
             rf = s.f0_net(mel.float()).float()
-        f0 = 60.0 + 440.0 * torch.sigmoid(rf[:, 0:1])         # (B, 1, T) in [60, 500] Hz in fp32
-        uv = torch.sigmoid(rf[:, 1:2])                        # (B, 1, T) in [0, 1] in fp32
+        f0 = torch.round(60.0 + 440.0 * torch.sigmoid(rf[:, 0:1]))  # (B, 1, T) in [60, 500] Hz in fp32 (pre-smoothing 1 Hz snap eliminates cross-runtime cumsum drift)
+        uv = torch.round(torch.sigmoid(rf[:, 1:2]) * 64.0) * 0.015625
         # Voiced-weighted local log-F0 interpolation + soft-ramped vuv (eliminates voiced/unvoiced phase snaps & clicks!)
         w_v = (uv.detach() > 0.35).float() * uv.detach() + 0.04
         lf0_raw = torch.log2(f0.clamp(130.0, 380.0))
@@ -91,7 +91,9 @@ class HarmonicSource(nn.Module):
             uv = F.avg_pool1d(F.pad(uv, (1, 1), mode="replicate"), 3, stride=1)
         sh = shift_st if shift_st is not None else getattr(s, "shift_st", None)
         if sh is not None:
-            f0 = f0 * torch.pow(2.0, sh.to(f0.dtype) / 12.0)
+            sh_q = torch.round(sh.to(f0.dtype) * 64.0) * 0.015625
+            f0 = f0 * torch.pow(2.0, sh_q / 12.0)
+        f0 = torch.round(f0 * 16.0) * 0.0625
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         # Wrapped cumulative cycles in [0, 1) so long utterances never suffer float32 cumsum phase drift
