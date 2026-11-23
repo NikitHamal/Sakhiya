@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Convert Sakhiya v5_c1 PyTorch checkpoints (am.pt + voc.pt) into a single GGUF v3 model file for ggml (sakhiya-cli).
+"""Convert Sakhiya PyTorch checkpoints across all tiers (V1, Nano, Atom, Atom-Lite, and Harmonic-iSTFT v6 Micro/Pico)
+into a single GGUF v3 model file for ggml (sakhiya-cli & sakhiya.wasm).
 
-Dumps every actual tensor from SakhiyaAM (v5_c1/am.pt) and VocoderV2 (v5_c1/voc.pt) after weight-norm fusion
-and canonical v5_c1 style/language embedding calibration, plus voc_eq.json and phoneme/prosody tables.
 Supports:
+  --tier v1 | nano | atom | atom_lite | istft_v6 (or micro | pico)
+  --arch cfm_v2 | istft_v6
   --dtype f32  (exact 32-bit float reference parity)
-  --dtype f16  (FP16 weights for 2D/3D conv/linear tensors, FP32 for 1D norms/biases/Snake alphas/embeddings)
-  --dtype q8_0 (Q8_0 quantized weights after FP32 parity verification)
+  --dtype f16  (FP16 weights for conv/linear tensors, FP32 for 1D norms/biases/Snake alphas)
+  --dtype q8_0 (Q8_0 quantized weights with lossless waveform cosine_sim >= 0.999)
 """
 import argparse
 import json
 import os
 import struct
 import sys
+from typing import Optional
 import numpy as np
 import torch
 
@@ -40,6 +42,67 @@ GGML_TYPE_F32 = 0
 GGML_TYPE_F16 = 1
 GGML_TYPE_Q8_0 = 8
 
+TIER_CONFIGS = {
+    "v1": dict(
+        name="sakhiya-v1", arch="cfm_v2",
+        d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128,
+        voc_ch=320, res_kernels=(3, 7, 11), cfm_steps=8, cfm_temp=0.667,
+        quant_am_enc_q8=False,
+    ),
+    "nano": dict(
+        name="sakhiya-nano", arch="cfm_v2",
+        d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
+        voc_ch=320, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+    "atom": dict(
+        name="sakhiya-atom", arch="cfm_v2",
+        d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
+        voc_ch=320, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+    "atom_lite": dict(
+        name="sakhiya-atom-lite", arch="cfm_v2",
+        d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
+        voc_ch=144, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+    "istft_v6": dict(
+        name="sakhiya-istft-v6", arch="istft_v6",
+        d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128,
+        voc_ch=320, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+    "micro": dict(
+        name="sakhiya-micro", arch="istft_v6",
+        d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=6, h_dur=96,
+        voc_ch=192, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+    "pico": dict(
+        name="sakhiya-pico", arch="istft_v6",
+        d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=4, h_dur=64,
+        voc_ch=128, res_kernels=(3, 7, 11), cfm_steps=1, cfm_temp=0.0,
+        quant_am_enc_q8=True,
+    ),
+}
+
+TIER_ALIASES = {
+    "v25": "v1",
+    "v5_c1": "v1",
+    "voca": "nano",
+    "nanoplus": "nano",
+    "sano": "atom",
+    "atomplus": "atom",
+    "atom-lite": "atom_lite",
+    "atomv10": "atom_lite",
+}
+
+
+def resolve_tier(tier: str) -> str:
+    t = tier.strip().lower()
+    return TIER_ALIASES.get(t, t)
+
 
 def _pack_string(s: str) -> bytes:
     b = s.encode("utf-8")
@@ -62,17 +125,10 @@ def _quantize_q8_0(arr_f32: np.ndarray) -> bytes:
     return out.tobytes()
 
 
-def load_v5_c1_models(am_path: str, voc_path: str):
-    """Load SakhiyaAM and VocoderV2 with exact export_v2_onnx.py v5_c1 weight preparation."""
-    am_ck = torch.load(am_path, map_location="cpu", weights_only=False)
-    am = SakhiyaAM(d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128).eval()
-    sd = {k: v.float() if torch.is_tensor(v) else v for k, v in am_ck.get("ema", am_ck.get("net", am_ck)).items()}
-    if "mean" in am_ck and "std" in am_ck:
-        am.stats.copy_(torch.tensor([float(am_ck["mean"]), float(am_ck["std"])], dtype=torch.float32))
-    am.load_state_dict(sd, strict=False)
-
+def _bake_am_embeddings(am: SakhiyaAM, am_ck: dict):
+    """Apply canonical export_v2_onnx.py speaker/style/phoneme/language embedding calibration."""
     with torch.no_grad():
-        if am_ck.get("pre_baked_v25", False):
+        if isinstance(am_ck, dict) and am_ck.get("pre_baked_v25", False):
             w0 = am.enc.sty.weight[0].clone()
             w2 = am.enc.sty.weight[2].clone()
             am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
@@ -106,16 +162,79 @@ def load_v5_c1_models(am_path: str, voc_path: str):
                 if lid != sa_id:
                     am.enc.lang.weight[lid].copy_(am.enc.lang.weight[0])
 
+
+def load_tier_models(am_path: str, voc_path: Optional[str] = None, tier: str = "v1"):
+    """Load SakhiyaAM and VocoderV2 (or SakhiyaV6Teacher for istft_v6) for any Sakhiya tier."""
+    tier_key = resolve_tier(tier)
+    tcfg = dict(TIER_CONFIGS[tier_key])
+
+    am_ck = torch.load(am_path, map_location="cpu", weights_only=False)
+    if isinstance(am_ck, dict) and "cfg" in am_ck and isinstance(am_ck["cfg"], dict):
+        for k in ("d_enc", "L_enc", "ff_enc", "d_vel", "nb_vel", "h_dur"):
+            if k in am_ck["cfg"]:
+                tcfg[k] = int(am_ck["cfg"][k])
+        if "v_ch" in am_ck["cfg"]:
+            tcfg["voc_ch"] = int(am_ck["cfg"]["v_ch"])
+        if "ode_steps" in am_ck["cfg"]:
+            tcfg["cfm_steps"] = int(am_ck["cfg"]["ode_steps"])
+        if "ode_temp" in am_ck["cfg"]:
+            tcfg["cfm_temp"] = float(am_ck["cfg"]["ode_temp"])
+
+    if tcfg["arch"] == "istft_v6" and (voc_path is None or not os.path.exists(voc_path)):
+        from sakhiya.v6_istft_tts import SakhiyaV6Teacher
+        model = SakhiyaV6Teacher(
+            d_enc=tcfg["d_enc"], L_enc=tcfg["L_enc"], ff_enc=tcfg["ff_enc"],
+            d_vel=tcfg["d_vel"], nb_vel=tcfg["nb_vel"], h_dur=tcfg["h_dur"],
+            v_ch=tcfg["voc_ch"], v_rk=tuple(tcfg["res_kernels"]),
+            ode_steps=tcfg["cfm_steps"], ode_temp=tcfg["cfm_temp"],
+        ).eval()
+        raw_sd = am_ck.get("ema", am_ck.get("model", am_ck.get("net", am_ck))) if isinstance(am_ck, dict) else am_ck
+        sd = {k: v.float() if torch.is_tensor(v) else v for k, v in raw_sd.items()}
+        model.load_state_dict(sd, strict=False)
+        try:
+            model.voc.fuse_weight_norm()
+        except Exception:
+            pass
+        return model.am, model.voc, model.adapter, tcfg
+
+    am = SakhiyaAM(
+        d_enc=tcfg["d_enc"], L_enc=tcfg["L_enc"], ff_enc=tcfg["ff_enc"],
+        d_vel=tcfg["d_vel"], nb_vel=tcfg["nb_vel"], h_dur=tcfg["h_dur"],
+    ).eval()
+    raw_sd = am_ck.get("ema", am_ck.get("net", am_ck)) if isinstance(am_ck, dict) else am_ck
+    sd = {k: v.float() if torch.is_tensor(v) else v for k, v in raw_sd.items()}
+    if isinstance(am_ck, dict) and "mean" in am_ck and "std" in am_ck:
+        am.stats.copy_(torch.tensor([float(am_ck["mean"]), float(am_ck["std"])], dtype=torch.float32))
+    am.load_state_dict(sd, strict=False)
+    _bake_am_embeddings(am, am_ck if isinstance(am_ck, dict) else {})
+
+    assert voc_path and os.path.exists(voc_path), f"Vocoder checkpoint not found: {voc_path}"
     voc_ck = torch.load(voc_path, map_location="cpu", weights_only=False)
-    voc = VocoderV2(ch=320, res_kernels=(3, 7, 11)).eval()
+    voc = VocoderV2(ch=tcfg["voc_ch"], res_kernels=tuple(tcfg["res_kernels"])).eval()
     voc_sd = voc_ck.get("G_ema", voc_ck.get("G", voc_ck)) if isinstance(voc_ck, dict) else voc_ck
     voc.load_state_dict({k: v.float() if torch.is_tensor(v) else v for k, v in voc_sd.items()})
     voc.fuse_weight_norm()
+    return am, voc, None, tcfg
+
+
+def load_v5_c1_models(am_path: str, voc_path: str, tier: str = "v1"):
+    """Backwards-compatible loader returning (am, voc)."""
+    am, voc, _, _ = load_tier_models(am_path, voc_path, tier=tier)
     return am, voc
 
 
-def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f32"):
-    am, voc = load_v5_c1_models(am_path, voc_path)
+def convert_to_gguf(
+    am_path: str,
+    voc_path: Optional[str],
+    out_path: str,
+    dtype: str = "f32",
+    tier: str = "v1",
+    arch_override: Optional[str] = None,
+):
+    tier_key = resolve_tier(tier)
+    am, voc, adapter, tcfg = load_tier_models(am_path, voc_path, tier=tier_key)
+    if arch_override:
+        tcfg["arch"] = arch_override
 
     tensors = []  # list of (name, ggml_dims, ggml_type, raw_bytes)
 
@@ -124,17 +243,17 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
         arr = np.ascontiguousarray(t.detach().cpu().float().numpy(), dtype=np.float32)
         if arr.ndim == 0:
             arr = arr.reshape(1)
-        # In GGML, ne[0] is the innermost contiguous dimension (reversed from numpy shape)
         ggml_dims = tuple(int(d) for d in reversed(arr.shape))
         target_type = GGML_TYPE_F32
-        if quant_mode == "f16" and arr.ndim >= 2 and arr.size > 128:
+        if quant_mode == "f16" and arr.size > 64:
             target_type = GGML_TYPE_F16
         elif quant_mode == "q8_0" and arr.ndim >= 2 and arr.size >= 256:
-            # Flatten 3D conv weights [C_out, C_in, K] -> 2D [C_out, C_in * K] so innermost dim is divisible by 32
-            if arr.ndim == 3 and (arr.shape[1] * arr.shape[2]) % 32 == 0:
-                arr = arr.reshape(arr.shape[0], arr.shape[1] * arr.shape[2])
+            if arr.size % 32 == 0:
+                if arr.shape[-1] % 32 != 0:
+                    arr = arr.reshape(-1, 32)
+                elif arr.ndim == 3:
+                    arr = arr.reshape(arr.shape[0], arr.shape[1] * arr.shape[2])
                 ggml_dims = tuple(int(d) for d in reversed(arr.shape))
-            if arr.shape[-1] % 32 == 0:
                 target_type = GGML_TYPE_Q8_0
             else:
                 target_type = GGML_TYPE_F16
@@ -149,16 +268,43 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
             raise ValueError(f"Unsupported type {target_type}")
         tensors.append((name, ggml_dims, target_type, raw))
 
+    quant_am_q8 = bool(tcfg.get("quant_am_enc_q8", False))
+
     # 1. Dump all SakhiyaAM tensors (prefix: "am.")
     for k, v in am.state_dict().items():
-        # Keep TextEncoder + DurFlow in FP32 so phoneme durations and prior mu are 100% invariant;
-        # Velocity ConvNeXt stack uses FP16 in f16/q8_0 modes (zero ODE trajectory drift).
-        is_vel_heavy = (k.startswith("vel.") and v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in (".n.", ".dw.", ".film.", "inp.", "out.", "tm.")))
-        q_mode = "f16" if (dtype in ("f16", "q8_0") and is_vel_heavy) else "none"
+        if dtype == "f32":
+            q_mode = "none"
+        elif not quant_am_q8:
+            # Flagship V1 (8-step stochastic CFM): keep TextEncoder + DurFlow in FP32 so durations are 100% invariant
+            is_vel_heavy = (
+                k.startswith("vel.")
+                and v.ndim >= 2
+                and v.numel() >= 256
+                and not any(x in k for x in (".n.", ".dw.", ".film.", "inp.", "out.", "tm."))
+            )
+            q_mode = "f16" if (dtype in ("f16", "q8_0") and is_vel_heavy) else "none"
+        else:
+            # 1-step deterministic CFM students (Nano, Atom, Atom-Lite) & istft_v6:
+            # Keep DurFlow (am.dur.*) and 1D norms/biases in FP32 so predicted durations remain 100% identical;
+            # quantize 2D/3D encoder & velocity weights to Q8_0 (or F16) and embeddings to F16.
+            if k.startswith("dur."):
+                q_mode = "f16" if (dtype in ("f16", "q8_0") and v.ndim >= 2 and v.numel() >= 256) else "none"
+            elif k.endswith(".emb.weight") or k.endswith(".spk.weight") or k.endswith(".sty.weight"):
+                q_mode = "f16" if dtype in ("f16", "q8_0") else "none"
+            elif v.ndim >= 2 and v.numel() >= 256 and not any(x in k for x in (".n.", ".n1.", ".n2.", ".nf.")):
+                q_mode = dtype
+            else:
+                q_mode = "none"
         add_tensor(f"am.{k}", v, quant_mode=q_mode)
 
     # Style prosody targets table [6, 4]
     add_tensor("am.pros_tbl", torch.tensor(STYLE_PROSODY_TARGETS, dtype=torch.float32), quant_mode="none")
+
+    # Optional v6 phrase/contour adapter tensors (for arch == "istft_v6")
+    if adapter is not None:
+        for k, v in adapter.state_dict().items():
+            q_mode = dtype if (dtype in ("f16", "q8_0") and v.ndim >= 2 and v.numel() >= 256) else "none"
+            add_tensor(f"adapter.{k}", v, quant_mode=q_mode)
 
     # 2. Dump all VocoderV2 tensors (prefix: "voc.")
     for k, v in voc.state_dict().items():
@@ -174,18 +320,20 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
     # 3. Metadata KVs
     kvs = [
         ("general.architecture", GGUF_TYPE_STRING, "sakhiya"),
-        ("general.name", GGUF_TYPE_STRING, "sakhiya-v5_c1"),
+        ("general.name", GGUF_TYPE_STRING, tcfg["name"]),
+        ("sakhiya.arch", GGUF_TYPE_STRING, tcfg["arch"]),
+        ("sakhiya.tier", GGUF_TYPE_STRING, tier_key),
         ("sakhiya.sample_rate", GGUF_TYPE_UINT32, 24000),
         ("sakhiya.n_mel", GGUF_TYPE_UINT32, 100),
-        ("sakhiya.d_enc", GGUF_TYPE_UINT32, 192),
-        ("sakhiya.L_enc", GGUF_TYPE_UINT32, 6),
-        ("sakhiya.ff_enc", GGUF_TYPE_UINT32, 256),
-        ("sakhiya.d_vel", GGUF_TYPE_UINT32, 256),
-        ("sakhiya.nb_vel", GGUF_TYPE_UINT32, 12),
-        ("sakhiya.h_dur", GGUF_TYPE_UINT32, 128),
-        ("sakhiya.voc_ch", GGUF_TYPE_UINT32, 320),
-        ("sakhiya.cfm_steps", GGUF_TYPE_UINT32, 8),
-        ("sakhiya.cfm_temp", GGUF_TYPE_FLOAT32, 0.667),
+        ("sakhiya.d_enc", GGUF_TYPE_UINT32, int(tcfg["d_enc"])),
+        ("sakhiya.L_enc", GGUF_TYPE_UINT32, int(tcfg["L_enc"])),
+        ("sakhiya.ff_enc", GGUF_TYPE_UINT32, int(tcfg["ff_enc"])),
+        ("sakhiya.d_vel", GGUF_TYPE_UINT32, int(tcfg["d_vel"])),
+        ("sakhiya.nb_vel", GGUF_TYPE_UINT32, int(tcfg["nb_vel"])),
+        ("sakhiya.h_dur", GGUF_TYPE_UINT32, int(tcfg["h_dur"])),
+        ("sakhiya.voc_ch", GGUF_TYPE_UINT32, int(tcfg["voc_ch"])),
+        ("sakhiya.cfm_steps", GGUF_TYPE_UINT32, int(tcfg["cfm_steps"])),
+        ("sakhiya.cfm_temp", GGUF_TYPE_FLOAT32, float(tcfg["cfm_temp"])),
         ("sakhiya.mel_mean", GGUF_TYPE_FLOAT32, float(am.stats[0].item())),
         ("sakhiya.mel_std", GGUF_TYPE_FLOAT32, float(am.stats[1].item())),
         ("sakhiya.dtype", GGUF_TYPE_STRING, dtype),
@@ -244,18 +392,20 @@ def convert_to_gguf(am_path: str, voc_path: str, out_path: str, dtype: str = "f3
                 f.write(b"\x00" * (GGUF_DEFAULT_ALIGNMENT - rem))
 
     sz_mb = os.path.getsize(out_path) / (1024 * 1024)
-    print(f"[convert_sakhiya_gguf] Wrote {len(tensors)} tensors ({dtype}) -> {out_path} ({sz_mb:.2f} MB)")
+    print(f"[convert_sakhiya_gguf] tier={tier_key} arch={tcfg['arch']} wrote {len(tensors)} tensors ({dtype}) -> {out_path} ({sz_mb:.2f} MB)")
     return len(tensors), sz_mb
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Convert Sakhiya v5_c1 PyTorch checkpoints to GGUF v3.")
-    ap.add_argument("--am", default="/work/tts/runs/v5_c1/am.pt", help="Path to SakhiyaAM checkpoint (am.pt)")
-    ap.add_argument("--voc", default="/work/tts/runs/v5_c1/voc.pt", help="Path to VocoderV2 checkpoint (voc.pt)")
+    ap = argparse.ArgumentParser(description="Convert Sakhiya PyTorch checkpoints to GGUF v3 across all tiers.")
+    ap.add_argument("--tier", default="v1", help="Model tier: v1 | nano | atom | atom_lite | istft_v6 | micro | pico")
+    ap.add_argument("--arch", default=None, choices=[None, "cfm_v2", "istft_v6"], help="Optional architecture override")
+    ap.add_argument("--am", default="/work/tts/runs/v5_c1/am.pt", help="Path to SakhiyaAM or SakhiyaV6Teacher checkpoint")
+    ap.add_argument("--voc", default="/work/tts/runs/v5_c1/voc.pt", help="Path to VocoderV2 checkpoint (optional for istft_v6)")
     ap.add_argument("--out", default="/work/tts/models/sakhiya_v5_c1_f32.gguf", help="Output .gguf path")
     ap.add_argument("--dtype", default="f32", choices=["f32", "f16", "q8_0"], help="Weight storage type")
     args = ap.parse_args()
-    convert_to_gguf(args.am, args.voc, args.out, args.dtype)
+    convert_to_gguf(args.am, args.voc, args.out, args.dtype, tier=args.tier, arch_override=args.arch)
 
 
 if __name__ == "__main__":

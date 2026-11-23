@@ -1,10 +1,22 @@
 #pragma once
-// Sakhiya ggml C++ Inference Engine: TextEncoder -> DurFlow -> 8-step Velocity CFM ODE -> export_mel -> VocoderV2 -> 64-pt iSTFT
+// Sakhiya ggml C++ Inference Engine: TextEncoder -> DurFlow -> Velocity CFM ODE -> export_mel -> VocoderV2 -> 64-pt iSTFT
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(SAKHIYA_STANDALONE_GGUF)
+#ifndef SAKHIYA_STANDALONE_GGUF
+#define SAKHIYA_STANDALONE_GGUF 1
+#endif
+#else
 #include "ggml.h"
 #include "ggml-alloc.h"
 #include "ggml-backend.h"
 #include "ggml-cpu.h"
 #include "gguf.h"
+#endif
+
+#if defined(__wasm_simd128__)
+#include <wasm_simd128.h>
+#elif defined(__AVX512F__) || defined(__AVX2__)
+#include <immintrin.h>
+#endif
 
 #ifdef GGML_USE_CUDA
 #include "ggml-cuda.h"
@@ -65,12 +77,16 @@ struct StageDump {
 
 class SakhiyaGGML {
 public:
+#ifndef SAKHIYA_STANDALONE_GGUF
     struct ggml_context * ctx_data = nullptr;
     struct gguf_context * ctx_gguf = nullptr;
     ggml_backend_t backend = nullptr;
+#endif
     int n_threads = 4;
 
-    // Dynamic architecture hyperparameters read from GGUF metadata (supports V1, Nano, Atom, Atom-Lite)
+    // Dynamic architecture hyperparameters read from GGUF metadata (supports V1, Nano, Atom, Atom-Lite, and istft_v6 Micro/Pico)
+    std::string cfg_arch = "cfm_v2";
+    std::string cfg_tier = "v1";
     int cfg_d_enc = 192;
     int cfg_L_enc = 6;
     int cfg_ff_enc = 256;
@@ -86,11 +102,177 @@ public:
     std::unordered_map<std::string, std::vector<int64_t>> shape_cache;
 
     ~SakhiyaGGML() {
+#ifndef SAKHIYA_STANDALONE_GGUF
         if (backend) ggml_backend_free(backend);
         if (ctx_gguf) gguf_free(ctx_gguf);
         if (ctx_data) ggml_free(ctx_data);
+#endif
     }
 
+    static inline float fp16_to_fp32(uint16_t h) {
+        uint32_t sign = static_cast<uint32_t>(h & 0x8000u) << 16;
+        uint32_t exp  = (h >> 10) & 0x1Fu;
+        uint32_t mant = h & 0x03FFu;
+        uint32_t bits = 0;
+        if (exp == 0) {
+            if (mant == 0) {
+                bits = sign;
+            } else {
+                exp = 1;
+                while ((mant & 0x0400u) == 0) {
+                    mant <<= 1;
+                    exp--;
+                }
+                mant &= 0x03FFu;
+                bits = sign | ((exp + (127 - 15)) << 23) | (mant << 13);
+            }
+        } else if (exp == 31) {
+            bits = sign | 0x7F800000u | (mant << 13);
+        } else {
+            bits = sign | ((exp + (127 - 15)) << 23) | (mant << 13);
+        }
+        float out = 0.0f;
+        std::memcpy(&out, &bits, sizeof(float));
+        return out;
+    }
+
+    // Zero-dependency GGUF v3 in-memory loader (supports F32=0, F16=1, Q8_0=8) for WASM, Android JNI, and buffer init
+    void load_model_from_buffer(const uint8_t * data, size_t size, int threads = 1) {
+        n_threads = std::max(1, threads);
+#ifdef _OPENMP
+        omp_set_num_threads(n_threads);
+#endif
+        if (!data || size < 24) {
+            throw std::runtime_error("Invalid GGUF buffer (too small)");
+        }
+        size_t pos = 0;
+        auto read_u32 = [&]() -> uint32_t {
+            if (pos + 4 > size) throw std::runtime_error("GGUF buffer EOF reading u32");
+            uint32_t v; std::memcpy(&v, data + pos, 4); pos += 4; return v;
+        };
+        auto read_i32 = [&]() -> int32_t {
+            if (pos + 4 > size) throw std::runtime_error("GGUF buffer EOF reading i32");
+            int32_t v; std::memcpy(&v, data + pos, 4); pos += 4; return v;
+        };
+        auto read_u64 = [&]() -> uint64_t {
+            if (pos + 8 > size) throw std::runtime_error("GGUF buffer EOF reading u64");
+            uint64_t v; std::memcpy(&v, data + pos, 8); pos += 8; return v;
+        };
+        auto read_f32 = [&]() -> float {
+            if (pos + 4 > size) throw std::runtime_error("GGUF buffer EOF reading f32");
+            float v; std::memcpy(&v, data + pos, 4); pos += 4; return v;
+        };
+        auto read_str = [&]() -> std::string {
+            uint64_t len = read_u64();
+            if (pos + len > size) throw std::runtime_error("GGUF buffer EOF reading string");
+            std::string s(reinterpret_cast<const char *>(data + pos), static_cast<size_t>(len));
+            pos += static_cast<size_t>(len);
+            return s;
+        };
+
+        uint32_t magic = read_u32();
+        if (magic != 0x46554747u) throw std::runtime_error("Bad GGUF magic");
+        uint32_t version = read_u32();
+        if (version < 2 || version > 3) throw std::runtime_error("Unsupported GGUF version");
+        uint64_t n_tensors = read_u64();
+        uint64_t n_kv = read_u64();
+
+        std::unordered_map<std::string, uint32_t> kv_u32;
+        std::unordered_map<std::string, float> kv_f32;
+        std::unordered_map<std::string, std::string> kv_str;
+
+        for (uint64_t i = 0; i < n_kv; ++i) {
+            std::string key = read_str();
+            uint32_t vtype = read_u32();
+            if (vtype == 4) { // UINT32
+                kv_u32[key] = read_u32();
+            } else if (vtype == 5) { // INT32
+                kv_u32[key] = static_cast<uint32_t>(read_i32());
+            } else if (vtype == 6) { // FLOAT32
+                kv_f32[key] = read_f32();
+            } else if (vtype == 8) { // STRING
+                kv_str[key] = read_str();
+            } else {
+                throw std::runtime_error("Unsupported GGUF KV type in buffer loader: " + std::to_string(vtype));
+            }
+        }
+
+        cfg_arch      = kv_str.count("sakhiya.arch") ? kv_str["sakhiya.arch"] : "cfm_v2";
+        cfg_tier      = kv_str.count("sakhiya.tier") ? kv_str["sakhiya.tier"] : "v1";
+        cfg_d_enc     = kv_u32.count("sakhiya.d_enc") ? static_cast<int>(kv_u32["sakhiya.d_enc"]) : 192;
+        cfg_L_enc     = kv_u32.count("sakhiya.L_enc") ? static_cast<int>(kv_u32["sakhiya.L_enc"]) : 6;
+        cfg_ff_enc    = kv_u32.count("sakhiya.ff_enc") ? static_cast<int>(kv_u32["sakhiya.ff_enc"]) : 256;
+        cfg_d_vel     = kv_u32.count("sakhiya.d_vel") ? static_cast<int>(kv_u32["sakhiya.d_vel"]) : 256;
+        cfg_nb_vel    = kv_u32.count("sakhiya.nb_vel") ? static_cast<int>(kv_u32["sakhiya.nb_vel"]) : 12;
+        cfg_h_dur     = kv_u32.count("sakhiya.h_dur") ? static_cast<int>(kv_u32["sakhiya.h_dur"]) : 128;
+        cfg_voc_ch    = kv_u32.count("sakhiya.voc_ch") ? static_cast<int>(kv_u32["sakhiya.voc_ch"]) : 320;
+        cfg_cfm_steps = kv_u32.count("sakhiya.cfm_steps") ? static_cast<int>(kv_u32["sakhiya.cfm_steps"]) : 8;
+        cfg_cfm_temp  = kv_f32.count("sakhiya.cfm_temp") ? kv_f32["sakhiya.cfm_temp"] : 0.667f;
+
+        struct TInfo {
+            std::string name;
+            std::vector<int64_t> dims;
+            size_t nel;
+            uint32_t ttype;
+            uint64_t offset;
+        };
+        std::vector<TInfo> tinfos;
+        tinfos.reserve(static_cast<size_t>(n_tensors));
+        for (uint64_t i = 0; i < n_tensors; ++i) {
+            TInfo ti;
+            ti.name = read_str();
+            uint32_t nd = read_u32();
+            std::vector<uint64_t> ne(nd);
+            ti.nel = 1;
+            for (uint32_t d = 0; d < nd; ++d) {
+                ne[d] = read_u64();
+                ti.nel *= static_cast<size_t>(ne[d]);
+            }
+            for (int d = static_cast<int>(nd) - 1; d >= 0; --d) {
+                ti.dims.push_back(static_cast<int64_t>(ne[d]));
+            }
+            ti.ttype = read_u32();
+            ti.offset = read_u64();
+            tinfos.push_back(std::move(ti));
+        }
+
+        size_t rem = pos % 32;
+        if (rem != 0) pos += (32 - rem);
+        size_t data_base = pos;
+
+        w_cache.clear();
+        shape_cache.clear();
+        for (const auto & ti : tinfos) {
+            size_t tpos = data_base + static_cast<size_t>(ti.offset);
+            std::vector<float> buf(ti.nel);
+            if (ti.ttype == 0) { // GGML_TYPE_F32
+                if (tpos + ti.nel * 4 > size) throw std::runtime_error("GGUF EOF reading F32 tensor " + ti.name);
+                std::memcpy(buf.data(), data + tpos, ti.nel * 4);
+            } else if (ti.ttype == 1) { // GGML_TYPE_F16
+                if (tpos + ti.nel * 2 > size) throw std::runtime_error("GGUF EOF reading F16 tensor " + ti.name);
+                const uint16_t * src = reinterpret_cast<const uint16_t *>(data + tpos);
+                for (size_t k = 0; k < ti.nel; ++k) buf[k] = fp16_to_fp32(src[k]);
+            } else if (ti.ttype == 8) { // GGML_TYPE_Q8_0 (34 bytes per 32 elements: fp16 d + 32 x int8 qs)
+                size_t n_blocks = ti.nel / 32;
+                if (tpos + n_blocks * 34 > size) throw std::runtime_error("GGUF EOF reading Q8_0 tensor " + ti.name);
+                const uint8_t * bptr = data + tpos;
+                for (size_t b = 0; b < n_blocks; ++b) {
+                    uint16_t d_bits;
+                    std::memcpy(&d_bits, bptr + b * 34, 2);
+                    float d_val = fp16_to_fp32(d_bits);
+                    const int8_t * qs = reinterpret_cast<const int8_t *>(bptr + b * 34 + 2);
+                    float * dst = buf.data() + b * 32;
+                    for (int j = 0; j < 32; ++j) dst[j] = static_cast<float>(qs[j]) * d_val;
+                }
+            } else {
+                throw std::runtime_error("Unsupported tensor type in buffer loader for " + ti.name);
+            }
+            w_cache[ti.name] = std::move(buf);
+            shape_cache[ti.name] = ti.dims;
+        }
+    }
+
+#ifndef SAKHIYA_STANDALONE_GGUF
     uint32_t get_u32_meta(const char * key, uint32_t def_val) const {
         if (!ctx_gguf) return def_val;
         int64_t kid = gguf_find_key(ctx_gguf, key);
@@ -105,14 +287,34 @@ public:
         return gguf_get_val_f32(ctx_gguf, kid);
     }
 
+    std::string get_str_meta(const char * key, const std::string & def_val) const {
+        if (!ctx_gguf) return def_val;
+        int64_t kid = gguf_find_key(ctx_gguf, key);
+        if (kid < 0) return def_val;
+        const char * s = gguf_get_val_str(ctx_gguf, kid);
+        return s ? std::string(s) : def_val;
+    }
+#endif
+
     void load_model(const std::string & model_path, int threads = 4) {
         n_threads = std::max(1, threads);
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
         setenv("OMP_WAIT_POLICY", "ACTIVE", 0);
 #endif
 #ifdef _OPENMP
         omp_set_num_threads(n_threads);
 #endif
+#ifdef SAKHIYA_STANDALONE_GGUF
+        std::ifstream f(model_path, std::ios::binary | std::ios::ate);
+        if (!f) throw std::runtime_error("Failed to open GGUF model: " + model_path);
+        std::streamsize sz = f.tellg();
+        f.seekg(0, std::ios::beg);
+        std::vector<uint8_t> buf(static_cast<size_t>(sz));
+        if (!f.read(reinterpret_cast<char *>(buf.data()), sz)) {
+            throw std::runtime_error("Failed to read GGUF model: " + model_path);
+        }
+        load_model_from_buffer(buf.data(), buf.size(), threads);
+#else
         struct gguf_init_params params = {
             /*.no_alloc = */ false,
             /*.ctx      = */ &ctx_data,
@@ -122,6 +324,8 @@ public:
             throw std::runtime_error("Failed to load GGUF model: " + model_path);
         }
 
+        cfg_arch      = get_str_meta("sakhiya.arch", "cfm_v2");
+        cfg_tier      = get_str_meta("sakhiya.tier", "v1");
         cfg_d_enc     = static_cast<int>(get_u32_meta("sakhiya.d_enc", 192));
         cfg_L_enc     = static_cast<int>(get_u32_meta("sakhiya.L_enc", 6));
         cfg_ff_enc    = static_cast<int>(get_u32_meta("sakhiya.ff_enc", 256));
@@ -173,8 +377,10 @@ public:
 
         // Execute a quick ggml_cgraph smoke op on the initialized backend to confirm ggml graph execution
         verify_ggml_backend_graph();
+#endif
     }
 
+#ifndef SAKHIYA_STANDALONE_GGUF
     void verify_ggml_backend_graph() {
         struct ggml_init_params p = { 1024 * 1024, nullptr, false };
         struct ggml_context * ctx = ggml_init(p);
@@ -193,6 +399,7 @@ public:
         ggml_graph_compute(gf, &plan);
         ggml_free(ctx);
     }
+#endif
 
     const std::vector<float> & W(const std::string & name) const {
         auto it = w_cache.find(name);
@@ -603,10 +810,10 @@ public:
                      const std::vector<float> & pitch_add,
                      std::vector<float> & x_out, std::vector<float> & logdur) const {
         const int L = static_cast<int>(ids.size());
-        const int d = 192;
+        const int d = cfg_d_enc;
         const int n_heads = 4;
-        const int head_dim = d / n_heads; // 48
-        const int ff = 256;
+        const int head_dim = d / n_heads;
+        const int ff = cfg_ff_enc;
         const int n_mel = 100;
 
         int sty = std::min(5, std::max(0, style_id));
@@ -702,9 +909,9 @@ public:
             }
         }
 
-        // 6 Transformer + Conv1d EncLayers
+        // L_enc Transformer + Conv1d EncLayers
         const float attn_scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
-        for (int l = 0; l < 6; ++l) {
+        for (int l = 0; l < cfg_L_enc; ++l) {
             std::string pfx = "am.enc.layers." + std::to_string(l) + ".";
             auto xn1 = layer_norm(x, L, d, W(pfx + "n1.weight"), W(pfx + "n1.bias"));
             auto qkv = linear_2d(xn1, L, d, W(pfx + "qkv.weight"), W(pfx + "qkv.bias"), 3 * d);
@@ -793,8 +1000,34 @@ public:
             for (int b = 0; b < n_mel; ++b) mu[t * n_mel + b] += eng_mod;
         }
 
+        // Optional istft_v6 Phrase-Context + Micro-Prosody Contour Adapter
+        if (cfg_arch == "istft_v6" && w_cache.count("adapter.phrase_net.0.weight")) {
+            std::vector<float> phrase_ctx(static_cast<size_t>(L) * 4, 0.0f);
+            float cum = 0.0f;
+            std::vector<float> cum_v(L, 0.0f);
+            for (int t = 0; t < L; ++t) {
+                bool is_v = (ids[t] >= 7 && ids[t] <= 18);
+                if (is_v) cum += 1.0f;
+                cum_v[t] = cum;
+            }
+            float tot_syl = std::max(1.0f, cum);
+            int64_t last_id = ids.empty() ? 4 : ids.back();
+            float p_base = (last_id == 5) ? 0.75f : ((last_id == 6) ? 1.0f : ((last_id == 3) ? 0.25f : 0.5f));
+            float sty_n = static_cast<float>(sty) / 5.0f;
+            for (int t = 0; t < L; ++t) {
+                phrase_ctx[t * 4 + 0] = cum_v[t] / tot_syl;
+                phrase_ctx[t * 4 + 1] = (tot_syl - cum_v[t]) / tot_syl;
+                phrase_ctx[t * 4 + 2] = p_base * (1.0f - 0.5f * is_pause[t]);
+                phrase_ctx[t * 4 + 3] = sty_n;
+            }
+            auto hp0 = linear_2d(phrase_ctx, L, 4, W("adapter.phrase_net.0.weight"), W("adapter.phrase_net.0.bias"), 64);
+            for (float & v : hp0) v = silu(v);
+            auto hp1 = linear_2d(hp0, L, 64, W("adapter.phrase_net.2.weight"), W("adapter.phrase_net.2.bias"), d);
+            for (size_t i = 0; i < h.size(); ++i) h[i] += hp1[i];
+        }
+
         // DurFlow.pred_logdur (4-step Euler)
-        const int h_dur = 128;
+        const int h_dur = cfg_h_dur;
         std::vector<float> x_d(L);
         for (int t = 0; t < L; ++t) {
             x_d[t] = std::sin(pos[t] * 1.6180339f + static_cast<float>(ids[t]) * 0.37f) * 0.20f;
@@ -866,7 +1099,7 @@ public:
         float pause_scale,
         bool is_last) const {
         const int L = static_cast<int>(ids.size());
-        const int out_dim = 294;
+        const int out_dim = 100 + cfg_d_enc + 2;
         std::vector<int32_t> dur(L);
         for (int i = 0; i < L; ++i) {
             double d_val = std::max(std::exp(static_cast<double>(logdur[i])) - 1.0, 1.0);
@@ -926,14 +1159,14 @@ public:
         return dur;
     }
 
-    // Velocity v_theta(xt, t | mu_y, g): xt [100, T], mu_y [100, T], g [192] -> [100, T]
+    // Velocity v_theta(xt, t | mu_y, g): xt [100, T], mu_y [100, T], g [d_enc] -> [100, T]
     std::vector<float> run_velocity(const std::vector<float> & xt, float t_val,
                                     const std::vector<float> & mu_y, const std::vector<float> & g, int T) const {
         const int C = 100;
-        const int d_vel = 256;
-        const int c_dim = 192;
+        const int d_vel = cfg_d_vel;
+        const int c_dim = cfg_d_enc;
 
-        // c = tm(temb(t, 192)) + g
+        // c = tm(temb(t, c_dim)) + g
         auto te = compute_temb(t_val, c_dim);
         auto tm0 = linear_2d(te, 1, c_dim, W("am.vel.tm.0.weight"), W("am.vel.tm.0.bias"), c_dim);
         for (float & v : tm0) v = silu(v);
@@ -947,7 +1180,7 @@ public:
 
         auto h = conv1d(cat_in, 2 * C, T, W("am.vel.inp.weight"), W("am.vel.inp.bias"), d_vel, 1, 1, 0);
 
-        for (int b = 0; b < 12; ++b) {
+        for (int b = 0; b < cfg_nb_vel; ++b) {
             std::string bpfx = "am.vel.blocks." + std::to_string(b) + ".";
             auto film = linear_2d(c_vec, 1, c_dim, W(bpfx + "film.weight"), W(bpfx + "film.bias"), 2 * d_vel);
             const float * sc = film.data();
@@ -1001,11 +1234,11 @@ public:
         return conv1d(h, d_vel, T, W("am.vel.out.weight"), W("am.vel.out.bias"), C, 1, 1, 0);
     }
 
-    // DecExport: xe [T, 294] -> mel [100, T]
+    // DecExport: xe [T, 100 + d_enc + 2] -> mel [100, T]
     std::vector<float> run_decoder(const std::vector<float> & xe, int T, int steps = 8, float temp = 0.667f) const {
         const int C = 100;
-        const int c_dim = 192;
-        const int in_dim = 294;
+        const int c_dim = cfg_d_enc;
+        const int in_dim = 100 + c_dim + 2;
 
         std::vector<float> mu_y(static_cast<size_t>(C) * T);
         std::vector<float> g(c_dim);
@@ -1099,9 +1332,9 @@ public:
     void run_vocoder_spectrum(const std::vector<float> & mel, int T,
                               std::vector<float> & re_out, std::vector<float> & im_out) const {
         const int n_mel = 100;
-        const int ch = 320;
-        const int c1 = 160;
-        const int c2 = 80;
+        const int ch = cfg_voc_ch;
+        const int c1 = ch / 2;
+        const int c2 = ch / 4;
 
         // Extract st_shift from bin 99 - bin 97, and build mel_clean (bins 98/99 replaced with bin 97)
         std::vector<float> st_shift_scaled(T);
@@ -1588,7 +1821,7 @@ public:
         int T_mel = 0;
         for (int32_t d_i : dur) T_mel += d_i;
 
-        const int out_dim = 294;
+        const int out_dim = 100 + cfg_d_enc + 2;
         std::vector<float> xe(static_cast<size_t>(T_mel) * out_dim);
         int f_idx = 0;
         for (size_t i = 0; i < dur.size(); ++i) {
@@ -1598,7 +1831,7 @@ public:
             }
         }
 
-        auto mel = run_decoder(xe, T_mel, 8, 0.667f);
+        auto mel = run_decoder(xe, T_mel, cfg_cfm_steps, cfg_cfm_temp);
 
         std::vector<float> re_spec, im_spec;
         run_vocoder_spectrum(mel, T_mel, re_spec, im_spec);
