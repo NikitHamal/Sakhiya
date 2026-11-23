@@ -40,7 +40,7 @@ TIERS = {
     "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=104,  r_voc_k7=None, r_voc_k11=136),
     "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
-    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=44,   r_voc_k7=52,   r_voc_k11=30),
+    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=46,   r_voc_k11=26),
 }
 
 
@@ -166,16 +166,11 @@ class Student(nn.Module):
     def _apply_svd_structure(self):
         if self.arch == "sakhiya_pico":
             self.am.vel.ublock_late = self.am.vel.ublock_early
-            if len(self.am.dur.cv) > 1:
-                self.am.dur.cv = nn.ModuleList([self.am.dur.cv[0]])
         if self.r_enc is not None:
             if self.arch == "sakhiya_pico":
                 if isinstance(self.am.enc.ublock.c1, nn.Conv1d):
                     self.am.enc.ublock.c1 = _make_svd_seq(self.am.enc.ublock.c1, self.r_enc, use_qat=True)
                     self.am.enc.ublock.c2 = _make_svd_seq(self.am.enc.ublock.c2, self.r_enc, use_qat=True)
-                if isinstance(self.am.vel.ublock_early.p1, nn.Conv1d):
-                    self.am.vel.ublock_early.p1 = _make_svd_seq(self.am.vel.ublock_early.p1, self.r_enc, use_qat=True)
-                    self.am.vel.ublock_early.p2 = _make_svd_seq(self.am.vel.ublock_early.p2, self.r_enc, use_qat=True)
             else:
                 for lyr in self.am.enc.layers:
                     if isinstance(lyr.c1, nn.Conv1d):
@@ -220,15 +215,16 @@ class Student(nn.Module):
                     if "enc.layers.1.c2.weight" in sd and self.am.enc.ublock.c2.weight.shape == sd["enc.layers.1.c2.weight"].shape:
                         self.am.enc.ublock.c2.weight.copy_(sd["enc.layers.1.c2.weight"].float())
                 # If a pre-distilled Pico AM checkpoint exists on disk with unfactorized weights, warm-load its learned AM weights
-                prev_t1 = "/work/sp/distill/runs/t1/ema_latest.pt"
-                if os.path.exists(prev_t1):
-                    try:
-                        s_prev = torch.load(prev_t1, map_location=dev, weights_only=False)
-                        am_prev = {k[3:]: v.float() for k, v in s_prev.get("ema", {}).items() if k.startswith("am.") and not k.startswith("am.stats")}
-                        if "enc.ublock.c1.weight" in am_prev:
-                            self.am.load_state_dict(am_prev, strict=False)
-                    except Exception:
-                        pass
+                for prev_t1 in ("/work/tts/ck/t1_am_pretrained.pt", "/work/sp/distill/runs/t1/ema_latest.pt"):
+                    if os.path.exists(prev_t1):
+                        try:
+                            s_prev = torch.load(prev_t1, map_location=dev, weights_only=False)
+                            am_prev = {k[3:]: v.float() for k, v in s_prev.get("ema", {}).items() if k.startswith("am.") and not k.startswith("am.stats")}
+                            if "enc.ublock.c1.weight" in am_prev:
+                                self.am.load_state_dict(am_prev, strict=False)
+                                break
+                        except Exception:
+                            pass
             else:
                 self.am.load_state_dict(sd, strict=False)
                 _calibrate_styles(self.am, pre_baked=pre_baked)
