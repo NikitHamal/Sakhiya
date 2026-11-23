@@ -1,5 +1,10 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 66 — Standalone `sakhiya-cli` (GGML C/C++ Inference Engine) + `.gguf` Weight Converter + Stage-by-Stage Diff Gate (`max_abs_diff < 1e-3`, `cosine_sim = 1.000000`)
+- **Real Weight Converter (`convert_sakhiya_gguf.py`):** Dumps all 226 actual tensors from `v5_c1/am.pt` (`SakhiyaAM`) and `v5_c1/voc.pt` (`VocoderV2`) after weight-norm fusion and v5_c1 style/language calibration into a single GGUF v3 file (`--dtype f32`, `f16`, `q8_0`).
+- **Standalone GGML C++ Binary (`cpp/sakhiya_cli.cpp`, `cpp/sakhiya_ggml.hpp`, `cpp/sakhiya_g2p.hpp`, `CMakeLists.txt`, `Makefile`):** Zero Python/PyTorch/ONNX dependency; links statically against `ggml` (`ggml`, `ggml-base`, `ggml-cpu`, optional `-DGGML_CUDA=ON` / `-DGGML_VULKAN=ON` / `-DGGML_METAL=ON`).
+- **Stage-by-Stage Diff Gate (`tests/test_ggml_parity.py`, `eval/ggml_proof/stage_diff_report.json`) & Side-by-Side Audio Proof (`pytorch.wav` vs `sakhiya_cpp.wav`):** Verified 100% exact phoneme IDs & durations across Nepali and Sanskrit, `mel_max_abs_diff <= 1.24e-4 < 1e-3`, `wav_max_abs_diff <= 2.75e-4 < 1e-3`, and `wav_cosine_sim = 1.000000 >= 0.998`.
+
 ## Session 65 — Sakhiya v15: Resonant ॐ + Chandas-Laya-Svara + 6-Style Calibration (`UTMOS 3.957`, `0` Drops/Clicks), `MS-RND-Wavehax` Sub-500 KB Vocoder, E2E Co-Distillation & Sub-1 MB `Sakhiya-Pico` (`0.969 MB`)
 - **Phase 0 — Box A Audit & 15-Minute HF Backup (`eval/v15_phase0_audit.json`):**
   - Connected to Box A (`sb-b9067f39bf1a412c.sb.molab.run`, RTX PRO 6000 Blackwell 98 GB); launched 15-minute HF backup daemon to `NikitHamal/sakhiya-v1-train` (`box6_v15/`).
