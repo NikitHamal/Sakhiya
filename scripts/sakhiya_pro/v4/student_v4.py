@@ -26,11 +26,11 @@ SR, N_FFT, HOP, NB, N_MEL = 24000, 1024, 256, 513, 100
 ISTFT_N_FFT, ISTFT_HOP = 64, 16
 
 TIERS = {
-    'micro': dict(arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208),
-    'pico':  dict(arch='pico',  d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
+    'micro': dict(arch='micro', d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144),
+    'pico':  dict(arch='pico',  d_enc=96,  L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
     't10':   dict(arch='t10',   d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=320),
-    't5':    dict(arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208),
-    't1':    dict(arch='pico',  d_enc=96, L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
+    't5':    dict(arch='micro', d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144),
+    't1':    dict(arch='pico',  d_enc=96,  L_enc=4, ff_enc=112, d_vel=112, nb_vel=5, h_dur=64, v_ch=112),
 }
 
 
@@ -215,12 +215,16 @@ class EmbeddedVocoderV2(nn.Module):
             im_sym = torch.cat([z, im[:, 1:-1, :], z], dim=1)
             spec_cat = torch.cat([re.float(), im_sym.float()], dim=1)
             p = (ISTFT_N_FFT - ISTFT_HOP) // 2
-            return F.conv_transpose1d(spec_cat, self.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=p)[:, 0, :]
+            w_out = F.conv_transpose1d(spec_cat, self.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=p)[:, 0, :]
+            if not self.training:
+                pk = w_out.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
+                w_out = (w_out * (0.85 / pk)).clamp(-0.98, 0.98)
+            return w_out
 
 
-def _calibrate_am(am, is_pico=False):
+def _calibrate_am(am, is_pico=False, pre_baked=True):
     with torch.no_grad():
-        if is_pico:
+        if is_pico or pre_baked:
             w0 = am.enc.sty.weight[0].clone()
             w2 = am.enc.sty.weight[2].clone()
             am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
@@ -251,7 +255,7 @@ def _calibrate_am(am, is_pico=False):
 
 
 class StudentV4(nn.Module):
-    def __init__(self, arch='micro', d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64, v_ch=208, **kw):
+    def __init__(self, arch='micro', d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96, v_ch=144, **kw):
         super().__init__()
         self.cfg = dict(arch=arch, d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur, v_ch=v_ch)
         self.is_pico = (arch == 'pico')
@@ -260,12 +264,11 @@ class StudentV4(nn.Module):
         else:
             # Prune unused embedding rows on micro/t10 so only active speaker 0, langs 0..5, styles 0..5 are stored in ONNX
             self.am = SakhiyaAM(d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc, d_vel=d_vel, nb_vel=nb_vel, h_dur=h_dur, n_spk=2, n_lang=6, n_sty=6)
-            # Remove training-only speaker-adversarial head so it never bloats exported ONNX
             if hasattr(self.am.enc, 'spk_adv'):
                 delattr(self.am.enc, 'spk_adv')
         self.voc = EmbeddedVocoderV2(ch=v_ch, res_kernels=(3, 7, 11))
-        self.register_buffer('f0_stats', torch.tensor([5.35, 0.25]))
-        self.register_buffer('mel_stats', torch.tensor([-5.5028, 2.1869]))
+        self.register_buffer('f0_stats', torch.tensor([5.3706, 0.2200]))
+        self.register_buffer('mel_stats', torch.tensor([-6.1761, 2.4932]))
 
     def warm_from_pretrained(self):
         sano_p = '/work/tts/ck/v9_sano_am.pt'
@@ -274,19 +277,22 @@ class StudentV4(nn.Module):
         if ck_p:
             try:
                 ck = torch.load(ck_p, map_location='cpu', weights_only=False)
+                pre_baked = bool(ck.get('pre_baked_v25', True))
                 raw_sd = {k: v.float() for k, v in ck.get('ema', ck.get('net', ck)).items() if not k.startswith(('ctc_rec.', 'enc.spk_adv.'))}
-                # Calibrate full 16-spk / 32-sty teacher before slicing into 2-spk / 6-sty student
                 full_am = SakhiyaAM(
                     d_enc=self.cfg['d_enc'], L_enc=self.cfg['L_enc'],
                     ff_enc=144 if self.is_pico else self.cfg['ff_enc'],
                     d_vel=self.cfg['d_vel'], nb_vel=self.cfg['nb_vel'], h_dur=self.cfg['h_dur'],
                 ).eval()
+                if 'mean' in ck and 'std' in ck:
+                    full_am.stats.copy_(torch.tensor([float(ck['mean']), float(ck['std'])]))
                 full_am.load_state_dict(raw_sd, strict=False)
-                _calibrate_am(full_am, is_pico=False)
+                _calibrate_am(full_am, is_pico=False, pre_baked=pre_baked)
                 cal_sd = full_am.state_dict()
                 if self.is_pico:
                     self.am.warm_from_sano(cal_sd)
-                    _calibrate_am(self.am, is_pico=True)
+                    self.am.stats.copy_(full_am.stats)
+                    _calibrate_am(self.am, is_pico=True, pre_baked=True)
                 else:
                     dsd = self.am.state_dict()
                     with torch.no_grad():
@@ -295,6 +301,8 @@ class StudentV4(nn.Module):
                                 sv = cal_sd[k].float()
                                 sl = tuple(slice(0, min(a, b)) for a, b in zip(dv.shape, sv.shape))
                                 dv[sl].copy_(sv[sl])
+                        self.am.stats.copy_(full_am.stats)
+                self.mel_stats.copy_(self.am.stats)
             except Exception as e:
                 print('AM warm-start warn:', e, flush=True)
         self.voc.warm_from_pretrained()
