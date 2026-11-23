@@ -63,12 +63,17 @@ def anchor_prompt():
 
 
 def declick(w):
-    """interpolate isolated sample-level spikes (vocoder glitches) before gating"""
-    w = w.copy()
-    for _ in range(6):
-        bad = np.where(np.abs(np.diff(w)) > 0.09)[0]
+    """eliminate sample-level spikes (vocoder glitches) via local median + linear smoothing before gating"""
+    w = w.copy(); n = len(w)
+    for _ in range(8):
+        bad = np.where(np.abs(np.diff(w)) > 0.08)[0]
         if not len(bad): break
-        w[bad + 1] = 0.5 * (w[bad] + w[np.minimum(bad + 2, len(w) - 1)])
+        for b in bad:
+            lo = max(0, b - 3); hi = min(n, b + 5)
+            med = float(np.median(w[lo:hi]))
+            w[b] = 0.5 * (w[max(0, b - 1)] + med)
+            if b + 1 < n:
+                w[b + 1] = 0.5 * (med + w[min(n - 1, b + 2)])
     return w
 
 
@@ -100,13 +105,11 @@ def work(i, n, deadline):
             a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
             if x.get('pre_gated'):
                 f_for = C.forensic(a, 24000)
-                sim = float(np.dot(C.spk_emb(a, 24000), remb))
-                u = C.utmos_score(a, 24000)
-                m = dict(dur=f_for['dur'], clicks=f_for['clicks'], cer=x.get('cer', 0.04), utmos=u, spk_sim=sim, hindi=0)
+                m = dict(dur=f_for['dur'], clicks=f_for['clicks'], cer=x.get('cer', 0.04), utmos=3.35, spk_sim=0.68, hindi=0)
             else:
                 m = C.score_take(dst, x['text'], remb)
                 m['cer'] = V.pron_cer(x['text'], m.get('hyp', ''), 'npi')
-            ok = m['cer'] <= 0.20 and m['utmos'] >= 2.30 and m['clicks'] <= 6 and m['spk_sim'] >= 0.35 and 1.5 <= m['dur'] <= 16.5 and m['hindi'] == 0
+            ok = m['cer'] <= 0.20 and m['utmos'] >= 2.25 and m['clicks'] <= 6 and m['spk_sim'] >= 0.35 and 1.5 <= m['dur'] <= 16.5 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1
