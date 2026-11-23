@@ -1,0 +1,232 @@
+{
+  "sentences": [
+    {
+      "id": "ne_kathmandu",
+      "lang": "ne",
+      "style": "news",
+      "L": 70,
+      "T_mel": 574,
+      "wav_samples": 148924,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 0.0,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 3.337860107421875e-06,
+      "logdur_max_diff": 1.0609626770019531e-05,
+      "mel_max_abs_diff": 4.291534423828125e-05,
+      "spec_re_max_diff": 0.03793245553970337,
+      "spec_im_max_diff": 0.022573232650756836,
+      "wav_max_abs_diff": 0.0032394248992204666,
+      "wav_cosine_sim": 0.9999968540164443,
+      "cpp_synth_ms": 747.7,
+      "py_synth_ms": 642.21,
+      "cpp_rtf": 0.1205,
+      "audio_sec": 6.205,
+      "wav_mean_abs_diff": 0.00015146088844630867
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "L": 85,
+      "T_mel": 679,
+      "wav_samples": 175804,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 0.0001150369644165039,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 0.00010246038436889648,
+      "logdur_max_diff": 1.0013580322265625e-05,
+      "mel_max_abs_diff": 0.00022554397583007812,
+      "spec_re_max_diff": 0.03880882263183594,
+      "spec_im_max_diff": 0.03332042694091797,
+      "wav_max_abs_diff": 0.0044755637645721436,
+      "wav_cosine_sim": 0.999997295909602,
+      "cpp_synth_ms": 880.98,
+      "py_synth_ms": 688.78,
+      "cpp_rtf": 0.1203,
+      "audio_sec": 7.325,
+      "wav_mean_abs_diff": 0.00015379677643068135
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "L": 81,
+      "T_mel": 645,
+      "wav_samples": 167100,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 0.0,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 2.5033950805664062e-06,
+      "logdur_max_diff": 1.9073486328125e-06,
+      "mel_max_abs_diff": 6.031990051269531e-05,
+      "spec_re_max_diff": 0.019908905029296875,
+      "spec_im_max_diff": 0.019280433654785156,
+      "wav_max_abs_diff": 0.0018685907125473022,
+      "wav_cosine_sim": 0.9999989643184392,
+      "cpp_synth_ms": 808.22,
+      "py_synth_ms": 688.5,
+      "cpp_rtf": 0.1161,
+      "audio_sec": 6.963,
+      "wav_mean_abs_diff": 8.426563726970926e-05
+    },
+    {
+      "id": "ne_hiatus",
+      "lang": "ne",
+      "style": "storytelling",
+      "L": 45,
+      "T_mel": 435,
+      "wav_samples": 113340,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 0.0,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 3.2782554626464844e-06,
+      "logdur_max_diff": 9.5367431640625e-07,
+      "mel_max_abs_diff": 9.274482727050781e-05,
+      "spec_re_max_diff": 0.049347877502441406,
+      "spec_im_max_diff": 0.036362409591674805,
+      "wav_max_abs_diff": 0.006519526243209839,
+      "wav_cosine_sim": 0.9999926528790508,
+      "cpp_synth_ms": 549.97,
+      "py_synth_ms": 594.65,
+      "cpp_rtf": 0.1165,
+      "audio_sec": 4.723,
+      "wav_mean_abs_diff": 0.00034459633752703667
+    },
+    {
+      "id": "sa_om",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "L": 90,
+      "T_mel": 945,
+      "wav_samples": 243900,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 5.960464477539063e-08,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 2.384185791015625e-06,
+      "logdur_max_diff": 3.5762786865234375e-06,
+      "mel_max_abs_diff": 5.0067901611328125e-05,
+      "spec_re_max_diff": 0.04432201385498047,
+      "spec_im_max_diff": 0.0388493537902832,
+      "wav_max_abs_diff": 0.005256667733192444,
+      "wav_cosine_sim": 0.999997545988355,
+      "cpp_synth_ms": 1344.69,
+      "py_synth_ms": 741.54,
+      "cpp_rtf": 0.1323,
+      "audio_sec": 10.162,
+      "wav_mean_abs_diff": 0.00014981767162680626
+    },
+    {
+      "id": "sa_rv",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "L": 65,
+      "T_mel": 630,
+      "wav_samples": 163260,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 5.960464477539063e-08,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 2.0265579223632812e-06,
+      "logdur_max_diff": 3.0994415283203125e-06,
+      "mel_max_abs_diff": 3.2901763916015625e-05,
+      "spec_re_max_diff": 0.0489044189453125,
+      "spec_im_max_diff": 0.05512261390686035,
+      "wav_max_abs_diff": 0.006594985723495483,
+      "wav_cosine_sim": 0.9999975829640679,
+      "cpp_synth_ms": 776.57,
+      "py_synth_ms": 686.94,
+      "cpp_rtf": 0.1142,
+      "audio_sec": 6.803,
+      "wav_mean_abs_diff": 0.00012048987264279276
+    },
+    {
+      "id": "sa_gita",
+      "lang": "sa",
+      "style": "storytelling",
+      "L": 88,
+      "T_mel": 963,
+      "wav_samples": 248508,
+      "ids_exact": true,
+      "dur_exact": true,
+      "pitch_add_max_diff": 5.960464477539063e-08,
+      "dm_max_diff": 0.0,
+      "x_enc_max_diff": 3.7550926208496094e-06,
+      "logdur_max_diff": 5.0067901611328125e-06,
+      "mel_max_abs_diff": 5.1975250244140625e-05,
+      "spec_re_max_diff": 0.016088485717773438,
+      "spec_im_max_diff": 0.015554428100585938,
+      "wav_max_abs_diff": 0.0018492639064788818,
+      "wav_cosine_sim": 0.9999994047718546,
+      "cpp_synth_ms": 1284.83,
+      "py_synth_ms": 783.74,
+      "cpp_rtf": 0.1241,
+      "audio_sec": 10.354,
+      "wav_mean_abs_diff": 7.11788670741953e-05
+    }
+  ],
+  "all_passed": true,
+  "quantized_tiers": {
+    "f32": {
+      "size_mb": 58.13,
+      "results": [
+        {
+          "id": "ne_kathmandu",
+          "mel_max_abs_diff": 4.291534423828125e-05,
+          "wav_cosine_sim": 0.9999968540164443,
+          "cpp_rtf": 0.1157,
+          "cpp_synth_ms": 717.83
+        },
+        {
+          "id": "sa_om",
+          "mel_max_abs_diff": 5.0067901611328125e-05,
+          "wav_cosine_sim": 0.999997545988355,
+          "cpp_rtf": 0.134,
+          "cpp_synth_ms": 1361.52
+        }
+      ]
+    },
+    "f16": {
+      "size_mb": 40.03,
+      "results": [
+        {
+          "id": "ne_kathmandu",
+          "mel_max_abs_diff": 4.291534423828125e-05,
+          "wav_cosine_sim": 0.9999967574541553,
+          "cpp_rtf": 0.1159,
+          "cpp_synth_ms": 719.19
+        },
+        {
+          "id": "sa_om",
+          "mel_max_abs_diff": 5.0067901611328125e-05,
+          "wav_cosine_sim": 0.9999972874954174,
+          "cpp_rtf": 0.1244,
+          "cpp_synth_ms": 1264.14
+        }
+      ]
+    },
+    "q8_0": {
+      "size_mb": 36.69,
+      "results": [
+        {
+          "id": "ne_kathmandu",
+          "mel_max_abs_diff": 4.291534423828125e-05,
+          "wav_cosine_sim": 0.9999438721040607,
+          "cpp_rtf": 0.1148,
+          "cpp_synth_ms": 712.46
+        },
+        {
+          "id": "sa_om",
+          "mel_max_abs_diff": 5.0067901611328125e-05,
+          "wav_cosine_sim": 0.9999549508722573,
+          "cpp_rtf": 0.1284,
+          "cpp_synth_ms": 1304.94
+        }
+      ]
+    }
+  }
+}
