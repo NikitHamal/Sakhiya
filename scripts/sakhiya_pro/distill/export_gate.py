@@ -92,7 +92,7 @@ def export_fp32(m, path):
         output_names=["wav"],
         dynamic_axes={"ids": {1: "L"}, "wav": {1: "N"}},
         opset_version=17,
-        do_constant_folding=False,
+        do_constant_folding=True,
     )
     try:
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
@@ -106,6 +106,19 @@ def export_fp32(m, path):
 def quantize(src, dst, fp16_names=()):
     """Weight-only per-output-channel int8 (QDQ: DequantizeLinear) with deduplication for looped universal blocks."""
     m = onnx.load(src)
+    # Convert large Constant float nodes (e.g., K_istft) into initializers so they are quantized/deduplicated
+    rem_nodes = []
+    for n in m.graph.node:
+        if n.op_type == "Constant" and len(n.output) == 1:
+            val_attr = next((a for a in n.attribute if a.name == "value"), None)
+            if val_attr is not None and val_attr.t.data_type == TensorProto.FLOAT:
+                arr_c = numpy_helper.to_array(val_attr.t)
+                if arr_c.size >= 64:
+                    m.graph.initializer.append(numpy_helper.from_array(arr_c, n.output[0]))
+                    continue
+        rem_nodes.append(n)
+    del m.graph.node[:]
+    m.graph.node.extend(rem_nodes)
     _dedup_initializers(m)
     use = {}
     for n in m.graph.node:
@@ -120,7 +133,7 @@ def quantize(src, dst, fp16_names=()):
         op = use.get(init.name, "")
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
-            or a.shape[0] in (1, 66)
+            or a.shape[0] == 1
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0

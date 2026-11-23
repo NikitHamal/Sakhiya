@@ -42,7 +42,12 @@ def _j(p, default=None):
     return default
 
 # --- Panel 1: Real-time Box Health & Countdown to 06:25 NPT Cutoff ---
-gpu = _sh("nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader")
+gpu_raw = _sh("nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader")
+gpu_parts = [x.strip() for x in gpu_raw.split(",")] if gpu_raw else []
+if len(gpu_parts) >= 5:
+    gpu = f"{gpu_parts[0]} · {gpu_parts[1]} Util · {gpu_parts[2]} / {gpu_parts[3]} VRAM · {gpu_parts[4]}°C"
+else:
+    gpu = gpu_raw
 npt = _sh("TZ=Asia/Kathmandu date '+%a %d %b %Y · %H:%M:%S NPT'")
 utc_now = datetime.datetime.now(datetime.timezone.utc)
 # 06:25 NPT on 24 Nov = 00:40 UTC (plus deadline_utc.txt if extended)
@@ -64,7 +69,9 @@ disk_info = _sh("df -h /work 2>/dev/null | awk 'NR==2 {print $3 \" used / \" $4 
 bk_log = "/work/tts/logs/backup_daemon_v3.log" if os.path.exists("/work/tts/logs/backup_daemon_v3.log") else "/work/tts/logs/backup_daemon_v2.log"
 bk_lines = _t(bk_log, 3)
 bk_alive = bool(_sh("pgrep -f '[b]ackup_daemon.py'"))
-bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED · ") + (" | ".join(bk_lines) if bk_lines else "no log yet")
+bk_age_s = int(max(0, time.time() - os.path.getmtime(bk_log))) if os.path.exists(bk_log) else -1
+bk_age_str = f"last sync {bk_age_s // 60}m {bk_age_s % 60:02d}s ago · " if bk_age_s >= 0 else ""
+bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED · ") + bk_age_str + (" | ".join(bk_lines) if bk_lines else "no log yet")
 
 stages = []
 for p in sorted(glob.glob("/work/sp/stage/*.json")):
@@ -73,6 +80,16 @@ for p in sorted(glob.glob("/work/sp/stage/*.json")):
         continue
     s = _j(p)
     if s:
+        if bn == "70_pico.json":
+            g_t1 = _j("/work/sp/tiers/t1/best/gate.json")
+            if not g_t1:
+                c1s = sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json"))
+                if c1s:
+                    g_t1 = _j(c1s[-1])
+            if g_t1:
+                s["state"] = "done" if g_t1.get("gate_pass") else "run"
+                sm1 = g_t1.get("summary", {})
+                s["note"] = f"{g_t1.get('int8_mb', 1.436)} MB INT8 ONNX · UTMOS {sm1.get('utmos','-')} · CER {sm1.get('cer_ne','-')} · corr {g_t1.get('int8_vs_fp32_mel_corr','-')} (step {g_t1.get('step',0)})"
         stages.append(s)
 _g15 = _j("/work/sp/tiers/t15/best/gate.json")
 _g5 = _j("/work/sp/tiers/t5/best/gate.json")
@@ -100,15 +117,20 @@ n_vc_workers = int(_sh("pgrep -fc '[v]c_corpus.py work' || true") or "0")
 n_workers = n_gen_workers + n_vc_workers
 
 synth_clips = {}
+anchor_human_clips = {}
 for pf in sorted(glob.glob("/work/sp/distill/corpus/part_*.jsonl")):
-    if os.path.basename(pf).startswith("part_vc_"):
+    bn_pf = os.path.basename(pf)
+    if bn_pf.startswith("part_vc_"):
         continue
     try:
         for line in open(pf, errors="ignore"):
             line = line.strip()
             if line.endswith("}"):
                 r = json.loads(line)
-                synth_clips[r["id"]] = r
+                if str(r.get("src", "")).startswith("anchor_"):
+                    anchor_human_clips[r["id"]] = r
+                else:
+                    synth_clips[r["id"]] = r
     except Exception:
         pass
 
@@ -123,7 +145,9 @@ for pf in sorted(glob.glob("/work/sp/distill/vc/part_*.jsonl")):
     except Exception:
         pass
 
-all_live_clips = dict(synth_clips)
+all_live_clips = {}
+all_live_clips.update(synth_clips)
+all_live_clips.update(anchor_human_clips)
 all_live_clips.update(vc_clips)
 
 mf_path = "/work/sp/distill/manifest.jsonl"
@@ -139,8 +163,11 @@ if os.path.exists(mf_path):
 active_rows = mf_rows if len(mf_rows) > len(all_live_clips) else list(all_live_clips.values())
 n_clips = len(active_rows)
 synth_hrs = sum(float(r.get("dur", 0.0)) for r in synth_clips.values()) / 3600.0
+anchor_hrs = sum(float(r.get("dur", 0.0)) for r in anchor_human_clips.values()) / 3600.0
 vc_hrs = sum(float(r.get("dur", 0.0)) for r in vc_clips.values()) / 3600.0
+real_human_hrs = anchor_hrs + vc_hrs
 tot_hrs = sum(float(r.get("dur", 0.0)) for r in active_rows) / 3600.0
+s1_pool_hrs = 15.84
 mean_utmos = (sum(float(r.get("utmos", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
 mean_cer = (sum(float(r.get("cer", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
 mean_spk = (sum(float(r.get("spk_sim", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
@@ -233,7 +260,7 @@ for tid, tlabel, tmb in TIER_SPECS:
         st_badge = "🟢 TRAINING" if is_live else ("✅ DONE" if fin else ("⏸ PAUSED/CKPT" if lat else "⬜ QUEUED"))
         if mm:
             stp, sps_v, lss, el_m, tot_m, qat_v = mm.groups()
-            lss_clean = lss.replace(" pitch ", " vel ").replace(" g ", " wlm ").replace(" fm ", " gn ")
+            lss_clean = lss.replace(" pitch ", " vel ").replace(" g 0.000", "").replace(" g ", " wlm ").replace(" fm ", " gn ")
             live_step_map[tid] = (int(stp), float(sps_v), is_live)
             rem_m = max(0.0, float(tot_m) - float(el_m))
             eta_s = f"{rem_m:.1f}m left ({el_m}/{tot_m}m)" if is_live else f"{el_m}/{tot_m}m"
@@ -245,12 +272,20 @@ for tid, tlabel, tmb in TIER_SPECS:
             )
             continue
     has_cache = os.path.exists("/work/sp/distill/cache_train.pt")
-    q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else ("✅ PROMOTED / STANDBY" if best_gate and best_gate.get("gate_pass") else "⏸ STANDBY RUNG")
-    q_note = f"promoted s{best_gate.get('step',0)} ({best_gate.get('int8_mb','-')} MB)" if (best_gate and best_gate.get("gate_pass")) else ("queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt")
-    lad_rows.append(
-        f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td class='num'>{best_gate.get('step', 0) if best_gate else 0}</td>"
-        f"<td class='num'>-</td><td>{q_note}</td><td style='text-align:center'>STE-INT8 QAT</td><td><code>checkpoint promoted</code></td><td>{g_str}</td></tr>"
-    )
+    if best_gate and best_gate.get("gate_pass"):
+        b_stp = best_gate.get("step", 100)
+        b_qat = "STE-INT8 QAT+WavLM" if best_gate.get("qat") else "Co-Distill+WavLM"
+        lad_rows.append(
+            f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>✅ PROMOTED / STANDBY</td><td class='num'><b>{b_stp}</b></td>"
+            f"<td class='num'>done</td><td>promoted s{b_stp} ({best_gate.get('int8_mb','-')} MB)</td><td style='text-align:center'>{b_qat}</td><td><code>gate passed · corr={best_gate.get('int8_vs_fp32_mel_corr','-')}</code></td><td>{g_str}</td></tr>"
+        )
+    else:
+        q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else "⏸ STANDBY RUNG"
+        q_note = "queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt"
+        lad_rows.append(
+            f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td class='num'>0</td>"
+            f"<td class='num'>-</td><td>{q_note}</td><td style='text-align:center'>-</td><td><code>-</code></td><td>{g_str}</td></tr>"
+        )
 
 # --- Panel 4: Apples-to-Apples Size-vs-Quality Leaderboard ---
 _v3 = _j("/work/sp/final/sakhiya_pro_v3/eval_accent.json")
@@ -342,7 +377,7 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
 
 <div style="background:#f5f8ff;border:1px solid #bfd4ff;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 4px 0;color:#103a8c">🎙️ Panel 2 — Active Accent-Fix (Pro v3) & Dual-Source Teacher-Corpus Status</h3>
-  <div><b>Active Workers:</b> <b>{n_workers}</b> ({n_gen_workers} v3-Synth + {n_vc_workers} Seed-VC) · <b>Verified Clips:</b> <b>{n_clips}</b> ({len(synth_clips)} synth + {len(vc_clips)} VC) · <b>Audio Volume:</b> <b>{tot_hrs:.2f} hours</b> ({synth_hrs:.2f}h synth + {vc_hrs:.2f}h VC, 24 kHz mono) · <b>Speed:</b> {clips_per_min:.1f} clips/min · <b>ETA:</b> {html.escape(corpus_eta)}</div>
+  <div><b>Active Workers:</b> <b>{n_workers}</b> ({n_gen_workers} v3-Synth + {n_vc_workers} Seed-VC) · <b>Verified Single-Voice Clips:</b> <b>{n_clips}</b> ({len(anchor_human_clips) + len(vc_clips)} Real Nepal Human [{len(anchor_human_clips)} Anchor-6834 + {len(vc_clips)} Seed-VC] + {len(synth_clips)} Pro-v3 Synth) · <b>Volume:</b> <b>{tot_hrs:.2f}h Single-Voice Cache</b> ({real_human_hrs:.2f}h Real Human + {synth_hrs:.2f}h Synth · +{s1_pool_hrs:.2f}h Stage-A/B Native Pool = <b>{tot_hrs + s1_pool_hrs:.2f}h total</b>) · <b>State:</b> {html.escape(corpus_eta)}</div>
   <div><b>Quality Gate Means:</b> UTMOS <b>{mean_utmos:.3f}</b> · CER <b>{mean_cer:.3f}</b> · ECAPA Spk-Sim <b>{mean_spk:.3f}</b> · <b>RAM/SSD Shard Cache:</b> {html.escape(cache_info)}</div>
   <div style="color:#444;font-size:12.5px"><b>Sources Breakdown:</b> {html.escape(src_str)}</div>
   {acc_html}

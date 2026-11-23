@@ -245,6 +245,7 @@ def main():
     t0 = time.time() - spent
     tstep = time.time()
     qat_on = False
+    last_wlm = 0.0
     ar = torch.arange(a.seg, device=dev)
     ac = lambda: torch.autocast("cuda", dtype=torch.bfloat16)
 
@@ -279,14 +280,6 @@ def main():
             ht, mut, gt = t_am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_add, prosody=pros, sty_mask=ones_m)
             ldt = t_am.dur.pred_logdur(ids, ht, im)
             mut_t = mut.transpose(1, 2)
-            if G.steps == 1:
-                t_tok = torch.zeros(B, device=dev, dtype=torch.float32)
-                xt_tok = mut_t
-            else:
-                t_tok = torch.rand(B, device=dev, dtype=torch.float32)
-                z_tok = torch.randn_like(mut_t) * (0.667 * 1.4142)
-                xt_tok = (1.0 - t_tok[:, None, None]) * z_tok + t_tok[:, None, None] * mut_t
-            vt = t_am.vel(xt_tok, t_tok, mut_t, gt, m_l)
             # Gentle duration calibration toward Sakhiya-Pro v3 utterance length tl
             dur_t = torch.exp(ldt).clamp(min=1.0, max=60.0) * im.float()
             scale_v3 = (tl.float() / dur_t.sum(1).clamp(min=1.0)).clamp(0.92, 1.08)[:, None]
@@ -297,12 +290,9 @@ def main():
             hs, mus, gs = G.am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_add, prosody=pros, sty_mask=ones_m)
             lds = G.am.dur.pred_logdur(ids, hs, im) + G.dur_rate_bias.clamp(-0.12, 0.12) * im.float()
             mus_t = mus.transpose(1, 2)
-            xs_tok = mus_t if G.steps == 1 else ((1.0 - t_tok[:, None, None]) * z_tok + t_tok[:, None, None] * mus_t)
-            vs = G.am.vel(xs_tok, t_tok, mus_t, gs, m_l)
 
         l_prior = F.l1_loss(mus[im].float(), mut[im].float()) + 0.4 * F.l1_loss(hs[im].float(), ht[im].float())
         l_dur = F.l1_loss(lds[im].float(), (0.85 * ldt[im] + 0.15 * ldt_v3[im]).float())
-        l_vel = F.l1_loss((vs * m_l).float(), (vt * m_l).float())
 
         # Expand to frame level using teacher durations for exact frame-synchronous Harmonic-iSTFT waveform distillation
         with torch.no_grad():
@@ -331,11 +321,19 @@ def main():
             mel_s = xt_s_seg * G.am.stats[1] + G.am.stats[0]
             y_s, re_s, im_s, f0_s, _ = G.voc_wav(mel_s)
 
-        l_mel = F.l1_loss(mel_s.float(), mel_t.float()) + 0.5 * F.l1_loss(mel_fn(y_s), mel_fn(y_t))
+        # Frame-level velocity + spectral sharpness + cepstral harmonic comb losses (no token-level vel distortion)
+        l_vel = F.l1_loss(xt_s_seg.float(), xt_t_seg.float())
+        l_df = F.l1_loss(mel_s[:, 1:, :].float() - mel_s[:, :-1, :].float(), mel_t[:, 1:, :].float() - mel_t[:, :-1, :].float())
+        l_dt = F.l1_loss(mel_s[:, :, 1:].float() - mel_s[:, :, :-1].float(), mel_t[:, :, 1:].float() - mel_t[:, :, :-1].float())
+        cep_s = torch.fft.rfft(mel_s.float(), dim=1).abs()[:, 4:48, :]
+        cep_t = torch.fft.rfft(mel_t.float(), dim=1).abs()[:, 4:48, :]
+        l_cep = F.l1_loss(cep_s, cep_t)
+        l_mel = F.l1_loss(mel_s.float(), mel_t.float()) + 0.5 * F.l1_loss(mel_fn(y_s), mel_fn(y_t)) + 0.6 * l_df + 0.3 * l_dt + 0.25 * l_cep
         l_st = mrstft(y_t.float(), y_s.float())
         l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t)
         l_pitch = F.l1_loss(G.am.enc.f0_pred(hs)[im].squeeze(-1).float(), t_am.enc.f0_pred(ht)[im].squeeze(-1).float()) * 0.25
 
+        step += 1
         l_wlm = torch.zeros((), device=dev)
         if wavlm is not None and (step % 2 == 0):
             with ac():
@@ -348,6 +346,7 @@ def main():
                     hy = wavlm(y16, output_hidden_states=True).hidden_states
                 hyh = wavlm(yh16, output_hidden_states=True).hidden_states
                 l_wlm = sum(F.l1_loss(hyh[k].float(), hy[k].detach().float()) for k in (3, 6, 9, 12) if k < len(hy)) / 4.0
+                last_wlm = float(l_wlm.item())
 
         loss = 4.0 * l_mel + 2.5 * l_prior + 2.0 * l_vel + 1.5 * l_dur + 0.5 * l_st + 0.5 * l_ph + l_pitch + 1.2 * l_wlm
         oG.zero_grad(set_to_none=True)
@@ -355,7 +354,6 @@ def main():
         gn = torch.nn.utils.clip_grad_norm_(G.parameters(), 2.0)
         if torch.isfinite(gn):
             oG.step()
-        step += 1
 
         with torch.no_grad():
             dcy = min(0.998, (1 + step) / (10 + step))
@@ -372,7 +370,7 @@ def main():
             now = time.time()
             ips = 50 / max(1e-6, now - tstep)
             tstep = now
-            log(f"Step {step} | {ips:.2f} it/s | mel {l_mel.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_vel.item():.3f} g {l_wlm.item():.3f} fm {gn.item() if torch.isfinite(gn) else 0.0:.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}")
+            log(f"Step {step} | {ips:.2f} it/s | mel {l_mel.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_vel.item():.3f} g {last_wlm:.3f} fm {gn.item() if torch.isfinite(gn) else 0.0:.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}")
 
         if step in (50, 150) or step % a.save_every == 0:
             torch.save(dict(ema=ema.state_dict(), cfg=G.cfg, tier=a.tier, arch=G.arch, step=step, f0=[mu, sd], qat=qat_on), a.out + "/ema_latest.tmp")
