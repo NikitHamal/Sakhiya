@@ -10,6 +10,10 @@ def stage():
         if os.path.isdir(src): os.system(f'mkdir -p {O}/{dst} && cp -ru {src}/. {O}/{dst}/ 2>/dev/null')
     for f in ('dataset_report.json', 'train_meta.json', 'dev_meta.json'):
         if os.path.exists('/work/sp/ft/' + f): os.system(f'mkdir -p {O}/ft && cp -u /work/sp/ft/{f} {O}/ft/')
+    for d in glob.glob('/work/sp/distill/runs/*/'):   # student ladder: EMA checkpoints + logs (resume state.pt stays local)
+        n = os.path.basename(d.rstrip('/')); os.system(f'mkdir -p {O}/distill/runs/{n} && cp -u {d}train.log {d}ema_latest.pt {d}ema_final.pt {O}/distill/runs/{n}/ 2>/dev/null')
+    for f in ('texts.jsonl', 'manifest.jsonl', 'corpus_report.json', 'cache_train.pt'):
+        if os.path.exists('/work/sp/distill/' + f): os.system(f'mkdir -p {O}/distill && cp -u /work/sp/distill/{f} {O}/distill/')
     for d in glob.glob('/work/sp/exp/*/'):
         n = os.path.basename(d.rstrip('/')); cks = sorted(glob.glob(d + 'checkpoint-*'), key=lambda p: int(p.rsplit('-', 1)[1]))
         os.system(f'mkdir -p {O}/exp/{n} && cp -u {d}train.log {d}train_cfg.json {O}/exp/{n}/ 2>/dev/null')

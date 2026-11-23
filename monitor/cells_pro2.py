@@ -17,7 +17,7 @@ def _sh(c):
     except Exception: return ""
 gpu = _sh("nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader")
 npt = _sh("TZ=Asia/Kathmandu date '+%a %H:%M NPT'")
-now = datetime.datetime.now(datetime.timezone.utc); stop = datetime.datetime(2026, 11, 24, 0, 40, tzinfo=datetime.timezone.utc)
+now = datetime.datetime.now(datetime.timezone.utc); stop = datetime.datetime.fromisoformat((open('/work/sp/deadline_utc.txt').read().strip() if os.path.exists('/work/sp/deadline_utc.txt') else '2026-11-24T04:30:00') ).replace(tzinfo=datetime.timezone.utc)
 left = (stop - now).total_seconds(); lh, lm = int(left // 3600), int(left % 3600 // 60)
 logs = sorted(glob.glob("/work/tts/logs/train_*.log"), key=os.path.getmtime)
 job, step_line, loss, sps, eta = "-", "-", "-", "-", "-"
@@ -43,13 +43,22 @@ st = "".join(f"<li>{ic.get(s.get('state'), '⬜')} <b>{html.escape(str(s.get('la
 try: lb = json.load(open("/work/sp/tiers/leaderboard.json"))
 except Exception: lb = []
 tb = "".join(f"<tr><td>{html.escape(str(r.get('name')))}</td><td align=right>{r.get('size_mb','-')}</td><td align=right>{r.get('utmos','-')}</td><td align=right>{r.get('cer','-')}</td><td align=right>{r.get('spk','-')}</td><td align=right>{r.get('rtf','-')}</td><td>{html.escape(str(r.get('status','')))}</td></tr>" for r in lb)
+lad = []
+for t in ("t30", "t15", "t10", "t5", "t1"):
+    lg = f"/work/sp/distill/runs/{t}/train.log"
+    ls_ = [l for l in _t(lg, 30) if l.startswith("Step ")]
+    if ls_:
+        mm = re.search(r"Step (\d+) \| ([0-9.]+) it/s .*?\| ([0-9.]+)/([0-9.]+) min", ls_[-1])
+        fin = os.path.exists(f"/work/sp/distill/runs/{t}/ema_final.pt")
+        if mm: lad.append(f"<tr><td>{t}</td><td align=right>{mm.group(1)}</td><td align=right>{mm.group(2)}</td><td align=right>{mm.group(3)} / {mm.group(4)} min</td><td>{'✅ finished' if fin else ('🔄 training' if os.path.getmtime(lg) > time.time() - 180 else '⏸ stopped')}</td><td><code>{html.escape(ls_[-1].split('|')[2][:110])}</code></td></tr>")
+ladtb = "<table style='border-collapse:collapse' border=1 cellpadding=4><tr><th>student</th><th>step</th><th>it/s</th><th>progress</th><th>state</th><th>losses</th></tr>" + "".join(lad) + "</table>" if lad else ""
 bk = _t("/work/tts/logs/backup_daemon_v2.log", 1)
 col = "#c00" if left < 3600 else "#080"
 mo.Html(f"""<div style="font-family:system-ui;font-size:14px;line-height:1.5">
 <h3 style="margin:0">Sakhiya-Pro v2 → Micro / Pico — LIVE · {npt}</h3>
-<p><b style="color:{col}">⏱ {lh}h {lm}m until hard stop 06:25 NPT</b> · GPU util/mem/total/temp <code>{html.escape(gpu)}</code></p>
+<p><b style="color:{col}">⏱ {lh}h {lm}m until hard stop (final pushes done by then; box expiry is later)</b> · GPU util/mem/total/temp <code>{html.escape(gpu)}</code></p>
 <p>job: <b>{html.escape(job)}</b> {'(running)' if running else '(idle)'}<br>Step: <code>{html.escape(step_line)}</code><br>speed: <b>{sps}</b> steps/s · ETA: <b>{eta}</b> · loss: {loss}</p>
-<ul style="list-style:none;padding-left:0">{st}</ul>
+<ul style="list-style:none;padding-left:0">{st}</ul>{ladtb}
 <table style="border-collapse:collapse" border="1" cellpadding="4"><tr><th>tier</th><th>INT8 size MB</th><th>UTMOS</th><th>CER</th><th>spk-match</th><th>1-thr RTF</th><th>status</th></tr>{tb}</table>
 <p>HF backup (15 min → sakhiya-v1-train/sakhiya_pro_v2): <code>{html.escape(' | '.join(bk) if bk else '-')}</code></p>
 <p style="color:#666">Scores come from synthesized / exported-INT8 audio (ASR CER, UTMOS22, speaker similarity, click forensics), never training loss.</p></div>""")

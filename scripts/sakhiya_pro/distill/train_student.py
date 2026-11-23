@@ -157,7 +157,7 @@ def main():
         with torch.no_grad():
             if step < a.warm_uniform:
                 ii = (torch.arange(T, device=dev)[None] * il[:, None] // tl[:, None].clamp(min=1)).clamp(max=L - 1)
-                path = F.one_hot(ii, L).transpose(1, 2).float() * imask * tmask[:, None]
+                path = F.one_hot(ii, L).transpose(1, 2).float() * imask.transpose(1, 2) * tmask[:, None]
             else:
                 a_ = (prior ** 2).sum(1)[:, :, None]; b_ = (melN ** 2).sum(1)[:, None, :]; lp = -0.5 * (a_ - 2 * prior.transpose(1, 2) @ melN + b_) / N_MEL
                 m = (imask[:, 0, :, None] > 0) & (tmask[:, None, :] > 0); path = maximum_path(lp, m)

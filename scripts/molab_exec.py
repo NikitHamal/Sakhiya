@@ -2,7 +2,7 @@
 """Run shell (default) or python code on the MoLab marimo kernel via the REST API.
 Token is read from /tmp/molab_token (never committed). usage: molab_exec.py [--py] 'cmd'  |  molab_exec.py < script"""
 import json, os, re, sys, urllib.request
-URL = os.environ.get("MOLAB_URL") or (open("/tmp/molab_url").read().strip() if os.path.exists("/tmp/molab_url") else "https://sb-36998e0130e60721.sb.molab.run")
+URL = os.environ.get("MOLAB_URL") or open("/tmp/molab_url").read().strip()
 TOK = open(os.environ.get("MOLAB_TOKEN_FILE", "/tmp/molab_token")).read().strip()
 H = {"Authorization": f"Bearer {TOK}", "User-Agent": "curl/8.5.0"}
 def req(path, body=None, extra=None, timeout=600):

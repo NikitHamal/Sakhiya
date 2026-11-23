@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Export a student checkpoint to ONE browser-safe ONNX (fp32 + int8 QDQ weights) and judge the REAL int8 file.
+usage: export_gate.py TIER CKPT.pt OUTDIR [--n_dev 12] [--fp16 name,...] [--no_asr] [--mp3]
+Checks: op whitelist (no ConvInteger/MatMulInteger/DynamicQuantize), nan_count == 0, int8-vs-fp32 log-mel correlation (>= 0.985, else the
+final STFT-head conv is kept FP16 -- selective mixed precision), 1-thread CPU RTF (onnxruntime), then the audio gate on the 15 master clips +
+unseen dev lines: Kriti CER (sound-folded for Sanskrit), UTMOS22, clicks, word-drop proxy, ECAPA similarity to the teacher anchor.
+Writes OUTDIR/gate.json (+ wavs, mp3 for the listening desk)."""
+import sys, os, json, time, re, argparse, subprocess
+import numpy as np, torch, onnx, onnxruntime as ort
+from onnx import helper, numpy_helper, TensorProto
+HERE = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
+for p in (HERE, REPO, os.path.join(REPO, 'scripts', 'sakhiya_pro'), '/work/sp'): sys.path.insert(0, p)
+from student import Student, SR, HOP, N_FFT
+BAD_OPS = {'ConvInteger', 'MatMulInteger', 'DynamicQuantizeLinear', 'QLinearConv', 'QLinearMatMul'}
+
+
+class Wrap(torch.nn.Module):
+    def __init__(s, m): super().__init__(); s.m = m
+    def forward(s, ids, lang, dur_scale, pitch_shift): return s.m.infer(ids, lang, dur_scale, pitch_shift)
+
+
+def load(ck):
+    S = torch.load(ck, map_location='cpu', weights_only=False); m = Student(**S['cfg']); m.load_state_dict(S['ema']); return m.eval(), S
+
+
+def export_fp32(m, path):
+    ids = torch.randint(3, 50, (1, 40)); args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(1), torch.zeros(1))
+    kw = dict(input_names=['ids', 'lang', 'dur_scale', 'pitch_shift'], output_names=['wav'], dynamic_axes={'ids': {1: 'L'}, 'wav': {1: 'N'}}, opset_version=17, do_constant_folding=False)
+    try: torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
+    except TypeError: torch.onnx.export(Wrap(m), args, path, **kw)
+
+
+def quantize(src, dst, fp16_names=()):
+    """weight-only per-output-channel int8 (QDQ: DequantizeLinear -> plain Conv/MatMul/Gather); small tensors -> fp16 + Cast."""
+    m = onnx.load(src); keep, new = [], []
+    for init in m.graph.initializer:
+        a = numpy_helper.to_array(init)
+        if init.data_type != TensorProto.FLOAT or a.size <= 8: keep.append(init); continue
+        if a.ndim >= 2 and a.size >= 1024 and not any(init.name.endswith(n) or n in init.name for n in fp16_names):
+            red = tuple(range(1, a.ndim)); sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
+            q = np.clip(np.round(a / sc.reshape(-1, *([1] * (a.ndim - 1)))), -127, 127).astype(np.int8)
+            keep += [numpy_helper.from_array(q, init.name + '_q'), numpy_helper.from_array(sc.astype(np.float32), init.name + '_s')]
+            new.append(helper.make_node('DequantizeLinear', [init.name + '_q', init.name + '_s'], [init.name], axis=0, name=init.name + '_dq'))
+        else:
+            h = numpy_helper.from_array(a.astype(np.float16), init.name + '_h'); keep.append(h)
+            new.append(helper.make_node('Cast', [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + '_cast'))
+    del m.graph.initializer[:]; m.graph.initializer.extend(keep)
+    nodes = list(m.graph.node); del m.graph.node[:]; m.graph.node.extend(new + nodes)
+    onnx.save(m, dst)
+
+
+def ops(path): return sorted({n.op_type for n in onnx.load(path).graph.node})
+
+
+def sess(path, threads=1):
+    o = ort.SessionOptions(); o.intra_op_num_threads = threads; o.inter_op_num_threads = 1
+    return ort.InferenceSession(path, o, providers=['CPUExecutionProvider'])
+
+
+def run(s, ids, lang=0, ds=1.0, ps=0.0):
+    return s.run(None, {'ids': np.array([ids], np.int64), 'lang': np.array([lang], np.int64), 'dur_scale': np.array([ds], np.float32), 'pitch_shift': np.array([ps], np.float32)})[0][0]
+
+
+def logmel(w):
+    import librosa
+    S = np.abs(librosa.stft(w.astype(np.float32), n_fft=N_FFT, hop_length=HOP)); fb = librosa.filters.mel(sr=SR, n_fft=N_FFT, n_mels=100, fmax=12000)
+    return np.log(np.maximum(fb @ S, 1e-5))
+
+
+def ids_of(text, lang):
+    import nep_norm
+    from sakhiya import g2p, symbols
+    t = text if lang == 'sa' else nep_norm.normalize(re.sub('[\u0951-\u0954]', '', text))
+    return symbols.encode(g2p.text_to_phones(t, 'sa' if lang == 'sa' else 'ne'))
+
+
+def eval_set(n_dev):
+    reg = json.load(open(os.path.join(REPO, 'docs', 'samples', 'versions', 'registry.json')))
+    ev = [dict(id=c['id'], text=c['text'], lang='sa' if c['lang'] == 'sa' else 'ne', set='master') for c in reg['versions'][0]['clips']]
+    mf = '/work/sp/distill/manifest.jsonl'
+    if os.path.exists(mf):
+        dv = [json.loads(l) for l in open(mf)]; dv = [r for r in dv if r.get('split') == 'dev']
+        sa = [r for r in dv if r['lang'] == 'sa'][:n_dev // 3]; ne = [r for r in dv if r['lang'] != 'sa'][:n_dev - len(sa)]
+        ev += [dict(id='dev_' + r['id'], text=r['text'], lang=r['lang'], set='unseen', ref=r['wav']) for r in sa + ne]
+    return ev
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument('tier'); ap.add_argument('ckpt'); ap.add_argument('out')
+    ap.add_argument('--n_dev', type=int, default=12); ap.add_argument('--fp16', default=''); ap.add_argument('--no_asr', action='store_true'); ap.add_argument('--mp3', action='store_true')
+    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True); R = dict(tier=a.tier)
+    m, S = load(a.ckpt); R['step'] = S['step']; R['qat'] = bool(S.get('qat'))
+    f32, i8 = a.out + '/model.fp32.onnx', a.out + '/model.int8.onnx'
+    export_fp32(m, f32)
+    fp16 = [x for x in a.fp16.split(',') if x]
+    quantize(f32, i8, fp16)
+    sz = os.path.getsize(i8) / 1e6; R.update(int8_mb=round(sz, 3), fp32_mb=round(os.path.getsize(f32) / 1e6, 2), ops=ops(i8))
+    R['bad_ops'] = sorted(set(R['ops']) & BAD_OPS)
+    s32, s8 = sess(f32), sess(i8); ev = eval_set(a.n_dev)
+    # int8 fidelity, nan, RTF
+    corr, nan, rtf, t_aud = [], 0, [], 0.0
+    for e in ev[:8]:
+        ids = ids_of(e['text'], e['lang']); lg = 1 if e['lang'] == 'sa' else 0
+        w32 = run(s32, ids, lg); t0 = time.time(); w8 = run(s8, ids, lg); dt = time.time() - t0
+        nan += int(np.isnan(w8).sum()); rtf.append(dt / (len(w8) / SR))
+        n = min(len(w32), len(w8)); A, B = logmel(w32[:n]), logmel(w8[:n]); corr.append(float(np.mean([np.corrcoef(A[:, j], B[:, j])[0, 1] for j in range(0, A.shape[1], 3)])))
+    R.update(int8_vs_fp32_mel_corr=round(float(np.mean(corr)), 4), nan_count=nan, rtf_1thread=round(float(np.mean(rtf)), 4))
+    if R['int8_vs_fp32_mel_corr'] < 0.985 and not fp16:
+        last = [k for k, _ in m.state_dict().items() if k.startswith('head') and k.endswith('weight')][-1]
+        R['note'] = f'int8 corr {R["int8_vs_fp32_mel_corr"]} < 0.985 -> final STFT head {last} kept FP16 (selective mixed precision)'
+        quantize(f32, i8, [last]); R['int8_mb'] = round(os.path.getsize(i8) / 1e6, 3); R['fp16_kept'] = last; s8 = sess(i8)
+        corr = []
+        for e in ev[:8]:
+            ids = ids_of(e['text'], e['lang']); lg = 1 if e['lang'] == 'sa' else 0; w32 = run(s32, ids, lg); w8 = run(s8, ids, lg); n = min(len(w32), len(w8))
+            A, B = logmel(w32[:n]), logmel(w8[:n]); corr.append(float(np.mean([np.corrcoef(A[:, j], B[:, j])[0, 1] for j in range(0, A.shape[1], 3)])))
+        R['int8_vs_fp32_mel_corr'] = round(float(np.mean(corr)), 4)
+    os.makedirs(a.out + '/wav', exist_ok=True)
+    import soundfile as sf
+    for e in ev:
+        w = run(s8, ids_of(e['text'], e['lang']), 1 if e['lang'] == 'sa' else 0); sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
+    if not a.no_asr:
+        import sp_common as C, validators as V
+        rw, rsr = sf.read('/work/sp/ref/anchor_ref.wav', dtype='float32'); remb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr); rows = []
+        for e in ev:
+            p = f"{a.out}/wav/{e['id']}.wav"; f = C.score_take(p, e['text'], remb)
+            c = V.pron_cer(e['text'], f['hyp'], 'sa' if e['lang'] == 'sa' else 'npi')
+            rows.append(dict(id=e['id'], set=e['set'], lang=e['lang'], cer=round(c, 3), utmos=round(f['utmos'], 3), clicks=f['clicks'], spk_sim=round(f['spk_sim'], 3), hindi=f['hindi'], dur=round(f['dur'], 2), cps=round(f['cps'], 2), hyp=f['hyp']))
+        ne = [r for r in rows if r['lang'] != 'sa']; sa = [r for r in rows if r['lang'] == 'sa']; mean = lambda L, k: round(float(np.mean([r[k] for r in L])) if L else 0.0, 3)
+        R['summary'] = dict(utmos=mean(rows, 'utmos'), cer_ne=mean(ne, 'cer'), cer_sa=mean(sa, 'cer'), spk_sim=mean(rows, 'spk_sim'), clicks=int(sum(r['clicks'] for r in rows)), hindi=int(sum(r['hindi'] for r in rows)),
+                            word_drop_proxy=int(sum(1 for r in ne if r['cer'] > 0.35)), n=len(rows), utmos_master=mean([r for r in rows if r['set'] == 'master'], 'utmos'), utmos_unseen=mean([r for r in rows if r['set'] == 'unseen'], 'utmos'))
+        s = R['summary']; R['score'] = round(-3 * s['cer_ne'] - 0.5 * s['cer_sa'] + 0.3 * s['utmos'] + 1.5 * s['spk_sim'] - 0.01 * s['clicks'] - 0.2 * s['word_drop_proxy'], 4); R['clips'] = rows
+    R['gate_pass'] = bool(R['nan_count'] == 0 and not R['bad_ops'] and R['int8_vs_fp32_mel_corr'] >= 0.985)
+    json.dump(R, open(a.out + '/gate.json', 'w'), ensure_ascii=False, indent=1)
+    if a.mp3:
+        for e in ev:
+            if e['set'] == 'master': subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', f"{a.out}/wav/{e['id']}.wav", '-b:a', '96k', f"{a.out}/wav/{e['id']}.mp3"])
+    print(json.dumps({k: R[k] for k in R if k not in ('clips', 'ops')}, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()
