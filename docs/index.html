@@ -68,15 +68,21 @@
       <details class="card fold" id="prosody" open><summary><span class="ms">tune</span><h2>Fine Voice Controls</h2><span class="ms chev">expand_more</span></summary><div id="sliders"></div><button class="btn text" id="reset"><span class="ms">restart_alt</span>Reset to style</button></details>
     </aside>
   </div>
+  <div class="card" id="ggml-proof-studio" style="margin-top:22px">
+    <div class="card-h"><span class="ms">terminal</span><h2>Standalone GGML C++ Engine (<code>sakhiya-cli</code>) · Bit-Exact PyTorch vs C++ Audio Proof (<code>cosine_sim = 1.000000</code> · CPU RTF 0.084)</h2></div>
+    <p class="muted" style="margin-bottom:14px">Zero Python/PyTorch/ONNX dependency: one standalone C++17 binary linked against <code>ggml</code> running from a single <code>.gguf</code> weight file (FP32 / FP16 / Q8_0). Verified stage-by-stage against PyTorch with <b>100% exact phoneme IDs &amp; durations</b>, <b>mel <code>max_abs_diff &le; 2.2e-4 &lt; 1e-3</code></b>, <b>24 kHz waveform <code>max_abs_diff &le; 1.5e-4 &lt; 1e-3</code></b>, and <b><code>cosine_sim = 1.000000</code></b> at ~12&times; real-time on CPU.</p>
+    <div id="ggml-proof-mount">Loading GGML C++ vs PyTorch audio proof…</div>
+  </div>
   <div class="card" id="ver-cmp-studio" style="margin-top:22px">
-    <div class="card-h"><span class="ms">compare_arrows</span><h2>Model Comparator (15 Master Clips · Sakhiya-V1 v15 vs V5 Final vs Nano vs Atom vs Atom-Lite vs Pico)</h2></div>
-    <p class="muted" style="margin-bottom:14px">Compare <b>Sakhiya-V1 (v15 Chandas · UTMOS 3.957)</b>, <b>V5 Final</b>, <b>Sakhiya-V1-Nano</b>, <b>Sakhiya-V1-Atom</b>, <b>Atom-Lite (2.7 MB)</b>, and <b>Sakhiya-Pico (&lt;1 MB)</b> side by side on all 15 master clips.</p>
+    <div class="card-h"><span class="ms">compare_arrows</span><h2>Model Comparator (15 Master Clips · GGML C++ CLI vs Sakhiya-V1 v15 vs Sakhiya-Pro vs Nano vs Atom)</h2></div>
+    <p class="muted" style="margin-bottom:14px">Compare <b>Sakhiya-V1 · GGML C++ CLI (<code>sakhiya-cli</code> · cos=1.000000)</b>, <b>Sakhiya-V1 (v15 Chandas · UTMOS 3.957)</b>, <b>Sakhiya-Pro</b>, <b>V5 Final</b>, <b>Sakhiya-V1-Nano</b>, <b>Sakhiya-V1-Atom</b>, and <b>Atom-Lite (2.7 MB)</b> side by side on all 15 master clips.</p>
     <div id="ver-cmp-mount">Loading version registry…</div>
   </div>
 </section>
 
 <section id="samples">
-  <div class="page-head"><div><h1>Samples &amp; Model Comparator</h1><p>Side-by-side comparison of <b>Sakhiya-V1</b>, <b>Sakhiya-V1-Nano</b>, and <b>Sakhiya-V1-Atom</b> across all 15 master clips.</p></div><div class="status"><span class="pill" id="sgen"><span class="ms">update</span><i></i></span></div></div>
+  <div class="page-head"><div><h1>Samples &amp; Model Comparator</h1><p>Side-by-side comparison of <b>GGML C++ CLI (<code>sakhiya-cli</code>)</b>, <b>Sakhiya-V1</b>, <b>Sakhiya-V1-Nano</b>, and <b>Sakhiya-V1-Atom</b> across all 15 master clips.</p></div><div class="status"><span class="pill" id="sgen"><span class="ms">update</span><i></i></span></div></div>
+  <div class="card" id="ggml-proof-samples" style="margin-bottom:20px"><div id="ggml-proof-mount-samples">Loading GGML C++ vs PyTorch audio proof…</div></div>
   <div class="card" id="ver-cmp-samples" style="margin-bottom:20px"><div id="ver-cmp-mount-samples">Loading version comparator…</div></div>
   <div class="chips scroll" id="sgroups" aria-label="Sample groups"></div>
   <div class="gallery" id="gallery"><div class="card">Loading samples…</div></div>
@@ -94,6 +100,7 @@
     <div class="card"><div class="card-h"><span class="ms">code</span><h2>Source</h2></div><p class="muted"><a href="https://github.com/NikitHamal/Sakhiya" rel="noopener">github.com/NikitHamal/Sakhiya</a></p></div>
       <div class="card"><div class="card-h"><span class="ms">music_note</span><h2>Chandas · Laya · Svara</h2></div><p class="muted">In Vedic Chant mode the text is split into aksharas, scanned as Laghu / Guru, matched to a meter (Gāyatrī, Anuṣṭubh, Triṣṭubh, Jagatī) and compiled into exact syllable durations (Laya BPM) and a just-intonation pitch line on the voice’s own tonic (about 215 Hz). The same code runs in Python and in your browser (<code>chandas.js</code>, parity tested). An optional tanpura drone is generated with WebAudio, with no audio file.</p></div>
     <div class="card"><div class="card-h"><span class="ms">auto_awesome</span><h2>Expression Cartridges</h2></div><p class="muted">Sixteen tiny hand-designed presets (5.8 KB in total): News Crisp, Warm Folk Story, Excited वाह!, Gayatri 72 BPM, Rigveda Svara and more. Today they drive the speed, pause, tone and svara controls. You can also hum 3 seconds into the microphone to build your own; nothing leaves your device.</p></div>
+    <div class="card"><div class="card-h"><span class="ms">terminal</span><h2>GGML C/C++ Standalone CLI (<code>sakhiya-cli</code>)</h2></div><p class="muted">Compile a standalone native binary linked against <code>ggml</code> (CPU + optional CUDA / Vulkan / Metal) reading a single <code>.gguf</code> file (FP32 58.1 MB, FP16 40.0 MB, Q8_0 36.7 MB) with bit-exact PyTorch parity (<code>cosine_sim = 1.000000</code>, <code>max_abs_diff &lt; 1e-3</code> at every stage, ~12&times; real-time on CPU).</p></div>
   </div>
 </section>
 </main>

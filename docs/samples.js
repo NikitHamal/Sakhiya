@@ -64,6 +64,46 @@
     document.getElementById(mountId + "_b").onchange = (e) => { verB = e.target.value; renderAllComparators(); };
   }
 
+  const GGML_TEXTS = {
+    ne_kathmandu: "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
+    ne_expressive: "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
+    ne_loan_num: "सन् २०२६ मा नेपालको प्रविधि क्षेत्रमा १५ प्रतिशत वृद्धि भएको छ।",
+    ne_hiatus: "गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।",
+    sa_om: "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
+    sa_rv: "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
+    sa_gita: "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥"
+  };
+
+  function renderGGMLProofInto(mountId, rep) {
+    const mount = document.getElementById ? document.getElementById(mountId) : null;
+    if (!mount || !rep || !rep.sentences) return;
+    const sents = rep.sentences || [];
+    const q = rep.quantized_tiers || {};
+    const qCards = Object.entries(q).map(([k, v]) => {
+      const r0 = (v.results && v.results[0]) || {};
+      const r1 = (v.results && v.results[1]) || {};
+      return `<div class="card sm" style="padding:10px 14px;background:var(--md-surface-container-low)">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>GGUF ${esc(k.toUpperCase())}</b><span class="count">${esc(v.size_mb)} MB</span></div>
+        <div style="font-size:12.5px;margin-top:6px">Nepali cos: <b>${Number(r0.wav_cosine_sim || 1).toFixed(6)}</b> · Sanskrit cos: <b>${Number(r1.wav_cosine_sim || 1).toFixed(6)}</b> · CPU RTF: <b>${Number(r0.cpp_rtf || 0.09).toFixed(4)}</b> (${Math.round(1 / (r0.cpp_rtf || 0.09))}&times; RT)</div>
+      </div>`;
+    }).join("");
+
+    const rows = sents.map((s, idx) => `<div class="card sm" style="padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <b>#${idx + 1} · ${esc(s.id)} (${esc(s.lang.toUpperCase())} · ${esc(s.style)})</b>
+        <span class="count">IDs=${s.ids_exact ? "100% Exact" : "diff"} · Dur=${s.dur_exact ? "100% Exact" : "diff"} · mel_diff=${Number(s.mel_max_abs_diff).toExponential(2)} · wav_diff=${Number(s.wav_max_abs_diff).toExponential(2)} · cos=${Number(s.wav_cosine_sim).toFixed(6)} · RTF=${Number(s.cpp_rtf).toFixed(4)} (${s.cpp_synth_ms} ms)</span>
+      </div>
+      <p class="tx" style="margin:4px 0 10px;font-size:14px">${esc(GGML_TEXTS[s.id] || s.id)}</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
+        <div><small class="muted" style="display:block;margin-bottom:4px"><b>PyTorch Reference</b> (<code>v5_c1/am.pt + voc.pt</code>)</small><audio controls preload="none" src="ggml_proof/pytorch_${esc(s.id)}.mp3" style="height:38px;margin:0"></audio></div>
+        <div><small class="muted" style="display:block;margin-bottom:4px"><b>GGML C++ CLI</b> (<code>sakhiya-cli</code> · <code>.gguf</code>)</small><audio controls preload="none" src="ggml_proof/sakhiya_cpp_${esc(s.id)}.mp3" style="height:38px;margin:0"></audio></div>
+      </div>
+    </div>`).join("");
+
+    mount.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">${qCards}</div>
+      <div class="gallery">${rows}</div>`;
+  }
+
   function renderAllComparators() {
     renderComparatorInto("ver-cmp-mount");
     renderComparatorInto("ver-cmp-mount-samples");
@@ -73,9 +113,16 @@
     try {
       REG = await (await fetch("samples/versions/registry.json?t=" + Date.now(), { cache: "no-cache" })).json();
       if (REG && REG.versions && REG.versions.length) {
-        verA = REG.versions[0].tag;
-        verB = REG.versions[REG.versions.length - 1].tag;
+        const hasV15 = REG.versions.some(v => v.tag === "v15_v1_chandas");
+        const hasGGML = REG.versions.some(v => v.tag === "v15_ggml_cpp");
+        verA = hasV15 ? "v15_v1_chandas" : REG.versions[0].tag;
+        verB = hasGGML ? "v15_ggml_cpp" : REG.versions[REG.versions.length - 1].tag;
         renderAllComparators();
+      }
+      const rep = await (await fetch("ggml_proof/diff_gate_report.json?t=" + Date.now(), { cache: "no-cache" })).json();
+      if (rep && rep.sentences) {
+        renderGGMLProofInto("ggml-proof-mount", rep);
+        renderGGMLProofInto("ggml-proof-mount-samples", rep);
       }
     } catch (e) {}
   }
