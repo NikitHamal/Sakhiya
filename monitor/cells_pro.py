@@ -82,11 +82,18 @@ epv = mo.audio(open(ep, "rb").read()) if os.path.exists(ep) else mo.md("EP01: n/
 mo.vstack([mo.md("### 🔊 Sakhiya-Pro listening desk"), mo.md("**A/B: zero-shot base vs fine-tune (same sentence, same seed)**"), cmp_,
            mo.md("**15-clip master pack (Best-of-3, mastered -14 LUFS)**"), packv, mo.md("**NEBians News Episode 01 voiceover**"), epv])
 '''
+def _wrap(code):
+    """Cell-local scope: wrap in a function so marimo sees no multiply-defined globals."""
+    import textwrap, re as _re
+    body = textwrap.indent(code.strip(), '    ')
+    body = _re.sub(r'^    (mo\.Html\(|mo\.vstack\(\[mo\.md\("### )', lambda m: '    return ' + m.group(1), body, flags=_re.M)
+    return 'def _main():\n' + body + '\n_main()'
 async def install():
     import marimo._code_mode as cm
     async with cm.get_context(skip_staleness_check=True) as ctx:
         ex = {c.name: c.id for c in ctx.cells.values()}
         for name, code in (('tts_sakhiya_pro', CARD), ('tts_sakhiya_pro_audio', AUDIO)):
-            if name in ex: ctx.edit_cell(ex[name], code.strip(), hide_code=True); cid = ex[name]
-            else: cid = ctx.create_cell(code.strip(), name=name, hide_code=True)
+            code = _wrap(code)
+            if name in ex: ctx.edit_cell(ex[name], code, hide_code=True); cid = ex[name]
+            else: cid = ctx.create_cell(code, name=name, hide_code=True)
             ctx.run_cell(cid); print('installed', name)
