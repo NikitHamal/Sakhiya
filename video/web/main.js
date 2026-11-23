@@ -12,7 +12,7 @@ window.render = (T) => {
     const ox = [W / 2, W * .25, W * .75, W / 2][i % 4], oy = [H / 2, H * .7, H * .3, H * .6][i % 4];
     if (wipe(c, T, TLs[i].t0 - .05, '', .95, ox, oy, WIPE[i % 7])) { drawScene(c, i, T); c.restore(); } else drawScene(c, i, T); }
   else drawScene(c, i, T);
-  const th = TH[SCT[TLs[i].id]]; chrome(c, th, T - TLs[i].t0 + (i === 0 ? 0 : 99), TL, false);
+  const th = TH[SCT[TLs[i].id]]; chrome(c, th, T, TL, i === 0);
   if (T > TL.total - 1.2) { c.fillStyle = C.blue; c.globalAlpha = P(T, TL.total - 1.2, TL.total - .15) * .0; c.fillRect(0, 0, W, H); c.globalAlpha = 1; }
   return i;
 };

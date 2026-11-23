@@ -25,7 +25,7 @@ SC.n1 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '01', title: 'Anthrop
   c.beginPath(); const n = (pts.length - 1) * eo3(p); for (let i = 0; i <= Math.floor(n); i++) c.lineTo(x0 + (x1 - x0) * i / 11, yb - pts[i] * ys);
   const f = n % 1, i0 = Math.floor(n); if (i0 < 11) c.lineTo(x0 + (x1 - x0) * (i0 + f) / 11, yb - lerp(pts[i0], pts[i0 + 1], f) * ys);
   c.lineWidth = 9; c.lineCap = c.lineJoin = 'round'; c.strokeStyle = C.blue; c.stroke();
-  const a = sp(t, 2.3, .6), b = sp(t, 4.2, .6); c.globalAlpha = a; chip(c, '+17%  IPO day', 240, 90, { sz: 38, fill: C.aquac, col: C.aquad, ic: 'bolt' }); c.globalAlpha = b; chip(c, '-14%  next day', 380, 500, { sz: 38, fill: C.errc, col: C.err, ic: 'warn' }); c.globalAlpha = 1;
+  const a = sp(t, 2.3, .6), b = sp(t, 4.2, .6); c.globalAlpha = a; chip(c, '+17%  IPO day', 240, 90, { sz: 38, fill: C.aquac, col: C.aquad, ic: 'bolt' }); c.globalAlpha = b; chip(c, '-14%  next day', 420, 440, { sz: 38, fill: C.errc, col: C.err, ic: 'warn' }); c.globalAlpha = 1;
   txt(c, 'Tech stocks slid with it', 60, 590, { sz: 28, w: 500, col: C.mute, a: b }); } });
 SC.n2 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '02', title: 'Gemini 4 Neon', src: 'Indian Express reports', draw: (c, t) => {
   txt(c, 'MULTI-STEP TASK', 56, 90, { sz: 26, col: th.mu, ls: 4 }); const ic = ['doc', 'search', 'compass', 'bolt', 'check'], lb = ['Read', 'Search', 'Plan', 'Act', 'Done'];
@@ -40,14 +40,14 @@ SC.n3 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '03', title: 'Nvidia:
   const r = P(t, 3.2, 5.2); shape(c, C.white, 150, 440, 100 * sp(t, 3, .6), 'squircle', 'squircle', 0, 0); icon(c, 'chip', 150, 440, 90, C.blue, 3);
   c.beginPath(); c.moveTo(260, 440); c.lineTo(260 + 330 * eo3(r), 440); c.lineWidth = 8; c.setLineDash([22, 18]); c.lineDashOffset = -T * 60; c.strokeStyle = C.white; c.stroke(); c.setLineDash([]);
   box(c, 600, 395, 170, 90, 30, 'rgba(255,255,255,.18)', null); txt(c, 'CHINA', 685, 452, { sz: 32, w: 700, col: C.white, al: 'center' });
-  const q = sp(t, 5.4, .6); c.save(); c.globalAlpha = q; c.translate(430, 440); shape(c, C.amber, 0, 0, 46 * q, 'cookie', 'cookie', 0, 0); icon(c, 'pause', 0, 0, 36, C.amberd, 3.2); c.restore(); chip(c, 'shipments paused (reported)', 50, 540, { sz: 28, fill: C.white, col: C.blue, a: q }); } });
-SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '04', title: 'OpenAI: GPT-6.2 and an agent wallet', src: 'AI news roundups', draw: (c, t) => {
+  const q = sp(t, 5.4, .6); c.save(); c.globalAlpha = q; c.translate(430, 440); shape(c, C.amber, 0, 0, 46 * q, 'cookie', 'cookie', 0, 0); icon(c, 'pause', 0, 0, 36, C.amberd, 3.2); c.restore(); chip(c, 'shipments paused (reported)', 50, 520, { sz: 28, fill: C.white, col: C.blue, a: q }); } });
+SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '04', title: 'OpenAI: GPT-6.2 + wallet', src: 'AI news roundups', draw: (c, t) => {
   ['Astra', 'Sol'].forEach((n, i) => { const p = sp(t, .5 + i * .3, .8), x = 50 + i * 370; c.save(); c.globalAlpha = clamp(p * 1.5); box(c, x, 60 + (1 - p) * 80, 340, 210, 36, i ? C.aquac : C.pc, null);
     txt(c, 'GPT-6.2', x + 34, 140 + (1 - p) * 80, { sz: 28, w: 600, col: C.mute }); txt(c, n, x + 34, 210 + (1 - p) * 80, { sz: 64, w: 700, col: i ? C.aquad : C.onpc }); c.restore(); });
   const w = sp(t, 3.4, .8); c.save(); c.globalAlpha = clamp(w * 1.5); box(c, 50, 330 + (1 - w) * 60, 720, 230, 36, C.cont, C.line); icon(c, 'wallet', 140, 445 + (1 - w) * 60, 84, C.blue, 2.6);
   txt(c, 'ChatGPT Wallet', 220, 430 + (1 - w) * 60, { sz: 44, w: 700, col: C.ink }); txt(c, 'agents can shop for you', 220, 480 + (1 - w) * 60, { sz: 28, w: 500, col: C.mute });
   const k = P(t, 4.6, 6.4); shape(c, C.blue, lerp(560, 700, eio3(k)), 445 + (1 - w) * 60, 30 * (1 - k * .3), 'cookie', 'flower', k, T); c.restore(); } });
-SC.n5 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '05', title: 'OpenRouter drops three AI providers', src: 'AI Weekly reports', draw: (c, t) => {
+SC.n5 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '05', title: 'OpenRouter drops 3 providers', src: 'AI Weekly reports', draw: (c, t) => {
   const cx = 410, cy = 330, nm = ['', '', '', '', '', ''], bad = [0, 2, 4];
   for (let i = 0; i < 6; i++) { const a = i / 6 * TAU - 1.2, b = bad.includes(i), k = b ? P(t, 3.4 + bad.indexOf(i) * .5, 4.2 + bad.indexOf(i) * .5) : 0, r = 220 * (1 - eo3(k) * .0) + eo3(k) * 120, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * .86, p = sp(t, .4 + i * .1, .6);
     c.globalAlpha = (1 - k) * clamp(p); c.beginPath(); c.moveTo(cx, cy); c.lineTo(x, y); c.lineWidth = 4; c.strokeStyle = b && t > 3.2 ? C.err : th.line; c.stroke();
@@ -55,7 +55,7 @@ SC.n5 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '05', title: 'OpenRou
   c.globalAlpha = 1; shape(c, th.acc, cx, cy, 80 * sp(t, 0, .7), 'flower', 'sunny', Math.sin(T) * .5 + .5, T * .4); icon(c, 'bolt', cx, cy, 56, th.bg, 2.8);
   const q = sp(t, 5.4, .6); c.globalAlpha = q; chip(c, 'prompt leaks found', 56, 560, { sz: 30, fill: C.errc, col: C.err, ic: 'lock' }); c.globalAlpha = 1; } });
 SC.fast = (c, t, sc, th, T) => { dotgrid(c, th, T, .8); const f1 = lt(sc, 'f1'), f2 = lt(sc, 'f2');
-  for (let r = 0; r < 2; r++) { const y = r ? 880 : 70, dir = r ? 1 : -1, s = 'AI NEWS   -   TECH   -   NEBIANS   -   '; const L = tw(c, s, 44, 700); c.globalAlpha = .55;
+  for (let r = 0; r < 2; r++) { const y = r ? 190 : 100, dir = r ? 1 : -1, s = 'AI NEWS   -   TECH   -   NEBIANS   -   '; const L = tw(c, s, 44, 700); c.globalAlpha = .55;
     for (let k = -1; k < 4; k++) txt(c, s, ((T * 140 * dir) % L) + k * L, y + 40, { sz: 44, w: 700, col: '#c9d7ff' }); c.globalAlpha = 1; }
   [[f1, 'Microsoft', 'cheaper, task-specific AI models', 'bolt', 290], [f2, 'Google DeepMind', 'AI used to test Signal encryption', 'lock', 520]].forEach(([s0, a, b, ic, y], i) => { const p = sp(t, s0 + .2 - sc.t0 * 0 - (sc.t0 ? 0 : 0), .8), q = p; const lx = lerp(i ? 2000 : -1700, 160, clamp(sp(t, s0, .9)));
     box(c, lx, y, 1600, 200, 56, C.white, null); shape(c, C.pc, lx + 120, y + 100, 74, seq7[i + 3], seq7[i + 3], 0, T * .4); icon(c, ic, lx + 120, y + 100, 56, C.blue, 3);

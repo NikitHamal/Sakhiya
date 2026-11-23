@@ -37,7 +37,7 @@ function wavebars(c, x, y, w, h, t, v, col, n = 48) { c.save(); c.fillStyle = co
 function shell(c, th, sc, t) { c.fillStyle = th.bg; c.fillRect(0, 0, W, H); }
 // chrome: brand chip, episode chip, caption bar with karaoke highlight
 function chrome(c, th, T, tl, hide) {
-  const a = hide ? 0 : eo3(P(T, 3.2, 3.9)); if (a <= 0) return; c.save(); c.globalAlpha = a;
+  const a = hide ? eo3(P(T, 2.5, 3.1)) : 1; if (a <= 0) return; c.save(); c.globalAlpha = a;
   const light = th === TH.light; chip(c, 'NEBians News', 64, 48, { fill: light ? C.pc : th.accc, col: light ? C.onpc : th.fg, ic: 'bolt', sz: 24 });
   const d = tl.date; const w = tw(c, 'EP 01  |  ' + d, 24, 600) + 44; chip(c, 'EP 01  |  ' + d, W - 64 - w, 48, { fill: th.soft, col: th.mu, line: th.line, sz: 24 });
   const ln = curLine(tl, T); if (ln) caption(c, th, ln, T); c.restore(); }
