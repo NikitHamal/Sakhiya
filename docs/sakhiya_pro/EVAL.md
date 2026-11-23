@@ -17,3 +17,18 @@ Selected: **ft3_s200**
 | ft2_s600 | 0.130 | 0.150 | 0.135 | 3.71 | 0.70 | 0 | 23 |
 | ft2_s1200 | 0.141 | 0.162 | 0.149 | 3.67 | 0.69 | 0 | 16 |
 | ft2_avg | 0.970 | 0.967 | 1.000 | 1.23 | -0.06 | 0 | 3 |
+
+
+## Sakhiya-Pro v2 (native-Nepali two-stage adaptation) — selected **pron_s2_300 (stage-1 pron_s1_1200)**
+
+| tag | native CER | word recall | tech CER | Vedic CER | UTMOS22 | spk-sim | Hindi leaks | clicks |
+|---|---|---|---|---|---|---|---|---|
+| pron_s1_1200 | 0.061 | 0.745 | 0.702 | 0.157 | 4.01 | 0.69 | 0 | 239 |
+| pron_s1_400 | 0.062 | 0.755 | 0.654 | 0.125 | 4.04 | 0.68 | 1 | 176 |
+| pron_s1_800 | 0.068 | 0.708 | 0.689 | 0.168 | 4.07 | 0.69 | 1 | 166 |
+| pron_s2_100 | 0.066 | 0.724 | 0.764 | 0.132 | 3.87 | 0.69 | 1 | 48 |
+| pron_s2_200 | 0.066 | 0.734 | 0.753 | 0.110 | 3.81 | 0.66 | 1 | 62 |
+| pron_s2_300 | 0.066 | 0.740 | 0.711 | 0.147 | 3.80 | 0.67 | 1 | 44 |
+| pron_v1 | 0.064 | 0.740 | 0.736 | 0.137 | 3.97 | 0.67 | 1 | 35 |
+
+Automatic metrics only (ASR round trip, UTMOS22, ECAPA similarity); no human MOS.
