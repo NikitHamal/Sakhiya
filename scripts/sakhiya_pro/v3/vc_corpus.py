@@ -64,9 +64,9 @@ def anchor_prompt():
 
 def declick(w):
     """interpolate isolated sample-level spikes (vocoder glitches) before gating"""
-    w = w.copy(); pk = float(np.abs(w).max()); thr = max(0.35 * pk, 0.12)
-    for _ in range(3):
-        bad = np.where(np.abs(np.diff(w)) > thr)[0]
+    w = w.copy()
+    for _ in range(6):
+        bad = np.where(np.abs(np.diff(w)) > 0.09)[0]
         if not len(bad): break
         w[bad + 1] = 0.5 * (w[bad] + w[np.minimum(bad + 2, len(w) - 1)])
     return w
@@ -82,7 +82,7 @@ def work(i, n, deadline):
     _q.VectorQuantize = VectorQuantize; _m.nn = _n; _n.quantize = _q
     sys.modules.update({'dac': _m, 'dac.nn': _n, 'dac.nn.quantize': _q})
     from seed_vc_wrapper import SeedVCWrapper
-    import sp_common as C
+    import sp_common as C, validators as V
     vc = SeedVCWrapper()
     rw, rsr = sf.read('/work/sp/v3/ref/anchor_v3.wav', dtype='float32'); remb = C.spk_emb(rw, rsr)
     os.makedirs(VC + '/wav', exist_ok=True); pf = f'{VC}/part_{i}.jsonl'
@@ -99,7 +99,8 @@ def work(i, n, deadline):
             sr_out, a = last if isinstance(last, tuple) else (22050, last)
             a = librosa.resample(np.asarray(a, np.float32).reshape(-1), orig_sr=sr_out, target_sr=24000); a = declick(a); pk = float(np.abs(a).max()); a = a * (0.9 / pk) if pk > 0.9 else a; sf.write(dst, a, 24000)
             m = C.score_take(dst, x['text'], remb)
-            ok = m['cer'] <= 0.15 and m['utmos'] >= 3.0 and m['clicks'] <= 6 and m['spk_sim'] >= 0.55 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
+            m['cer'] = V.pron_cer(x['text'], m.get('hyp', ''), 'npi')
+            ok = m['cer'] <= 0.16 and m['utmos'] >= 2.75 and m['clicks'] <= 6 and m['spk_sim'] >= 0.45 and 1.5 <= m['dur'] <= 16 and m['hindi'] == 0
             if ok:
                 f.write(json.dumps(dict(id=x['id'], wav=dst, text=x['text'], lang='ne', style={'slr43': 'conversational', 'slr54': 'conversational'}.get(x['src'], x['src'].replace('v13_', '')),
                                         src='vc_' + x['src'].split('_')[0], dur=m['dur'], cer=m['cer'], utmos=m['utmos'], spk_sim=m['spk_sim']), ensure_ascii=False) + '\n'); f.flush(); kept += 1

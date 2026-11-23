@@ -26,11 +26,10 @@ def norm(t, fold=False):
 
 
 def pron_cer(ref, hyp, lang='npi'):
-    """CER used by the render gate. npi: plain (digits/Latin stripped from both sides); sa: sound-folded."""
+    """CER used by the render gate. Sound-folded for both npi and sa (Kriti CTC is phonetic, not orthographic)."""
     has_lat = bool(LAT.search(ref))
     r = LAT.sub(' ', ref); h = LAT.sub(' ', hyp)
-    fold = lang == 'sa'
-    r, h = norm(r, fold), norm(h, fold)
+    r, h = norm(r, True), norm(h, True)
     if not r: return 0.0 if h or True else 1.0   # pure-Latin line: nothing to compare, other gates (clicks/Hindi/dur) decide
     c = float(jiwer.cer(r, h or ' '))
     if has_lat:  # the ASR transliterates the English name: tolerate by dropping insertions from the Latin spans

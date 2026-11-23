@@ -35,7 +35,17 @@ def master(src, dst, lufs=-14.0, tp=-1.5, sr=48000):
     codec = ['-codec:a', 'libmp3lame', '-qscale:a', '2'] if dst.endswith('.mp3') else ['-c:a', 'pcm_s16le']
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-af', f2, '-ar', str(sr), '-ac', '1'] + codec + [dst], check=True)
 
+def declick(w):
+    """Interpolate isolated sample-level spikes from audio tokenizer decoding before gating/mastering."""
+    w = w.copy()
+    for _ in range(6):
+        bad = np.where(np.abs(np.diff(w)) > 0.10)[0]
+        if not len(bad): break
+        w[bad + 1] = 0.5 * (w[bad] + w[np.minimum(bad + 2, len(w) - 1)])
+    return w
+
 def trim(w, sr, lead=0.08, tail=0.18):
+    w = declick(np.asarray(w, dtype=np.float32))
     a = np.abs(w); thr = max(0.008, 0.02 * float(a.max())); idx = np.where(a > thr)[0]
     if not idx.size: return w
     w = w[max(0, idx[0] - int(lead * sr)): min(len(w), idx[-1] + int(tail * sr))].copy()

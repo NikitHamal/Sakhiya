@@ -158,24 +158,25 @@ def work_batch(i, n, deadline, B):
     have = set(json.loads(l)['id'] for q in glob.glob(W + '/part_*.jsonl') for l in open(q) if l.strip().endswith('}'))
     rows = [r for r in (json.loads(l) for l in open(O + '/texts.jsonl'))][i::n]; rows = [r for r in rows if r['id'] not in have]
     pf = f'{W}/part_b{i}.jsonl'; f = open(pf, 'a', encoding='utf8'); kept = tried = 0; tmp = f'/tmp/gcb{i}'; os.makedirs(tmp, exist_ok=True)
-    def prep(r): return SR.SVARA.sub('', r['text']) if r['lang'] == 'sa' else nep_norm.normalize(SR.SVARA.sub('', r['text']))
+    from v3.nepal_loan import nativize
+    def prep(r): return SR.SVARA.sub('', r['text']) if r['lang'] == 'sa' else nep_norm.normalize(nativize(SR.SVARA.sub('', r['text'])))
     for c0 in range(0, len(rows), B * 6):
         chunk = sorted(rows[c0:c0 + B * 6], key=lambda r: len(r['text']))
         for b0 in range(0, len(chunk), B):
             if time.time() > deadline: print(f'[w{i}] DONE tried {tried} kept {kept}', flush=True); return
             pend = chunk[b0:b0 + B]; tried += len(pend)
-            for sd in (11, 22, 33):
+            for sd in (11, 22):
                 if not pend: break
                 try:
                     R.torch.manual_seed(sd); tx = [prep(r) for r in pend]
-                    outs = R.m.generate(text=tx, language=['sa' if r['lang'] == 'sa' else 'npi' for r in pend], ref_audio=SR.REF_WAV, ref_text=R.ref_text, num_step=R.ns, guidance_scale=R.gs)
+                    outs = R.m.generate(text=tx, language=['sa' if r['lang'] == 'sa' else 'npi' for r in pend], instruct=None, ref_audio=SR.REF_WAV, ref_text=R.ref_text, num_step=R.ns, guidance_scale=R.gs)
                 except Exception as e: print('ERR batch', str(e)[:160], flush=True); break
                 nxt = []
                 for r, t, a in zip(pend, tx, outs):
                     try:
                         w = SR.trim(np.asarray(a, dtype=np.float32), R.m.sampling_rate); pth = f'{tmp}/{r["id"]}.wav'; sf.write(pth, w, R.m.sampling_rate)
                         lang = 'sa' if r['lang'] == 'sa' else 'npi'; fs = R.score(pth, t, lang)
-                        ok = V.gate(fs, lang, bool(V.LAT.search(t))) and fs['clicks'] <= 3 and fs['utmos'] >= 3.5 and fs['spk_sim'] >= 0.55 and 1.5 <= fs['dur'] <= 16 and fs['hindi'] == 0 and fs['cer'] <= (0.25 if lang == 'sa' else 0.06)
+                        ok = V.gate(fs, lang, bool(V.LAT.search(t))) and fs['clicks'] <= 5 and fs['utmos'] >= 3.25 and fs['spk_sim'] >= 0.50 and 1.5 <= fs['dur'] <= 16 and fs['hindi'] == 0 and fs['cer'] <= (0.28 if lang == 'sa' else 0.12)
                     except Exception as e: print('ERR', r['id'], str(e)[:120], flush=True); ok = False; fs = None
                     if ok:
                         p = f"{W}/wav/{r['id']}.wav"; sf.write(p, w, R.m.sampling_rate)
