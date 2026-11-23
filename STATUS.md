@@ -1,5 +1,9 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Sakhiya-Pro Studio card (MoLab, bottom of notebook)
+- `monitor/cells_studio.py` + `scripts/sakhiya_pro_studio.py`: type any Nepali / Sanskrit / Nepali-English text, press **Generate MP4**; the worker chunks by sentence, renders Best-of-N takes with the current Sakhiya-Pro model (`/work/sp/final/*` or a recent checkpoint), masters to -14 LUFS with the broadcast chain, and builds a captioned 16:9 or 9:16 MP4 (waveform + libass-shaped Devanagari). Live progress, in-notebook player, MP4/MP3/WAV downloads. Install: `exec(open('/work/sp/repo/monitor/cells_studio.py').read()); await install()`.
+- Verified on the box: 3-chunk Nepali + Sanskrit job rendered in ~21 s (11.7 s audio, -14.01 LUFS).
+
 ## Session 66 — Standalone `sakhiya-cli` (GGML C/C++ Inference Engine) + `.gguf` Weight Converter + Stage-by-Stage Diff Gate (`max_abs_diff < 1e-3`, `cosine_sim = 1.000000`)
 - **Real Weight Converter (`convert_sakhiya_gguf.py`):** Dumps all 226 actual tensors from `v5_c1/am.pt` (`SakhiyaAM`) and `v5_c1/voc.pt` (`VocoderV2`) after weight-norm fusion and v5_c1 style/language calibration into a single GGUF v3 file (`--dtype f32`, `f16`, `q8_0`).
 - **Standalone GGML C++ Binary (`cpp/sakhiya_cli.cpp`, `cpp/sakhiya_ggml.hpp`, `cpp/sakhiya_g2p.hpp`, `CMakeLists.txt`, `Makefile`):** Zero Python/PyTorch/ONNX dependency; links statically against `ggml` (`ggml`, `ggml-base`, `ggml-cpu`, optional `-DGGML_CUDA=ON` / `-DGGML_VULKAN=ON` / `-DGGML_METAL=ON`).
