@@ -101,7 +101,7 @@ def export_fp32(m, path):
         torch.onnx.export(Wrap(m), args, path, **kw)
 
 
-def quantize(src, dst, fp16_names=('mel_head', 'voc.post')):
+def quantize(src, dst, fp16_names=('mel_head', 'voc.post', 'f0_net')):
     """Weight-only per-channel INT8 QDQ with deduplication and selective FP16 protection."""
     m = onnx.load(src)
     _dedup_initializers(m)
