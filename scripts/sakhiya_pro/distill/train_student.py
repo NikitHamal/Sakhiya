@@ -3,12 +3,12 @@
 
 Combines:
 1. Warm-initialization from pre-trained Sakhiya Acoustic Models & Harmonic-iSTFT Vocoders (`/work/tts/ck/*.pt`).
-2. High-speed Acoustic + Prosody Distillation against Teacher AM (`v5_c1_am.pt` + `v9_sano_am.pt`) AND
+2. High-speed Acoustic + Prosody Distillation against Teacher AM (`v5_c1_am.pt` + `v9_voca_am.pt` + `v9_sano_am.pt`) AND
    Sakhiya-Pro v3 Native-Nepal corpus (`/work/sp/distill/cache_train.pt`: 2,928 single-voice utterances,
    calibrating duration predictor, F0 contour, and downward Nepali sentence closures).
 3. End-to-End Differentiable Harmonic-iSTFT Vocoder-in-the-Loop Co-Distillation (`mrstft` + 33-bin complex
    phase/group-delay + 100-band log-mel L1 + Frozen `WavLM-base-plus-sv` perceptual loss every 2nd step).
-4. Straight-Through Estimator (STE) Per-Channel INT8 QAT in the final 35% of the budget (`--qat_start 0.65`).
+4. Straight-Through Estimator (STE) Per-Channel INT8 QAT (`--qat_start 0.35`).
 5. Step-50 stdout throughput watchdog + resumable checkpointing (`ema_latest.pt`, `state.pt`).
 """
 import argparse, copy, json, math, os, random, sys, time
@@ -20,11 +20,11 @@ for p in (HERE, REPO):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from student import build, set_qat, n_params, SR, N_FFT, HOP, N_MEL, TIERS, _calibrate_styles, ste_int8_weight  # noqa: E402
+from student import build, set_qat, n_params, SR, N_FFT, HOP, N_MEL, TIERS, _calibrate_styles, ste_int8_weight, snap_f0_int8, snap_am_int8  # noqa: E402
 from sakhiya.cfm import SakhiyaAM  # noqa: E402
 from sakhiya.v2_vocoder import VocoderV2  # noqa: E402
 
-LR = dict(t30=8e-5, t15=1.0e-4, t10=1.2e-4, t5=2.5e-4, t1=6.0e-4)
+LR = dict(t30=2.0e-5, t15=2.5e-5, t10=3.0e-5, t5=3.5e-5, t1=1.2e-4)
 
 
 class Mel(nn.Module):
@@ -119,6 +119,24 @@ def make_batch(items, B, dev, mu, sd):
     return ids.to(dev), il.to(dev), tl.to(dev), lang.to(dev), wav, lf, vuv
 
 
+def _ode_solve(vel_net, mu_seg, g, m_seg, steps):
+    B, _, T = mu_seg.shape
+    if steps == 1:
+        t0 = torch.zeros((B,), device=mu_seg.device, dtype=torch.float32)
+        return mu_seg + vel_net(mu_seg, t0, mu_seg, g, m_seg)
+    c_idx = torch.arange(100, device=mu_seg.device, dtype=torch.float32)[None, :, None]
+    t_idx = torch.arange(T, device=mu_seg.device, dtype=torch.float32)[None, None, :]
+    z_init = torch.sin(c_idx * 12.9898 + t_idx * 78.233) * torch.cos(c_idx * 39.346 + t_idx * 11.135) * (0.667 * 1.4142)
+    xt = z_init.expand(B, 100, T)
+    dt = 1.0 / steps
+    for i in range(steps):
+        ti = torch.full((B,), i * dt, device=mu_seg.device, dtype=torch.float32)
+        k1 = vel_net(xt, ti, mu_seg, g, m_seg)
+        k2 = vel_net(xt + 0.5 * dt * k1, ti + 0.5 * dt, mu_seg, g, m_seg)
+        xt = xt + dt * k2
+    return xt
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tier", required=True)
@@ -130,7 +148,7 @@ def main():
     ap.add_argument("--lr", type=float, default=None)
     ap.add_argument("--gan_start", type=int, default=2500)
     ap.add_argument("--warm_uniform", type=int, default=400)
-    ap.add_argument("--qat_start", type=float, default=0.55)
+    ap.add_argument("--qat_start", type=float, default=0.35)
     ap.add_argument("--max_step_s", type=float, default=3.0)
     ap.add_argument("--save_every", type=int, default=500)
     ap.add_argument("--resume", action="store_true")
@@ -169,8 +187,8 @@ def main():
     if os.path.exists(t_am_p):
         ck_t = torch.load(t_am_p, map_location=dev, weights_only=False)
         t_am.load_state_dict({k: v.float() for k, v in ck_t.get("ema", ck_t.get("net", ck_t)).items() if not k.startswith("ctc_rec.")}, strict=False)
-        t_am.stats.copy_(torch.tensor([-5.5028, 2.1869], device=dev))
-        _calibrate_styles(t_am)
+        t_am.stats.copy_(torch.tensor([float(ck_t.get("mean", -6.1760635)), float(ck_t.get("std", 2.4932315))], device=dev))
+        _calibrate_styles(t_am, pre_baked=bool(ck_t.get("pre_baked_v25", False)))
     for p_ in t_am.parameters():
         p_.requires_grad_(False)
 
@@ -178,7 +196,7 @@ def main():
     t_voc = VocoderV2(ch=320, res_kernels=(3, 7, 11)).to(dev).eval()
     if os.path.exists("/work/tts/ck/v5_c1_voc.pt"):
         vck_t = torch.load("/work/tts/ck/v5_c1_voc.pt", map_location=dev, weights_only=False)
-        t_voc.load_state_dict({k: v.float() for k, v in vck_t.get("G_ema", vck_t.get("G", vck_t)).items()}, strict=False)
+        t_voc.load_state_dict({k: v.float() for k, v in vck_t.get("G_ema", vck_t.get("G", vck_t)).items()}, strict=True)
         t_voc.fuse_weight_norm()
     for p_ in t_voc.parameters():
         p_.requires_grad_(False)
@@ -201,28 +219,27 @@ def main():
 
     ema = copy.deepcopy(G).eval()
     lr = (a.lr or LR[a.tier]) * a.lr_mult
-    # Separate LR: AM parameters train at full lr; pre-trained Harmonic-iSTFT vocoder polishes gently at 0.08 * lr (f0_net frozen)
+    voc_lr_ratio = 0.60 if a.tier == "t1" else 0.15
     am_params = [p for n, p in G.named_parameters() if not n.startswith("voc.") and p.requires_grad]
     voc_params = [p for n, p in G.named_parameters() if n.startswith("voc.") and p.requires_grad]
     oG = torch.optim.AdamW([
         {"params": am_params, "lr": lr, "initial_lr": lr},
-        {"params": voc_params, "lr": lr * 0.08, "initial_lr": lr * 0.08},
+        {"params": voc_params, "lr": lr * voc_lr_ratio, "initial_lr": lr * voc_lr_ratio},
     ], betas=(0.8, 0.99), weight_decay=1e-4)
 
     step, spent = 0, 0.0
     if a.resume and os.path.exists(a.out + "/state.pt"):
         try:
             S = torch.load(a.out + "/state.pt", weights_only=False, map_location=dev)
-            if S.get("arch") == G.arch:
-                G.load_state_dict(S["G"], strict=False)
-                ema.load_state_dict(S["ema"], strict=False)
+            if S.get("cfg") == G.cfg:
+                G.load_state_dict(S["G"], strict=True)
+                ema.load_state_dict(S["ema"], strict=True)
                 oG.load_state_dict(S["oG"])
                 step, spent = S["step"], (0.0 if a.fresh_clock else S["spent"])
                 log(f"[resume] step {step} spent {spent / 60:.1f} min")
         except Exception as e:
             log(f"[resume] warm-starting fresh Harmonic-iSTFT graph ({e})")
 
-    # Save initial warm-started checkpoint at step 50 so ladder_daemon can immediately evaluate
     log(f"[{a.tier}] Harmonic-iSTFT {G.arch} deployed params {n_params(G) / 1e6:.3f}M | train {len(tr)} dev {len(dv)} utts | lr {lr} bs {a.bs} seg {a.seg}")
     budget = a.minutes * 60
     t0 = time.time() - spent
@@ -238,7 +255,7 @@ def main():
             break
         mult = 0.05 + 0.95 * 0.5 * (1.0 + math.cos(math.pi * prog))
         oG.param_groups[0]["lr"] = lr * mult
-        oG.param_groups[1]["lr"] = lr * 0.08 * mult
+        oG.param_groups[1]["lr"] = lr * voc_lr_ratio * mult
 
         if prog >= a.qat_start and not qat_on:
             set_qat(G, True)
@@ -261,12 +278,18 @@ def main():
         with torch.no_grad(), ac():
             ht, mut, gt = t_am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_add, prosody=pros, sty_mask=ones_m)
             ldt = t_am.dur.pred_logdur(ids, ht, im)
-            t0_v = torch.zeros(B, device=dev, dtype=torch.float32)
             mut_t = mut.transpose(1, 2)
-            vt = t_am.vel(mut_t, t0_v, mut_t, gt, m_l)
-            # Calibrate duration target toward Sakhiya-Pro v3 utterance length tl
+            if G.steps == 1:
+                t_tok = torch.zeros(B, device=dev, dtype=torch.float32)
+                xt_tok = mut_t
+            else:
+                t_tok = torch.rand(B, device=dev, dtype=torch.float32)
+                z_tok = torch.randn_like(mut_t) * (0.667 * 1.4142)
+                xt_tok = (1.0 - t_tok[:, None, None]) * z_tok + t_tok[:, None, None] * mut_t
+            vt = t_am.vel(xt_tok, t_tok, mut_t, gt, m_l)
+            # Gentle duration calibration toward Sakhiya-Pro v3 utterance length tl
             dur_t = torch.exp(ldt).clamp(min=1.0, max=60.0) * im.float()
-            scale_v3 = (tl.float() / dur_t.sum(1).clamp(min=1.0)).clamp(0.88, 1.14)[:, None]
+            scale_v3 = (tl.float() / dur_t.sum(1).clamp(min=1.0)).clamp(0.92, 1.08)[:, None]
             ldt_v3 = torch.log((dur_t * scale_v3).clamp(min=1.0) + 1.0) * im.float()
 
         with ac():
@@ -274,10 +297,11 @@ def main():
             hs, mus, gs = G.am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_add, prosody=pros, sty_mask=ones_m)
             lds = G.am.dur.pred_logdur(ids, hs, im) + G.dur_rate_bias.clamp(-0.12, 0.12) * im.float()
             mus_t = mus.transpose(1, 2)
-            vs = G.am.vel(mus_t, t0_v, mus_t, gs, m_l)
+            xs_tok = mus_t if G.steps == 1 else ((1.0 - t_tok[:, None, None]) * z_tok + t_tok[:, None, None] * mus_t)
+            vs = G.am.vel(xs_tok, t_tok, mus_t, gs, m_l)
 
         l_prior = F.l1_loss(mus[im].float(), mut[im].float()) + 0.4 * F.l1_loss(hs[im].float(), ht[im].float())
-        l_dur = F.l1_loss(lds[im].float(), (0.75 * ldt[im] + 0.25 * ldt_v3[im]).float())
+        l_dur = F.l1_loss(lds[im].float(), (0.85 * ldt[im] + 0.15 * ldt_v3[im]).float())
         l_vel = F.l1_loss((vs * m_l).float(), (vt * m_l).float())
 
         # Expand to frame level using teacher durations for exact frame-synchronous Harmonic-iSTFT waveform distillation
@@ -294,8 +318,8 @@ def main():
             idx_seg = torch.gather(idx, 1, sel)
             mut_seg = torch.gather(mut_t.float(), 2, idx_seg[:, None, :].expand(-1, 100, -1))
             m_seg = torch.ones((B, 1, a.seg), device=dev, dtype=torch.float32)
-            vt_seg = t_am.vel(mut_seg, t0_v, mut_seg, gt.float(), m_seg)
-            mel_t = (mut_seg + vt_seg) * t_am.stats[1] + t_am.stats[0]
+            xt_t_seg = _ode_solve(t_am.vel, mut_seg, gt.float(), m_seg, G.steps)
+            mel_t = xt_t_seg * t_am.stats[1] + t_am.stats[0]
             re_t, im_t, f0_t, _ = t_voc.spectrum_and_f0(mel_t)
             z_t = torch.zeros_like(im_t[:, :1, :])
             spec_t = torch.cat([re_t.float(), torch.cat([z_t, im_t[:, 1:-1, :], z_t], dim=1).float()], dim=1)
@@ -303,14 +327,14 @@ def main():
 
         with ac():
             mus_seg = torch.gather(mus_t, 2, idx_seg[:, None, :].expand(-1, 100, -1))
-            vs_seg = G.am.vel(mus_seg, t0_v, mus_seg, gs, m_seg)
-            mel_s = (mus_seg + vs_seg) * G.am.stats[1] + G.am.stats[0]
+            xt_s_seg = _ode_solve(G.am.vel, mus_seg, gs, m_seg, G.steps)
+            mel_s = xt_s_seg * G.am.stats[1] + G.am.stats[0]
             y_s, re_s, im_s, f0_s, _ = G.voc_wav(mel_s)
 
         l_mel = F.l1_loss(mel_s.float(), mel_t.float()) + 0.5 * F.l1_loss(mel_fn(y_s), mel_fn(y_t))
         l_st = mrstft(y_t.float(), y_s.float())
         l_ph = spec_phase_gd_loss(re_s, im_s, re_t, im_t)
-        l_pitch = F.l1_loss(G.am.enc.f0_pred(hs)[im].squeeze(-1).float(), torch.zeros_like(lds[im]).float()) * 0.05
+        l_pitch = F.l1_loss(G.am.enc.f0_pred(hs)[im].squeeze(-1).float(), t_am.enc.f0_pred(ht)[im].squeeze(-1).float()) * 0.25
 
         l_wlm = torch.zeros((), device=dev)
         if wavlm is not None and (step % 2 == 0):
@@ -328,7 +352,7 @@ def main():
         loss = 4.0 * l_mel + 2.5 * l_prior + 2.0 * l_vel + 1.5 * l_dur + 0.5 * l_st + 0.5 * l_ph + l_pitch + 1.2 * l_wlm
         oG.zero_grad(set_to_none=True)
         loss.backward()
-        gn = torch.nn.utils.clip_grad_norm_(G.parameters(), 5.0)
+        gn = torch.nn.utils.clip_grad_norm_(G.parameters(), 2.0)
         if torch.isfinite(gn):
             oG.step()
         step += 1
@@ -350,11 +374,11 @@ def main():
             tstep = now
             log(f"Step {step} | {ips:.2f} it/s | mel {l_mel.item():.3f} st {l_st.item():.3f} ph {l_ph.item():.3f} prior {l_prior.item():.3f} dur {l_dur.item():.3f} pitch {l_vel.item():.3f} g {l_wlm.item():.3f} fm {gn.item() if torch.isfinite(gn) else 0.0:.3f} | {spent / 60:.1f}/{a.minutes:.0f} min qat={int(qat_on)}")
 
-        if step == 100 or step % a.save_every == 0:
+        if step in (50, 150) or step % a.save_every == 0:
             torch.save(dict(ema=ema.state_dict(), cfg=G.cfg, tier=a.tier, arch=G.arch, step=step, f0=[mu, sd], qat=qat_on), a.out + "/ema_latest.tmp")
             os.replace(a.out + "/ema_latest.tmp", a.out + "/ema_latest.pt")
             if step % (a.save_every * 2) == 0:
-                torch.save(dict(G=G.state_dict(), ema=ema.state_dict(), oG=oG.state_dict(), arch=G.arch, step=step, spent=time.time() - t0), a.out + "/state.tmp")
+                torch.save(dict(G=G.state_dict(), ema=ema.state_dict(), oG=oG.state_dict(), cfg=G.cfg, arch=G.arch, step=step, spent=time.time() - t0), a.out + "/state.tmp")
                 os.replace(a.out + "/state.tmp", a.out + "/state.pt")
 
     torch.save(dict(ema=ema.state_dict(), cfg=G.cfg, tier=a.tier, arch=G.arch, step=step, f0=[mu, sd], qat=qat_on), a.out + "/ema_final.pt")

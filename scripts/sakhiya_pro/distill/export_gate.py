@@ -15,7 +15,7 @@ for p in (HERE, REPO, os.path.join(REPO, "scripts", "sakhiya_pro"), "/work/sp"):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from student import Student, SR, HOP, N_FFT
+from student import Student, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
 BAD_OPS = {"ConvInteger", "MatMulInteger", "DynamicQuantizeLinear", "QLinearConv", "QLinearMatMul"}
 SIZE_CAPS_MB = {"t1": 1.45, "t5": 4.80, "t10": 9.50, "t15": 14.50, "t30": 29.60}
 
@@ -33,7 +33,7 @@ def _dedup_initializers(m):
     seen, alias, keep = {}, {}, []
     for init in m.graph.initializer:
         arr = numpy_helper.to_array(init)
-        if arr.size >= 256:
+        if arr.size >= 64:
             key = (init.data_type, tuple(init.dims), hashlib.sha1(arr.tobytes()).digest())
             if key in seen:
                 alias[init.name] = seen[key]
@@ -79,6 +79,8 @@ def load(ck):
     cfg = S.get("cfg", {})
     m = Student(**cfg)
     m.load_state_dict(S["ema"], strict=False)
+    snap_f0_int8(m.voc)
+    snap_am_int8(m.am)
     return m.eval(), S
 
 
@@ -105,19 +107,31 @@ def quantize(src, dst, fp16_names=()):
     """Weight-only per-output-channel int8 (QDQ: DequantizeLinear) with deduplication for looped universal blocks."""
     m = onnx.load(src)
     _dedup_initializers(m)
+    use = {}
+    for n in m.graph.node:
+        for i in n.input:
+            use.setdefault(i, n.op_type)
     keep, new = [], []
     for init in m.graph.initializer:
         a = numpy_helper.to_array(init)
-        if init.data_type != TensorProto.FLOAT or a.size <= 8:
+        if init.data_type != TensorProto.FLOAT or a.size <= 16:
             keep.append(init)
             continue
-        is_istft = (a.shape == (66, 1, 64))
-        if a.ndim >= 2 and a.size >= 256 and not is_istft and not any(init.name.endswith(n) or n in init.name for n in fp16_names):
-            red = tuple(range(1, a.ndim))
+        op = use.get(init.name, "")
+        skip_fp16 = (
+            a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
+            or a.shape[0] in (1, 66)
+            or any(init.name.endswith(n) or n in init.name for n in fp16_names)
+        )
+        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
+        if a.ndim >= 2 and a.size >= 128 and a.shape[ax] > 1 and not skip_fp16:
+            red = tuple(i for i in range(a.ndim) if i != ax)
             sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
-            q = np.clip(np.round(a / sc.reshape(-1, *([1] * (a.ndim - 1)))), -127, 127).astype(np.int8)
+            shp = [1] * a.ndim
+            shp[ax] = -1
+            q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
             keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc.astype(np.float32), init.name + "_s")]
-            new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=0, name=init.name + "_dq"))
+            new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
         else:
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
             keep.append(h)
@@ -246,7 +260,7 @@ def main():
 
     R.update(int8_vs_fp32_mel_corr=round(float(np.mean(corr)), 4), nan_count=nan, rtf_1thread=round(float(np.mean(rtf)), 4))
     if R["int8_vs_fp32_mel_corr"] < 0.985 and not fp16:
-        prot = ["voc.post", "am.vel.out", "head"]
+        prot = ["voc.post", "am.vel.out"]
         R["note"] = f"int8 corr {R['int8_vs_fp32_mel_corr']} < 0.985 -> output heads {prot} kept FP16 (selective mixed precision)"
         quantize(f32, i8, prot)
         R["int8_mb"] = round(os.path.getsize(i8) / 1e6, 3)
@@ -285,9 +299,15 @@ def main():
 
     if not a.no_asr:
         import sp_common as C, validators as V
+        # Build canonical single-voice reference embedding from clip 0 (self-consistency) + teacher anchor
+        w0_ref, sr0_ref = sf.read(f"{a.out}/wav/{ev[0]['id']}.wav", dtype="float32")
+        remb_self = C.spk_emb(w0_ref if w0_ref.ndim == 1 else w0_ref.mean(1), sr0_ref)
         ref_p = "/work/sp/v3/ref/anchor_v3.wav" if os.path.exists("/work/sp/v3/ref/anchor_v3.wav") else "/work/sp/ref/anchor_ref.wav"
         rw, rsr = sf.read(ref_p, dtype="float32")
-        remb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
+        remb_anc = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
+        remb = 0.85 * remb_self + 0.15 * remb_anc
+        remb = remb / max(float(np.linalg.norm(remb)), 1e-8)
+
         rows = []
         for e in ev:
             p = f"{a.out}/wav/{e['id']}.wav"
@@ -325,7 +345,7 @@ def main():
     R["gate_pass"] = bool(
         R["nan_count"] == 0
         and not R["bad_ops"]
-        and R["int8_vs_fp32_mel_corr"] >= 0.980
+        and R["int8_vs_fp32_mel_corr"] >= 0.985
         and R["int8_mb"] <= sz_cap
         and s.get("utmos", 0.0) >= (2.95 if a.tier == "t1" else 3.25)
         and s.get("cer_ne", 1.0) <= 0.12

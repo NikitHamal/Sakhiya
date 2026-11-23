@@ -69,7 +69,7 @@ bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED 
 stages = []
 for p in sorted(glob.glob("/work/sp/stage/*.json")):
     bn = os.path.basename(p)
-    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json", "70_pico.json"):
+    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json"):
         continue
     s = _j(p)
     if s:
@@ -190,11 +190,11 @@ acc_html = (
 
 # --- Panel 3: Live Shrink-Ladder Training Monitor ---
 TIER_SPECS = [
-    ("t15", "Sakhiya-T15 (Flagship Compact)", "14.5 MB"),
-    ("t5",  "Sakhiya-Micro (Hero Sub-5 MB)", "4.8 MB"),
-    ("t1",  "Sakhiya-Pico (Breakthrough Sub-1.5 MB Looped)", "1.05 MB"),
-    ("t10", "Sakhiya-T10 (Compact 10M)", "9.5 MB"),
-    ("t30", "Sakhiya-T30 (Teacher-Bridge 30M)", "29.6 MB"),
+    ("t15", "Sakhiya-T15 (Flagship Compact)", "<=14.5 MB"),
+    ("t5",  "Sakhiya-Micro (Hero Sub-5 MB)", "<=4.8 MB"),
+    ("t1",  "Sakhiya-Pico (Breakthrough Sub-1.5 MB Looped)", "<=1.45 MB"),
+    ("t10", "Sakhiya-T10 (Compact 10M)", "<=9.5 MB"),
+    ("t30", "Sakhiya-T30 (Teacher-Bridge 30M)", "<=29.6 MB"),
 ]
 lad_rows = []
 live_step_map = {}
@@ -211,7 +211,8 @@ for tid, tlabel, tmb in TIER_SPECS:
     g_str = "🔄 awaiting 20m gate" if lat else "-"
     if best_gate:
         bs = best_gate.get("summary", {})
-        g_str = f"<b>score {best_gate.get('score','-')}</b> · UTMOS {bs.get('utmos','-')} · CER {bs.get('cer_ne','-')} · {best_gate.get('int8_mb','-')} MB (s{best_gate.get('step',0)})"
+        p_ic = "✅" if best_gate.get("gate_pass") else "🔄"
+        g_str = f"{p_ic} <b>{best_gate.get('int8_mb','-')} MB</b> · UTMOS <b>{bs.get('utmos','-')}</b> · CER <b>{bs.get('cer_ne','-')}</b> · corr {best_gate.get('int8_vs_fp32_mel_corr','-')} (s{best_gate.get('step',0)})"
     if ls_:
         last_l = ls_[-1]
         mm = re.search(r"Step (\d+) \| ([0-9.]+) it/s \| (.*?) \| ([0-9.]+)/([0-9.]+) min qat=(\d)", last_l)
@@ -219,14 +220,15 @@ for tid, tlabel, tmb in TIER_SPECS:
         st_badge = "🟢 TRAINING" if is_live else ("✅ DONE" if fin else ("⏸ PAUSED/CKPT" if lat else "⬜ QUEUED"))
         if mm:
             stp, sps_v, lss, el_m, tot_m, qat_v = mm.groups()
+            lss_clean = lss.replace(" pitch ", " vel ").replace(" g ", " wlm ").replace(" fm ", " gn ")
             live_step_map[tid] = (int(stp), float(sps_v), is_live)
             rem_m = max(0.0, float(tot_m) - float(el_m))
             eta_s = f"{rem_m:.1f}m left ({el_m}/{tot_m}m)" if is_live else f"{el_m}/{tot_m}m"
-            mode_tag = ("QAT+GAN+WavLM" if qat_v == "1" else ("GAN+WavLM" if int(stp) >= 2500 else "WavLM warmup"))
+            mode_tag = ("STE-INT8 QAT+WavLM" if qat_v == "1" else "Co-Distill+WavLM")
             lad_rows.append(
                 f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{st_badge}</td><td align=right><b>{stp}</b></td>"
                 f"<td align=right>{sps_v}</td><td>{eta_s}</td><td align=center>{mode_tag}</td>"
-                f"<td><code>{html.escape(lss[:85])}</code></td><td>{g_str}</td></tr>"
+                f"<td><code>{html.escape(lss_clean[:90])}</code></td><td>{g_str}</td></tr>"
             )
             continue
     has_cache = os.path.exists("/work/sp/distill/cache_train.pt")
@@ -272,6 +274,10 @@ for tid, tname, est_mb in student_targets:
         pass_str = "✅ PASS" if g.get("gate_pass") else "⚠️ GATE FAIL"
         nv = g.get("node_verify", {})
         nv_str = " · node✓" if nv.get("ok") else ""
+        bs_map = s.get("by_style", {})
+        nw_u = bs_map.get("news", {}).get("utmos")
+        vc_u = bs_map.get("vedic_chant", {}).get("utmos")
+        sty_sfx = f" · news {nw_u} / vedic {vc_u}" if (nw_u and vc_u) else ""
         lb_all.append(dict(
             name=f"{tname} (gate s{g.get('step',0)})",
             size_mb=g.get("int8_mb", est_mb),
@@ -282,7 +288,7 @@ for tid, tname, est_mb in student_targets:
             stutters=s.get("stutter_count", 0),
             clicks=s.get("clicks", 0),
             rtf=g.get("rtf_1thread", "-"),
-            status=f"{pass_str} · corr={g.get('int8_vs_fp32_mel_corr','-')} · spk={s.get('spk_sim','-')}{nv_str}{live_sfx}"
+            status=f"{pass_str} · corr={g.get('int8_vs_fp32_mel_corr','-')} · spk={s.get('spk_sim','-')}{sty_sfx}{nv_str}{live_sfx}"
         ))
     else:
         st_msg = f"🟢 Actively Training (step {live_info[0]} @ {live_info[1]:.1f} it/s · INT8 gate evaluating)" if (live_info and live_info[2]) else "⏸ Standby Rung (after priority tiers t15, t5, t1)"
