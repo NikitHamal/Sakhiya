@@ -281,6 +281,7 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
   <div><b>Active Workers:</b> {n_workers} · <b>Verified Clips:</b> <b>{n_clips}</b> · <b>Audio Volume:</b> <b>{tot_hrs:.2f} hours</b> (24 kHz mono) · <b>Speed:</b> {clips_per_min:.1f} clips/min · <b>ETA:</b> {html.escape(corpus_eta)}</div>
   <div><b>Quality Gate Means:</b> UTMOS <b>{mean_utmos:.3f}</b> · CER <b>{mean_cer:.3f}</b> · ECAPA Spk-Sim <b>{mean_spk:.3f}</b> · <b>RAM/SSD Shard Cache:</b> {html.escape(cache_info)}</div>
   <div style="color:#444;font-size:12.5px"><b>Sources Breakdown:</b> {html.escape(src_str)}</div>
+  {acc_html}
 </div>
 
 <div style="background:#fffaf2;border:1px solid #f5d69b;border-radius:8px;padding:10px 14px;margin-bottom:10px">
