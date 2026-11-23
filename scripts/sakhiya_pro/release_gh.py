@@ -3,7 +3,7 @@
 usage: release_gh.py <notes.md> <asset> [<asset> ...]"""
 import json, os, re, subprocess, sys, urllib.request
 TAG = 'sakhiya-pro-v1'; REPO = 'NikitHamal/Sakhiya'
-tok = re.search(r'echo (\S+)', open('/tmp/gitenv.sh').read())[1].rstrip('";')
+tok = re.findall(r'ghp_\w+|github_pat_\w+', open('/tmp/gitenv.sh').read())[0]
 H = {'Authorization': f'Bearer {tok}', 'Accept': 'application/vnd.github+json', 'User-Agent': 'sakhiya'}
 def api(path, data=None, method=None):
     r = urllib.request.Request('https://api.github.com' + path, data=None if data is None else json.dumps(data).encode(), headers=H, method=method)
