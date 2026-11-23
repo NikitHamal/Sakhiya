@@ -36,6 +36,20 @@ wav, sr = tts.say("नेपालको राजधानी काठमा�
 ```
 Controls: `lang` (`auto`/`ne`/`sa`), `style` (`news`, `storytelling`, `conversational`, `warm_soft`, `expressive`, `vedic_chant`), `rate`, `pitch_shift`.
 
+
+## Quickstart (GGML C/C++ Standalone CLI: `sakhiya-cli`)
+```bash
+# 1. Convert PyTorch v5_c1 checkpoints (am.pt + voc.pt) into a single GGUF v3 file (f32, f16, or q8_0)
+python3 convert_sakhiya_gguf.py --am /work/tts/runs/v5_c1/am.pt --voc /work/tts/runs/v5_c1/voc.pt --out /work/tts/models/sakhiya_f32.gguf --dtype f32
+
+# 2. Build standalone sakhiya-cli linked against ggml (CMake or Makefile; optional -DGGML_CUDA=ON / -DGGML_VULKAN=ON / -DGGML_METAL=ON)
+cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+
+# 3. Synthesize 24 kHz 16-bit PCM WAV & run the stage-by-stage diff gate
+./build/sakhiya-cli -m /work/tts/models/sakhiya_f32.gguf -t "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।" -l ne -s news -o sakhiya_cpp.wav -j 8
+python3 tests/test_ggml_parity.py
+```
+
 ## How Nano / Atom were improved (v9)
 v8 swapped the tiny vocoder for V1's vocoder, but the small acoustic students had only ~4.6k training steps because the teacher flow-ODE was recomputed every step (2.5 steps/s). v9 (`scripts/v9_am_cached.py`) runs the teacher once, keeps its targets in GPU memory and trains the students ~3x faster at 2x the batch size, under a hard 100-minute cap with a step-50 throughput gate. `scripts/v9_chain.sh` exports, runs the real forensic gate and publishes only if the result beats v8. The website selector lists only V1, Nano and Atom; older packs stay in the repo but are not listed.
 
