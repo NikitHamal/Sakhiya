@@ -786,3 +786,27 @@ Session 1 numbers (early-stage model, 30 sentences) are in `eval/metrics.json` u
 - **Teacher corpus**: the per-utterance renderer kept only ~7 clips/min; `gen_corpus.py` now has a batched worker (`BATCH=12`, one `generate()` call per 12 lines, failed lines re-rendered with new seeds). Same strict keep rules (gate, CER<=0.06 / Sanskrit sound-folded 0.25, clicks<=3, UTMOS>=3.5, ECAPA>=0.55, zero Hindi).
 - **Ladder** (owner order): t30 (29.6 MB) -> t15 -> t10 -> t5 -> t1 (~1.05 MB) trained concurrently from the cached teacher shards; `ladder_daemon.py` runs the REAL int8 export gate every 20 min and only promotes passing, higher-scoring exports (never a regression). `finalize_v2.py` (detached autopilot) syncs best passing exports into `docs/models_student/`, pushes every 45 min, freezes immutable packs (`sakhiya_micro` = t5, `sakhiya_pico` = t1, others `sakhiya_student_<tier>`) at the 04:15 UTC cutoff, uploads to HF and stops GPU/backup jobs by exact PID. Student rows in `docs/tiers.json` are `ready:false` until audited in the browser runtime (`docs/student_tts.js`).
 - No student quality is claimed here; the numbers land in `docs/models_student/*/gate.json` and the final section appended by the autopilot.
+
+
+## Session 68 — Sakhiya-Pro v3 native-Nepal accent work (honest status)
+
+* Paused/retired the v2-accent corpus workers (exact PIDs) before they could lock the English cadence into the ladder students; old corpus archived as `distill/corpus_v2accent_old` on the box.
+* Accent audit (`scripts/sakhiya_pro/v3/accent_audit.py`): language tag `npi` (never auto), `instruct=None`. The previous anchor clip closed clauses *upward* (end-slope +0.79 st, 29 % rising ends); a re-selected 7-9 s pure-Devanagari SLR43 6834 clip closes downward. Best sweep config: guidance 2.0 + Nepal-native loanword respelling (`nepal_loan.py`).
+* Weight lock: stitched 6-14 s utterances (10.8 h, female-only SLR54 + SLR43 + v13 news/story/conv), prompt ratio 0.10, cosine 1.4e-5 -> 2e-6 (3200 steps bf16, step-50 watchdog) + 600-step single-anchor lock. Selected `v3b_checkpoint-600`.
+* Measured result vs v2 under the same fixed config (automatic proxies, no human MOS): level drift 1.07 -> 0.64 dB, f0 drift 8.5 -> 6.9 Hz, CER 0.123 -> 0.120, UTMOS 3.89 -> 3.92; end-slope -0.58 -> -0.42 st and rising ends 0.24 -> 0.23 (NOT improved); spk-sim 0.78 -> 0.75 (the 0.85 target was NOT reached). v3 is a consistency gain, not a proven accent fix; a listening check by a native speaker is still required.
+* Seed-VC real-speech -> anchor tract needed a BigVGAN/huggingface_hub patch and a de-click pass; gated yield is low (see corpus panel). The ladder (t15/t5/t1) is launched by `chain_v3.sh` unattended; no INT8 tier has been promoted by this session and no tier claims are made here.
+* Box observation at write time:
+```
+BEST v3b_checkpoint-600 /work/sp/exp/v3b/checkpoint-600
+[20:09:04] PRO_V3_DONE
+--
+[20:09:22] push: d9b498a sakhiya_pro_v3: freeze 15-clip pack + EP01 v3 + accent eval (v3b_checkpoint-600)
+[20:09:26] HF pro v3 uploaded
+--
+[20:09:22] push: d9b498a sakhiya_pro_v3: freeze 15-clip pack + EP01 v3 + accent eval (v3b_checkpoint-600)
+[20:09:26] HF pro v3 uploaded
+66
+4
+6
+20:13:12
+```
