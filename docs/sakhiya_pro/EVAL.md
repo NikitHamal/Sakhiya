@@ -32,3 +32,30 @@ Selected: **ft3_s200**
 | pron_v1 | 0.064 | 0.740 | 0.736 | 0.137 | 3.97 | 0.67 | 1 | 35 |
 
 Automatic metrics only (ASR round trip, UTMOS22, ECAPA similarity); no human MOS.
+
+
+## Sakhiya-Pro v3 (native-Nepal accent lock) — selected **v3b_checkpoint-600**
+
+| metric | v2 | v3 |
+|---|---|---|
+| end_slope | -0.577 | -0.416 |
+| rise_frac | 0.240 | 0.233 |
+| spk_sim | 0.780 | 0.748 |
+| cer | 0.123 | 0.120 |
+| utmos | 3.888 | 3.918 |
+| clicks | 28.833 | 25.792 |
+| f0_med_std | 8.481 | 6.920 |
+| rms_std_db | 1.072 | 0.645 |
+
+Episode 01: **27/33** lines pass the forensic gate. Previously failing lines:
+
+| line | gate | CER | clicks |
+|---|---|---|---|
+| c3 | True | 0.085 | 3 |
+| n1a | False | 0.119 | 1 |
+| n2a | False | 0.104 | 5 |
+| n4a | False | 0.318 | 7 |
+| f1 | True | 0.070 | 7 |
+| o1 | False | 0.240 | 0 |
+
+end_slope < 0 = clause endings close downward (Nepal-native); > 0 = floating English-style rise. All numbers automatic (F0 contour, Kriti ASR, UTMOS22, ECAPA); no human MOS.
