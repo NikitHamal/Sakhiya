@@ -16,8 +16,8 @@ Executes on the 98 GB RTX PRO 6000 Blackwell GPU with /work on /dev/shm/work (50
    `sakhiya_pro_v4` and `sakhiya_pro_v4_vedic` (all 4 benchmark Sanskrit chants + unseen shloka + 15-clip pack), updates
    Marimo Card 3B (`vedic_audit.json`), uploads to Hugging Face, and pushes to `origin HEAD:sakhiya-pro-v4`.
 """
-import os, sys, re, json, glob, time, shutil, random, subprocess, datetime
-import numpy as np, soundfile as sf, torch
+import os, sys, re, json, glob, time, math, shutil, random, subprocess, datetime
+import numpy as np, soundfile as sf, librosa, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = '/work/sp/repo'
