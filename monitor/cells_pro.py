@@ -5,6 +5,7 @@ Card 1 `tts_sakhiya_pro`        : live status — clock, hard-deadline countdown
 Card 2 `tts_sakhiya_pro_audio`  : listen in the browser — base zero-shot vs fine-tune on the 8 hard sentences + 15-clip pack + EP01.
 """
 CARD = r'''
+sp_tick.value  # auto-refresh trigger (reactive)
 import json, glob, os, re, subprocess, html, time, datetime
 import marimo as mo
 def _t(p, n=40):
@@ -82,6 +83,9 @@ epv = mo.audio(open(ep, "rb").read()) if os.path.exists(ep) else mo.md("EP01: n/
 mo.vstack([mo.md("### 🔊 Sakhiya-Pro listening desk"), mo.md("**A/B: zero-shot base vs fine-tune (same sentence, same seed)**"), cmp_,
            mo.md("**15-clip master pack (Best-of-3, mastered -14 LUFS)**"), packv, mo.md("**NEBians News Episode 01 voiceover**"), epv])
 '''
+TICK = '''import marimo as mo
+sp_tick = mo.ui.refresh(options=["15s", "30s", "1m"], default_interval="30s", label="Sakhiya-Pro live refresh")
+sp_tick'''
 def _wrap(code):
     """Cell-local scope: wrap in a function so marimo sees no multiply-defined globals."""
     import textwrap, re as _re
@@ -92,8 +96,8 @@ async def install():
     import marimo._code_mode as cm
     async with cm.get_context(skip_staleness_check=True) as ctx:
         ex = {c.name: c.id for c in ctx.cells.values()}
-        for name, code in (('tts_sakhiya_pro', CARD), ('tts_sakhiya_pro_audio', AUDIO)):
-            code = _wrap(code)
+        for name, code in (('tts_sakhiya_pro_tick', TICK), ('tts_sakhiya_pro', CARD), ('tts_sakhiya_pro_audio', AUDIO)):
+            code = code.strip() if name.endswith('_tick') else _wrap(code)
             if name in ex: ctx.edit_cell(ex[name], code, hide_code=True); cid = ex[name]
             else: cid = ctx.create_cell(code, name=name, hide_code=True)
             ctx.run_cell(cid); print('installed', name)
