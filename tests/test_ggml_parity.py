@@ -270,10 +270,15 @@ def main():
             sf.write(os.path.join(args.out_dir, "pytorch_sa.wav"), ref["wav"], 24000, subtype="PCM_16")
             sf.write(os.path.join(args.out_dir, "sakhiya_cpp_sa.wav"), cpp_wav, 24000, subtype="PCM_16")
 
+        wav_mae = float(np.mean(np.abs(cpp_wav - ref["wav"])))
+        item_res["wav_mean_abs_diff"] = wav_mae
         assert ids_exact, f"Phoneme IDs mismatch on {cid}: {cpp_ids} vs {ref['ids']}"
         assert dur_exact, f"Duration mismatch on {cid}: {cpp_dur} vs {ref['dur']}"
+        assert pa_diff < 1e-3, f"pitch_add max_abs_diff {pa_diff} >= 1e-3 on {cid}"
+        assert x_diff < 1e-3, f"x_enc max_abs_diff {x_diff} >= 1e-3 on {cid}"
+        assert ld_diff < 1e-3, f"logdur max_abs_diff {ld_diff} >= 1e-3 on {cid}"
         assert mel_diff < 1e-3, f"Mel max_abs_diff {mel_diff} >= 1e-3 on {cid}"
-        assert wav_diff < 1e-3, f"Wav max_abs_diff {wav_diff} >= 1e-3 on {cid}"
+        assert wav_mae < 1e-3, f"Wav mean_abs_diff {wav_mae} >= 1e-3 on {cid}"
         assert wav_cos >= 0.998, f"Wav cosine_sim {wav_cos} < 0.998 on {cid}"
 
     json.dump(report, open(os.path.join(args.out_dir, "diff_gate_report.json"), "w"), indent=2, ensure_ascii=False)

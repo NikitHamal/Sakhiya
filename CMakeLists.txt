@@ -61,5 +61,5 @@ if(GGML_METAL)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(sakhiya-cli PRIVATE -O3 -march=native -ffp-contract=off)
+    target_compile_options(sakhiya-cli PRIVATE -O3 -march=native -funroll-loops)
 endif()
