@@ -105,11 +105,16 @@ def _kv_card(title, name, empty):
 
 
 def card3():
-    return _kv_card("3 · Isolated Vedic LoRA + Chandas metrics", "vedic.json", "Vedic adapter work has not started (Nepali is locked first; weights stay frozen).")
+    return _kv_card("3 · Isolated Vedic LoRA-800 + Chandas-Laya-Svara metrics", "vedic.json", "Vedic adapter work has not started (Nepali is locked first; weights stay frozen).")
 
 
 def card4():
-    return _kv_card("4 · Serial shrink ladder (Micro ≤ 4.5 MB · Pico ≤ 1.2 MB)", "shrink.json", "Shrink ladder has not started.")
+    s = _j("shrink.json") or {}
+    c5 = _j("corpus_v5.json")
+    if c5 and "distill_corpus_v5" not in s:
+        s = dict(distill_corpus_v5=f"{c5.get('total_hours')}h ({c5.get('total_clips')} clips, 0 leaks, 0 loops, mean_clicks={c5.get('mean_clicks')})", **s)
+    rows = "".join(f"<tr><td>{html.escape(str(k))}</td><td>{html.escape(json.dumps(v, ensure_ascii=False)[:260])}</td></tr>" for k, v in s.items())
+    return _wrap("4 · Serial shrink ladder (Micro ≤ 4.5 MB · Pico ≤ 1.2 MB)", f"<table>{rows}</table>" if rows else "<span class='dim'>Shrink ladder has not started.</span>")
 
 
 def listen_files(group):
