@@ -28,7 +28,7 @@ for p in (DIST, REPO, '/work/sp'):
         sys.path.insert(0, p)
 
 from student import Student, build, set_qat, n_params, TIERS, _calibrate_styles  # noqa: E402
-from train_student import install_ste_qat_hooks, _ode_solve  # noqa: E402
+from train_student import install_ste_qat_hooks, _ode_solve, spec_phase_gd_loss  # noqa: E402
 from sakhiya.cfm import SakhiyaAM, STYLE_PROSODY_TARGETS, _dur_to_attn  # noqa: E402
 from sakhiya.v2_vocoder import mel_spec_24k, HOP  # noqa: E402
 from sakhiya.ctc_aligner import MelCTCAligner, batch_viterbi_ctc_durations  # noqa: E402
@@ -91,7 +91,8 @@ def load_clean_pro_v3_items(data_path='/work/sp/distill/gt_feats.pt', dev='cuda'
                 w = np.clip(w * (0.062 / r), -0.97, 0.97).astype(np.float32)
                 n = (len(w) // HOP) * HOP
                 w = w[:n]
-                ids_list = symbols.encode(g2p.text_to_phones(c['text'], 'sa' if c['lang'] == 'sa' else 'ne'))
+                ph_m = [q for p in g2p.text_to_phones(c['text'], 'sa' if c['lang'] == 'sa' else 'ne') for q in (['o', 'm'] if p == '<om>' else [p])]
+                ids_list = symbols.encode(ph_m)
                 with torch.no_grad():
                     m = mel_spec_24k(torch.from_numpy(w)[None].to(dev), dev)[0]
                     mn = ((m - mean) / std)[None]
@@ -425,7 +426,29 @@ def main():
                 if torch.isfinite(c_val):
                     l_ctc = F.relu(c_val - 0.12)
 
-            loss = l_mel + 2.4 * l_df + 0.9 * l_std + 1.2 * l_dt + 0.85 * l_cep + 1.6 * l_prior + 0.8 * l_dur + l_heads + 0.25 * l_ctc
+            # 3. Differentiable Vocoder-in-the-Loop Complex-iSTFT Magnitude + Phase + Instantaneous-Frequency Loss (32-frame crop)
+            l_vspec = torch.zeros((), device=dev)
+            if T >= 36:
+                seg_v = 32
+                B_v = min(B, 16)
+                s_p, s_t = [], []
+                for bi in range(B_v):
+                    valid_t = max(int(yl[bi].item()), seg_v + 1)
+                    st_i = random.randint(0, max(0, valid_t - seg_v)) if valid_t > seg_v else 0
+                    s_p.append(y_pred[bi, :, st_i:st_i + seg_v])
+                    s_t.append(y_clean[bi, :, st_i:st_i + seg_v])
+                mp_seg = torch.stack(s_p, dim=0) * G.am.stats[1] + G.am.stats[0]
+                mt_seg = torch.stack(s_t, dim=0) * G.am.stats[1] + G.am.stats[0]
+                mp_in = torch.cat([mp_seg[:, :98, :], mp_seg[:, 97:98, :], mp_seg[:, 97:98, :]], dim=1)
+                mt_in = torch.cat([mt_seg[:, :98, :], mt_seg[:, 97:98, :], mt_seg[:, 97:98, :]], dim=1)
+                with torch.no_grad():
+                    re_vt, im_vt, _, _ = G.voc.spectrum_and_f0(mt_in)
+                re_vs, im_vs, _, _ = G.voc.spectrum_and_f0(mp_in)
+                v_val = spec_phase_gd_loss(re_vs, im_vs, re_vt, im_vt)
+                if torch.isfinite(v_val):
+                    l_vspec = v_val
+
+            loss = l_mel + 2.4 * l_df + 0.9 * l_std + 1.2 * l_dt + 0.85 * l_cep + 1.6 * l_prior + 0.8 * l_dur + l_heads + 0.25 * l_ctc + 0.45 * l_vspec
 
         oG.zero_grad(set_to_none=True)
         loss.backward()
