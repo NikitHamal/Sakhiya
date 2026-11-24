@@ -250,13 +250,6 @@ class Student(nn.Module):
             self.voc.load_state_dict(vtmp.state_dict(), strict=True)
 
         self._apply_svd_structure()
-        if self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "t5_v3_init.pt")):
-            try:
-                ck_p5 = torch.load(os.path.join(ck_dir, "t5_v3_init.pt"), map_location=dev, weights_only=False)
-                sd_p5 = {k: v.float() for k, v in ck_p5.get("ema", ck_p5).items() if k.startswith("am.")}
-                self.load_state_dict(sd_p5, strict=False)
-            except Exception:
-                pass
         if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "t1_am_pretrained.pt")):
             try:
                 ck_p1 = torch.load(os.path.join(ck_dir, "t1_am_pretrained.pt"), map_location=dev, weights_only=False)

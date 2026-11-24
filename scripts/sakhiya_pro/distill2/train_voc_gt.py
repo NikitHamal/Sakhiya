@@ -47,6 +47,8 @@ def main():
     G = VocoderV2(ch=a.ch).to(dev)
     ck = torch.load(a.init, map_location=dev, weights_only=False)
     sd = {k: v.float() for k, v in ck.get('G_ema', ck.get('G', ck)).items()}
+    if not any('parametrizations' in k or 'weight_g' in k for k in sd):
+        G.fuse_weight_norm()
     print('load', G.load_state_dict(sd, strict=False))
     G_ema = copy.deepcopy(G).eval(); D = DiscV2().to(dev)
     dp = '/work/tts/ck/voc_disc_state.pt'

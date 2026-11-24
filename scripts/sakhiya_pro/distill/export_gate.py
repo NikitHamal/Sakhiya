@@ -365,7 +365,7 @@ def main():
 
     sz_cap = SIZE_CAPS_MB.get(a.tier, 30.0)
     s = R.get("summary", {})
-    min_spk = 0.44 if a.tier in ("t1", "t5") else 0.50
+    min_spk = 0.58 if a.tier in ("t1", "t5") else 0.65
     R["gate_pass"] = bool(
         R["nan_count"] == 0
         and not R["bad_ops"]
