@@ -1,0 +1,211 @@
+{
+ "tag": "sakhiya_v5_nepali",
+ "model": "v3b_checkpoint-600 (NikitHamal/sakhiya-v1-train sakhiya_pro_v3/exp/v3b/latest, STEP 600)",
+ "anchor": "/work/sp/v4/ref/anchor_v4 (studio-denoised, verbatim ref_text)",
+ "renderer": "scripts/v4_pro_render.py (lang=npi, instruct=None, de-karkar chain)",
+ "gate_agg": {
+  "end_slope": -1.214,
+  "rise_frac": 0.045,
+  "cer": 0.058,
+  "utmos": 3.774,
+  "hf_karkar": 0.002,
+  "spk_sim": 0.801,
+  "clips": 11,
+  "gate_pass": 11,
+  "metric_pass": 2,
+  "all_pass": 2
+ },
+ "ep01": {
+  "tag": "a4",
+  "lines": 33,
+  "gate_pass": 33,
+  "renderer_gate": 33,
+  "total_clicks": 0,
+  "lufs": "-14.0",
+  "rejected": []
+ },
+ "caveats": [
+  "v3b_checkpoint-400/200 weights are not stored anywhere (only their eval wavs): rollback target is v3b-600",
+  "mean UTMOS 3.774 < 3.90 spec bar; only 2/11 clips meet ALL strict metric thresholds -> NOT a promoted flagship"
+ ],
+ "rows": [
+  {
+   "id": "ne_kathmandu",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "utmos"
+   ],
+   "hyp": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ैतिहासिक सर हो",
+   "end_slope": -0.728,
+   "rise_frac": 0.0,
+   "cer": 0.036,
+   "utmos": 3.805,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.766,
+   "clicks": 0
+  },
+  {
+   "id": "ne_story",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [],
+   "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुडी आमा बस्थिन् उनि बिहानै उठेर चरालाई दाना हाल्थिन्",
+   "end_slope": -1.04,
+   "rise_frac": 0.0,
+   "cer": 0.014,
+   "utmos": 3.92,
+   "hf_karkar": 0.002,
+   "spk_sim": 0.838,
+   "clicks": 0
+  },
+  {
+   "id": "ne_chat",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "end_slope",
+    "rise",
+    "utmos"
+   ],
+   "hyp": "नमस्ते आज मौसम धेरै राम्रो छ चिया खान जाउन तिमी कताबाट आउदै छौ",
+   "end_slope": -0.113,
+   "rise_frac": 0.5,
+   "cer": 0.06,
+   "utmos": 3.817,
+   "hf_karkar": 0.002,
+   "spk_sim": 0.791,
+   "clicks": 2
+  },
+  {
+   "id": "ne_warm",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "utmos"
+   ],
+   "hyp": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउछ गहिर श्वास लिनुहोस र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्",
+   "end_slope": -0.705,
+   "rise_frac": 0.0,
+   "cer": 0.023,
+   "utmos": 3.582,
+   "hf_karkar": 0.003,
+   "spk_sim": 0.853,
+   "clicks": 0
+  },
+  {
+   "id": "ne_expressive",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer"
+   ],
+   "hyp": "उहा के अदभुत दृश्य हो यो माछापुछ्रे हिमाल बिहानको घाममा सुन जस्तै चम्किरहेको छ",
+   "end_slope": -2.267,
+   "rise_frac": 0.0,
+   "cer": 0.066,
+   "utmos": 3.994,
+   "hf_karkar": 0.004,
+   "spk_sim": 0.797,
+   "clicks": 0
+  },
+  {
+   "id": "ne_tricky_real",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "end_slope",
+    "cer",
+    "utmos"
+   ],
+   "hyp": "बाटोबाट हिड्दै गर्दा गाउँका साथीहरूसँग भेट भयो अनि हामीले विद्यालयको काकम बारे लामो कुरा गर्यौ",
+   "end_slope": -0.549,
+   "rise_frac": 0.0,
+   "cer": 0.062,
+   "utmos": 3.562,
+   "hf_karkar": 0.0,
+   "spk_sim": 0.765,
+   "clicks": 1
+  },
+  {
+   "id": "ne_loan_num",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer"
+   ],
+   "hyp": "सन् २०मा नेपालको प्रविध क्षेत्रमा पन्दतिशत वृद्ध भएको छ र मोवाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बढका छन्",
+   "end_slope": -0.782,
+   "rise_frac": 0.0,
+   "cer": 0.106,
+   "utmos": 4.109,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.799,
+   "clicks": 0
+  },
+  {
+   "id": "mixed_owner",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer",
+    "utmos"
+   ],
+   "hyp": "हेलो साथीहरू म सकिया हु निकित हमालजुले बनाउनुएको सानो टेक्ट टु स्पिच मोडल म संस्कृत पनि स्पट बोल्न सक्छु धर्मषेत्रे कुरुषेत्रे समवेता युयत्सव मामाका पाणडवा सेव किमकुर्वत सन्जय आज मौसम निकै रमाइलो र शान्त छ",
+   "end_slope": -2.144,
+   "rise_frac": 0.0,
+   "cer": 0.09,
+   "utmos": 3.494,
+   "hf_karkar": 0.004,
+   "spk_sim": 0.84,
+   "clicks": 0
+  },
+  {
+   "id": "ne_unseen_dialogue",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer",
+    "utmos"
+   ],
+   "hyp": "दिदी आज बजारमा नयाँ किताबहरु आका रहेछन् हामी साजपख सँगै गएर हेरौला नि हुदैन र",
+   "end_slope": -2.2,
+   "rise_frac": 0.0,
+   "cer": 0.076,
+   "utmos": 3.811,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.767,
+   "clicks": 0
+  },
+  {
+   "id": "ne_unseen_narrative",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [],
+   "hyp": "वषा थामिएपछि पहाडको टुप्पोबाट कलकल बग्ने  जरनाको आवाज अझै मिठो सुन्यो गाउँलेहरू आ आफ्नो खेत बारमा काम गर्न निस्किए",
+   "end_slope": -1.819,
+   "rise_frac": 0.0,
+   "cer": 0.056,
+   "utmos": 3.949,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.824,
+   "clicks": 0
+  },
+  {
+   "id": "ne_unseen_prose",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "utmos"
+   ],
+   "hyp": "स्वास्थ्य र शिक्षामा समान पहुच पर््याउन स्थानयतहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिवर सन्चालन गरेको छ",
+   "end_slope": -1.007,
+   "rise_frac": 0.0,
+   "cer": 0.048,
+   "utmos": 3.475,
+   "hf_karkar": 0.005,
+   "spk_sim": 0.771,
+   "clicks": 0
+  }
+ ]
+}

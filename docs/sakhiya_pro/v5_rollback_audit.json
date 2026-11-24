@@ -1,0 +1,206 @@
+{
+ "root_cause": [
+  "anchor = anchor_v4[:3.2s] (hard slice, mid-sentence Nepali) + chant[:5.8s] (hard slice) but ref_text = FULL verse -> model completes the missing verse tail (leaked 'प्रचोदयात्', '...सञ्जय')",
+  "Gayatri anchor reused for Shanti (startswith ॐ) -> identical broken opening",
+  "'ओऽऽऽम्' stretch hack + post-hoc Om splice (soften_visarga_and_shape_svara) -> नम् नम् loop / collapsed ॐ / splice",
+  "Seed-VC converted timbre anchors: ref audio no longer matches ref_text phonetics"
+ ],
+ "v4_vedic": [
+  {
+   "pack": "sakhiya_pro_v4",
+   "id": "sa_gayatri",
+   "anchor": "om",
+   "ok": true,
+   "rejects": [],
+   "leaks": [],
+   "loops": [],
+   "hyp": "नपपपपपपपप न प्रचोदयात भुर्व वह स्व तत्स वितुर्वरेण्यम भर्गो देवस्य धि महि धियो यो नह प्रचोदयात",
+   "om_s": 1.65,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4",
+   "id": "sa_gita",
+   "anchor": "gita",
+   "ok": true,
+   "rejects": [],
+   "leaks": [],
+   "loops": [],
+   "hyp": "त सजय धर्मषेत्रे कुरुषेत्रे समवेता ययोत्सव मामता पाण्डवाशैव किमकर्व त सन्जय",
+   "om_s": null,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4",
+   "id": "sa_om",
+   "anchor": "om",
+   "ok": false,
+   "rejects": [
+    "LEAK:['प्रचोदयात']"
+   ],
+   "leaks": [
+    "प्रचोदयात"
+   ],
+   "loops": [],
+   "hyp": "नपपपपपपपप प्रचोदयात  पूर्ण मद पूर्णमिदम पूर्णात पूर्णमुदच्यत पूर्णस्य पूर्णमादय पूर्णमेवाव शिष्यते",
+   "om_s": 1.64,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4",
+   "id": "sa_rv",
+   "anchor": "gita",
+   "ok": false,
+   "rejects": [
+    "LOOP:[{'kind': 'word', 'ngram': 'अग्नि', 'repeats': 2}]"
+   ],
+   "leaks": [],
+   "loops": [
+    [
+     "अग्नि",
+     2
+    ]
+   ],
+   "hyp": "अग्नि अग्नि मिडे पुरोहितम यज्नेस्य देवमृत विजम होतारम रत्नधातमम",
+   "om_s": null,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4_vedic",
+   "id": "sa_gayatri",
+   "anchor": "om",
+   "ok": true,
+   "rejects": [],
+   "leaks": [],
+   "loops": [],
+   "hyp": "नपपपपपपपप न प्रचोदयात भुर्व वह स्व तत्स वितुर्वरेण्यम भर्गो देवस्य धि महि धियो यो नह प्रचोदयात",
+   "om_s": 1.65,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4_vedic",
+   "id": "sa_gita",
+   "anchor": "gita",
+   "ok": true,
+   "rejects": [],
+   "leaks": [],
+   "loops": [],
+   "hyp": "त सजय धर्मषेत्रे कुरुषेत्रे समवेता ययोत्सव मामता पाण्डवाशैव किमकर्व त सन्जय",
+   "om_s": null,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4_vedic",
+   "id": "sa_om",
+   "anchor": "om",
+   "ok": false,
+   "rejects": [
+    "LEAK:['प्रचोदयात']"
+   ],
+   "leaks": [
+    "प्रचोदयात"
+   ],
+   "loops": [],
+   "hyp": "नपपपपपपपप प्रचोदयात  पूर्ण मद पूर्णमिदम पूर्णात पूर्णमुदच्यत पूर्णस्य पूर्णमादय पूर्णमेवाव शिष्यते",
+   "om_s": 1.64,
+   "clicks": 0
+  },
+  {
+   "pack": "sakhiya_pro_v4_vedic",
+   "id": "sa_rv",
+   "anchor": "gita",
+   "ok": false,
+   "rejects": [
+    "LOOP:[{'kind': 'word', 'ngram': 'अग्नि', 'repeats': 2}]"
+   ],
+   "leaks": [],
+   "loops": [
+    [
+     "अग्नि",
+     2
+    ]
+   ],
+   "hyp": "अग्नि अग्नि मिडे पुरोहितम यज्नेस्य देवमृत विजम होतारम रत्नधातमम",
+   "om_s": null,
+   "clicks": 0
+  }
+ ],
+ "v4_rejected": 4,
+ "v4_leak_clips": 2,
+ "v4_loop_clips": 2,
+ "nepali_accent": {
+  "v3b_400": {
+   "src": "/work/sp/hfpull/sakhiya_pro_v3/v3/eval/v3b_checkpoint-400/eval.json",
+   "cer": 0.136,
+   "utmos": 3.975,
+   "spk_sim": 0.744,
+   "hindi": 0.0,
+   "clicks": 33.083,
+   "end_slope": -0.574,
+   "rise_frac": 0.128,
+   "decl": -1.153,
+   "f0_std": 3.538,
+   "cps": 4.964,
+   "f0_med_std": 7.856,
+   "cps_std": 0.319,
+   "rms_std_db": 0.711,
+   "score": 2.939,
+   "model": "/work/sp/exp/v3b/checkpoint-400"
+  },
+  "v3b_200": {
+   "src": "/work/sp/hfpull/sakhiya_pro_v3/v3/eval/v3b_checkpoint-200/eval.json",
+   "cer": 0.131,
+   "utmos": 3.89,
+   "spk_sim": 0.743,
+   "hindi": 0.0,
+   "clicks": 35.458,
+   "end_slope": -0.598,
+   "rise_frac": 0.118,
+   "decl": -1.207,
+   "f0_std": 3.759,
+   "cps": 4.964,
+   "f0_med_std": 8.202,
+   "cps_std": 0.319,
+   "rms_std_db": 0.677,
+   "score": 2.865,
+   "model": "/work/sp/exp/v3b/checkpoint-200"
+  },
+  "v3b_600": {
+   "src": "/work/sp/hfpull/sakhiya_pro_v3/v3/eval/v3b_checkpoint-600/eval.json",
+   "cer": 0.032,
+   "utmos": 3.752,
+   "spk_sim": 0.852,
+   "hindi": 0.0,
+   "clicks": 4.5,
+   "end_slope": -0.208,
+   "rise_frac": 0.201,
+   "decl": -1.285,
+   "f0_std": 3.665,
+   "cps": 4.961,
+   "f0_med_std": 7.332,
+   "cps_std": 0.318,
+   "rms_std_db": 0.47,
+   "score": 4.015,
+   "model": "/work/sp/exp/v3b/checkpoint-600"
+  },
+  "v4_poisoned": {
+   "src": "/work/sp/v4/eval/v4b_checkpoint-100/eval.json",
+   "cer": 0.039,
+   "utmos": 3.97,
+   "spk_sim": 0.77,
+   "hindi": 0.0,
+   "clicks": 0.125,
+   "hf_karkar": 0.002,
+   "end_slope": -1.288,
+   "rise_frac": 0.031,
+   "decl": -1.243,
+   "f0_std": 3.403,
+   "cps": 5.388,
+   "f0_med_std": 8.003,
+   "cps_std": 0.41,
+   "rms_std_db": 0.758,
+   "score": 3.983,
+   "model": "/work/sp/exp/v4b/checkpoint-100"
+  }
+ }
+}

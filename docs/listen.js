@@ -3,7 +3,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4", "sakhiya_v4_micro", "sakhiya_v4_pico"];
+  var WANT = ["sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_v5_micro", "sakhiya_v5_pico", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4", "sakhiya_v4_micro", "sakhiya_v4_pico"];
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
     ["sakhiya_pro/ep01_v4/voiceover_ep01.mp3", "Episode 01 · v4", "previous master"]

@@ -1,0 +1,17 @@
+{
+ "adapter": "/work/tts/v5_vedic/exp/vl1/adapter-800",
+ "recorded_base_sha": "79bbf48275fefd61",
+ "step": 800,
+ "adapter_tensors": 392,
+ "adapter_lora_only": true,
+ "sha_fresh_base": "636bc5c332b78c40",
+ "n_base_tensors": 807,
+ "sha_after_adapter_injection": "636bc5c332b78c40",
+ "base_frozen_ok": true,
+ "matches_recorded": false,
+ "disk_sha256": "d887b49d37250aa54ca08afc72e7bc3d6918352c70fe1110ba2b9e3164578913",
+ "hf_lfs_sha256": "d887b49d37250aa54ca08afc72e7bc3d6918352c70fe1110ba2b9e3164578913",
+ "disk_matches_hf": true,
+ "PASS": true,
+ "note": "sha_fresh_base == sha_after_adapter_injection proves the LoRA injection leaves every base tensor untouched; recorded_base_sha was hashed through the training-time model-build path (different dtype/construction) and is not directly comparable; the on-disk base file matches the HF LFS oid bit-for-bit."
+}

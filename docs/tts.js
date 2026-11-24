@@ -93,6 +93,7 @@ class SakhiyaWeb {
       const keep = ph.map(p => S.indexOf(p) >= 0), rate = o.rate || 1, basePitch = o.pitch_shift || 0, svDepth = o.svara ?? 1;
       const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 0.65 : 0.52) : 0.35) * svDepth;
       const dmArr = o.lang === "sa" ? (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => (0.75 + 0.25 * Math.min(1.35, Math.max(0.85, v))) / rate) : [1.0];
+      if (o.lang === "sa" && dmArr.length >= 2 && ph[0] === "o" && ph[1] === "m") { dmArr[0] = Math.max(dmArr[0], 1.38 / rate); dmArr[1] = Math.max(dmArr[1], 1.32 / rate); }
       const offArr = o.lang === "sa" ? (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => basePitch + v * svScale) : [basePitch];
       const r = await this.sess.single.run({
         ids: new ort.Tensor("int64", ids, [1, ids.length]),

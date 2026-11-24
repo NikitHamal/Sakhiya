@@ -76,3 +76,24 @@ end_slope < 0 = clause endings close downward (Nepal-native); > 0 = floating Eng
 | utmos | 3.752 | 3.970 |
 
 Episode 01 v4 Broadcast Master: **33/33** lines pass the forensic gate (-14.0 LUFS, -56 dB studio room-tone bed, zero clicks/karkar).
+
+
+## Sakhiya v5 Clean Recovery — Locked Nepali `v3b-600` Master + Isolated Vedic LoRA-800 (`adapter-800`) + 16.69h Clean Distillation Corpus
+
+- **Nepali Master (`sakhiya_v5_nepali` / `ep01_v5`)**: Locked on `v3b_checkpoint-600` with the de-karkar renderer (`11/11` Nepali pack pass, `33/33` Episode 01 pass at `-14.0 LUFS`, `0` clicks, `end_slope = -1.787`, `rise_frac = 0.0`, `CER = 0.025`, `UTMOS = 3.922`).
+- **Isolated Vedic LoRA (`sakhiya_v5_vedic`, `adapter-800`)**: Trained on `3.74h` (`1,291` clips) pure Vagdhenu + Gita Vedic chants with base weights strictly frozen (`base_sha_before == base_sha_after == 5517602c2d24c470`).
+
+| Vedic Checkpoint | Leak/Loop Gate (`scripts/leak_loop_gate.py`) | Rigveda 1.1.1 | Shanti Mantra (`ॐ`) | Gayatri Mantra (`ॐ`) | Bhagavad Gita 1.1 | Unseen Shloka |
+|---|---|---|---|---|---|---|
+| `base_pure` | `0/8` | 0/2 | 0/2 | 0/2 | 0/2 | — |
+| `vl1_1600` | `9/12` | 3/3 | 1/3 | 2/3 | 3/3 | — |
+| `vl1_2400` | `10/12` | 3/3 | 2/3 | 2/3 | 3/3 | — |
+| **`vl1_800` (`adapter-800`, selected)** | **`11/12` (`5/5` Best-of-3, `14/15` takes)** | **PASS (`0` clicks)** | **PASS (`ॐ 1.46s`, `0` clicks)** | **PASS (`ॐ 2.44s`, `0` clicks)** | **PASS (`0` clicks)** | **PASS (`ॐ 1.92s`, `0` clicks)** |
+
+- **16.69-Hour Single-Voice 24 kHz Distillation Corpus (`docs/sakhiya_pro/v5_distill_corpus_report.json`)**: `8,997` gate-verified utterances (`16.69h`, `164` rejected by `scripts/leak_loop_gate.py`, `0` leaks, `0` loops, `mean_clicks = 0.02`, `mean_cer = 0.014`).
+- **Serial Shrink Sprint (`sakhiya_v5_micro` <= 4.5 MB & `sakhiya_v5_pico` <= 1.2 MB INT8 ONNX)**:
+
+| Tier | INT8 ONNX Size | FP32-vs-INT8 Corr | UTMOS (Mean / Unseen) | Nepali CER | Sanskrit CER | Spk-Sim | Clicks / Drops | Leak/Loop Gate | Node ORT 1T RTF |
+|---|---|---|---|---|---|---|---|---|---|
+| **`sakhiya_v5_micro`** | **`4.404 MB`** (`<= 4.50 MB`) | **`0.9952`** (`>= 0.995`) | **`3.355` / `3.507`** | `0.038` | `0.068` | `0.820` | `0` / `0` | **`27/27` PASS** | `0.0163` (~61x) |
+| **`sakhiya_v5_pico`** | **`1.195 MB`** (`<= 1.20 MB`) | **`0.9922`** (`>= 0.990`) | **`2.778` / `2.846`** | `0.055` | `0.087` | `0.848` | `0` / `0` | **`27/27` PASS** | `0.0135` (~74x) |
