@@ -35,13 +35,13 @@ TIERS = {
         tier='micro', arch='sakhiya_am',
         d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
         voc_ch=144, steps=1,
-        r_enc=88, r_voc_k7=None, r_voc_k11=48, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=88, r_voc_k7=52, r_voc_k11=32, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     'pico': dict(
         tier='pico', arch='sakhiya_pico',
         d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
         voc_ch=144, steps=1,
-        r_enc=52, r_voc_k7=44, r_voc_k11=26, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=50, r_voc_k7=40, r_voc_k11=24, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     't10': dict(
         tier='t10', arch='sakhiya_am',
@@ -451,10 +451,12 @@ class StudentV4(nn.Module):
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
         p_xe = torch.gather(p_out, 1, idx)
         ps_fr = torch.gather(ps_tok, 1, idx)[:, None, :]
+        is_wb_fr = torch.gather(is_hiatus_wb, 1, idx)[:, None, :]
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
         t0 = torch.zeros((B,), device=mu_y.device, dtype=torch.float32)
         xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_t)
+        xt = xt * (1.0 - 0.65 * is_wb_fr) + xt[:, :, -1:] * (0.65 * is_wb_fr)
 
         mel = xt * self.am.stats[1] + self.am.stats[0]
         p_zero = p_xe - p_xe.mean(dim=1, keepdim=True)

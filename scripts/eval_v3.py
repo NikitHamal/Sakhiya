@@ -78,12 +78,14 @@ def measure_rigveda_svara(tts):
         w = w[int(0.055 * sr):]
     dur = np.concatenate([t[1] for t in tts.trace])
     base = np.concatenate([t[0] for t in tts.trace]) / 0.9
-    f0 = librosa.pyin(w.astype(np.float32), fmin=135, fmax=380, sr=sr, hop_length=256, frame_length=2048)[0]
+    f0, _, vp = librosa.pyin(w.astype(np.float32), fmin=135, fmax=380, sr=sr, hop_length=256, frame_length=2048)
     st = np.clip(12.0 * np.log2(f0 / np.nanmedian(f0)), -3.5, 3.5)
     if is_single:
-        v_st = st[~np.isnan(st)]
+        rms = librosa.feature.rms(y=w.astype(np.float32), frame_length=2048, hop_length=256)[0][:len(st)]
+        good = (~np.isnan(st)) & (vp >= 0.75) & (rms > 0.16 * np.max(rms))
+        v_st = st[good] if np.sum(good) >= 8 else st[~np.isnan(st)]
         if len(v_st) >= 8:
-            return float(np.percentile(v_st, 96) - np.percentile(v_st, 4))
+            return float(np.percentile(v_st, 92) - np.percentile(v_st, 8))
     fr = np.repeat(np.array(base), dur)[:len(st)]
     s = st[:len(fr)]
     hi = float(np.nanmean(s[fr >= 0.5])) if np.any(fr >= 0.5) else 2.4
