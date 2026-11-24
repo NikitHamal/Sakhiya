@@ -321,7 +321,12 @@ class RendererV4:
             nonlocal best
             self.torch.manual_seed(sd)
             ref_a, ref_t, txt_gen = self.ref_wav, self.ref_text, text_in
-            if lang == 'sa':
+            if lang == 'sa' and os.environ.get('V5_VEDIC_CLEAN'):
+                # v5: zero-leak pure prompt. Full, unsliced anchor whose ref_text matches the audio verbatim; no Seed-VC anchors,
+                # no 'ओऽऽऽम्' stretch hack, no post-hoc Om splice. Target text keeps natural ॐ and pada breaks.
+                import vedic_v4 as VV
+                txt_gen = VV.format_sanskrit_for_omnivoice(text)
+            elif lang == 'sa':
                 try:
                     import vedic_v4 as VV
                     txt_gen = VV.format_sanskrit_for_omnivoice(text)
@@ -344,7 +349,7 @@ class RendererV4:
                 instruct=None,
             )
             w = trim_clause(np.asarray(a[0], dtype=np.float32), self.m.sampling_rate)
-            if lang == 'sa':
+            if lang == 'sa' and not os.environ.get('V5_VEDIC_CLEAN'):
                 try:
                     import vedic_v4 as VV
                     aw, _ = sf.read(self.ref_wav, dtype='float32')
@@ -449,6 +454,8 @@ def render_pack(R: RendererV4, out: str):
     meta = []
     for c in clips:
         lang = 'sa' if c['lang'] == 'sa' else 'npi'
+        if lang != 'sa' and os.environ.get('SP_ONLY_SA'):
+            continue
         if lang == 'sa' and os.environ.get('SP_SKIP_SA'):   # v5: Vedic is isolated behind its own adapter + leak gate
             continue
         w, wsr, info = R.take(c['text'], lang=lang)
