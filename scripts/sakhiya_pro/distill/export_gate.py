@@ -382,25 +382,34 @@ def main():
 
     if not a.no_asr:
         import sp_common as C, validators as V, glob, librosa
-        # Build true Sakhiya-Pro v3 single-voice reference embedding centroid (anchor_v3.wav + sakhiya_pro_v3 pack)
+        # Build true Sakhiya-Pro v3 single-voice reference embedding centroids (ne + sa from sakhiya_pro_v3 pack)
         ref_p = "/work/sp/v3/ref/anchor_v3.wav" if os.path.exists("/work/sp/v3/ref/anchor_v3.wav") else "/work/sp/ref/anchor_ref.wav"
         rw, rsr = sf.read(ref_p, dtype="float32")
         embs_v3 = [C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)]
-        for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "ne_*.mp3")))[:4]:
+        for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "ne_*.mp3")))[:6]:
             try:
                 pw_v3, _ = librosa.load(pf, sr=SR)
                 embs_v3.append(C.spk_emb(pw_v3, SR))
             except Exception:
                 pass
-        remb = np.mean(embs_v3, axis=0)
-        remb = remb / max(float(np.linalg.norm(remb)), 1e-8)
+        remb_ne = np.mean(embs_v3, axis=0)
+        remb_ne = remb_ne / max(float(np.linalg.norm(remb_ne)), 1e-8)
+        embs_sa = []
+        for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "sa_*.mp3"))):
+            try:
+                pw_sa, _ = librosa.load(pf, sr=SR)
+                embs_sa.append(C.spk_emb(pw_sa, SR))
+            except Exception:
+                pass
+        remb_sa = np.mean(embs_sa, axis=0) if embs_sa else remb_ne
+        remb_sa = remb_sa / max(float(np.linalg.norm(remb_sa)), 1e-8)
 
         import nep_norm as _nn
         rows = []
         for e in ev:
             p = f"{a.out}/wav/{e['id']}.wav"
             ref_txt = e["text"] if e["lang"] == "sa" else _nn.normalize(e["text"])
-            f = C.score_take(p, ref_txt, remb)
+            f = C.score_take(p, ref_txt, remb_sa if e["lang"] == "sa" else remb_ne)
             c = V.pron_cer(ref_txt, f["hyp"], "sa" if (e["lang"] == "sa" or e["id"] == "mixed_owner") else "npi")
             rows.append(dict(
                 id=e["id"], set=e["set"], lang=e["lang"], style=e.get("style", "news"),
