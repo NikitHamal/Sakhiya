@@ -360,9 +360,9 @@ class Student(nn.Module):
         L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
         is_pause = (ids <= 8).float()
         phase = pos / L_f
-        # Grounded Kathmandu/Nepal-native downward clause ending + natural phrase arch matching training p_enc
+        # Grounded Kathmandu/Nepal-native downward clause ending + natural multi-clause phrase arch
         tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        p_arch = (0.22 * torch.sin(phase * 3.14159265) + 0.12 * torch.sin(phase * 6.2831853) + tail_closure) * (1.0 - is_pause) - 0.20 * is_pause
+        p_arch = (0.55 * torch.sin(phase * 3.14159265) + 0.48 * torch.sin(phase * 9.424778) + 0.32 * torch.cos(phase * 15.707963) + tail_closure) * (1.0 - is_pause) - 0.28 * is_pause
         p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode="replicate"), 3, stride=1)[:, 0]
         sty_gain = (0.18 * pros[:, 1:2] + 0.14 * (1.0 - is_sa.float()[:, None])).clamp(0.0, 0.38)
         p_prose_enc = p_arch * (0.55 * sty_gain)

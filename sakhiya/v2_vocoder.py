@@ -105,9 +105,7 @@ class HarmonicSource(nn.Module):
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
         ks = torch.arange(1, s.n_har + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
-        # Smooth anti-aliasing roll-off near 750 Hz Nyquist instead of hard binary step at 720 Hz (which popped 3*F0 at F0=240 Hz)
-        anti_alias = ((745.0 - ks * f0_16) / 145.0).clamp(0.0, 1.0)
-        amp = (1.0 / torch.sqrt(ks)) * anti_alias
+        amp = (1.0 / torch.sqrt(ks)) * (ks * f0_16 < 720.0).float()
         k_ph = ks * ph
         har = torch.cat([torch.sin(k_ph) * amp, torch.cos(k_ph) * amp], dim=1) * uv_16
         # Analytic multi-band unvoiced noise excitation (deterministic incommensurate sinusoids for 100% ONNX parity)
