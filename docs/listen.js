@@ -45,11 +45,14 @@
       if (m.utmos) pills.push('<span class="pill tone"><span class="ms">star</span><i>UTMOS ' + m.utmos + "</i></span>");
       if (m.rtf_1thread) pills.push('<span class="pill"><span class="ms">speed</span><i>RTF ' + m.rtf_1thread + "</i></span>");
       $("#pack").innerHTML = '<div class="card-h"><span class="ms">album</span><h2>' + esc(v.label) + '</h2></div><div class="status" style="margin-bottom:12px">' + pills.join("") + '</div><p class="muted" style="margin-bottom:16px">' + esc(v.notes || "") + '</p><div class="clip-grid" id="g">Loading clips…</div>';
-      fetch("samples/versions/" + t + "/manifest.json").then(function (r) { return r.json(); }).then(function (mf) {
-        $("#g").innerHTML = (mf.clips || []).map(function (c) {
+      var draw = function (clips) {
+        $("#g").innerHTML = clips.length ? clips.map(function (c) {
           return clipCard(c.mp3 || "samples/versions/" + t + "/" + c.id + ".mp3", c.id, c.style || "", c.text);
-        }).join("");
-      }).catch(function (e) { $("#g").textContent = "Could not load manifest: " + e; });
+        }).join("") : "<p class=\"muted\">No clips listed for this pack.</p>";
+      };
+      if (Array.isArray(v.clips) && v.clips.length) draw(v.clips);
+      else fetch("samples/versions/" + t + "/manifest.json").then(function (r) { return r.json(); }).then(function (mf) { draw(mf.clips || []); })
+        .catch(function (e) { $("#g").textContent = "Could not load manifest: " + e; });
       try { history.replaceState(null, "", "#" + t); } catch (e) {}
     }
     tabs.addEventListener("click", function (e) { var b = e.target.closest("[data-t]"); if (b) show(b.dataset.t); });
