@@ -73,49 +73,84 @@ def promote_repo_and_hf(tier, g, best_dir):
         gate_pass=bool(g.get('gate_pass')),
         score=g.get('score')
     )
+    alias_map = {'t5': ('sakhiya_v4_micro', 'micro', 'models_micro'), 't1': ('sakhiya_v4_pico', 'pico', 'models_pico')}
     st_list = [x for x in st_list if x.get('tier') != tier] + [entry_t]
+    if tier in alias_map:
+        v4_tag, _, _ = alias_map[tier]
+        entry_v4 = dict(entry_t, tier=v4_tag, label=TIER_LABELS.get(tier, v4_tag))
+        st_list = [x for x in st_list if x.get('tier') != v4_tag] + [entry_v4]
     json.dump(st_list, open(st_path, 'w'), indent=2, ensure_ascii=False)
 
-    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/
+    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/ (and sakhiya_v4_micro/pico + live models_micro/pico)
     tag = f'sakhiya_v3_{tier}'
-    vdir = os.path.join(REPO, 'docs', 'samples', 'versions', tag)
-    os.makedirs(vdir, exist_ok=True)
+    tags_to_write = [tag]
+    extra_git_paths = []
+    if tier in alias_map:
+        v4_tag, tier_id, mdir_name = alias_map[tier]
+        tags_to_write.append(v4_tag)
+        src_i8 = os.path.join(best_dir, 'model.int8.onnx')
+        dst_mdir = os.path.join(REPO, 'docs', mdir_name)
+        if os.path.exists(src_i8) and os.path.isdir(dst_mdir):
+            shutil.copy(src_i8, os.path.join(dst_mdir, 'model.int8.onnx'))
+            extra_git_paths.append(f'docs/{mdir_name}/model.int8.onnx')
+        tiers_p = os.path.join(REPO, 'docs', 'tiers.json')
+        if os.path.exists(tiers_p):
+            try:
+                td = json.load(open(tiers_p))
+                for tr_row in td.get('tiers', []):
+                    if tr_row.get('id') == tier_id:
+                        tr_row['mb'] = g.get('int8_mb')
+                        tr_row['onnx_mb'] = g.get('int8_mb')
+                        tr_row['rtf'] = g.get('rtf_1thread')
+                        tr_row['rtf_onnx'] = g.get('rtf_1thread')
+                        tr_row['utmos'] = s.get('utmos')
+                        tr_row['ne_pcer'] = s.get('cer_ne')
+                        tr_row['sa_pcer'] = s.get('cer_sa')
+                json.dump(td, open(tiers_p, 'w'), indent=1, ensure_ascii=False)
+                extra_git_paths.append('docs/tiers.json')
+            except Exception:
+                pass
+
     reg_p = os.path.join(REPO, 'docs', 'samples', 'versions', 'registry.json')
     reg = json.load(open(reg_p))
     base_clips = reg['versions'][0]['clips']
-    clips_out = []
-    for c in base_clips:
-        cid = c['id']
-        src_mp3 = os.path.join(best_dir, 'wav', f'{cid}.mp3')
-        src_wav = os.path.join(best_dir, 'wav', f'{cid}.wav')
-        dst_mp3 = os.path.join(vdir, f'{cid}.mp3')
-        if os.path.exists(src_mp3):
-            shutil.copy(src_mp3, dst_mp3)
-        elif os.path.exists(src_wav):
-            subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src_wav, '-b:a', '96k', dst_mp3])
-        dur_s = c.get('duration_s', 4.0)
-        for gc in g.get('clips', []):
-            if gc.get('id') == cid:
-                dur_s = gc.get('dur', dur_s)
-                break
-        clips_out.append(dict(id=cid, lang=c['lang'], style=c['style'], text=c['text'], mp3=f'samples/versions/{tag}/{cid}.mp3', duration_s=dur_s))
     sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=REPO, text=True).strip()
     now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    v_entry = dict(
-        tag=tag,
-        label=f"{TIER_LABELS.get(tier, tier)} (step {g.get('step',0)}, {g.get('int8_mb')} MB INT8 ONNX)",
-        commit_sha=sha, timestamp_utc=now,
-        notes=f"Distilled from Sakhiya-Pro v3 + Nepal-native Seed-VC corpus; int8_mb={g.get('int8_mb')}, corr={g.get('int8_vs_fp32_mel_corr')}, rtf_1thread={g.get('rtf_1thread')}",
-        metrics=entry_t, clips=clips_out
-    )
-    json.dump(v_entry, open(os.path.join(vdir, 'manifest.json'), 'w'), indent=2, ensure_ascii=False)
-    open(os.path.join(vdir, '.frozen'), 'w').write(f'Frozen at {now} commit {sha}\n')
-    reg['versions'] = [v for v in reg['versions'] if v['tag'] != tag] + [v_entry]
+    for cur_tag in tags_to_write:
+        vdir = os.path.join(REPO, 'docs', 'samples', 'versions', cur_tag)
+        os.makedirs(vdir, exist_ok=True)
+        clips_out = []
+        for c in base_clips:
+            cid = c['id']
+            src_mp3 = os.path.join(best_dir, 'wav', f'{cid}.mp3')
+            src_wav = os.path.join(best_dir, 'wav', f'{cid}.wav')
+            dst_mp3 = os.path.join(vdir, f'{cid}.mp3')
+            if os.path.exists(src_mp3):
+                shutil.copy(src_mp3, dst_mp3)
+            elif os.path.exists(src_wav):
+                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src_wav, '-b:a', '96k', dst_mp3])
+            dur_s = c.get('duration_s', 4.0)
+            for gc in g.get('clips', []):
+                if gc.get('id') == cid:
+                    dur_s = gc.get('dur', dur_s)
+                    break
+            clips_out.append(dict(id=cid, lang=c['lang'], style=c['style'], text=c['text'], mp3=f'samples/versions/{cur_tag}/{cid}.mp3', duration_s=dur_s))
+        v_entry = dict(
+            tag=cur_tag,
+            label=f"{TIER_LABELS.get(tier, cur_tag)} (step {g.get('step',0)}, {g.get('int8_mb')} MB INT8 ONNX)",
+            commit_sha=sha, timestamp_utc=now,
+            notes=f"Distilled from Sakhiya-Pro v3 + Phase-Locked Harmonic-iSTFT; int8_mb={g.get('int8_mb')}, corr={g.get('int8_vs_fp32_mel_corr')}, rtf_1thread={g.get('rtf_1thread')}",
+            metrics=entry_t, clips=clips_out
+        )
+        json.dump(v_entry, open(os.path.join(vdir, 'manifest.json'), 'w'), indent=2, ensure_ascii=False)
+        open(os.path.join(vdir, '.frozen'), 'w').write(f'Frozen at {now} commit {sha}\n')
+        reg['versions'] = [v for v in reg['versions'] if v['tag'] != cur_tag] + [v_entry]
+        extra_git_paths.append(f'docs/samples/versions/{cur_tag}')
     json.dump(reg, open(reg_p, 'w'), indent=2, ensure_ascii=False)
 
     # 3. Git pull --rebase & push
     env = dict(os.environ, GIT_ASKPASS='/tmp/gitenv.sh', GIT_TERMINAL_PROMPT='0')
-    subprocess.run(['git', 'add', 'docs/student_tiers.json', f'docs/samples/versions/{tag}', 'docs/samples/versions/registry.json'], cwd=REPO, env=env)
+    subprocess.run(['git', 'add', 'docs/student_tiers.json', 'docs/samples/versions/registry.json'] + extra_git_paths, cwd=REPO, env=env)
     subprocess.run(['git', 'commit', '-m', f"student({tier}): promote step {g.get('step')} ({g.get('int8_mb')} MB INT8, UTMOS {s.get('utmos')}, CER {s.get('cer_ne')})"], cwd=REPO, env=env)
     subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=REPO, env=env)
     subprocess.run(['git', 'push', 'origin', 'HEAD:main'], cwd=REPO, env=env)
