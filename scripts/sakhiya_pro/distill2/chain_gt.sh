@@ -11,7 +11,7 @@ STU_MIN=${STU_MIN:-290}
 
 st 50_corpus_d "Pro-v3 teacher corpus (batched, strict filters)" run "6 workers until deadline"
 while [ $(grep -l "DONE tried" $L/gen_w[0-5].log 2>/dev/null | wc -l) -lt 6 ] && [ $(date +%s) -lt $((DL+600)) ]; do sleep 20; done
-pkill -f "[g]en_corpus.py"; sleep 3
+pkill -f "[r]unpy.run_path"; sleep 3
 git_pull
 st 50_corpus_d "Pro-v3 teacher corpus (batched, strict filters)" done "workers finished"
 
