@@ -34,10 +34,14 @@ for p in model.parameters(): p.requires_grad_(False)
 
 
 def base_sha(m):
+    # rename-robust: PEFT injection turns "q_proj.weight" into "q_proj.base_layer.weight"; normalise and hash FULL tensors
     h = hashlib.sha256()
-    for n, p in sorted(m.named_parameters(), key=lambda x: x[0]):
+    items = {}
+    for n, p in m.named_parameters():
         if "lora_" in n: continue
-        h.update(n.encode()); h.update(p.detach().float().flatten()[:4096].cpu().numpy().tobytes())
+        items[n.replace(".base_layer.", ".")] = p
+    for n in sorted(items):
+        h.update(n.encode()); h.update(items[n].detach().float().contiguous().cpu().numpy().tobytes())
     return h.hexdigest()[:16]
 
 
