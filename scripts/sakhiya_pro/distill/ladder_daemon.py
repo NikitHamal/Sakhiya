@@ -41,7 +41,8 @@ def refresh_marimo_cards():
                 open('/tmp/molab_token', 'w').write(m_tok.group(1))
         sys.path.insert(0, os.path.join(REPO, 'scripts'))
         import molab_exec as M
-        M.run_py("exec(open('/work/sp/repo/monitor/cells_pro5.py').read()); await install()", 90)
+        # pro5 cards self-refresh from the files this daemon writes; reinstalling would reset the listening-desk selection
+        M.run_py("pass", 30)
     except Exception as e:
         print('marimo refresh skip:', str(e)[:120], flush=True)
 
