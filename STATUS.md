@@ -1,5 +1,14 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 74 — Pickup on `sb-b8c2567baa30da51`: Studio-Clean Anti-Metallic Vocoder & Full Pro-v3 Timbre Promotion Across `t30, t15, t10, t5, t1`
+
+- **Live Box & Marimo Cards Audit (`sb-b8c2567baa30da51`, RTX PRO 6000 Blackwell 98 GB)**:
+  - Verified 15-min HF backup daemon alive (`backup_daemon_v3.log`), synced `/tmp/hf_token` and `/tmp/gitenv.sh`, and refreshed all 8 cells (`monitor/cells_pro5.py`) via `marimo._code_mode` with `0` cell errors.
+- **Forensic Audit of Shipped Packs vs Current Checkpoints (`ne_kathmandu`)**:
+  - Shipped `sakhiya_v3_t5`, `sakhiya_v4_micro`, and `sakhiya_v4_pico` on GitHub Pages still had `sim_ProV3 = 0.119–0.135` (`sim_OldV1 = 0.712–0.730`) because `gta_polish.py` had stopped before running Stage 2 (`voc320_gta`, `voc144`, `voc144_t1`) and `export_gate.py` had rejected `t30` (`corr=0.9709`), `t15`, `t5` (`corr=0.9818`), and `t1` (`spk_sim=0.568 < 0.58`).
+  - Current distilled student checkpoints in `/work/sp/distill/runs/` already have `sim_ProV3 = 0.791 (t30), 0.784 (t15), 0.776 (t10), 0.750 (t5), 0.694 (t1)` and `UTMOS = 4.036 (t30), 4.205 (t15), 4.022 (t10), 3.447 (t5)`.
+  - Now executing studio-clean anti-metallic vocoder & GTA co-adaptation + exact INT8 velocity/vocoder pre-snapping to eliminate faint metallic artifacts and promote all 5 Pro-v3-timbre student tiers.
+
 ## Session 73 — Pickup on `sb-1b37f31b21bf1be3`: Root-Cause Fix for Old-V1 Timbre in Student Exports (`sim_ProV3 0.212 -> 0.871`) + Live OT-CFM Rectified Distillation Ladder
 
 - **Acoustic/Forensic Diagnosis of Why Earlier `t30`/`t15`/`t10`/`t5` Exports Sounded Like Old V1**:
