@@ -438,9 +438,7 @@ class Student(nn.Module):
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
         f0_hz_frame = torch.gather(f0_hz_tok, 1, idx)[:, None, :]
-        # Smooth continuous F0 transitions across phoneme boundaries with a light 3-frame Hann kernel (not 9-frame pooling)
-        if T >= 5:
-            f0_hz_frame = F.avg_pool1d(F.pad(f0_hz_frame, (1, 1), mode="replicate"), 3, stride=1)
+        f0_hz_frame = F.avg_pool1d(F.pad(f0_hz_frame, (1, 1), mode="replicate"), 3, stride=1)
         vuv_frame = torch.gather(vuv_tok, 1, idx)[:, None, :]
         prog_4d = compute_intra_phoneme_progress(dur, ends, idx, t_arange)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
