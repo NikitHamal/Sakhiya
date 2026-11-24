@@ -418,8 +418,6 @@ class Student(nn.Module):
 
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
-        if self.steps == 1:
-            mu_y = 0.72 * mu_y + 0.28 * F.avg_pool1d(F.pad(mu_y, (1, 1), mode="replicate"), 3, stride=1)
         p_xe = torch.gather(p_out, 1, idx)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
