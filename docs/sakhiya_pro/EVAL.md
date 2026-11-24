@@ -63,16 +63,16 @@ Episode 01: **33/33** lines pass the forensic gate (-14.0 LUFS broadcast master,
 end_slope < 0 = clause endings close downward (Nepal-native); > 0 = floating English-style rise. All numbers automatic (F0 contour, Kriti ASR, UTMOS22, ECAPA); no human MOS.
 
 
-## Sakhiya-Pro v4 (Studio-Denoised Native-Nepal Lock + De-Karkar) — selected **v3b_checkpoint-400**
+## Sakhiya-Pro v4 (Studio-Denoised Native-Nepal Lock + De-Karkar) — selected **v4b_checkpoint-100**
 
 | metric | v3 (v3b_s600) | v4 (Studio-Denoised + De-Karkar) |
 |---|---|---|
-| end_slope | -0.208 | -0.574 |
-| rise_frac | 0.201 | 0.128 |
-| clicks | 4.500 | 33.083 |
-| hf_karkar | nan | nan |
-| spk_sim | 0.852 | 0.744 |
-| cer | 0.032 | 0.136 |
-| utmos | 3.752 | 3.975 |
+| end_slope | -0.208 | -1.288 |
+| rise_frac | 0.201 | 0.031 |
+| clicks | 4.500 | 0.125 |
+| hf_karkar | nan | 0.002 |
+| spk_sim | 0.852 | 0.770 |
+| cer | 0.032 | 0.039 |
+| utmos | 3.752 | 3.970 |
 
 Episode 01 v4 Broadcast Master: **33/33** lines pass the forensic gate (-14.0 LUFS, -56 dB studio room-tone bed, zero clicks/karkar).
