@@ -124,6 +124,38 @@
    "desc": "v5 Sub-1.2 MB Breakthrough (1.195 MB <= 1.20 MB) Looped FiLM + Harmonic-iSTFT + Chandas · FP32-vs-INT8 corr 0.9922 · 27/27 gate pass, 0 drops, 0 clicks",
    "onnx_mb": 1.195,
    "rtf_onnx": 0.0135
+  },
+  {
+   "id": "v5_micro",
+   "label": "Sakhiya-v5-Micro (Clean)",
+   "prec": "int8",
+   "dir": "models_v5_micro/",
+   "variant": "tiny",
+   "mb": 4.404,
+   "rtf": 0.0163,
+   "utmos": 3.355,
+   "ne_pcer": 0.038,
+   "sa_pcer": 0.068,
+   "ready": true,
+   "desc": "v5 Clean <= 4.5 MB (4.404 MB) single-graph Harmonic-iSTFT + Chandas · FP32-vs-INT8 corr 0.9952 · 27/27 Leak/Loop gate pass, 0 drops, 0 clicks",
+   "onnx_mb": 4.404,
+   "rtf_onnx": 0.0163
+  },
+  {
+   "id": "v5_pico",
+   "label": "Sakhiya-v5-Pico (Clean)",
+   "prec": "int8",
+   "dir": "models_v5_pico/",
+   "variant": "tiny",
+   "mb": 1.195,
+   "rtf": 0.0135,
+   "utmos": 2.778,
+   "ne_pcer": 0.055,
+   "sa_pcer": 0.087,
+   "ready": true,
+   "desc": "v5 Clean <= 1.20 MB (1.195 MB) Looped FiLM + Harmonic-iSTFT + Chandas · FP32-vs-INT8 corr 0.9922 · 27/27 Leak/Loop gate pass, 0 drops, 0 clicks",
+   "onnx_mb": 1.195,
+   "rtf_onnx": 0.0135
   }
  ],
  "voices": {
