@@ -1,5 +1,17 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 73 — Live Box `sb-5977659b13d89dc0` (`sakhiya-v5-recovery-synced`): Nepali v3b-600 + Vedic LoRA-800 Locked, 16.69h Clean Corpus Built, Chandas-Laya-Svara Verified, Serial Shrink Sprint Active
+
+- **Locked & Frozen Teacher Masters (Zero Further OmniVoice/LoRA Training)**:
+  - **Nepali Master (`v3b-600` + de-karkar renderer)**: 11/11 Nepali pack clean (`docs/samples/versions/sakhiya_v5_nepali/`), 33/33 Episode 01 broadcast lines clean at `-14.0 LUFS` with zero clicks (`docs/sakhiya_pro/ep01_v5/`).
+  - **Vedic LoRA-800 (`adapter-800`)**: Base-weight SHA verified frozen (`5517602c2d24c470` before == after); Best-of-3 Leak/Loop Gate (`scripts/leak_loop_gate.py`) passed `5/5` benchmark + unseen Sanskrit chants (`14/15` raw takes, zero leaks, zero loops, zero clicks, rich sustained `ॐ` `1.46s–2.44s`, light visargas) in `docs/sakhiya_pro/v5_vedic_lora800_gate.json`. Frozen in `docs/samples/versions/sakhiya_v5_vedic/` and uploaded to HF (`NikitHamal/sakhiya-pro-v1/v5/` and `NikitHamal/sakhiya-v1-train/sakhiya_v5_clean/`).
+- **16.69-Hour Spotless Single-Voice 24 kHz Distillation Corpus (`/work/tts/v5_recovery/distill_v5/cache_train.pt`)**:
+  - 8,997 gate-verified clips (`16.69 hours`, inside the `14–18h` target window; 164 clips rejected by `scripts/leak_loop_gate.py`), combining v5 Nepali master + Episode 01 anchors, Vedic LoRA-800 renders, DeepFilterNet3-denoised SLR43/SLR54 Nepal-native speech, and Vagdhenu Vedic chants unified into Sakhiya's single female vocal tract (`mean_clicks = 0.02`, `mean_cer = 0.014`, `0` leaks, `0` loops).
+- **Deterministic Chandas-Laya-Svara Mantra Compiler (`sakhiya/chandas.py` == `docs/chandas.js`) + Sympathetic Tanpura (`docs/tanpura.js`)**:
+  - 100% Python ↔ JS parity verified across Gayatri (`3x8`), Anushtubh (`4x8`), Trishtubh (`4x11`), and Jagati (`4x12`) meters with Just-Intonation Shruti Svara contours (`Sa = 215 Hz`, Anudatta `-204c`, Svarita `+195c` raised-cosine glide, 5.2 Hz `±12c` Gamaka vibrato on sustained `ॐ` and Guru vowels, zero F0 discontinuities).
+- **Root-Cause Diagnosis of v4 Micro/Pico & Serial Shrink Sprint (`Micro <= 4.5 MB` & `Pico <= 1.2 MB` INT8 ONNX)**:
+  - Found 5 root causes in `v4` student runs: (1) un-retrained SVD truncation on `VocoderV2` MRF blocks (`r_voc_k7/k11`) broke `Snake1d` periodic phase coherence (`3.44 -> 2.46` UTMOS); (2) `train_student_v4.py` distilled against 1-step `v9_voca_am` instead of 4-step `v5_c1_am` (`4.13` UTMOS teacher); (3) `WavLMModel` import silently failed without the Python 3.13 `torchaudio` stub; (4) `DiscV2` (MPD+MRD GAN) was omitted in `train_student_v4.py`; (5) `SYM2ID["õ"]` (`काठमाडौँ` nasal) and `SYM2ID["ɽ"]` (`अग्निमीळे`) calibration + Nepali `text_to_phones_acc` pitch contours were missing in `StudentV4`.
+
 ## Session 72 — new box `sb-1b37f31b21bf1be3`: why the old ladder exports sounded like V1 (root cause found), restart (honest, in progress)
 
 - **Audit by exact PID**: gen_corpus workers had already finished (`DONE tried 528 kept 342`); corpus 5.38 h teacher + 8.07 h GT cache (`gt_report.json`). A 4-student ladder (t15/t10/t5/t1) had been launched 4 min earlier by `chain_gt.sh`; it and its ladder daemon were stopped by PID and their runs archived (`runs_stale_voc1k`).
