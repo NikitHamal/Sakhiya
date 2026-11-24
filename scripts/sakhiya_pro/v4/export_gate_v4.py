@@ -179,48 +179,51 @@ def run(s, ids, lang=0, ds=1.0, ps=0.0):
     })[0][0]
 
 
+def _declick_phase_safe(w):
+    w = np.asarray(w, dtype=np.float32).copy()
+    for _ in range(12):
+        pk = float(np.abs(w).max())
+        thr = 0.94 * max(0.35 * max(pk, 1e-3), 0.12)
+        d = np.diff(w)
+        bad = np.where(np.abs(d) > thr)[0]
+        if not len(bad):
+            break
+        for b in bad:
+            mid = 0.5 * (w[b] + w[b + 1])
+            s_step = thr * (1.0 if d[b] > 0 else -1.0)
+            w[b] = mid - 0.5 * s_step
+            w[b + 1] = mid + 0.5 * s_step
+    fn = min(int(0.01 * SR), len(w) // 4)
+    if fn > 0:
+        w[:fn] *= np.linspace(0, 1, fn, dtype=np.float32)
+        w[-fn:] *= np.linspace(1, 0, fn, dtype=np.float32)
+    return w
+
+
 def chandas_inputs(text, lang):
+    import nep_norm
     from sakhiya import g2p, symbols as SYM, chandas as CH
     if lang == 'sa':
-        res = CH.compile_chandas(text, bpm=75.0, tonic_hz=215.0, add_end=True)
-        ph, off, dm = res['ph'], res['off'], res['dm']
-        sv_sc = 0.55 if res.get('has_vedic_marks') else 0.48
-        lg = 1
-        rate = 0.92
-    else:
-        ph, off = g2p.text_to_phones_acc(text, 'ne')
-        dm = g2p.phone_dm(ph)
-        sv_sc = 0.35
-        lg = 0
-        rate = 0.96
-    sid = [SYM.SYM2ID.get(p, -1) for p in ph]
-    ids = [i for i in sid if i >= 0]
-    ds_arr = np.array([float(d) / rate for d, i in zip(dm, sid) if i >= 0], dtype=np.float32)
-    ps_arr = np.array([float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
-    if len(ids) >= 2 and len(ids) == len(ds_arr) == len(ps_arr):
-        return ids, lg, ds_arr, ps_arr
-    return SYM.encode(g2p.text_to_phones(text, 'sa' if lang == 'sa' else 'ne')), lg, np.array([1.0], np.float32), np.array([0.0], np.float32)
+        try:
+            res = CH.compile_chandas(text, bpm=75.0, tonic_hz=215.0, add_end=True)
+            keep = [p in SYM.SYM2ID for p in res['ph']]
+            ids = SYM.encode(res['ph'])
+            sv_sc = 0.55 if res.get('has_vedic_marks') else 0.48
+            dm = [float(0.75 + 0.25 * min(max(d, 0.85), 1.35)) for d, k in zip(res['dm'], keep) if k]
+            off = [float(o) * sv_sc for o, k in zip(res['off'], keep) if k]
+            if len(ids) == len(dm) == len(off) and len(ids) >= 2:
+                return ids, 1, np.array(dm, dtype=np.float32), np.array(off, dtype=np.float32)
+        except Exception:
+            pass
+    t = text if lang == 'sa' else nep_norm.normalize(re.sub('[\u0951-\u0954]', '', text))
+    ids = SYM.encode(g2p.text_to_phones(t, 'sa' if lang == 'sa' else 'ne'))
+    return ids, (1 if lang == 'sa' else 0), np.array([1.0], np.float32), np.array([0.0], np.float32)
 
 
 def synth_text(s, text, lang):
-    """Synthesize single or multi-sentence text cleanly across sentence boundaries."""
-    sents = [x.strip() for x in re.split(r'(?<=[।॥?!])\s+', str(text).strip()) if len(x.strip()) > 1]
-    if not sents:
-        sents = [str(text).strip()]
-    if lang == 'sa' and len(sents) <= 2 and len(str(text).split()) <= 40:
-        sents = [str(text).strip()]
-    parts = []
-    gap = np.zeros(int(0.14 * SR), dtype=np.float32)
-    for idx_s, sent in enumerate(sents):
-        ids, lg, ds_in, ps_in = chandas_inputs(sent, lang)
-        if len(ids) < 2:
-            continue
-        w = run(s, ids, lg, ds_in, ps_in).astype(np.float32)
-        w = R4.trim_clause(w, SR)
-        parts.append(w)
-        if idx_s + 1 < len(sents):
-            parts.append(gap)
-    return np.concatenate(parts) if parts else np.zeros(int(0.5 * SR), dtype=np.float32)
+    ids, lg, ds_in, ps_in = chandas_inputs(text, lang)
+    w = run(s, ids, lg, ds_in, ps_in).astype(np.float32)
+    return _declick_phase_safe(w)
 
 
 def logmel(w):
@@ -273,7 +276,7 @@ def main():
     ap.add_argument('ckpt')
     ap.add_argument('out')
     ap.add_argument('--n_dev', type=int, default=12)
-    ap.add_argument('--fp16', default='voc.post,am.vel.out')
+    ap.add_argument('--fp16', default='')
     ap.add_argument('--no_asr', action='store_true')
     ap.add_argument('--mp3', action='store_true')
     a = ap.parse_args()

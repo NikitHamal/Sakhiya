@@ -149,8 +149,8 @@ class UniversalVelBlock(nn.Module):
         s.p2 = QATConv1d(h_ff, d, 1)
         s.film = QATConv1d(c, 2 * d, 1)
 
-    def forward(s, x, c_3d, m, out_gamma, out_beta):
-        sc, sh = s.film(c_3d).chunk(2, 1)
+    def forward(s, x, c_3d, m, out_gamma, out_beta, film_step=None):
+        sc, sh = (film_step if film_step is not None else s.film(c_3d)).chunk(2, 1)
         y = s.n(s.dw(x * m)) * (1.0 + sc) + sh
         y = s.p2(F.gelu(s.p1(y)))
         y = y * (1.0 + out_gamma) + out_beta
@@ -172,6 +172,7 @@ class PicoVelocity(nn.Module):
         s.ublock_early = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
         s.ublock_late = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
         s.step_emb = nn.Parameter(torch.zeros(nb, c, 1))
+        s.film_steps = nn.Parameter(torch.zeros(nb, 2 * d, 1), requires_grad=False)
         s.out_gamma = nn.Parameter(torch.zeros(nb, d, 1))
         s.out_beta = nn.Parameter(torch.zeros(nb, d, 1))
         s.out = QATConv1d(d, n_mel, 1)
@@ -179,6 +180,7 @@ class PicoVelocity(nn.Module):
         nn.init.zeros_(s.out.bias)
 
     def forward(s, x, t, mu, g, m):
+        has_folded_film = isinstance(s.ublock_early.film, nn.Identity)
         if isinstance(s.tm1, nn.Identity):
             c_base = g[:, :, None]
         else:
@@ -187,9 +189,10 @@ class PicoVelocity(nn.Module):
         h = s.inp(torch.cat([x, mu], 1)) * m
         n_early = (s.nb + 1) // 2  # 3 iterations of early block, 2 iterations of late block
         for k in range(s.nb):
-            c_k = c_base + s.step_emb[k].to(x.dtype)
+            c_k = None if has_folded_film else (c_base + s.step_emb[k].to(x.dtype))
+            f_k = s.film_steps[k : k + 1].to(x.dtype) if has_folded_film else None
             blk = s.ublock_early if k < n_early else s.ublock_late
-            h = blk(h, c_k, m, s.out_gamma[k].to(x.dtype), s.out_beta[k].to(x.dtype))
+            h = blk(h, c_k, m, s.out_gamma[k].to(x.dtype), s.out_beta[k].to(x.dtype), film_step=f_k)
         return s.out(h) * m
 
 
@@ -204,7 +207,7 @@ class SakhiyaPicoAM(nn.Module):
 
     @torch.no_grad()
     def fold_time_embeddings(s):
-        """Fold constant 1-step velocity time embedding (t=0) and 4-step duration time embeddings into step parameters."""
+        """Fold constant 1-step velocity time+speaker FiLM conditioning and 4-step duration time embeddings into step parameters."""
         dev = next(s.parameters()).device
         if not isinstance(s.vel.tm1, nn.Identity):
             tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)[:, :, None]
@@ -212,6 +215,17 @@ class SakhiyaPicoAM(nn.Module):
             s.vel.step_emb.data.add_(tm_out[None, :, :])
             s.vel.tm1 = nn.Identity()
             s.vel.tm2 = nn.Identity()
+        if not isinstance(s.vel.ublock_early.film, nn.Identity):
+            g0 = (s.enc.spk.weight[0:1] + s.enc.lang.weight[0:1] + s.enc.studio.weight[1:2] + s.enc.sty.weight[0:1])[:, :, None]
+            n_early = (s.vel.nb + 1) // 2
+            f_list = []
+            for k in range(s.vel.nb):
+                c_k = g0 + s.vel.step_emb[k : k + 1]
+                blk = s.vel.ublock_early if k < n_early else s.vel.ublock_late
+                f_list.append(blk.film(c_k)[0])
+            s.vel.film_steps.data.copy_(torch.stack(f_list, dim=0))
+            s.vel.ublock_early.film = nn.Identity()
+            s.vel.ublock_late.film = nn.Identity()
         if not isinstance(s.dur.t, nn.Identity):
             ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
             tbs = temb(ts, s.dur.d)[:, :, None]

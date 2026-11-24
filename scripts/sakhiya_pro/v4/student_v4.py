@@ -35,13 +35,13 @@ TIERS = {
         tier='micro', arch='sakhiya_am',
         d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
         voc_ch=144, steps=1,
-        r_enc=88, r_voc_k7=None, r_voc_k11=44, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=88, r_voc_k7=None, r_voc_k11=54, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     'pico': dict(
         tier='pico', arch='sakhiya_pico',
         d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
         voc_ch=144, steps=1,
-        r_enc=44, r_voc_k7=34, r_voc_k11=22, r_voc_1_k7=22, r_voc_1_k11=16, r_vel_ff=64,
+        r_enc=52, r_voc_k7=46, r_voc_k11=28, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     't10': dict(
         tier='t10', arch='sakhiya_am',
@@ -410,20 +410,20 @@ class StudentV4(nn.Module):
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
         # Protect sentence-final tokens and short Nepali function words from frame collapse
         is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
-        dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 3.0)).clamp(min=2.0, max=60.0)
-        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames = 0.58s before Laya stretch) & light breathy visarga 'h'
+        dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 1.0)).clamp(min=1.0, max=60.0)
+        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames) & light breathy visarga 'h'
         id_o, id_m, id_h = SYM2ID['o'], SYM2ID['m'], SYM2ID['h']
         next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
         prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
         is_sa_f = is_sa.float()[:, None]
         is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
-        dur = torch.maximum(dur, is_om_o * 38.0 + is_om_m * 18.0)
+        dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
         is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
 
         f0_hat = F.avg_pool1d(F.pad(self.am.enc.f0_pred(h).transpose(1, 2), (1, 1), mode='replicate'), 3, stride=1)[:, 0].clamp(-1.2, 1.2)
-        p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.65 * ps_tok
+        p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.35 * ps_tok
 
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
@@ -459,10 +459,10 @@ class StudentV4(nn.Module):
         st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
         tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode='replicate'), 5, stride=1)
-        # Add smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-10c Gamaka vibrato on Sanskrit chants
+        # Add smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-8c Gamaka vibrato on Sanskrit chants
         ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode='replicate'), 7, stride=1)
-        gamaka = 0.10 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift + is_sa_f[:, :, None] * (1.65 * ps_sm + gamaka).clamp(-2.8, 2.8)
+        gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
+        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.95 * ps_sm + gamaka).clamp(-1.8, 1.8)
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
