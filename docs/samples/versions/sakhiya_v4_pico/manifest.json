@@ -1,73 +1,73 @@
 {
   "tag": "sakhiya_v4_pico",
-  "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student) (step 7468, 1.45 MB INT8 ONNX)",
-  "commit_sha": "80cc0a1",
-  "timestamp_utc": "2026-11-24T22:01:54Z",
-  "notes": "Distilled from Sakhiya-Pro v3 + Phase-Locked Harmonic-iSTFT; int8_mb=1.45, corr=0.9896, rtf_1thread=0.0144",
+  "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student) (step 7468, 1.444 MB INT8 ONNX)",
+  "commit_sha": "138abb9",
+  "timestamp_utc": "2026-11-24T22:32:15Z",
+  "notes": "Distilled from Sakhiya-Pro v3 + Phase-Locked Harmonic-iSTFT; int8_mb=1.444, corr=0.99, rtf_1thread=0.0143",
   "metrics": {
     "tier": "t1",
     "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
     "step": 7468,
     "qat": true,
-    "int8_mb": 1.45,
-    "fp32_mb": 5.17,
-    "int8_vs_fp32_mel_corr": 0.9896,
-    "rtf_1thread": 0.0144,
-    "utmos": 2.85,
-    "cer_ne": 0.079,
-    "cer_sa": 0.183,
-    "spk_sim": 0.594,
+    "int8_mb": 1.444,
+    "fp32_mb": 5.16,
+    "int8_vs_fp32_mel_corr": 0.99,
+    "rtf_1thread": 0.0143,
+    "utmos": 2.942,
+    "cer_ne": 0.08,
+    "cer_sa": 0.18,
+    "spk_sim": 0.598,
     "clicks": 0,
     "drops": 0,
     "stutters": 0,
     "by_style": {
       "conversational": {
         "n": 9,
-        "utmos": 2.758,
-        "cer": 0.076,
-        "spk_sim": 0.549,
+        "utmos": 2.849,
+        "cer": 0.077,
+        "spk_sim": 0.553,
         "clicks": 0
       },
       "expressive": {
         "n": 1,
-        "utmos": 2.953,
+        "utmos": 3.082,
         "cer": 0.066,
-        "spk_sim": 0.658,
+        "spk_sim": 0.657,
         "clicks": 0
       },
       "news": {
         "n": 6,
-        "utmos": 2.759,
-        "cer": 0.102,
+        "utmos": 2.853,
+        "cer": 0.104,
         "spk_sim": 0.595,
         "clicks": 0
       },
       "storytelling": {
         "n": 3,
-        "utmos": 2.914,
-        "cer": 0.076,
-        "spk_sim": 0.65,
+        "utmos": 3.042,
+        "cer": 0.07,
+        "spk_sim": 0.653,
         "clicks": 0
       },
       "vedic": {
         "n": 4,
-        "utmos": 3.163,
-        "cer": 0.212,
-        "spk_sim": 0.589,
+        "utmos": 3.22,
+        "cer": 0.221,
+        "spk_sim": 0.599,
         "clicks": 0
       },
       "vedic_chant": {
         "n": 3,
-        "utmos": 2.797,
-        "cer": 0.159,
-        "spk_sim": 0.653,
+        "utmos": 2.881,
+        "cer": 0.146,
+        "spk_sim": 0.656,
         "clicks": 0
       },
       "warm_soft": {
         "n": 1,
-        "utmos": 2.841,
+        "utmos": 2.948,
         "cer": 0.046,
-        "spk_sim": 0.608,
+        "spk_sim": 0.613,
         "clicks": 0
       }
     },
@@ -77,7 +77,7 @@
       "rtf_1thread": 0.0142
     },
     "gate_pass": true,
-    "score": 1.4175
+    "score": 1.4496
   },
   "clips": [
     {
@@ -174,7 +174,7 @@
       "style": "news",
       "text": "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥ आज मौसम निकै रमाइलो र शान्त छ।",
       "mp3": "samples/versions/sakhiya_v4_pico/mixed_owner.mp3",
-      "duration_s": 19.06
+      "duration_s": 19.08
     },
     {
       "id": "ne_unseen_dialogue",

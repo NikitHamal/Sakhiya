@@ -225,231 +225,6 @@
     "score": 1.9672
   },
   {
-    "tier": "t1",
-    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
-    "step": 7468,
-    "qat": true,
-    "int8_mb": 1.45,
-    "fp32_mb": 5.17,
-    "int8_vs_fp32_mel_corr": 0.9896,
-    "rtf_1thread": 0.0144,
-    "utmos": 2.85,
-    "cer_ne": 0.079,
-    "cer_sa": 0.183,
-    "spk_sim": 0.594,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 2.758,
-        "cer": 0.076,
-        "spk_sim": 0.549,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 2.953,
-        "cer": 0.066,
-        "spk_sim": 0.658,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 2.759,
-        "cer": 0.102,
-        "spk_sim": 0.595,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 2.914,
-        "cer": 0.076,
-        "spk_sim": 0.65,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.163,
-        "cer": 0.212,
-        "spk_sim": 0.589,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 2.797,
-        "cer": 0.159,
-        "spk_sim": 0.653,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 2.841,
-        "cer": 0.046,
-        "spk_sim": 0.608,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0142
-    },
-    "gate_pass": true,
-    "score": 1.4175
-  },
-  {
-    "tier": "sakhiya_v4_pico",
-    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
-    "step": 7468,
-    "qat": true,
-    "int8_mb": 1.45,
-    "fp32_mb": 5.17,
-    "int8_vs_fp32_mel_corr": 0.9896,
-    "rtf_1thread": 0.0144,
-    "utmos": 2.85,
-    "cer_ne": 0.079,
-    "cer_sa": 0.183,
-    "spk_sim": 0.594,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 2.758,
-        "cer": 0.076,
-        "spk_sim": 0.549,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 2.953,
-        "cer": 0.066,
-        "spk_sim": 0.658,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 2.759,
-        "cer": 0.102,
-        "spk_sim": 0.595,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 2.914,
-        "cer": 0.076,
-        "spk_sim": 0.65,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.163,
-        "cer": 0.212,
-        "spk_sim": 0.589,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 2.797,
-        "cer": 0.159,
-        "spk_sim": 0.653,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 2.841,
-        "cer": 0.046,
-        "spk_sim": 0.608,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0142
-    },
-    "gate_pass": true,
-    "score": 1.4175
-  },
-  {
-    "tier": "sakhiya_v5_pico",
-    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
-    "step": 7468,
-    "qat": true,
-    "int8_mb": 1.45,
-    "fp32_mb": 5.17,
-    "int8_vs_fp32_mel_corr": 0.9896,
-    "rtf_1thread": 0.0144,
-    "utmos": 2.85,
-    "cer_ne": 0.079,
-    "cer_sa": 0.183,
-    "spk_sim": 0.594,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 2.758,
-        "cer": 0.076,
-        "spk_sim": 0.549,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 2.953,
-        "cer": 0.066,
-        "spk_sim": 0.658,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 2.759,
-        "cer": 0.102,
-        "spk_sim": 0.595,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 2.914,
-        "cer": 0.076,
-        "spk_sim": 0.65,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.163,
-        "cer": 0.212,
-        "spk_sim": 0.589,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 2.797,
-        "cer": 0.159,
-        "spk_sim": 0.653,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 2.841,
-        "cer": 0.046,
-        "spk_sim": 0.608,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0142
-    },
-    "gate_pass": true,
-    "score": 1.4175
-  },
-  {
     "tier": "t5",
     "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
     "step": 6369,
@@ -673,5 +448,230 @@
     },
     "gate_pass": true,
     "score": 1.7327
+  },
+  {
+    "tier": "t1",
+    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
+    "step": 7468,
+    "qat": true,
+    "int8_mb": 1.444,
+    "fp32_mb": 5.16,
+    "int8_vs_fp32_mel_corr": 0.99,
+    "rtf_1thread": 0.0143,
+    "utmos": 2.942,
+    "cer_ne": 0.08,
+    "cer_sa": 0.18,
+    "spk_sim": 0.598,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 2.849,
+        "cer": 0.077,
+        "spk_sim": 0.553,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.082,
+        "cer": 0.066,
+        "spk_sim": 0.657,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 2.853,
+        "cer": 0.104,
+        "spk_sim": 0.595,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.042,
+        "cer": 0.07,
+        "spk_sim": 0.653,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.22,
+        "cer": 0.221,
+        "spk_sim": 0.599,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 2.881,
+        "cer": 0.146,
+        "spk_sim": 0.656,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 2.948,
+        "cer": 0.046,
+        "spk_sim": 0.613,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0142
+    },
+    "gate_pass": true,
+    "score": 1.4496
+  },
+  {
+    "tier": "sakhiya_v4_pico",
+    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
+    "step": 7468,
+    "qat": true,
+    "int8_mb": 1.444,
+    "fp32_mb": 5.16,
+    "int8_vs_fp32_mel_corr": 0.99,
+    "rtf_1thread": 0.0143,
+    "utmos": 2.942,
+    "cer_ne": 0.08,
+    "cer_sa": 0.18,
+    "spk_sim": 0.598,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 2.849,
+        "cer": 0.077,
+        "spk_sim": 0.553,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.082,
+        "cer": 0.066,
+        "spk_sim": 0.657,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 2.853,
+        "cer": 0.104,
+        "spk_sim": 0.595,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.042,
+        "cer": 0.07,
+        "spk_sim": 0.653,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.22,
+        "cer": 0.221,
+        "spk_sim": 0.599,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 2.881,
+        "cer": 0.146,
+        "spk_sim": 0.656,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 2.948,
+        "cer": 0.046,
+        "spk_sim": 0.613,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0142
+    },
+    "gate_pass": true,
+    "score": 1.4496
+  },
+  {
+    "tier": "sakhiya_v5_pico",
+    "label": "Sakhiya-Pico t1 (1.05 MB INT8 Breakthrough Looped Student)",
+    "step": 7468,
+    "qat": true,
+    "int8_mb": 1.444,
+    "fp32_mb": 5.16,
+    "int8_vs_fp32_mel_corr": 0.99,
+    "rtf_1thread": 0.0143,
+    "utmos": 2.942,
+    "cer_ne": 0.08,
+    "cer_sa": 0.18,
+    "spk_sim": 0.598,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 2.849,
+        "cer": 0.077,
+        "spk_sim": 0.553,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.082,
+        "cer": 0.066,
+        "spk_sim": 0.657,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 2.853,
+        "cer": 0.104,
+        "spk_sim": 0.595,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.042,
+        "cer": 0.07,
+        "spk_sim": 0.653,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.22,
+        "cer": 0.221,
+        "spk_sim": 0.599,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 2.881,
+        "cer": 0.146,
+        "spk_sim": 0.656,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 2.948,
+        "cer": 0.046,
+        "spk_sim": 0.613,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0142
+    },
+    "gate_pass": true,
+    "score": 1.4496
   }
 ]
