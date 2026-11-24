@@ -17,5 +17,6 @@
   });
   addEventListener("hashchange", go); addEventListener("popstate", go);
   window.skGo = go;
+  addEventListener("scroll", function () { var b = document.getElementById("appbar"); if (b) b.classList.toggle("scrolled", window.scrollY > 6); }, { passive: true });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
 })();

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sakhiya · Ampixa Lab — 365 prompts, pre-rendered on the GPU box</title>
+<meta name="description" content="Every Ampixa NepTTS-Bench prompt, pre-rendered with Sakhiya-V1, Pro-v3 T30, Pro-v3 T15, V2-Micro and V2-Pico, then denoised, de-shuttered and de-clicked. Press play, nothing runs in your browser.">
+<script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
+<link rel="stylesheet" href="m3x/tokens.css"><link rel="stylesheet" href="m3x/shapes.css"><link rel="stylesheet" href="style.css?v=55"><link rel="stylesheet" href="m3x/pro.css?v=55">
+</head>
+<body>
+<header class="appbar" id="appbar"><div class="appbar-in">
+  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span class="brand-nm">Sakhiya</span></a>
+  <nav class="tabs" aria-label="Sections">
+    <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
+    <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
+    <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
+    <a href="ampixa.html" class="on" aria-current="page"><span class="ms">fact_check</span><b>Ampixa Lab</b></a>
+    <a href="clips.html"><span class="ms">library_music</span><b>Clips</b></a>
+    <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
+  </nav>
+  <button class="icon-btn" id="theme" aria-label="Toggle light or dark theme"><span class="ms">contrast</span></button>
+</div></header>
+
+<main>
+  <section class="hero">
+    <div class="hero-main">
+      <span class="blob"></span>
+      <h1>Ampixa Lab</h1>
+      <p>All 365 NepTTS-Bench prompts, rendered ahead of time on our Blackwell GPU box with every promoted Sakhiya model, then cleaned: gentle denoise, de-shutter, de-click and loudness match. Just press play. Nothing is synthesized in your browser and nothing is submitted anywhere.</p>
+      <div class="row" id="heroPills"></div>
+    </div>
+    <div class="tiles" id="tiles" aria-live="polite"></div>
+  </section>
+
+  <div class="lab-bar" role="search">
+    <label class="search"><span class="ms">search</span><input id="q" type="search" placeholder="Search Nepali, romanized text, prompt id or category" autocomplete="off" spellcheck="false"><button id="qx" aria-label="Clear search" hidden><span class="ms">close</span></button></label>
+    <div class="chips scroll" id="cats" role="radiogroup" aria-label="Category"></div>
+    <div class="chips scroll" id="tierSel" aria-label="Models to compare"></div>
+  </div>
+
+  <div id="count" class="hint" style="margin:0 6px 12px"></div>
+  <div id="list"></div>
+  <div class="load-more"><button class="btn tonal" id="more" hidden><span class="ms">expand_more</span>Show more prompts</button></div>
+
+  <section class="card" id="metricsCard" style="margin-top:28px">
+    <div class="card-h"><span class="ms">monitoring</span><h2>What the clean-up did, measured on all 365 clips per model</h2></div>
+    <p class="muted" style="margin-bottom:14px">Noise floor is the 10th-percentile 20 ms frame level (lower is quieter). Shutter dips are sub-25 ms envelope drop-outs inside speech. Clicks use the same spectral-flux detector as the render pipeline. CPU RTF is single-thread ONNX Runtime INT8 on the box, 14 renders in parallel.</p>
+    <div class="tbl-wrap"><table class="mt" id="mt"></table></div>
+  </section>
+</main>
+
+<div class="mini" id="mini" role="region" aria-label="Now playing">
+  <button class="ico" id="mPlay" aria-label="Play or pause"><span class="ms">pause</span></button>
+  <div class="mid"><div class="t1" id="mT1">—</div><input type="range" id="mSeek" min="0" max="1000" value="0" aria-label="Seek"><div class="t2" id="mT2">0:00 / 0:00</div></div>
+  <button class="x" id="mClose" aria-label="Close player"><span class="ms">close</span></button>
+</div>
+
+<script src="ampixa_lab.js?v=55"></script>
+</body>
+</html>

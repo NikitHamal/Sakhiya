@@ -17,11 +17,11 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, ROOT)
 
 TIERS = {
-    "v1":    dict(label="Sakhiya-V1 (flagship)", dir="docs/models_v2", tiny=True),
+    "v1":    dict(label="Sakhiya-V1 (flagship)", dir="docs/models_v2", tiny=True, mb=15.981, utmos=3.957),
     "t30":   dict(label="Pro-v3 T30", hf="students/t30", mb=15.853, utmos=4.081),
     "t15":   dict(label="Pro-v3 T15", hf="students/t15", mb=14.36, utmos=3.882),
-    "micro": dict(label="V2-Micro", dir="docs/models_micro", tiny=True),
-    "pico":  dict(label="V2-Pico", dir="docs/models_pico", tiny=True),
+    "micro": dict(label="V2-Micro", dir="docs/models_micro", tiny=True, mb=3.975, utmos=3.297),
+    "pico":  dict(label="V2-Pico", dir="docs/models_pico", tiny=True, mb=1.369, utmos=2.708),
 }
 WORK = os.environ.get("AMPIXA_WORK", "/work/tts/ampixa")
 
