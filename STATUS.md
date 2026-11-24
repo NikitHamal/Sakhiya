@@ -1,5 +1,15 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 72 — new box `sb-1b37f31b21bf1be3`: why the old ladder exports sounded like V1 (root cause found), restart (honest, in progress)
+
+- **Audit by exact PID**: gen_corpus workers had already finished (`DONE tried 528 kept 342`); corpus 5.38 h teacher + 8.07 h GT cache (`gt_report.json`). A 4-student ladder (t15/t10/t5/t1) had been launched 4 min earlier by `chain_gt.sh`; it and its ladder daemon were stopped by PID and their runs archived (`runs_stale_voc1k`).
+- **Root cause of "exports sound exactly like old Sakhiya, unclear, robotic"**: `distill2/train_voc_gt.py` crashed at step 1000 on *both* vocoder GANs (320 and 144 ch) with `AttributeError: 'ParametrizedConv1d' object has no attribute 'weight'` — `save_fused` deep-copied the EMA generator and called `fuse_weight_norm()`, which strips the weight property from a class shared with the live generator. `chain_gt.sh` then ignored the failure and launched the students on vocoders that had only received ~1,000 GAN steps (warm-started from V1/Atom-Lite), i.e. the V1 vocoder voice. Fixed (fresh module for the fused copy; `5250fbd`); both vocoders now train 55 min (~20k steps) on Pro-v3 GT.
+- **Measured dry run of the real INT8 gate on the stale t5 (step 1500, old vocoder)**: 4.415 MB, mel-corr 0.980 (FP16 heads kept), nan 0, bad_ops none, RTF 0.022, UTMOS **1.59**, CER 0.08, spk-sim **0.39**, clicks 13. That is far below Atom-Lite (2.94) — it confirms the owner's listening verdict; no student quality is claimed from that checkpoint.
+- **Safety changes**: `ladder_daemon.py` now publishes (git/HF/docs) only if UTMOS >= the shipped baseline of the size class (t15 3.957 V1, t10 3.253 Nano, t5 3.262 Atom, t1 2.944 Atom-Lite); weaker gate-passing checkpoints stay on the listening desk only. It no longer reinstalls the Marimo cards after each gate.
+- **Pipeline now running (detached, `distill2/chain_v5.sh`)**: vocoders -> t15/t10/t5/t1 concurrently (bs 40/48, GAN + WavLM + QAT) until 19:30 UTC -> `ladder_daemon` INT8 gates every 20 min. HF backup daemon (15 min) alive.
+- **MoLab cards** (`monitor/cells_pro5.py`, installed via `marimo._code_mode`, 8 cells, 0 errors): box health + countdown, accent/corpus status, ladder step/s + ETA, size-vs-quality leaderboard, listening desk that auto-discovers the newest INT8/Pro audio and never errors on missing files.
+- **Not done / not claimed**: no human MOS; Pro v3's accent fix is still only proxy-measured (Session 68); the 12-18 h corpus target is not met (13.4 h incl. old corpus, 5.4 h teacher-voice); no student has beaten its baseline yet.
+
 ## Session 71 — verification pass, release, live cards
 - Box `sb-5977659b13d89dc0` (deadline file 21:02 UTC) re-inspected: GPU idle, no chain process, HF backup log healthy. Nothing killed.
 - Re-verified on the box: pytest 26 passed (ggml C++ tests excluded), `node --check docs/*.js` OK; Pages `listen.html` HTTP 200, last Pages build `built`.
