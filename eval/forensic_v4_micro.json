@@ -1,109 +1,109 @@
 {
-  "ne_pcer": 0.0201,
-  "sa_pcer": 0.03,
-  "ne_wer": 0.1453,
-  "rigveda_svara_st": 2.08,
+  "ne_pcer": 0.02,
+  "sa_pcer": 0.0508,
+  "ne_wer": 0.1365,
+  "rigveda_svara_st": 4.3,
   "word_drop_count": 0,
   "word_drops": [],
   "stutter_count": 0,
   "stutters": [],
   "f0_shutters": 0,
   "clicks": 0,
-  "ltas_mcd_ne_sa": 11.182,
-  "formant_shift_hz": 28.5,
-  "sv_cos_ne_sa": 0.9953,
+  "ltas_mcd_ne_sa": 14.018,
+  "formant_shift_hz": 29.1,
+  "sv_cos_ne_sa": 0.9933,
   "min_func_word_frames": 8,
   "nasal_scores": {
     "काठमाडौँ": {
-      "ctc_nasal_prob": 0.2646,
-      "band_200_400_ratio": 13.429
+      "ctc_nasal_prob": 0.8138,
+      "band_200_400_ratio": 12.973
     },
     "गाउँ": {
-      "ctc_nasal_prob": 0.409,
-      "band_200_400_ratio": 19.891
+      "ctc_nasal_prob": 0.6818,
+      "band_200_400_ratio": 18.267
     },
     "गर्‍यौँ": {
-      "ctc_nasal_prob": 0.9987,
-      "band_200_400_ratio": 15.962
+      "ctc_nasal_prob": 0.9989,
+      "band_200_400_ratio": 15.907
     },
     "हेरौँला": {
-      "ctc_nasal_prob": 0.9246,
-      "band_200_400_ratio": 19.471
+      "ctc_nasal_prob": 0.953,
+      "band_200_400_ratio": 18.39
     }
   },
-  "utmos_15": 3.75,
+  "utmos_15": 2.921,
   "per_clip": [
     {
       "id": "ne_kathmandu",
       "lang": "ne",
       "style": "news",
-      "hyp": "नेपालको राजधानी काठमाण हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो",
+      "hyp": "नेपालको राजधानी काठमाणो हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.2,
-      "utmos": 3.807
+      "utmos": 3.58
     },
     {
       "id": "ne_story",
       "lang": "ne",
       "style": "storytelling",
-      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटि बुढि आमा बस्थिन् उनी बिहानै उठेर चरालाई दाना हाल्थिन्",
+      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन् उनी बिहानै उठेर चरालाई दाना हाल थिन्",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 3.751
+      "utmos": 3.369
     },
     {
       "id": "ne_chat",
       "lang": "ne",
       "style": "conversational",
-      "hyp": "नमस्ते आज मौसम धेरै राम्रो छ चिया खान जाउँन तिमी कताबाट आउँदै छौँ",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.3,
-      "utmos": 3.736
-    },
-    {
-      "id": "ne_warm",
-      "lang": "ne",
-      "style": "warm_soft",
-      "hyp": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो श्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 3.781
-    },
-    {
-      "id": "ne_expressive",
-      "lang": "ne",
-      "style": "expressive",
-      "hyp": "वकि अद्भुत दृश्य हो यो माछा पुच्रे हिमाल बिहानको घामा सुन् जस्तै चम्किरहेको छ",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.3,
-      "utmos": 3.671
-    },
-    {
-      "id": "ne_tricky_real",
-      "lang": "ne",
-      "style": "conversational",
-      "hyp": "बाटोबाट हिँड्दै गर्दा गाउँका साथीहरूसँग भेट भयो अनि हामीले विद्यालयको कार्यक्रम बारे लामो कुरा गर्‍यौँ",
+      "hyp": "नमस्ते आज मौसम धेरै राम्रो छ चियाँ खान जाउँन तिमी कताबाट आउँदै छौँ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 3.766
+      "utmos": 3.162
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "hyp": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो श्वास लिनुहोस् र आजको पललाई हृदैँदेखि अनुभव गर्नुहोस्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 3.221
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "hyp": "वाके अद्भुत दृश्य हो यो माछा पुच्रे हिमाल बिहानको घाममा सुन् जस्तै चम्कि रहेको छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.866
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "बाटोबाट हिड्दै गर्दा गाउँका साथीहरूसँग भेट भयो अनि हामीले विद्यालयको कार्यक्रम बारे लामो कुरा गर्‍यौं",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 3.181
     },
     {
       "id": "ne_loan_num",
@@ -114,92 +114,92 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.2,
-      "utmos": 3.748
+      "max_jump_st": 0.4,
+      "utmos": 3.588
     },
     {
       "id": "sa_om",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "ओm णmिद पूरणतपूरण मुदचयते पूrणशय पूरणमदाय पूरणमेवावशषयते",
+      "hyp": "ओm ूरणmिद पूरणतपूरण मुदचयते पूरणश्य पूरणमादाय पूरणमेवावशिषयते",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 3.852
+      "utmos": 2.34
     },
     {
       "id": "sa_rv",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "अगnीमिल ए पुरोहितम यजञस्य देव ृत्विज होतारम रथनधातम",
+      "hyp": "अगnीmिलए पुरोहितम यञञस्य देवम ृत्विजम होतारम रत्नधातमं",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.3,
-      "utmos": 3.782
+      "max_jump_st": 0.4,
+      "utmos": 2.309
     },
     {
       "id": "sa_gita",
       "lang": "sa",
       "style": "storytelling",
-      "hyp": "धर्मक्षेत्रे कुरु क्षेत्रे समवेता युयुत्सवह ममकह p वषच i कुरवत सञजय",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 3.723
-    },
-    {
-      "id": "sa_gayatri",
-      "lang": "sa",
-      "style": "vedic_chant",
-      "hyp": "भूरभुवहसव ततसवितुरवरेनियम भर्गो देवस्य धिमही धियोयोन प्रचोधयात",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.2,
-      "utmos": 3.731
-    },
-    {
-      "id": "mixed_owner",
-      "lang": "auto",
-      "style": "news",
-      "hyp": "हेलो साथीहरू म सखिया हुँ निकित हमालज्युले बनाउनुभएको सानो टेक्स्ट टु स्पिच मोडेल म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्म क्षेत्रे कुरु क्षेत्र समावेता युयुत्सवह मामकाह पा्ड वाष्चइव किमा कुर्वत सञ्जयत आज मौसमनी कै रमाइलो र शान्त छ",
+      "hyp": "धर्मक्षेत्र कुरु क्षेत्रे समवेता युयुत्सवह मामकह pडवाष्चैव किमकुरवत सञजय",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 3.704
+      "utmos": 2.075
+    },
+    {
+      "id": "sa_gayatri",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "hyp": "ओभूरभुवहसव ततsवितुरवरेnयम भरगो देवस्य धिमहि धिोयोnह परचोध यात",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.7,
+      "utmos": 2.066
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "hyp": "हेलो साथीहरू म सखिया हुँ निकित हमालज्युले बनाउनुभएको सानो टेक्स्ट टु स्पिच मोडेल म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्मक्षेत्रे कुरु क्षेत्रे समवता युयुत्सवह मामकाह पा्डवाष चइव किमा कुर्वत सञ्जयक आज मौसमनी की रमाइलो र शान्त छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.3,
+      "utmos": 2.317
     },
     {
       "id": "ne_unseen_dialogue",
       "lang": "ne",
       "style": "conversational",
-      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी साचप सँगै गएर हेरौला नि हुँदैन र",
+      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी सास्फख सँगै गएर हेरला नि हुँदैन र",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 3.736
+      "utmos": 2.965
     },
     {
       "id": "ne_unseen_narrative",
       "lang": "ne",
       "style": "storytelling",
-      "hyp": "वर्षा थामिएपछि पहाडको टुप्पोबाट कल्कल बग्ने झरनाको आवाज हझैमिठो सुनियो गाउँलेहरू आ आफ्नो खेतबारीमा काम गर्न निस्किए",
+      "hyp": "वर्षा ठामिएपछि पहाडको टुप्पोबाट कल्कल बग्ने झरनाको आवाज हझै मिठो सुनियो गाउँलेहरू आ आफ्नो खेतबारीमा काम गर्न निस्किए",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 3.753
+      "max_jump_st": 0.3,
+      "utmos": 3.28
     },
     {
       "id": "ne_unseen_prose",
@@ -211,7 +211,7 @@
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 3.713
+      "utmos": 3.493
     }
   ]
 }

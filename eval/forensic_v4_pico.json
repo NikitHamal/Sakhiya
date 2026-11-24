@@ -1,227 +1,221 @@
 {
-  "ne_pcer": 0.132,
-  "sa_pcer": 0.3786,
-  "ne_wer": 0.6868,
-  "rigveda_svara_st": 0.48,
-  "word_drop_count": 3,
+  "ne_pcer": 0.0296,
+  "sa_pcer": 0.0598,
+  "ne_wer": 0.1746,
+  "rigveda_svara_st": 2.34,
+  "word_drop_count": 1,
   "word_drops": [
-    "ne_story:drop:हो",
-    "ne_unseen_dialogue:drop:र",
-    "ne_unseen_narrative:drop:आआफ्नो"
+    "ne_unseen_narrative:आआफ्नो->आफ्नो"
   ],
   "stutter_count": 0,
   "stutters": [],
   "f0_shutters": 0,
   "clicks": 0,
-  "ltas_mcd_ne_sa": 8.176,
-  "formant_shift_hz": 46.4,
-  "sv_cos_ne_sa": 0.9907,
-  "min_func_word_frames": 8,
+  "ltas_mcd_ne_sa": 16.567,
+  "formant_shift_hz": 38.6,
+  "sv_cos_ne_sa": 0.9943,
+  "min_func_word_frames": 7,
   "nasal_scores": {
     "काठमाडौँ": {
-      "ctc_nasal_prob": 0.1399,
-      "band_200_400_ratio": 12.986
+      "ctc_nasal_prob": 0.6712,
+      "band_200_400_ratio": 21.0
     },
     "गाउँ": {
-      "ctc_nasal_prob": 0.2398,
-      "band_200_400_ratio": 13.868
+      "ctc_nasal_prob": 0.6053,
+      "band_200_400_ratio": 24.21
     },
     "गर्‍यौँ": {
-      "ctc_nasal_prob": 0.4416,
-      "band_200_400_ratio": 13.482
+      "ctc_nasal_prob": 0.9921,
+      "band_200_400_ratio": 23.884
     },
     "हेरौँला": {
-      "ctc_nasal_prob": 0.6581,
-      "band_200_400_ratio": 13.401
+      "ctc_nasal_prob": 0.9699,
+      "band_200_400_ratio": 23.816
     }
   },
-  "utmos_15": 3.605,
+  "utmos_15": 2.482,
   "per_clip": [
     {
       "id": "ne_kathmandu",
       "lang": "ne",
       "style": "news",
-      "hyp": "नेपालको राजधानी काठमारौ हिमालको कामना रहेदो एउटा इतिहासिक शहर हो",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.679
-    },
-    {
-      "id": "ne_story",
-      "lang": "ne",
-      "style": "storytelling",
-      "hyp": "समयको पुराखो नेउटासालु नाउँमा नेउटि बुढी पामा बस्थिन् उनी बिहालै उठे र चरालाई दाना खान थिन्",
-      "drops": [
-        "drop:हो"
-      ],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.573
-    },
-    {
-      "id": "ne_chat",
-      "lang": "ne",
-      "style": "conversational",
-      "hyp": "नमस्थेता जहौँसँ धेरै रा्रो छ चिया खान जाउन तिमी पदाबाट ाउँदै छौँ",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.565
-    },
-    {
-      "id": "ne_warm",
-      "lang": "ne",
-      "style": "warm_soft",
-      "hyp": "सान्त वन र मधुर मुस्कानले हरेप पठिन दिनलाई सहज बनाउँछ दहिरौंश्वा सिनुहोस् र आजको पललाई हृँदैदेखि अनुभव गर्नुहोस्",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.62
-    },
-    {
-      "id": "ne_expressive",
-      "lang": "ne",
-      "style": "expressive",
-      "hyp": "वाग्के पद्भुत दृश्य हो यो मछा पुछ्रे हिमाल विहानको ग्राममा सुन जस्तै चम्पि रहेको छ",
+      "hyp": "नेपालको राजधानी काटमानो हिमालको कापमा रहेको एउटा ऐतिहासिक सहर हो",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.2,
-      "utmos": 3.588
+      "utmos": 2.581
+    },
+    {
+      "id": "ne_story",
+      "lang": "ne",
+      "style": "storytelling",
+      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुढी आमा बस् थिन् उनी बिहानै उठे र चरालाई दाना हाल थिन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.427
+    },
+    {
+      "id": "ne_chat",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "नमस्ते आज मौसम धेरै राम्रो छ चिया खान जाउन तिमीको ताबाट आउँदै छौँ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.5,
+      "utmos": 2.514
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "hyp": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो स्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.724
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "hyp": "वाहके अद्भुत दृश्य हो यो माछा पुच्रे हिमाल विहानको घाममा सुनजस्तै चम्की रहेको छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.652
     },
     {
       "id": "ne_tricky_real",
       "lang": "ne",
       "style": "conversational",
-      "hyp": "बाटोबाट हिँदै वर्दा डाउका साथीहरू सदभेद भयो अनि हामीले विद्यालयको कार्यक्रमबारे लामुको रा दर्यौं",
+      "hyp": "बाटोबाट हिँदै गर्दा ग्राउँका साथीहरूसँग भेद भयो अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौं",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.592
+      "max_jump_st": 0.4,
+      "utmos": 2.481
     },
     {
       "id": "ne_loan_num",
       "lang": "ne",
       "style": "news",
-      "hyp": "सन् 200छ20 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशत वृद्धि भएको छ र मोबाईलदेपि केसन चलाउने प्रयोगकर्ता झन बढेका छन्",
+      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशत वृद्धि भएको छ र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बढेका छन्",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.623
+      "max_jump_st": 0.3,
+      "utmos": 2.704
     },
     {
       "id": "sa_om",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "plamद polmiz pola poलlamुदजजते polasय pोlamaदaय pोlamिbaशतe",
+      "hyp": "ओमि पूणतपूरणमुधचयते पूरय पूरणमदाय पूरणमेवावशिष्यते",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.663
+      "max_jump_st": 0.1,
+      "utmos": 2.094
     },
     {
       "id": "sa_rv",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "आधिै पुरौहित धञञ दैव ृतिज होता रकञधातन",
+      "hyp": "अgnिमिै पुरोहित यञञस्य देवमृतविजम होतारम रथnधातमम",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.624
+      "max_jump_st": 0.4,
+      "utmos": 2.341
     },
     {
       "id": "sa_gita",
       "lang": "sa",
       "style": "storytelling",
-      "hyp": "धर्मक्षेत्र पुरु क्षेत्रै समवधा युयुtसवय मामक तडवजै किम पूरवत सञज",
+      "hyp": "धर्मक्षेत्रे कुरु क्षेत्र समवेता युयुतsवह मामक हफडवाचै किमकुरवत सञजयत",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.591
+      "max_jump_st": 0.4,
+      "utmos": 2.122
     },
     {
       "id": "sa_gayatri",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "दुर्भुवहासवख्त सवितुरवरएनय धर्गो देवश्य धिमहि हियोहिो न प्रचोदयात",
+      "hyp": "ओ भूरभूवहसव तसवितुर वरेnयम भरगो दैवश्य धिम हि धिोो n आपरचोदयात",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.635
+      "max_jump_st": 0.7,
+      "utmos": 2.375
     },
     {
       "id": "mixed_owner",
       "lang": "auto",
       "style": "news",
-      "hyp": "केलो साथीहरूम सफिया हुँ नीतित हमाल जुरै बनाउनु भएको सानो टेप्स टु स्पेच मोडेलम संस्कृत पनि स्पष्ट बोल्न सक्छु धर्म क्षेत्रै पुरु-क्षेत्रै समावेतार युयुपसवनो मामका तान्डवास चैव किम पूर्वत सञ्जय आझ मौसम निति रमायो र शान्त छ",
+      "hyp": "हेलो साथीहरू म सख्या हुँ निकित हमालज्यउले बनाउनुभएको सानो टेक्स्ट टु स्पेच मोडेल म संस्कृत पनि स्पष्ट बोन सक्छु धर्मकक्षेत्र कुरु क्षेत्र समवेता युयुत्सवह मामका फाण्डवास चैव किमा कुर्वत सञ्जयक आज मौसम निक्कै रमाइलो र शान्त छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.587
+      "max_jump_st": 0.5,
+      "utmos": 2.179
     },
     {
       "id": "ne_unseen_dialogue",
       "lang": "ne",
       "style": "conversational",
-      "hyp": "दिदि आज बजारवान्दय किताबहरू आएका रहेछन् हामी साँच्कथो सँगै गेरा खेरौँलानि हुँदैन",
-      "drops": [
-        "drop:र"
-      ],
+      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी साचप्ख सँगै गएर हेराौलानि हुँदैन रह",
+      "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.545
+      "max_jump_st": 0.5,
+      "utmos": 2.583
     },
     {
       "id": "ne_unseen_narrative",
       "lang": "ne",
       "style": "storytelling",
-      "hyp": "वर्षा ठामिएपछि पहारको तोप्पोबाट कल्गल बाग्ने झरनाको आवाज अझै मिलो सुनियो दाौरेहरू पाग आफ्नो फ्रेतबारीमा काम गर्न निस्कि",
+      "hyp": "वर्षा ठामिएपछि पहाडको तुप्पोबाट कल्कल बग्ने झरनाको आवाज अझै मिठो सुनियो गाउलेहरू आफ्नो खेतबारीमा काम गर्न निस्किए",
       "drops": [
-        "drop:आआफ्नो"
+        "आआफ्नो->आफ्नो"
       ],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.592
+      "max_jump_st": 0.5,
+      "utmos": 2.59
     },
     {
       "id": "ne_unseen_prose",
       "lang": "ne",
       "style": "news",
-      "hyp": "स्वास्थ्य र शिक्षामा समान पहुजपुरि ाउन स््थालीय तसले डिजिटाल पुस्तकागय र घुन्डी स्वास्थीय शिविर सञ्चालन गरेको छ",
+      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स््थानीयतहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिवीर सञ्चालन गरेको छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.0,
-      "utmos": 3.602
+      "max_jump_st": 0.4,
+      "utmos": 2.87
     }
   ]
 }
