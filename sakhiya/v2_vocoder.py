@@ -77,18 +77,19 @@ class HarmonicSource(nn.Module):
     def forward(s, mel, shift_st=None):
         with torch.amp.autocast("cuda", enabled=False):
             rf = s.f0_net(mel.float()).float()
-        f0 = torch.round(60.0 + 440.0 * torch.sigmoid(rf[:, 0:1]))  # (B, 1, T) in [60, 500] Hz in fp32 (pre-smoothing 1 Hz snap eliminates cross-runtime cumsum drift)
-        uv_raw = torch.round(torch.sigmoid(rf[:, 1:2]) * 32.0) * 0.03125
-        # Voiced-weighted local log-F0 interpolation + 3-frame closing on uv (eliminates 1-frame intra-vowel voicing shutters & phase snaps!)
+        f0 = 60.0 + 440.0 * torch.sigmoid(rf[:, 0:1])  # continuous in [60, 500] Hz (avoids 1 Hz pitch-staircase FM buzz)
+        uv_raw = torch.sigmoid(rf[:, 1:2])
+        # Voiced-weighted local log-F0 interpolation + 5-frame morphological closing on uv (eliminates 1-to-3 frame intra-vowel voicing shutters)
         lf0_raw = torch.log2(f0.clamp(130.0, 380.0))
         if f0.shape[-1] >= 7:
-            uv_closed = F.max_pool1d(F.pad(uv_raw, (1, 1), mode="replicate"), 3, stride=1)
-            uv_blend = 0.65 * uv_raw + 0.35 * uv_closed
-            w_v = (uv_blend.detach() > 0.32).float() * uv_blend.detach() + 0.04
+            uv_dil = F.max_pool1d(F.pad(uv_raw, (2, 2), mode="replicate"), 5, stride=1)
+            uv_closed = -F.max_pool1d(F.pad(-uv_dil, (1, 1), mode="replicate"), 3, stride=1)
+            uv_blend = 0.45 * uv_raw + 0.55 * uv_closed
+            w_v = (uv_blend.detach() > 0.30).float() * uv_blend.detach() + 0.04
             num = F.avg_pool1d(F.pad(lf0_raw * w_v, (3, 3), mode="replicate"), 7, stride=1)
             den = F.avg_pool1d(F.pad(w_v, (3, 3), mode="replicate"), 7, stride=1).clamp(min=1e-3)
             lf0_loc = num / den
-            lf0_sm = F.avg_pool1d(F.pad(0.50 * lf0_raw + 0.50 * lf0_loc, (2, 2), mode="replicate"), 5, stride=1)
+            lf0_sm = F.avg_pool1d(F.pad(0.45 * lf0_raw + 0.55 * lf0_loc, (2, 2), mode="replicate"), 5, stride=1)
             uv = torch.round(F.avg_pool1d(F.pad(uv_blend, (1, 1), mode="replicate"), 3, stride=1) * 1024.0) * 0.0009765625
         else:
             uv = uv_raw
@@ -96,8 +97,7 @@ class HarmonicSource(nn.Module):
         sh = shift_st if shift_st is not None else getattr(s, "shift_st", None)
         if sh is not None:
             lf0_sm = lf0_sm + sh.to(f0.dtype) * (1.0 / 12.0)
-        lf0_q = torch.round(lf0_sm * 256.0) * 0.00390625
-        f0 = torch.round(torch.pow(2.0, lf0_q) * 16.0) * 0.0625
+        f0 = torch.round(torch.pow(2.0, lf0_sm) * 32.0) * 0.03125
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         # Wrapped cumulative cycles in [0, 1) so long utterances never suffer float32 cumsum phase drift
@@ -105,14 +105,18 @@ class HarmonicSource(nn.Module):
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
         ks = torch.arange(1, s.n_har + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
-        amp = (1.0 / torch.sqrt(ks)) * (ks * f0_16 < 720.0).float()
+        # Smooth C1 raised-cosine/smoothstep anti-aliasing roll-off below 750 Hz Nyquist (eliminates mid-syllable k*f0=720Hz step clicks & metallic buzz)
+        fk = ks * f0_16
+        aa = ((740.0 - fk) / 200.0).clamp(0.0, 1.0)
+        aa = aa * aa * (3.0 - 2.0 * aa)
+        amp = (1.0 / torch.sqrt(ks)) * aa
         k_ph = ks * ph
         har = torch.cat([torch.sin(k_ph) * amp, torch.cos(k_ph) * amp], dim=1) * uv_16
         # Analytic multi-band unvoiced noise excitation (deterministic incommensurate sinusoids for 100% ONNX parity)
         t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=ph.dtype)[None, None, :]
         ap_freqs = torch.tensor([1.41421, 1.73205, 2.23607, 2.64575, 3.14159, 3.60555, 4.12311, 4.58258], device=ph.device, dtype=ph.dtype)[None, :, None]
         ap = torch.cat([torch.sin(t_idx * ap_freqs), torch.cos(t_idx * (ap_freqs * 1.17))], dim=1)
-        har = (har + (1.0 - uv_16) * 0.14 * ap).to(mel.dtype)
+        har = (har + (1.0 - uv_16) * 0.12 * ap).to(mel.dtype)
         return s.proj4(har), s.proj16(har), f0, uv
 
 

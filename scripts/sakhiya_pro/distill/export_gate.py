@@ -98,7 +98,7 @@ def export_fp32(m, path):
         output_names=["wav"],
         dynamic_axes={"ids": {1: "L"}, "dur_scale": {0: "D"}, "pitch_shift": {0: "P"}, "wav": {1: "N"}},
         opset_version=17,
-        do_constant_folding=False,
+        do_constant_folding=True,
     )
     try:
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)

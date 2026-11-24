@@ -454,7 +454,7 @@ class Student(nn.Module):
         env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
         kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
         wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
-        comb_gain = 0.10 if self.steps == 1 else 0.08
+        comb_gain = 0.05 if self.steps == 1 else 0.0
         mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
         st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
