@@ -191,16 +191,19 @@ class SakhiyaAM(nn.Module):
 
     @torch.no_grad()
     def fold_time_embeddings(s):
-        """Fold constant 1-step velocity FiLM conditioning (t=0, spk=0, lang=0, studio=1, sty=0) and 4-step duration time embeddings."""
+        """Fold constant 1-step & 2-step Midpoint ODE velocity FiLM conditioning (t in {0, 0.25, 0.5, 0.75}) and 4-step duration time embeddings."""
         dev = next(s.parameters()).device
         g0 = s.enc.spk.weight[0:1] + s.enc.lang.weight[0:1] + s.enc.studio.weight[1:2] + s.enc.sty.weight[0:1]
         if not isinstance(s.vel.tm, nn.Identity):
-            tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)
-            c0 = s.vel.tm(tb0) + g0
+            ts_ode = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
+            cs_ode = s.vel.tm(temb(ts_ode, s.vel.c)) + g0
+            c0 = cs_ode[0:1]
             for b in s.vel.blocks:
                 if not isinstance(b.film, nn.Identity):
                     if float(b.film_const.abs().max()) < 1e-7:
                         b.film_const.data.copy_(b.film(c0)[:, :, None])
+                    if float(b.film_steps.abs().max()) < 1e-7:
+                        b.film_steps.data.copy_(b.film(cs_ode)[:, :, None])
                     b.film = nn.Identity()
             s.vel.tm = nn.Identity()
         else:
