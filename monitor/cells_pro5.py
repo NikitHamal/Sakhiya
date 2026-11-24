@@ -10,8 +10,8 @@ Panels: 1 box health + countdown, 2 accent-fix / corpus status, 3 live ladder pr
 """
 
 TICK = r"""
-import marimo as mo
-sp5_tick = mo.ui.refresh(options=["10s", "15s", "30s", "1m"], default_interval="15s", label="Sakhiya live auto-refresh")
+import marimo as _mo
+sp5_tick = _mo.ui.refresh(options=["10s", "15s", "30s", "1m"], default_interval="15s", label="Sakhiya live auto-refresh")
 sp5_tick
 """
 
@@ -196,12 +196,13 @@ _out4
 """
 
 C5_SCAN = r"""
-import marimo as mo
-sp5_rescan = mo.ui.run_button(label="🔄 Rescan audio")
+import marimo as _mo
+sp5_rescan = _mo.ui.run_button(label="🔄 Rescan audio")
 sp5_rescan
 """
 
 C5_PICK = r"""
+import marimo as _mo
 sp5_rescan.value
 def _discover():
     import glob, os
@@ -215,7 +216,7 @@ def _discover():
     items = sorted(seen.items(), key=lambda kv: -kv[1])[:300]
     return {f.replace("/work/sp/", ""): f for f, _ in items}
 sp5_files = _discover()
-sp5_pick = mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, newest first)", full_width=True)
+sp5_pick = _mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, newest first)", full_width=True)
 sp5_pick
 """
 
