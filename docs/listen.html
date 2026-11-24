@@ -9,7 +9,7 @@ h1{margin:.2em 0}a{color:#8ab4ff}.pack{background:#171a21;border:1px solid #2a2f
 <p><small>All frozen 15-clip packs, straight from <code>samples/versions/</code>. Pick a pack, press play. <a href="index.html">Back to Studio</a> · <a href="index.html#ampixa">Ampixa self-test (365 prompts)</a></small></p>
 <div class="tabs" id="tabs"></div><div id="out">Loading…</div>
 <script>
-const WANT=["sakhiya_pro_v4_vedic","sakhiya_pro_v4","sakhiya_v4_micro","sakhiya_v4_pico"];
+const WANT=["sakhiya_pro_v3","sakhiya_v3_t30","sakhiya_v3_t15","sakhiya_v3_t10","sakhiya_v3_t5","sakhiya_v3_t1","sakhiya_pro_v4_vedic","sakhiya_pro_v4","sakhiya_v4_micro","sakhiya_v4_pico"];
 fetch("samples/versions/registry.json").then(r=>r.json()).then(REG=>{
   const vs=REG.versions; const order=[...WANT,...vs.map(v=>v.tag).filter(t=>!WANT.includes(t)).reverse()];
   const by=Object.fromEntries(vs.map(v=>[v.tag,v])); const tags=order.filter(t=>by[t]);
