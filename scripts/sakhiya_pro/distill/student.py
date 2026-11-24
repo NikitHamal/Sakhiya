@@ -36,11 +36,11 @@ N_SYM = 64
 N_LANG = 2
 
 TIERS = {
-    "t30": dict(tier="t30", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=6, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=9,  h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=2, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=168, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=2, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=2, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
+    "t30": dict(tier="t30", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
+    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=100,  r_voc_k7=None, r_voc_k11=132),
+    "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
+    "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
+    "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
 }
 
 
@@ -327,10 +327,7 @@ class Student(nn.Module):
         idx = (t_arange[None, :, None] >= ends[:, None, :]).to(torch.float32).sum(-1).to(torch.int64).clamp(max=L - 1)
 
         mu_t = mu.transpose(1, 2)
-        mu_y_raw = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
-        # Smooth 3-frame coarticulation across phoneme boundaries so transitions never step-jump
-        mu_y_sm = F.avg_pool1d(F.pad(mu_y_raw, (1, 1), mode="replicate"), 3, stride=1)
-        mu_y = 0.72 * mu_y_raw + 0.28 * mu_y_sm
+        mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
         if self.steps == 1:
@@ -339,8 +336,7 @@ class Student(nn.Module):
         else:
             c_idx = torch.arange(100, device=mu_y.device, dtype=torch.float32)[None, :, None]
             t_idx = torch.arange(T, device=mu_y.device, dtype=torch.float32)[None, None, :]
-            temp = 0.16 if self.steps <= 2 else 0.20
-            z_init = torch.sin(c_idx * 12.9898 + t_idx * 78.233) * torch.cos(c_idx * 39.346 + t_idx * 11.135) * (temp * 1.4142)
+            z_init = torch.sin(c_idx * 12.9898 + t_idx * 78.233) * torch.cos(c_idx * 39.346 + t_idx * 11.135) * (0.667 * 1.4142)
             xt = z_init.expand(B, 100, T)
             dt = 1.0 / self.steps
             for i in range(self.steps):
@@ -353,7 +349,7 @@ class Student(nn.Module):
         env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
         kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
         wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
-        comb_gain = 0.10 if self.steps <= 2 else 0.06
+        comb_gain = 0.12 if self.steps == 1 else 0.08
         mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
         if self.arch == "sakhiya_pico":
             mel_mu = mel_w.mean(dim=(1, 2), keepdim=True)
