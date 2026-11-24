@@ -146,7 +146,7 @@ class Student(nn.Module):
         self.register_buffer("f0_stats", torch.tensor([5.418, 0.203]))
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
         # Learned Nepal-native prosody & downward sentence closure adaptation scalars
-        self.closure_slope = nn.Parameter(torch.tensor(-0.18))
+        self.closure_slope = nn.Parameter(torch.tensor(-0.06))
         self.dur_rate_bias = nn.Parameter(torch.tensor(0.0))
         self._qat_flag = False
 
@@ -230,18 +230,6 @@ class Student(nn.Module):
                 self.am.load_state_dict(dst_sd, strict=False)
                 if not os.path.exists(v3_t30_p) or am_p != v3_t30_p:
                     _calibrate_styles(self.am, pre_baked=pre_baked)
-            # If v3_t30_am.pt exists and we are on a smaller tier (t10/t5/t1), warm-slice the Pro-v3 speaker/mu/vel head from v3_t30_am.pt!
-            if os.path.exists(v3_t30_p) and am_p != v3_t30_p:
-                try:
-                    ck_v3 = torch.load(v3_t30_p, map_location=dev, weights_only=False)
-                    sd_v3 = {k: v.float() for k, v in ck_v3.get("ema", ck_v3).items()}
-                    with torch.no_grad():
-                        for k, p in self.am.named_parameters():
-                            if k in sd_v3 and k.startswith(("enc.spk.", "enc.sty.", "enc.studio.", "enc.mu.", "vel.out.")):
-                                sl = tuple(slice(0, min(a, b)) for a, b in zip(p.shape, sd_v3[k].shape))
-                                p.data[sl].copy_(sd_v3[k][sl])
-                except Exception:
-                    pass
             self.am.stats.copy_(st_vec)
             self.mel_stats.copy_(st_vec)
 
@@ -265,7 +253,7 @@ class Student(nn.Module):
         if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "t1_am_pretrained.pt")):
             try:
                 ck_p1 = torch.load(os.path.join(ck_dir, "t1_am_pretrained.pt"), map_location=dev, weights_only=False)
-                sd_p1 = {k: v.float() for k, v in ck_p1.get("ema", ck_p1).items() if k.startswith("am.")}
+                sd_p1 = {k: v.float() for k, v in ck_p1.get("ema", ck_p1).items() if k.startswith(("am.", "voc."))}
                 self.load_state_dict(sd_p1, strict=False)
             except Exception:
                 pass

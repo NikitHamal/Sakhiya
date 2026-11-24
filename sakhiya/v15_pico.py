@@ -172,7 +172,7 @@ class PicoVelocity(nn.Module):
         s.ublock_early = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
         s.ublock_late = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
         s.step_emb = nn.Parameter(torch.zeros(nb, c, 1))
-        s.film_steps = nn.Parameter(torch.zeros(nb, 2 * d, 1), requires_grad=False)
+        s.film_steps = nn.Parameter(torch.zeros(nb, 2 * d, 1), requires_grad=True)
         s.out_gamma = nn.Parameter(torch.zeros(nb, d, 1))
         s.out_beta = nn.Parameter(torch.zeros(nb, d, 1))
         s.out = QATConv1d(d, n_mel, 1)

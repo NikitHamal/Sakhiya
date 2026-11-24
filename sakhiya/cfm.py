@@ -193,20 +193,17 @@ class SakhiyaAM(nn.Module):
             if not isinstance(s.vel.tm, nn.Identity):
                 tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)
                 c0 = s.vel.tm(tb0) + g0
-                for b in s.vel.blocks:
-                    if not isinstance(b.film, nn.Identity):
-                        if float(b.film_const.abs().max()) < 1e-7:
-                            b.film_const.data.copy_(b.film(c0)[:, :, None])
-                        b.film = nn.Identity()
-                s.vel.tm = nn.Identity()
-            else:
-                for b in s.vel.blocks:
+            for b in s.vel.blocks:
+                if not isinstance(b.film, nn.Identity):
+                    b.film_const.data.copy_(b.film(c0)[:, :, None])
                     b.film = nn.Identity()
+                b.film_const.requires_grad_(True)
+            s.vel.tm = nn.Identity()
         if not isinstance(s.dur.t, nn.Identity):
-            if float(s.dur.t_steps.abs().max()) < 1e-7:
-                ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
-                s.dur.t_steps.data.copy_(s.dur.t(temb(ts, s.dur.d))[:, :, None])
+            ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
+            s.dur.t_steps.data.copy_(s.dur.t(temb(ts, s.dur.d))[:, :, None])
             s.dur.t = nn.Identity()
+            s.dur.t_steps.requires_grad_(True)
         return s
 
     def load_state_dict(s, state_dict, strict=False, assign=False):
