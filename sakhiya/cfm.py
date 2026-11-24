@@ -106,9 +106,14 @@ class Block(nn.Module):
         super().__init__(); s.dw = nn.Conv1d(d, d, k, padding=k // 2, groups=d); s.n = nn.GroupNorm(1, d)
         s.p1 = nn.Conv1d(d, d * ff, 1); s.p2 = nn.Conv1d(d * ff, d, 1); s.film = nn.Linear(c, 2 * d)
         s.film_const = nn.Parameter(torch.zeros(1, 2 * d, 1), requires_grad=False)
+        s.film_steps = nn.Parameter(torch.zeros(4, 2 * d, 1), requires_grad=False)
 
-    def forward(s, x, c, m):
-        sc, sh = (s.film_const.to(x.dtype) if isinstance(s.film, nn.Identity) else s.film(c)[:, :, None]).chunk(2, 1)
+    def forward(s, x, c, m, step_idx: int = -1):
+        if isinstance(s.film, nn.Identity):
+            fc = s.film_steps[step_idx : step_idx + 1].to(x.dtype) if step_idx >= 0 else s.film_const.to(x.dtype)
+        else:
+            fc = s.film(c)[:, :, None]
+        sc, sh = fc.chunk(2, 1)
         y = s.n(s.dw(x * m)) * (1 + sc) + sh
         return x + s.p2(F.gelu(s.p1(y))) * m
 
@@ -120,10 +125,10 @@ class Velocity(nn.Module):
         s.blocks = nn.ModuleList(Block(d, c) for _ in range(nb)); s.out = nn.Conv1d(d, n_mel, 1); s.c = c
         nn.init.zeros_(s.out.weight); nn.init.zeros_(s.out.bias)
 
-    def forward(s, x, t, mu, g, m):
+    def forward(s, x, t, mu, g, m, step_idx: int = -1):
         c = g if isinstance(s.tm, nn.Identity) else (s.tm(temb(t, s.c).to(x.dtype)) + g)
         h = s.inp(torch.cat([x, mu], 1)) * m
-        for b in s.blocks: h = b(h, c, m)
+        for b in s.blocks: h = b(h, c, m, step_idx=step_idx)
         return s.out(h) * m
 
 
