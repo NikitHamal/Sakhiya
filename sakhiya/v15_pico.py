@@ -186,7 +186,8 @@ class PicoVelocity(nn.Module):
         else:
             tb = temb(t, s.c).to(x.dtype)[:, :, None]
             c_base = s.tm2(F.silu(s.tm1(tb))) + g[:, :, None]
-        h = s.inp(torch.cat([x, mu], 1)) * m
+        inp_cat = mu if s.inp.weight.shape[1] == mu.shape[1] else torch.cat([x, mu], 1)
+        h = s.inp(inp_cat) * m
         n_early = (s.nb + 1) // 2  # 3 iterations of early block, 2 iterations of late block
         for k in range(s.nb):
             c_k = None if has_folded_film else (c_base + s.step_emb[k].to(x.dtype))

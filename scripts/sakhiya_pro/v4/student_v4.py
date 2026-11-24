@@ -455,10 +455,12 @@ class StudentV4(nn.Module):
         idx = (t_arange[None, :, None] >= ends[:, None, :]).to(torch.float32).sum(-1).to(torch.int64).clamp(max=L - 1)
 
         mu_t = mu.transpose(1, 2)
-        mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
+        mu_y_raw = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
+        mu_y_sm = F.avg_pool1d(F.pad(mu_y_raw, (1, 1), mode='replicate'), 3, stride=1)
+        is_wb_fr = torch.gather(is_hiatus_wb, 1, idx)[:, None, :]
+        mu_y = (0.72 * mu_y_raw + 0.28 * mu_y_sm) * (1.0 - is_wb_fr) + mu_y_raw * is_wb_fr
         p_xe = torch.gather(p_out, 1, idx)
         ps_fr = torch.gather(ps_tok, 1, idx)[:, None, :]
-        is_wb_fr = torch.gather(is_hiatus_wb, 1, idx)[:, None, :]
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
         t0 = torch.zeros((B,), device=mu_y.device, dtype=torch.float32)
@@ -476,19 +478,15 @@ class StudentV4(nn.Module):
         mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
         if self.is_pico:
             mel_mu = mel_w.mean(dim=(1, 2), keepdim=True)
-            mel_w = (mel_w - mel_mu) * 1.04 + mel_mu - 0.08
+            mel_w = (mel_w - mel_mu) * 1.04 + mel_mu - 0.06
             env_f = F.avg_pool1d(F.pad(mel_w.transpose(1, 2), (2, 2), mode='replicate'), 5, stride=1).transpose(1, 2)
             wf = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)[None, :, None]
-            mel_w = mel_w + 0.18 * wf * (mel_w - env_f)
-            env_t2 = F.avg_pool1d(F.pad(mel_w, (2, 2), mode='replicate'), 5, stride=1)
-            mel_w = mel_w + 0.08 * (mel_w - env_t2)
-        st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
+            mel_w = mel_w + 0.16 * wf * (mel_w - env_f)
+        st_shift = (p_sm[:, 0, :] * 1.25).clamp(-1.40, 1.40)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
-        tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode='replicate'), 5, stride=1)
-        # Add smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-8c Gamaka vibrato on Sanskrit chants
+        tot_shift = F.avg_pool1d(F.pad((0.28 * st_shift[:, None, :]).clamp(-0.65, 0.65), (2, 2), mode='replicate'), 5, stride=1)
         ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode='replicate'), 7, stride=1)
-        gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.85 * ps_sm + gamaka).clamp(-1.35, 1.35)
+        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.20 * ps_sm).clamp(-0.45, 0.45)
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
