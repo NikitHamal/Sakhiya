@@ -47,7 +47,7 @@ def session():
 def run_py(code, timeout=600):
     import time
     last_err = None
-    for attempt in range(4):
+    for attempt in range(8):
         try:
             raw = req("/api/kernel/execute", {"code": code}, {"Marimo-Session-Id": session()}, timeout)
             out = []
@@ -55,10 +55,13 @@ def run_py(code, timeout=600):
                 out.append(json.loads(m.group(1)).get("data", ""))
             for m in re.finditer(r"event: (?:stderr|error)\ndata: (.*)", raw):
                 out.append(m.group(1)[:800])
-            return "".join(out)
+            res = "".join(out)
+            if res or "print(" not in code:
+                return res
+            time.sleep(1.3)
         except Exception as e:
             last_err = e
-            time.sleep(2)
+            time.sleep(1.5)
     return f"MOLAB_EXEC_ERR: {last_err}"
 def _gh_tok():
     return re.search(r"echo (\S+)", open("/tmp/gitenv.sh").read())[1]
