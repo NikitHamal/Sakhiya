@@ -221,7 +221,7 @@ def _safe_mel_corr(w32, w8):
 
 def _declick_phase_safe(w):
     w = np.asarray(w, dtype=np.float32).copy()
-    for _ in range(12):
+    for _ in range(4):
         pk = float(np.abs(w).max())
         thr = 0.94 * max(0.35 * max(pk, 1e-3), 0.12)
         d = np.diff(w)
@@ -313,14 +313,18 @@ def main():
         sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
 
     if not a.no_asr:
-        import sp_common as C, validators as V
-        # Build canonical single-voice reference embedding from clip 0 (self-consistency) + teacher anchor
-        w0_ref, sr0_ref = sf.read(f"{a.out}/wav/{ev[0]['id']}.wav", dtype="float32")
-        remb_self = C.spk_emb(w0_ref if w0_ref.ndim == 1 else w0_ref.mean(1), sr0_ref)
+        import sp_common as C, validators as V, glob, librosa
+        # Build true Sakhiya-Pro v3 single-voice reference embedding centroid (anchor_v3.wav + sakhiya_pro_v3 pack)
         ref_p = "/work/sp/v3/ref/anchor_v3.wav" if os.path.exists("/work/sp/v3/ref/anchor_v3.wav") else "/work/sp/ref/anchor_ref.wav"
         rw, rsr = sf.read(ref_p, dtype="float32")
-        remb_anc = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
-        remb = 0.85 * remb_self + 0.15 * remb_anc
+        embs_v3 = [C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)]
+        for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "ne_*.mp3")))[:4]:
+            try:
+                pw_v3, _ = librosa.load(pf, sr=SR)
+                embs_v3.append(C.spk_emb(pw_v3, SR))
+            except Exception:
+                pass
+        remb = np.mean(embs_v3, axis=0)
         remb = remb / max(float(np.linalg.norm(remb)), 1e-8)
 
         rows = []
@@ -357,13 +361,15 @@ def main():
 
     sz_cap = SIZE_CAPS_MB.get(a.tier, 30.0)
     s = R.get("summary", {})
+    min_spk = 0.44 if a.tier in ("t1", "t5") else 0.50
     R["gate_pass"] = bool(
         R["nan_count"] == 0
         and not R["bad_ops"]
         and R["int8_vs_fp32_mel_corr"] >= 0.985
         and R["int8_mb"] <= sz_cap
-        and s.get("utmos", 0.0) >= (2.95 if a.tier == "t1" else 3.25)
-        and s.get("cer_ne", 1.0) <= 0.12
+        and s.get("utmos", 0.0) >= (3.10 if a.tier == "t1" else (3.45 if a.tier == "t5" else 3.75))
+        and s.get("cer_ne", 1.0) <= 0.08
+        and s.get("spk_sim", 0.0) >= min_spk
         and s.get("clicks", 99) <= 5
     )
     json.dump(R, open(a.out + "/gate.json", "w"), ensure_ascii=False, indent=1)
