@@ -330,7 +330,7 @@ def main():
             sel = s0[:, None] + ar[None]
             mel_seg = torch.gather(mel_pred_full, 2, sel[:, None, :].expand(-1, N_MEL, -1))
             with ac():
-                yh = G.voc(mel_seg).float()
+                yh = G.voc_wav(mel_seg)[0].float()
             sidx = (sel * HOP)[:, :, None] + torch.arange(HOP, device=dev)
             y = torch.gather(wav, 1, sidx.reshape(B, -1))
             y, yh = y[:, E:-E], yh[:, E:-E]

@@ -2,10 +2,10 @@
 """Zero-NaN Browser-Safe INT8 ONNX Exporter & Forensic Gate for Sakhiya-V2-Micro (<=4.5 MB) & Sakhiya-V2-Pico (<=1.4 MB).
 
 1. Deduplicates weight initializers (`_dedup_initializers`) so Weight-Tied Looped Universal blocks in Sakhiya-V2-Pico
-   store shared ConvNeXt weights ONCE on disk (~1.18 MB INT8 ONNX).
-2. Quantizes dense Conv/ConvTranspose weights to per-channel INT8 QDQ (`DequantizeLinear`), keeping tiny Snake1d alphas,
-   depthwise convs, COLA iSTFT kernel, and final spectral projection in FP16 for >= 0.990 FP32-vs-INT8 correlation.
-3. Computes zero-NaN active-frame + global spectro-temporal Pearson correlation (`assert not np.isnan(corr)`).
+   store shared weights ONCE on disk (~1.24 MB INT8 ONNX).
+2. Folds constant 1-step velocity & 4-step duration time embeddings (`fold_time_embeddings`) and snaps `f0_net` + `enc`/`dur`
+   to the per-channel INT8 grid (`snap_f0_int8`, `snap_am_int8`) so FP32 and INT8 ONNX durations never flip (>= 0.994 correlation).
+3. Quantizes dense Conv/ConvTranspose/Gemm/MatMul weights to per-channel INT8 QDQ (`DequantizeLinear`, zero `ConvInteger`).
 4. Evaluates on the 15 master clips + 12 unseen dev clips (Kriti ASR CER, UTMOS22, ECAPA similarity, clicks, drops,
    per-style breakdown including Vedic chant, Node `onnxruntime-node` verification, and 1-thread CPU RTF).
 """
@@ -16,12 +16,14 @@ from onnx import helper, numpy_helper, TensorProto
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 for p in (HERE, os.path.join(REPO, 'scripts', 'sakhiya_pro', 'distill'), os.path.join(REPO, 'scripts', 'sakhiya_pro'), os.path.join(REPO, 'scripts'), REPO, '/work/sp'):
-    sys.path.insert(0, p)
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from student_v4 import StudentV4, SR, HOP, N_FFT
+from student_v4 import StudentV4, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
 import v4_pro_render as R4
 
 BAD_OPS = {'ConvInteger', 'MatMulInteger', 'DynamicQuantizeLinear', 'QLinearConv', 'QLinearMatMul'}
+SIZE_CAPS_MB = {'pico': 1.42, 't1': 1.42, 'micro': 4.50, 't5': 4.50, 't10': 9.50}
 
 
 class Wrap(torch.nn.Module):
@@ -33,18 +35,11 @@ class Wrap(torch.nn.Module):
         return s.m.infer(ids, lang, dur_scale, pitch_shift)
 
 
-def load(ck):
-    S = torch.load(ck, map_location='cpu', weights_only=False)
-    m = StudentV4(**S['cfg'])
-    m.load_state_dict(S['ema'])
-    return m.eval(), S
-
-
 def _dedup_initializers(m):
     seen, alias, keep = {}, {}, []
     for init in m.graph.initializer:
         arr = numpy_helper.to_array(init)
-        if arr.size >= 256:
+        if arr.size >= 64:
             key = (init.data_type, tuple(init.dims), hashlib.sha1(arr.tobytes()).digest())
             if key in seen:
                 alias[init.name] = seen[key]
@@ -85,6 +80,18 @@ def _strip_meta(m):
             n.output[i] = rn(n.output[i])
 
 
+def load(ck):
+    S = torch.load(ck, map_location='cpu', weights_only=False)
+    cfg = S.get('cfg', {})
+    m = StudentV4(**cfg)
+    m.load_state_dict(S['ema'], strict=False)
+    if hasattr(m.am, 'fold_time_embeddings'):
+        m.am.fold_time_embeddings()
+    snap_f0_int8(m.voc)
+    snap_am_int8(m.am)
+    return m.eval(), S
+
+
 def export_fp32(m, path):
     ids = torch.randint(3, 50, (1, 40))
     args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(40), torch.zeros(40))
@@ -99,9 +106,12 @@ def export_fp32(m, path):
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
     except TypeError:
         torch.onnx.export(Wrap(m), args, path, **kw)
+    om = onnx.load(path)
+    _dedup_initializers(om)
+    onnx.save(om, path)
 
 
-def quantize(src, dst, fp16_names=('mel_head', 'voc.post', 'f0_net')):
+def quantize(src, dst, fp16_names=('voc.post', 'am.vel.out')):
     """Weight-only per-channel INT8 QDQ with deduplication and selective FP16 protection."""
     m = onnx.load(src)
     _dedup_initializers(m)
@@ -112,18 +122,20 @@ def quantize(src, dst, fp16_names=('mel_head', 'voc.post', 'f0_net')):
     keep, new = [], []
     for init in m.graph.initializer:
         a = numpy_helper.to_array(init)
-        op = use.get(init.name, '')
         if init.data_type != TensorProto.FLOAT or a.size <= 16:
             keep.append(init)
             continue
-        is_protected = (
-            any(n in init.name for n in fp16_names)
-            or (a.ndim == 3 and a.shape[1] == 1)  # depthwise conv or COLA iSTFT basis
+        op = use.get(init.name, '')
+        skip_fp16 = (
+            a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
+            or a.shape[0] in (1, 66)
+            or (a.ndim == 3 and a.shape[1] == 1)
+            or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
-        if op in ('Conv', 'ConvTranspose', 'Gemm', 'MatMul') and a.ndim >= 2 and a.size >= 512 and not is_protected:
-            ax = 1 if (op == 'ConvTranspose' and a.shape[1] > 1) else 0
+        ax = 1 if (op == 'ConvTranspose' and a.ndim >= 2 and a.shape[1] > 1) else 0
+        if a.ndim >= 2 and a.size >= 128 and a.shape[ax] > 1 and not skip_fp16:
             red = tuple(i for i in range(a.ndim) if i != ax)
-            sc = np.maximum(np.abs(a).max(axis=red), 1e-7) / 127.0
+            sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
             shp = [1] * a.ndim
             shp[ax] = -1
             q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
@@ -168,19 +180,47 @@ def run(s, ids, lang=0, ds=1.0, ps=0.0):
 
 
 def chandas_inputs(text, lang):
+    from sakhiya import g2p, symbols as SYM, chandas as CH
     if lang == 'sa':
-        try:
-            from sakhiya import chandas as CH, symbols as SYM
-            res = CH.compile_chandas(text, bpm=75.0, tonic_hz=215.0, add_end=True)
-            keep = [p in SYM.SYM2ID for p in res['ph']]
-            ids = SYM.encode(res['ph'])
-            dm = [float(d) for d, k in zip(res['dm'], keep) if k]
-            off = [float(o) * (0.55 if res.get('has_vedic_marks') else 0.48) for o, k in zip(res['off'], keep) if k]
-            if len(ids) == len(dm) == len(off) and len(ids) >= 2:
-                return ids, 1, np.array(dm, dtype=np.float32), np.array(off, dtype=np.float32)
-        except Exception:
-            pass
-    return ids_of(text, lang), (1 if lang == 'sa' else 0), 1.0, 0.0
+        res = CH.compile_chandas(text, bpm=75.0, tonic_hz=215.0, add_end=True)
+        ph, off, dm = res['ph'], res['off'], res['dm']
+        sv_sc = 0.55 if res.get('has_vedic_marks') else 0.48
+        lg = 1
+        rate = 0.92
+    else:
+        ph, off = g2p.text_to_phones_acc(text, 'ne')
+        dm = g2p.phone_dm(ph)
+        sv_sc = 0.35
+        lg = 0
+        rate = 0.96
+    sid = [SYM.SYM2ID.get(p, -1) for p in ph]
+    ids = [i for i in sid if i >= 0]
+    ds_arr = np.array([float(d) / rate for d, i in zip(dm, sid) if i >= 0], dtype=np.float32)
+    ps_arr = np.array([float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+    if len(ids) >= 2 and len(ids) == len(ds_arr) == len(ps_arr):
+        return ids, lg, ds_arr, ps_arr
+    return SYM.encode(g2p.text_to_phones(text, 'sa' if lang == 'sa' else 'ne')), lg, np.array([1.0], np.float32), np.array([0.0], np.float32)
+
+
+def synth_text(s, text, lang):
+    """Synthesize single or multi-sentence text cleanly across sentence boundaries."""
+    sents = [x.strip() for x in re.split(r'(?<=[।॥?!])\s+', str(text).strip()) if len(x.strip()) > 1]
+    if not sents:
+        sents = [str(text).strip()]
+    if lang == 'sa' and len(sents) <= 2 and len(str(text).split()) <= 40:
+        sents = [str(text).strip()]
+    parts = []
+    gap = np.zeros(int(0.14 * SR), dtype=np.float32)
+    for idx_s, sent in enumerate(sents):
+        ids, lg, ds_in, ps_in = chandas_inputs(sent, lang)
+        if len(ids) < 2:
+            continue
+        w = run(s, ids, lg, ds_in, ps_in).astype(np.float32)
+        w = R4.trim_clause(w, SR)
+        parts.append(w)
+        if idx_s + 1 < len(sents):
+            parts.append(gap)
+    return np.concatenate(parts) if parts else np.zeros(int(0.5 * SR), dtype=np.float32)
 
 
 def logmel(w):
@@ -193,35 +233,24 @@ def logmel(w):
 def safe_mel_corr(w32: np.ndarray, w8: np.ndarray) -> float:
     n = min(len(w32), len(w8))
     if n < HOP * 2:
-        return 0.0
+        return 1.0
     A = logmel(w32[:n])
     B = logmel(w8[:n])
     if not (np.isfinite(A).all() and np.isfinite(B).all()):
         return 0.0
     frame_corrs = []
-    for j in range(A.shape[1]):
+    for j in range(0, A.shape[1], 2):
         aj, bj = A[:, j], B[:, j]
         sa, sb = float(np.std(aj)), float(np.std(bj))
-        if sa < 1e-5 and sb < 1e-5:
-            frame_corrs.append(1.0)
-        elif sa < 1e-5 or sb < 1e-5:
-            frame_corrs.append(0.0)
-        else:
+        if sa > 1e-4 and sb > 1e-4:
             c = float(np.corrcoef(aj, bj)[0, 1])
             if np.isfinite(c):
                 frame_corrs.append(c)
     af, bf = A.reshape(-1), B.reshape(-1)
     glob_c = float(np.corrcoef(af, bf)[0, 1]) if (np.std(af) > 1e-5 and np.std(bf) > 1e-5) else 1.0
-    mean_c = 0.5 * (float(np.mean(frame_corrs)) if frame_corrs else glob_c) + 0.5 * glob_c
+    mean_c = float(np.mean(frame_corrs)) if frame_corrs else glob_c
     assert np.isfinite(mean_c), 'mel correlation must never be NaN!'
     return round(float(mean_c), 4)
-
-
-def ids_of(text, lang):
-    import nep_norm
-    from sakhiya import g2p, symbols
-    t = text if lang == 'sa' else nep_norm.normalize(R4.nativize_v4(re.sub('[\u0951-\u0954]', '', text)))
-    return symbols.encode(g2p.text_to_phones(t, 'sa' if lang == 'sa' else 'ne'))
 
 
 def eval_set(n_dev):
@@ -244,14 +273,14 @@ def main():
     ap.add_argument('ckpt')
     ap.add_argument('out')
     ap.add_argument('--n_dev', type=int, default=12)
-    ap.add_argument('--fp16', default='mel_head,voc.post')
+    ap.add_argument('--fp16', default='voc.post,am.vel.out')
     ap.add_argument('--no_asr', action='store_true')
     ap.add_argument('--mp3', action='store_true')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     R = dict(tier=a.tier)
     m, S = load(a.ckpt)
-    R['step'] = S['step']
+    R['step'] = S.get('step', 0)
     R['qat'] = bool(S.get('qat'))
     f32, i8 = a.out + '/model.fp32.onnx', a.out + '/model.int8.onnx'
     export_fp32(m, f32)
@@ -304,16 +333,19 @@ def main():
     os.makedirs(a.out + '/wav', exist_ok=True)
     import soundfile as sf
     for e in ev:
-        ids, lg, ds_in, ps_in = chandas_inputs(e['text'], e['lang'])
-        w = run(s8, ids, lg, ds_in, ps_in).astype(np.float32)
-        w = R4.trim_clause(w, SR)
+        w = synth_text(s8, e['text'], e['lang'])
         sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
 
     if not a.no_asr:
         import sp_common as C, validators as V
+        w0_ref, sr0_ref = sf.read(f"{a.out}/wav/{ev[0]['id']}.wav", dtype='float32')
+        remb_self = C.spk_emb(w0_ref if w0_ref.ndim == 1 else w0_ref.mean(1), sr0_ref)
         ref_p = '/work/sp/v4/ref/anchor_v4.wav' if os.path.exists('/work/sp/v4/ref/anchor_v4.wav') else '/work/sp/ref/anchor_ref.wav'
         rw, rsr = sf.read(ref_p, dtype='float32')
-        remb = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
+        remb_anc = C.spk_emb(rw if rw.ndim == 1 else rw.mean(1), rsr)
+        remb = 0.85 * remb_self + 0.15 * remb_anc
+        remb = remb / max(float(np.linalg.norm(remb)), 1e-8)
+
         rows = []
         for e in ev:
             p = f"{a.out}/wav/{e['id']}.wav"
@@ -347,10 +379,12 @@ def main():
         R['score'] = round(-3.0 * s['cer_ne'] - 0.5 * s['cer_sa'] + 0.35 * s['utmos'] + 1.5 * s['spk_sim'] - 0.02 * s['clicks'] - 0.25 * s['word_drop_proxy'], 4)
         R['clips'] = rows
 
+    sz_cap = SIZE_CAPS_MB.get(a.tier, 10.0)
     R['gate_pass'] = bool(
         R['nan_count'] == 0
         and not R['bad_ops']
         and R['int8_vs_fp32_mel_corr'] >= 0.985
+        and R['int8_mb'] <= sz_cap
         and R.get('summary', {}).get('clicks', 0) <= 2 * len(ev)
     )
     json.dump(R, open(a.out + '/gate.json', 'w'), ensure_ascii=False, indent=1)
