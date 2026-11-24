@@ -150,5 +150,305 @@
     },
     "gate_pass": true,
     "score": 2.0203
+  },
+  {
+    "tier": "t10",
+    "label": "Sakhiya-T10 (9.5 MB INT8 Compact Student)",
+    "step": 100,
+    "qat": true,
+    "int8_mb": 8.557,
+    "fp32_mb": 33.29,
+    "int8_vs_fp32_mel_corr": 0.9943,
+    "rtf_1thread": 0.047,
+    "utmos": 3.566,
+    "cer_ne": 0.049,
+    "cer_sa": 0.109,
+    "spk_sim": 0.802,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.724,
+        "cer": 0.046,
+        "spk_sim": 0.78,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.398,
+        "cer": 0.033,
+        "spk_sim": 0.864,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.561,
+        "cer": 0.057,
+        "spk_sim": 0.862,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.456,
+        "cer": 0.069,
+        "spk_sim": 0.807,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.704,
+        "cer": 0.115,
+        "spk_sim": 0.761,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.088,
+        "cer": 0.109,
+        "spk_sim": 0.753,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.544,
+        "cer": 0.023,
+        "spk_sim": 0.86,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0453
+    },
+    "gate_pass": true,
+    "score": 2.0713
+  },
+  {
+    "tier": "t30",
+    "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student)",
+    "step": 100,
+    "qat": true,
+    "int8_mb": 15.854,
+    "fp32_mb": 61.86,
+    "int8_vs_fp32_mel_corr": 0.9929,
+    "rtf_1thread": 0.1001,
+    "utmos": 4.045,
+    "cer_ne": 0.041,
+    "cer_sa": 0.1,
+    "spk_sim": 0.745,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 4.086,
+        "cer": 0.038,
+        "spk_sim": 0.706,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 4.201,
+        "cer": 0.049,
+        "spk_sim": 0.848,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 4.149,
+        "cer": 0.051,
+        "spk_sim": 0.81,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.866,
+        "cer": 0.053,
+        "spk_sim": 0.733,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.991,
+        "cer": 0.093,
+        "spk_sim": 0.716,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.854,
+        "cer": 0.109,
+        "spk_sim": 0.735,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 4.228,
+        "cer": 0.023,
+        "spk_sim": 0.781,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.1024
+    },
+    "gate_pass": true,
+    "score": 2.158
+  },
+  {
+    "tier": "t15",
+    "label": "Sakhiya-T15 (14.5 MB INT8 Flagship Compact Student)",
+    "step": 4000,
+    "qat": false,
+    "int8_mb": 14.472,
+    "fp32_mb": 56.29,
+    "int8_vs_fp32_mel_corr": 0.9949,
+    "rtf_1thread": 0.1026,
+    "utmos": 3.756,
+    "cer_ne": 0.042,
+    "cer_sa": 0.091,
+    "spk_sim": 0.764,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.87,
+        "cer": 0.038,
+        "spk_sim": 0.767,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.562,
+        "cer": 0.033,
+        "spk_sim": 0.824,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.814,
+        "cer": 0.057,
+        "spk_sim": 0.833,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.679,
+        "cer": 0.05,
+        "spk_sim": 0.785,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.547,
+        "cer": 0.085,
+        "spk_sim": 0.681,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.638,
+        "cer": 0.095,
+        "spk_sim": 0.674,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.99,
+        "cer": 0.023,
+        "spk_sim": 0.795,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.1033
+    },
+    "gate_pass": true,
+    "score": 2.1013
+  },
+  {
+    "tier": "t5",
+    "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
+    "step": 21000,
+    "qat": true,
+    "int8_mb": 4.562,
+    "fp32_mb": 17.46,
+    "int8_vs_fp32_mel_corr": 0.9953,
+    "rtf_1thread": 0.0166,
+    "utmos": 3.33,
+    "cer_ne": 0.037,
+    "cer_sa": 0.087,
+    "spk_sim": 0.822,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.429,
+        "cer": 0.032,
+        "spk_sim": 0.801,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 2.609,
+        "cer": 0.016,
+        "spk_sim": 0.88,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.341,
+        "cer": 0.055,
+        "spk_sim": 0.872,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.337,
+        "cer": 0.044,
+        "spk_sim": 0.823,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.396,
+        "cer": 0.075,
+        "spk_sim": 0.801,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.099,
+        "cer": 0.103,
+        "spk_sim": 0.771,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.501,
+        "cer": 0.023,
+        "spk_sim": 0.877,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0165
+    },
+    "gate_pass": true,
+    "score": 2.0775
   }
 ]

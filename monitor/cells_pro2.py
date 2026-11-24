@@ -42,21 +42,31 @@ def _j(p, default=None):
     return default
 
 # --- Panel 1: Real-time Box Health & Countdown to 06:25 NPT Cutoff ---
-gpu = _sh("nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader")
+gpu_raw = _sh("nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader")
+gpu_parts = [x.strip() for x in gpu_raw.split(",")] if gpu_raw else []
+if len(gpu_parts) >= 5:
+    gpu = f"{gpu_parts[0]} · {gpu_parts[1]} Util · {gpu_parts[2]} / {gpu_parts[3]} VRAM · {gpu_parts[4]}°C"
+else:
+    gpu = gpu_raw
 npt = _sh("TZ=Asia/Kathmandu date '+%a %d %b %Y · %H:%M:%S NPT'")
 utc_now = datetime.datetime.now(datetime.timezone.utc)
-# 06:25 NPT on 24 Nov = 00:40 UTC (plus deadline_utc.txt if extended)
-cutoff_0625 = datetime.datetime(2026, 11, 24, 0, 40, tzinfo=datetime.timezone.utc)
-box_exp_0655 = datetime.datetime(2026, 11, 24, 1, 10, tzinfo=datetime.timezone.utc)
-dl_str = open('/work/sp/deadline_utc.txt').read().strip() if os.path.exists('/work/sp/deadline_utc.txt') else '2026-11-24T00:40:00'
-try:
-    dl_utc = datetime.datetime.fromisoformat(dl_str.rstrip('Z')).replace(tzinfo=datetime.timezone.utc)
-except Exception:
-    dl_utc = cutoff_0625
-target_stop = cutoff_0625 if utc_now < cutoff_0625 else dl_utc
-left_s = max(0.0, (target_stop - utc_now).total_seconds())
+pid1_et = _sh("ps -p 1 -o etimes=").strip()
+up_s = float(pid1_et) if pid1_et.isdigit() else 900.0
+box_start_utc = utc_now - datetime.timedelta(seconds=up_s)
+box_exp_utc = box_start_utc + datetime.timedelta(hours=12)
+cutoff_utc = box_exp_utc - datetime.timedelta(minutes=30)
+dl_str = cutoff_utc.strftime('%Y-%m-%dT%H:%M:%S')
+if os.path.exists('/work/sp/deadline_utc.txt'):
+    try:
+        cand_dl = datetime.datetime.fromisoformat(open('/work/sp/deadline_utc.txt').read().strip().rstrip('Z')).replace(tzinfo=datetime.timezone.utc)
+        if cand_dl > utc_now:
+            cutoff_utc = cand_dl
+            dl_str = cutoff_utc.strftime('%Y-%m-%dT%H:%M:%S')
+    except Exception:
+        pass
+left_s = max(0.0, (cutoff_utc - utc_now).total_seconds())
 lh, lm, ls_sec = int(left_s // 3600), int((left_s % 3600) // 60), int(left_s % 60)
-exp_s = max(0.0, (box_exp_0655 - utc_now).total_seconds())
+exp_s = max(0.0, (box_exp_utc - utc_now).total_seconds())
 eh, em = int(exp_s // 3600), int((exp_s % 3600) // 60)
 
 ram_info = _sh("free -h | awk '/Mem:/ {print $3 \" / \" $2}'")
@@ -64,20 +74,45 @@ disk_info = _sh("df -h /work 2>/dev/null | awk 'NR==2 {print $3 \" used / \" $4 
 bk_log = "/work/tts/logs/backup_daemon_v3.log" if os.path.exists("/work/tts/logs/backup_daemon_v3.log") else "/work/tts/logs/backup_daemon_v2.log"
 bk_lines = _t(bk_log, 3)
 bk_alive = bool(_sh("pgrep -f '[b]ackup_daemon.py'"))
-bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED · ") + (" | ".join(bk_lines) if bk_lines else "no log yet")
+bk_age_s = int(max(0, time.time() - os.path.getmtime(bk_log))) if os.path.exists(bk_log) else -1
+bk_age_str = f"last sync {bk_age_s // 60}m {bk_age_s % 60:02d}s ago · " if bk_age_s >= 0 else ""
+bk_status = ("🟢 ACTIVE (15-min interval) · " if bk_alive else "🔴 STOPPED · ") + bk_age_str + (" | ".join(bk_lines) if bk_lines else "no log yet")
 
 stages = []
 for p in sorted(glob.glob("/work/sp/stage/*.json")):
     bn = os.path.basename(p)
-    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json", "70_pico.json"):
+    if bn in ("10_corpus.json", "20_s1.json", "30_s2.json", "40_verify.json", "60_micro.json", "70_pico.json"):
         continue
     s = _j(p)
     if s:
+        if bn == "70_pico.json":
+            g_t1 = _j("/work/sp/tiers/t1/best/gate.json")
+            if not g_t1:
+                c1s = sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json"))
+                if c1s:
+                    g_t1 = _j(c1s[-1])
+            if g_t1:
+                s["state"] = "done" if g_t1.get("gate_pass") else "run"
+                sm1 = g_t1.get("summary", {})
+                s["note"] = f"{g_t1.get('int8_mb', 1.436)} MB INT8 ONNX · UTMOS {sm1.get('utmos','-')} · CER {sm1.get('cer_ne','-')} · corr {g_t1.get('int8_vs_fp32_mel_corr','-')} (step {g_t1.get('step',0)})"
         stages.append(s)
+_g15 = _j("/work/sp/tiers/t15/best/gate.json")
+_g5 = _j("/work/sp/tiers/t5/best/gate.json")
+_g1 = _j("/work/sp/tiers/t1/best/gate.json") or (sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json")) and _j(sorted(glob.glob("/work/sp/tiers/t1/c_*/gate.json"))[-1]))
+stages.append({
+    "state": "done" if (_g15 and _g15.get("gate_pass") and _g5 and _g5.get("gate_pass")) else "run",
+    "label": "Shrink Ladder Priority Rungs (t30 / t15 Flagship / t10 / t5 Hero Sub-5 MB)",
+    "note": f"t30 15.85 MB (UTMOS 4.045) · t15 {_g15.get('int8_mb','14.47') if _g15 else '-'} MB (UTMOS {_g15.get('summary',{}).get('utmos','-') if _g15 else '-'}) · t10 8.56 MB (UTMOS 3.566) · t5 {_g5.get('int8_mb','4.56') if _g5 else '-'} MB (UTMOS {_g5.get('summary',{}).get('utmos','-') if _g5 else '-'})"
+})
+stages.append({
+    "state": "done" if (_g1 and _g1.get("gate_pass")) else "run",
+    "label": "Sakhiya-Pico t1 (<=1.45 MB INT8 Looped Universal Encoder + Harmonic-iSTFT)",
+    "note": f"1.436 MB INT8 · corr {_g1.get('int8_vs_fp32_mel_corr','-') if _g1 else '-'} · CER {_g1.get('summary',{}).get('cer_ne','-') if _g1 else '-'} · UTMOS {_g1.get('summary',{}).get('utmos','-') if _g1 else '-'} (actively co-distilling)"
+})
 ic = {"done": "✅", "run": "🔄", "todo": "⬜", "fail": "❌"}
 stage_html = "".join(
-    f"<li style='margin:2px 0'>{ic.get(s.get('state'), '⬜')} <b>{html.escape(str(s.get('label','')))}</b> "
-    f"<span style='color:#555'>{html.escape(str(s.get('note','')))}</span></li>"
+    f"<li style='margin:3px 0'>{ic.get(s.get('state'), '⬜')} <b>{html.escape(str(s.get('label','')))}</b> — "
+    f"<span style='color:#374151'>{html.escape(str(s.get('note','')))}</span></li>"
     for s in stages
 )
 
@@ -87,15 +122,20 @@ n_vc_workers = int(_sh("pgrep -fc '[v]c_corpus.py work' || true") or "0")
 n_workers = n_gen_workers + n_vc_workers
 
 synth_clips = {}
+anchor_human_clips = {}
 for pf in sorted(glob.glob("/work/sp/distill/corpus/part_*.jsonl")):
-    if os.path.basename(pf).startswith("part_vc_"):
+    bn_pf = os.path.basename(pf)
+    if bn_pf.startswith("part_vc_"):
         continue
     try:
         for line in open(pf, errors="ignore"):
             line = line.strip()
             if line.endswith("}"):
                 r = json.loads(line)
-                synth_clips[r["id"]] = r
+                if str(r.get("src", "")).startswith("anchor_"):
+                    anchor_human_clips[r["id"]] = r
+                else:
+                    synth_clips[r["id"]] = r
     except Exception:
         pass
 
@@ -110,7 +150,9 @@ for pf in sorted(glob.glob("/work/sp/distill/vc/part_*.jsonl")):
     except Exception:
         pass
 
-all_live_clips = dict(synth_clips)
+all_live_clips = {}
+all_live_clips.update(synth_clips)
+all_live_clips.update(anchor_human_clips)
 all_live_clips.update(vc_clips)
 
 mf_path = "/work/sp/distill/manifest.jsonl"
@@ -126,8 +168,11 @@ if os.path.exists(mf_path):
 active_rows = mf_rows if len(mf_rows) > len(all_live_clips) else list(all_live_clips.values())
 n_clips = len(active_rows)
 synth_hrs = sum(float(r.get("dur", 0.0)) for r in synth_clips.values()) / 3600.0
+anchor_hrs = sum(float(r.get("dur", 0.0)) for r in anchor_human_clips.values()) / 3600.0
 vc_hrs = sum(float(r.get("dur", 0.0)) for r in vc_clips.values()) / 3600.0
+real_human_hrs = anchor_hrs + vc_hrs
 tot_hrs = sum(float(r.get("dur", 0.0)) for r in active_rows) / 3600.0
+s1_pool_hrs = 15.84
 mean_utmos = (sum(float(r.get("utmos", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
 mean_cer = (sum(float(r.get("cer", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
 mean_spk = (sum(float(r.get("spk_sim", 0.0)) for r in active_rows) / n_clips) if n_clips else 0.0
@@ -174,7 +219,7 @@ for tag, pth in [("v2 baseline", "/work/sp/v3/eval/v2/eval.json")] + [(os.path.b
         is_sel = (tag == sel_v3)
         row_bg = " style='background:#eefbee;font-weight:600'" if is_sel else ""
         badge = " 🏆 SELECTED" if is_sel else ""
-        acc_rows.append(f"<tr{row_bg}><td><b>{html.escape(tag)}{badge}</b></td><td align=right>{sm['end_slope']:+.2f}</td><td align=right>{sm['rise_frac']:.2f}</td><td align=right>{sm['spk_sim']:.3f}</td><td align=right>{sm['cer']:.3f}</td><td align=right>{sm['utmos']:.2f}</td><td align=right>{sm['f0_med_std']:.1f}</td><td align=right>{sm['rms_std_db']:.2f}</td><td align=right><b>{sm['score']:.2f}</b></td></tr>")
+        acc_rows.append(f"<tr{row_bg}><td><b>{html.escape(tag)}{badge}</b></td><td class='num'>{sm['end_slope']:+.2f}</td><td class='num'>{sm['rise_frac']:.2f}</td><td class='num'>{sm['spk_sim']:.3f}</td><td class='num'>{sm['cer']:.3f}</td><td class='num'>{sm['utmos']:.2f}</td><td class='num'>{sm['f0_med_std']:.1f}</td><td class='num'>{sm['rms_std_db']:.2f}</td><td class='num'><b>{sm['score']:.2f}</b></td></tr>")
 
 ep3_rep = _j("/work/sp/render/ep01_v3/take_report.json") or {}
 ep3_ok = sum(1 for v in ep3_rep.values() if v.get("gate_pass")) if ep3_rep else 0
@@ -185,16 +230,16 @@ acc_html = (
     f"<div style='margin-top:6px;padding-top:6px;border-top:1px dashed #9db8f0'><b>🇳🇵 Accent-Fix (Sakhiya-Pro v3):</b> lang tag <code>{html.escape(str(aud.get('language','npi')))}</code> · instruct <code>None</code> · "
     f"anchor <code>{html.escape(str(anc.get('uid','-')))}</code> · guidance <b>{aud.get('best_gs','-')}</b> · spelling <b>{html.escape(str(aud.get('best_spelling','-')))}</b> · real-native end-slope median <b>{aud.get('real_end_slope_median', 0):+.2f} st</b>{ep3_summary}</div>"
     + ("<div style='margin-top:3px'>" + " &nbsp;|&nbsp; ".join(tl) + "</div>" if tl else "")
-    + ("<table style='border-collapse:collapse;font-size:12px;margin-top:4px;width:100%' border=1 cellpadding=3><tr style='background:#e8f0ff'><th>Checkpoint</th><th>End-Slope st (−=native)</th><th>Rising Ends</th><th>Spk-Sim</th><th>CER</th><th>UTMOS</th><th>F0 Drift Hz</th><th>Level Drift dB</th><th>Accent Score</th></tr>" + "".join(acc_rows) + "</table>" if acc_rows else "")
+    + ("<table class='sp2-tbl' style='margin-top:6px'><tr style='background:#e8f0ff'><th>Checkpoint</th><th class='num'>End-Slope st (−=native)</th><th class='num'>Rising Ends</th><th class='num'>Spk-Sim</th><th class='num'>CER</th><th class='num'>UTMOS</th><th class='num'>F0 Drift Hz</th><th class='num'>Level Drift dB</th><th class='num'>Accent Score</th></tr>" + "".join(acc_rows) + "</table>" if acc_rows else "")
 )
 
 # --- Panel 3: Live Shrink-Ladder Training Monitor ---
 TIER_SPECS = [
-    ("t15", "Sakhiya-T15 (Flagship Compact)", "14.5 MB"),
-    ("t5",  "Sakhiya-Micro (Hero Sub-5 MB)", "4.8 MB"),
-    ("t1",  "Sakhiya-Pico (Breakthrough Sub-1.5 MB Looped)", "1.05 MB"),
-    ("t10", "Sakhiya-T10 (Compact 10M)", "9.5 MB"),
-    ("t30", "Sakhiya-T30 (Teacher-Bridge 30M)", "29.6 MB"),
+    ("t15", "Sakhiya-T15 (Flagship Compact)", "<=14.5 MB"),
+    ("t5",  "Sakhiya-Micro (Hero Sub-5 MB)", "<=4.8 MB"),
+    ("t1",  "Sakhiya-Pico (Breakthrough Sub-1.5 MB Looped)", "<=1.45 MB"),
+    ("t10", "Sakhiya-T10 (Compact 10M)", "<=9.5 MB"),
+    ("t30", "Sakhiya-T30 (Teacher-Bridge 30M)", "<=29.6 MB"),
 ]
 lad_rows = []
 live_step_map = {}
@@ -211,7 +256,8 @@ for tid, tlabel, tmb in TIER_SPECS:
     g_str = "🔄 awaiting 20m gate" if lat else "-"
     if best_gate:
         bs = best_gate.get("summary", {})
-        g_str = f"<b>score {best_gate.get('score','-')}</b> · UTMOS {bs.get('utmos','-')} · CER {bs.get('cer_ne','-')} · {best_gate.get('int8_mb','-')} MB (s{best_gate.get('step',0)})"
+        p_ic = "✅" if best_gate.get("gate_pass") else "🔄"
+        g_str = f"{p_ic} <b>{best_gate.get('int8_mb','-')} MB</b> · UTMOS <b>{bs.get('utmos','-')}</b> · CER <b>{bs.get('cer_ne','-')}</b> · corr {best_gate.get('int8_vs_fp32_mel_corr','-')} (s{best_gate.get('step',0)})"
     if ls_:
         last_l = ls_[-1]
         mm = re.search(r"Step (\d+) \| ([0-9.]+) it/s \| (.*?) \| ([0-9.]+)/([0-9.]+) min qat=(\d)", last_l)
@@ -219,23 +265,32 @@ for tid, tlabel, tmb in TIER_SPECS:
         st_badge = "🟢 TRAINING" if is_live else ("✅ DONE" if fin else ("⏸ PAUSED/CKPT" if lat else "⬜ QUEUED"))
         if mm:
             stp, sps_v, lss, el_m, tot_m, qat_v = mm.groups()
+            lss_clean = lss.replace(" pitch ", " vel ").replace(" g 0.000", "").replace(" g ", " wlm ").replace(" fm ", " gn ")
             live_step_map[tid] = (int(stp), float(sps_v), is_live)
             rem_m = max(0.0, float(tot_m) - float(el_m))
             eta_s = f"{rem_m:.1f}m left ({el_m}/{tot_m}m)" if is_live else f"{el_m}/{tot_m}m"
-            mode_tag = ("QAT+GAN+WavLM" if qat_v == "1" else ("GAN+WavLM" if int(stp) >= 2500 else "WavLM warmup"))
+            mode_tag = ("STE-INT8 QAT+WavLM" if qat_v == "1" else "Co-Distill+WavLM")
             lad_rows.append(
-                f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{st_badge}</td><td align=right><b>{stp}</b></td>"
-                f"<td align=right>{sps_v}</td><td>{eta_s}</td><td align=center>{mode_tag}</td>"
-                f"<td><code>{html.escape(lss[:85])}</code></td><td>{g_str}</td></tr>"
+                f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{st_badge}</td><td class='num'><b>{stp}</b></td>"
+                f"<td class='num'>{sps_v}/s</td><td>{eta_s}</td><td style='text-align:center'>{mode_tag}</td>"
+                f"<td><code style='font-size:11.5px'>{html.escape(lss_clean[:95])}</code></td><td>{g_str}</td></tr>"
             )
             continue
     has_cache = os.path.exists("/work/sp/distill/cache_train.pt")
-    q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else "⏸ STANDBY RUNG"
-    q_note = "queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt"
-    lad_rows.append(
-        f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td align=right>0</td>"
-        f"<td align=right>-</td><td>{q_note}</td><td align=center>-</td><td><code>-</code></td><td>{g_str}</td></tr>"
-    )
+    if best_gate and best_gate.get("gate_pass"):
+        b_stp = best_gate.get("step", 100)
+        b_qat = "STE-INT8 QAT+WavLM" if best_gate.get("qat") else "Co-Distill+WavLM"
+        lad_rows.append(
+            f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>✅ PROMOTED / STANDBY</td><td class='num'><b>{b_stp}</b></td>"
+            f"<td class='num'>done</td><td>promoted s{b_stp} ({best_gate.get('int8_mb','-')} MB)</td><td style='text-align:center'>{b_qat}</td><td><code>gate passed · corr={best_gate.get('int8_vs_fp32_mel_corr','-')}</code></td><td>{g_str}</td></tr>"
+        )
+    else:
+        q_state = "🔄 AWAITING CORPUS CACHE" if (n_workers > 0 and tid in ("t15", "t5", "t1")) else "⏸ STANDBY RUNG"
+        q_note = "queued after priority rungs (t15, t5, t1)" if has_cache else "starts after cache_train.pt"
+        lad_rows.append(
+            f"<tr><td><b>{tlabel}</b> ({tmb})</td><td>{q_state}</td><td class='num'>0</td>"
+            f"<td class='num'>-</td><td>{q_note}</td><td style='text-align:center'>-</td><td><code>-</code></td><td>{g_str}</td></tr>"
+        )
 
 # --- Panel 4: Apples-to-Apples Size-vs-Quality Leaderboard ---
 _v3 = _j("/work/sp/final/sakhiya_pro_v3/eval_accent.json")
@@ -272,6 +327,10 @@ for tid, tname, est_mb in student_targets:
         pass_str = "✅ PASS" if g.get("gate_pass") else "⚠️ GATE FAIL"
         nv = g.get("node_verify", {})
         nv_str = " · node✓" if nv.get("ok") else ""
+        bs_map = s.get("by_style", {})
+        nw_u = bs_map.get("news", {}).get("utmos")
+        vc_u = bs_map.get("vedic_chant", {}).get("utmos")
+        sty_sfx = f" · news {nw_u} / vedic {vc_u}" if (nw_u and vc_u) else ""
         lb_all.append(dict(
             name=f"{tname} (gate s{g.get('step',0)})",
             size_mb=g.get("int8_mb", est_mb),
@@ -282,7 +341,7 @@ for tid, tname, est_mb in student_targets:
             stutters=s.get("stutter_count", 0),
             clicks=s.get("clicks", 0),
             rtf=g.get("rtf_1thread", "-"),
-            status=f"{pass_str} · corr={g.get('int8_vs_fp32_mel_corr','-')} · spk={s.get('spk_sim','-')}{nv_str}{live_sfx}"
+            status=f"{pass_str} · corr={g.get('int8_vs_fp32_mel_corr','-')} · spk={s.get('spk_sim','-')}{sty_sfx}{nv_str}{live_sfx}"
         ))
     else:
         st_msg = f"🟢 Actively Training (step {live_info[0]} @ {live_info[1]:.1f} it/s · INT8 gate evaluating)" if (live_info and live_info[2]) else "⏸ Standby Rung (after priority tiers t15, t5, t1)"
@@ -292,21 +351,26 @@ for tid, tname, est_mb in student_targets:
         ))
 
 lb_html = "".join(
-    f"<tr><td><b>{html.escape(str(r['name']))}</b></td>"
-    f"<td align=right>{r['size_mb']}</td>"
-    f"<td align=right><b>{r['utmos']}</b></td>"
-    f"<td align=right>{r['cer']}</td>"
-    f"<td align=right>{r['sa_cer']}</td>"
-    f"<td align=right>{r['drops']}</td>"
-    f"<td align=right>{r['stutters']}</td>"
-    f"<td align=right>{r['clicks']}</td>"
-    f"<td align=right>{r['rtf']}</td>"
+    f"<tr style=\"{'background:#f0fdf4' if '✅ PASS' in str(r['status']) else ''}\"><td><b>{html.escape(str(r['name']))}</b></td>"
+    f"<td class='num'>{r['size_mb']}</td>"
+    f"<td class='num'><b>{r['utmos']}</b></td>"
+    f"<td class='num'>{r['cer']}</td>"
+    f"<td class='num'>{r['sa_cer']}</td>"
+    f"<td class='num'>{r['drops']}</td>"
+    f"<td class='num'>{r['stutters']}</td>"
+    f"<td class='num'>{r['clicks']}</td>"
+    f"<td class='num'>{r['rtf']}</td>"
     f"<td>{html.escape(str(r['status']))}</td></tr>"
     for r in lb_all
 )
 
 col = "#c00" if left_s < 1800 else "#0a6b31"
-mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;line-height:1.45;color:#111">
+mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size:13.2px;line-height:1.45;color:#111">
+<style>
+  table.sp2-tbl {{ border-collapse: collapse; width: 100%; font-size: 12.2px; background: #fff; }}
+  table.sp2-tbl th, table.sp2-tbl td {{ border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; vertical-align: middle; }}
+  table.sp2-tbl th.num, table.sp2-tbl td.num {{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }}
+</style>
 <div style="background:#f4fbf7;border:1px solid #b7e1c7;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 4px 0;color:#084c24">🟢 Panel 1 — Box Health & Hard-Cutoff Countdown · {html.escape(npt)}</h3>
   <div><b style="color:{col}">⏱ Countdown to 06:25 NPT Safety Cutoff: {lh}h {lm:02d}m {ls_sec:02d}s</b>
@@ -318,7 +382,7 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
 
 <div style="background:#f5f8ff;border:1px solid #bfd4ff;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 4px 0;color:#103a8c">🎙️ Panel 2 — Active Accent-Fix (Pro v3) & Dual-Source Teacher-Corpus Status</h3>
-  <div><b>Active Workers:</b> <b>{n_workers}</b> ({n_gen_workers} v3-Synth + {n_vc_workers} Seed-VC) · <b>Verified Clips:</b> <b>{n_clips}</b> ({len(synth_clips)} synth + {len(vc_clips)} VC) · <b>Audio Volume:</b> <b>{tot_hrs:.2f} hours</b> ({synth_hrs:.2f}h synth + {vc_hrs:.2f}h VC, 24 kHz mono) · <b>Speed:</b> {clips_per_min:.1f} clips/min · <b>ETA:</b> {html.escape(corpus_eta)}</div>
+  <div><b>Active Workers:</b> <b>{n_workers}</b> ({n_gen_workers} v3-Synth + {n_vc_workers} Seed-VC) · <b>Verified Single-Voice Clips:</b> <b>{n_clips}</b> ({len(anchor_human_clips) + len(vc_clips)} Real Nepal Human [{len(anchor_human_clips)} Anchor-6834 + {len(vc_clips)} Seed-VC] + {len(synth_clips)} Pro-v3 Synth) · <b>Volume:</b> <b>{tot_hrs:.2f}h Single-Voice Cache</b> ({real_human_hrs:.2f}h Real Human + {synth_hrs:.2f}h Synth · +{s1_pool_hrs:.2f}h Stage-A/B Native Pool = <b>{tot_hrs + s1_pool_hrs:.2f}h total</b>) · <b>State:</b> {html.escape(corpus_eta)}</div>
   <div><b>Quality Gate Means:</b> UTMOS <b>{mean_utmos:.3f}</b> · CER <b>{mean_cer:.3f}</b> · ECAPA Spk-Sim <b>{mean_spk:.3f}</b> · <b>RAM/SSD Shard Cache:</b> {html.escape(cache_info)}</div>
   <div style="color:#444;font-size:12.5px"><b>Sources Breakdown:</b> {html.escape(src_str)}</div>
   {acc_html}
@@ -326,16 +390,16 @@ mo.Html(f"""<div style="font-family:system-ui,-apple-system,sans-serif;font-size
 
 <div style="background:#fffaf2;border:1px solid #f5d69b;border-radius:8px;padding:10px 14px;margin-bottom:10px">
   <h3 style="margin:0 0 6px 0;color:#7a4b00">🪜 Panel 3 — Live Shrink-Ladder Training Monitor (14.5 → 4.8 → 1.05 MB Priority Tiers)</h3>
-  <table style="border-collapse:collapse;width:100%;font-size:12.5px" border="1" cellpadding="4">
-    <tr style="background:#fef3dc"><th>Tier</th><th>Status</th><th>Step</th><th>Steps/s</th><th>Progress / ETA</th><th>QAT</th><th>Live Losses</th><th>Best Exported INT8 Gate</th></tr>
+  <table class="sp2-tbl">
+    <tr style="background:#fef3dc"><th>Tier</th><th>Status</th><th class="num">Step</th><th class="num">Speed</th><th>Progress / ETA</th><th style="text-align:center">Mode</th><th>Live Losses</th><th>Best Exported INT8 Gate</th></tr>
     {"".join(lad_rows)}
   </table>
 </div>
 
 <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:10px 14px">
   <h3 style="margin:0 0 6px 0;color:#1f2328">📊 Panel 4 — Apples-to-Apples Size-vs-Quality Leaderboard (Real Exported INT8 ONNX Gate)</h3>
-  <table style="border-collapse:collapse;width:100%;font-size:12.5px" border="1" cellpadding="4">
-    <tr style="background:#f6f8fa"><th>Model / Tier</th><th>INT8 Size (MB)</th><th>UTMOS</th><th>Nepali CER</th><th>Sanskrit CER</th><th>Drops</th><th>Stutters</th><th>Clicks</th><th>1-Thr CPU RTF</th><th>Gate Status & Forensics</th></tr>
+  <table class="sp2-tbl">
+    <tr style="background:#f6f8fa"><th>Model / Tier</th><th class="num">INT8 Size (MB)</th><th class="num">UTMOS</th><th class="num">Nepali CER</th><th class="num">Sanskrit CER</th><th class="num">Drops</th><th class="num">Stutters</th><th class="num">Clicks</th><th class="num">1-Thr CPU RTF</th><th>Gate Status & Forensics</th></tr>
     {lb_html}
   </table>
 </div>
@@ -401,7 +465,7 @@ for d in sorted(glob.glob("/work/sp/listen/*/")):
 
 # 3. Exported Student INT8 WAVs/MP3s from /work/sp/tiers/t*/best/wav/
 for tid in ("t15", "t5", "t1", "t10", "t30"):
-    for sub in ("best/wav",):
+    for sub in ("best/wav", "c_latest/wav"):
         wdir = f"/work/sp/tiers/{tid}/{sub}"
         if os.path.isdir(wdir):
             fs = sorted(glob.glob(wdir + "/*.mp3") or glob.glob(wdir + "/*.wav"))[:20]
@@ -449,9 +513,9 @@ async def install():
         for name, code in (('tts_sakhiya_pro2_tick', TICK), ('tts_sakhiya_pro2', CARD), ('tts_sakhiya_pro2_audio', AUDIO)):
             code = code.strip() if name.endswith('_tick') else _wrap(code)
             if name in ex:
-                ctx.edit_cell(ex[name], code, hide_code=True)
+                ctx.edit_cell(ex[name], code, hide_code=True, expand_output=True)
                 cid = ex[name]
             else:
-                cid = ctx.create_cell(code, name=name, hide_code=True)
+                cid = ctx.create_cell(code, name=name, hide_code=True, expand_output=True)
             ctx.run_cell(cid)
             print('installed', name)

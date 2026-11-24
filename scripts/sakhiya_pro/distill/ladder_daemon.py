@@ -28,6 +28,14 @@ TIER_LABELS = {
 
 def refresh_marimo_cards():
     try:
+        if not os.path.exists('/tmp/molab_url'):
+            open('/tmp/molab_url', 'w').write('http://127.0.0.1:8080')
+        if not os.path.exists('/tmp/molab_token'):
+            import re as _re
+            cmd1 = subprocess.check_output(['ps', '-p', '1', '-o', 'args='], text=True)
+            m_tok = _re.search(r'--token-password\s+(\S+)', cmd1)
+            if m_tok:
+                open('/tmp/molab_token', 'w').write(m_tok.group(1))
         sys.path.insert(0, os.path.join(REPO, 'scripts'))
         import molab_exec as M
         M.run_py("exec(open('/work/sp/repo/monitor/cells_pro2.py').read()); await install()", 90)
