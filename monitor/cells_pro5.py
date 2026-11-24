@@ -132,7 +132,7 @@ def _card3():
             vrows += f"<tr><td><b>{vlbl}</b></td><td align=right>{vst}</td><td align=right>mel {vmel:.3f}</td><td align=right>stft {vstft:.3f}</td><td align=right>{vel:.1f}/{vbud:.0f} min</td><td align=right>{max(0.0, vbud-vel):.0f} min</td><td>{vstate}</td></tr>"
     rx = re.compile(r"Step (\d+) \| ([\d.]+) it/s \| mel ([\d.]+).*?\| ([\d.]+)/(\d+) min")
     rows = ""
-    for tier in ("t30", "t15", "t10", "t5", "t1"):
+    for tier in ("t30", "t15", "t10", "t1"):
         lg = f"/work/sp/distill/runs/{tier}/train.log"
         last = None
         for ln in reversed(tail(lg, 30)):
