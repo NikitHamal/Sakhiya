@@ -140,10 +140,10 @@ def polish_am(tier: str, cache, ctc, steps: int, lr_e: float, lr_v: float, bs: i
             env_p = _mel_env(y_pred.float(), 7)
             env_c = _mel_env(y_clean.float(), 7)
             env_g = _mel_env(y_gt.float(), 7)
-            env_tgt = 0.75 * env_c + 0.25 * env_g
+            env_tgt = 0.55 * env_c + 0.45 * env_g
             l_env = ((env_p - env_tgt).abs() * ymf).sum() / denom
 
-            l_mel = ((1.2 * (y_pred.float() - y_clean.float()).abs() + 0.8 * (y_pred.float() - y_clean.float()) ** 2) * ymf).sum() / denom + 2.0 * l_env
+            l_mel = ((1.2 * (y_pred.float() - y_clean.float()).abs() + 0.8 * (y_pred.float() - y_clean.float()) ** 2) * ymf).sum() / denom + 3.0 * l_env
             df_p = y_pred[:, 1:, :].float() - y_pred[:, :-1, :].float()
             df_t = y_clean[:, 1:, :].float() - y_clean[:, :-1, :].float()
             l_df = ((df_p - df_t).abs() * ymf).sum() / denom
@@ -293,11 +293,39 @@ def gta_train_voc(
         print(s, flush=True)
         open(logf, "a").write(s + "\n")
 
-    valid_idx = [idx for idx, x in enumerate(gt_items) if "wav" in x and len(x["wav"]) // HOP > seg + 2 and gta_mels[idx].shape[1] >= len(x["wav"]) // HOP]
-    WAV = torch.cat([gt_items[i]["wav"] for i in valid_idx]).to(dev)
-    lens = torch.tensor([len(gt_items[i]["wav"]) // HOP for i in valid_idx], device=dev)
-    starts = torch.cumsum(torch.tensor([len(gt_items[i]["wav"]) for i in valid_idx], device=dev), 0) - torch.tensor([len(gt_items[i]["wav"]) for i in valid_idx], device=dev)
-    MEL_GTA = torch.cat([gta_mels[i][:, :len(gt_items[i]["wav"]) // HOP].to(dev) for i in valid_idx], dim=1)
+    # Filter to studio-clean utterances (exclude noisy VC/mined clips) and declick/deess waveforms so GAN never learns metallic codec karkar
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    import v4_pro_render as R4
+    id2r = {}
+    mf_p = "/work/sp/distill/manifest.jsonl"
+    if os.path.exists(mf_p):
+        for ln in open(mf_p):
+            try:
+                r = json.loads(ln)
+                id2r[r["id"]] = r
+            except Exception:
+                pass
+    valid_idx = []
+    clean_wavs = []
+    for idx, x in enumerate(gt_items):
+        if "wav" not in x or len(x["wav"]) // HOP <= seg + 2 or gta_mels[idx].shape[1] < len(x["wav"]) // HOP:
+            continue
+        r = id2r.get(x.get("id", ""), {})
+        src_s = r.get("src", x.get("src", ""))
+        ut_v = float(r.get("utmos", 3.85))
+        cl_v = int(r.get("clicks", 0))
+        if src_s in ("vc_slr54", "vc_slr43", "vc_v13", "mined") or ut_v < 3.62 or cl_v > 0:
+            continue
+        w_f = x["wav"].float().cpu().numpy() / 32767.0
+        w_clean = R4.declick_and_deess(w_f, SR)
+        clean_wavs.append(torch.from_numpy(np.clip(w_clean * 32767.0, -32767.0, 32767.0).astype(np.int16)))
+        valid_idx.append(idx)
+
+    WAV = torch.cat(clean_wavs).to(dev)
+    lens = torch.tensor([len(w_) // HOP for w_ in clean_wavs], device=dev)
+    w_lens = torch.tensor([len(w_) for w_ in clean_wavs], device=dev)
+    starts = torch.cumsum(w_lens, 0) - w_lens
+    MEL_GTA = torch.cat([gta_mels[i][:, :l_i].to(dev) for i, l_i in zip(valid_idx, lens.tolist())], dim=1)
     m_starts = torch.cumsum(lens, 0) - lens
 
     ar_w = torch.arange(seg * HOP, device=dev)
@@ -341,7 +369,7 @@ def gta_train_voc(
 
     t0 = time.time()
     tstep = time.time()
-    log(f"[{tag}] starting {steps} GTA+GAN steps on {len(valid_idx)} utts ({WAV.numel()/24000/3600:.2f} h) | comb_gain={comb_gain}")
+    log(f"[{tag}] starting {steps} GTA+GAN steps on {len(valid_idx)} studio-clean de-essed utts ({WAV.numel()/24000/3600:.2f} h) | comb_gain={comb_gain}")
 
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
@@ -357,17 +385,15 @@ def gta_train_voc(
         x = WAV[(starts[idx] + f * HOP)[:, None] + ar_w[None]].float() / 32767.0
         xm = mel_spec_24k(x, dev)
         mgta = MEL_GTA[:, (m_starts[idx] + f)[:, None] + ar_m[None]].permute(1, 0, 2).float()
+        B_gta = bs // 2
 
         if teacher_voc320 is not None:
-            B_gta = bs // 2
             mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
             with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(mel_in)
+                re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(vin_tier(xm, 0.0))
             y_t = ola64(torch.complex(re_t.float(), im_t.float()), teacher_voc320.win)
         else:
-            sm_m = (torch.rand(bs, 1, 1, device=dev) < 0.35).float()
-            xm_sm = 0.70 * xm + 0.30 * F.avg_pool1d(F.pad(xm, (1, 1), mode="replicate"), 3, stride=1)
-            mel_in = vin_tier(sm_m * xm_sm + (1.0 - sm_m) * xm, comb_gain)
+            mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
             re_t, im_t, y_t = None, None, None
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
@@ -376,7 +402,7 @@ def gta_train_voc(
         T = min(y.shape[1], x.shape[1])
         if y_t is not None:
             T = min(T, y_t.shape[1])
-            y_target = torch.cat([y_t[:bs // 2, :T].detach(), x[bs // 2:, :T]], dim=0)
+            y_target = torch.cat([y_t[:B_gta, :T].detach(), x[B_gta:, :T]], dim=0)
         else:
             y_target = x[:, :T]
         y = y[:, :T]
@@ -397,9 +423,7 @@ def gta_train_voc(
             l_st = mr_complex_stft_loss(y, y_target, dev)
             l_teach = torch.zeros((), device=dev)
             if re_t is not None:
-                mag_s = torch.sqrt(re_v.float() ** 2 + im_v.float() ** 2 + 1e-7)
-                mag_t = torch.sqrt(re_t.float() ** 2 + im_t.float() ** 2 + 1e-7)
-                l_teach = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
+                l_teach = spec_phase_gd_loss(re_v, im_v, re_t, im_t)
             fr = [[t.detach() for t in fs] for fs in fr_d]
             df, ff = D(y[:, None])
             l_adv = sum(F.relu(1.0 - q.float()).mean() for q in df) / len(df)
@@ -473,10 +497,10 @@ def main():
     # 1. Polish Student Acoustic Models with non-mutating out-of-place STE QAT + gentle cosine LR
     if not a.skip_am:
         for t_am, st_am, lre, lrv, bs_am, min_done in (
-            ("t1",  1600, 1.5e-4, 1.5e-4, 48, 7000),
-            ("t5",  1000, 8.0e-5, 8.0e-5, 48, 5900),
-            ("t10", 1000, 7.0e-5, 7.0e-5, 44, 4900),
-            ("t15", 500,  2.5e-5, 2.5e-5, 36, 1800),
+            ("t1",  400, 1.0e-4, 1.0e-4, 48, 7400),
+            ("t5",  400, 6.0e-5, 6.0e-5, 48, 6300),
+            ("t10", 400, 5.0e-5, 5.0e-5, 44, 4900),
+            ("t15", 400, 2.5e-5, 2.5e-5, 36, 1800),
         ):
             ck_chk_p = f"/work/sp/distill/runs/{t_am}/ema_latest.pt"
             cur_st = int(torch.load(ck_chk_p, map_location="cpu", weights_only=False).get("step", 0)) if os.path.exists(ck_chk_p) else 0
@@ -500,8 +524,8 @@ def main():
             gt_items=tr_items,
             gta_mels=gta_mels_320,
             comb_gain=0.0,
-            steps=1200,
-            lr=5.0e-5,
+            steps=800,
+            lr=4.5e-5,
             bs=48,
             seg=40,
             save_path="/work/tts/ck/v3_voc320.pt",
@@ -519,8 +543,8 @@ def main():
             gt_items=tr_items,
             gta_mels=gta_mels_t5,
             comb_gain=0.10,
-            steps=1600,
-            lr=8.0e-5,
+            steps=1100,
+            lr=7.0e-5,
             bs=48,
             seg=40,
             save_path="/work/tts/ck/v3_voc144.pt",
@@ -543,8 +567,8 @@ def main():
             gt_items=tr_items,
             gta_mels=gta_mels_t1,
             comb_gain=0.10,
-            steps=1600,
-            lr=8.0e-5,
+            steps=1100,
+            lr=7.0e-5,
             bs=48,
             seg=40,
             save_path="/work/tts/ck/v3_voc144_t1.pt",

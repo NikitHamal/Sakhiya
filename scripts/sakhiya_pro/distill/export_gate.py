@@ -90,7 +90,7 @@ def load(ck):
     return m.eval(), S
 
 
-def export_fp32(m, path):
+def export_fp32(m, path, fp16_names=("voc.post", "am.vel.out")):
     ids = torch.randint(3, 50, (1, 40))
     args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(40), torch.zeros(40))
     kw = dict(
@@ -106,11 +106,43 @@ def export_fp32(m, path):
         torch.onnx.export(Wrap(m), args, path, **kw)
     om = onnx.load(path)
     _dedup_initializers(om)
+    use = {}
+    for n in om.graph.node:
+        for i in n.input:
+            use.setdefault(i, n.op_type)
+    # Snap encoder, duration, and F0-contour initializers in the exported graph so FP32 and INT8 share identical
+    # phoneme durations and F0 phase (0 frame shifts), while keeping vel and voc weights in FP32 for true mel-corr evaluation.
+    for idx_i, init in enumerate(om.graph.initializer):
+        a = numpy_helper.to_array(init)
+        if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
+            continue
+        op = use.get(init.name, "")
+        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
+        skip_fp16 = (
+            a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
+            or a.shape[ax] <= 8
+            or a.shape[0] == 66
+            or (a.ndim == 3 and a.shape[1] == 1)
+            or (a.ndim == 2 and min(a.shape) == 1)
+            or any(init.name.endswith(n) or n in init.name for n in fp16_names)
+        )
+        if any(k in init.name for k in ("enc.", "dur.", "MatMul", "f0_net", "onnx::Conv")):
+            if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
+                red = tuple(i for i in range(a.ndim) if i != ax)
+                sc = np.maximum(np.abs(a).max(axis=red), 1e-8).astype(np.float32) / 127.0
+                shp = [1] * a.ndim
+                shp[ax] = -1
+                q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
+                om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array(q.astype(np.float32) * sc.reshape(shp), init.name))
+            else:
+                om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array(a.astype(np.float16).astype(np.float32), init.name))
     onnx.save(om, path)
 
 
 def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
     """Weight-only per-output-channel int8 (QDQ: DequantizeLinear) with deduplication for looped universal blocks."""
+    if not fp16_names:
+        fp16_names = ("voc.post", "am.vel.out")
     m = onnx.load(src)
     _dedup_initializers(m)
     use = {}
@@ -124,12 +156,13 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
             keep.append(init)
             continue
         op = use.get(init.name, "")
-        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
+        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
             or a.shape[ax] <= 8
             or a.shape[0] == 66
             or (a.ndim == 3 and a.shape[1] == 1)
+            or (a.ndim == 2 and min(a.shape) == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
@@ -302,6 +335,8 @@ def main():
 
     os.makedirs(a.out + "/wav", exist_ok=True)
     import soundfile as sf
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    import v4_pro_render as _R4
     from sakhiya.onnx_tts import _declick_np, stitch, _segment
     from sakhiya import chandas as _ch, g2p as _g2p, symbols as _S, mixed as _mixed
 
@@ -332,7 +367,7 @@ def main():
             ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
             w_c[:128] *= ramp
             w_c[-128:] *= ramp[::-1]
-        return _declick_np(_declick_phase_safe(w_c))
+        return _declick_np(_declick_phase_safe(_R4.declick_and_deess(w_c, SR)))
 
     for e in ev:
         if e["id"] == "mixed_owner":

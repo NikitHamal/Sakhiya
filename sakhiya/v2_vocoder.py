@@ -121,7 +121,8 @@ class HarmonicSource(nn.Module):
             torch.sin(t_idx * ap_freqs + 7.13 * torch.sin(t_idx * 0.173)),
             torch.cos(t_idx * (ap_freqs * 1.17) + 5.71 * torch.cos(t_idx * 0.231)),
         ], dim=1)
-        har = (har + (1.0 - uv_16) * e_gate_16 * 0.06 * ap).to(mel.dtype)
+        unv_w = ((1.0 - uv_16).clamp(0.0, 1.0) ** 2.0) * e_gate_16 * 0.04
+        har = (har + unv_w * ap).to(mel.dtype)
         return s.proj4(har), s.proj16(har), f0, uv
 
 

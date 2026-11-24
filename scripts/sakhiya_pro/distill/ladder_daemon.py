@@ -73,21 +73,25 @@ def promote_repo_and_hf(tier, g, best_dir):
         gate_pass=bool(g.get('gate_pass')),
         score=g.get('score')
     )
-    alias_map = {'t5': ('sakhiya_v4_micro', 'micro', 'models_micro'), 't1': ('sakhiya_v4_pico', 'pico', 'models_pico')}
+    alias_map = {
+        't5': ('sakhiya_v4_micro', 'sakhiya_v5_micro', 'micro', 'models_micro'),
+        't1': ('sakhiya_v4_pico',  'sakhiya_v5_pico',  'pico',  'models_pico'),
+    }
     st_list = [x for x in st_list if x.get('tier') != tier] + [entry_t]
     if tier in alias_map:
-        v4_tag, _, _ = alias_map[tier]
-        entry_v4 = dict(entry_t, tier=v4_tag, label=TIER_LABELS.get(tier, v4_tag))
-        st_list = [x for x in st_list if x.get('tier') != v4_tag] + [entry_v4]
+        v4_tag, v5_tag, _, _ = alias_map[tier]
+        for a_tag in (v4_tag, v5_tag):
+            entry_a = dict(entry_t, tier=a_tag, label=TIER_LABELS.get(tier, a_tag))
+            st_list = [x for x in st_list if x.get('tier') != a_tag] + [entry_a]
     json.dump(st_list, open(st_path, 'w'), indent=2, ensure_ascii=False)
 
-    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/ (and sakhiya_v4_micro/pico + live models_micro/pico)
+    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/ (and sakhiya_v4/v5_micro/pico + live models_micro/pico)
     tag = f'sakhiya_v3_{tier}'
     tags_to_write = [tag]
     extra_git_paths = []
     if tier in alias_map:
-        v4_tag, tier_id, mdir_name = alias_map[tier]
-        tags_to_write.append(v4_tag)
+        v4_tag, v5_tag, tier_id, mdir_name = alias_map[tier]
+        tags_to_write.extend([v4_tag, v5_tag])
         src_i8 = os.path.join(best_dir, 'model.int8.onnx')
         dst_mdir = os.path.join(REPO, 'docs', mdir_name)
         if os.path.exists(src_i8) and os.path.isdir(dst_mdir):
