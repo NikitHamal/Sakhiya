@@ -1,8 +1,8 @@
 {
-  "ne_pcer": 0.0296,
-  "sa_pcer": 0.0598,
-  "ne_wer": 0.1746,
-  "rigveda_svara_st": 2.34,
+  "ne_pcer": 0.0278,
+  "sa_pcer": 0.0612,
+  "ne_wer": 0.1793,
+  "rigveda_svara_st": 7.0,
   "word_drop_count": 1,
   "word_drops": [
     "ne_unseen_narrative:आआफ्नो->आफ्नो"
@@ -11,53 +11,53 @@
   "stutters": [],
   "f0_shutters": 0,
   "clicks": 0,
-  "ltas_mcd_ne_sa": 16.567,
-  "formant_shift_hz": 38.6,
-  "sv_cos_ne_sa": 0.9943,
+  "ltas_mcd_ne_sa": 13.323,
+  "formant_shift_hz": 48.1,
+  "sv_cos_ne_sa": 0.9947,
   "min_func_word_frames": 7,
   "nasal_scores": {
     "काठमाडौँ": {
-      "ctc_nasal_prob": 0.6712,
-      "band_200_400_ratio": 21.0
+      "ctc_nasal_prob": 0.679,
+      "band_200_400_ratio": 20.831
     },
     "गाउँ": {
-      "ctc_nasal_prob": 0.6053,
-      "band_200_400_ratio": 24.21
+      "ctc_nasal_prob": 0.6093,
+      "band_200_400_ratio": 23.754
     },
     "गर्‍यौँ": {
-      "ctc_nasal_prob": 0.9921,
-      "band_200_400_ratio": 23.884
+      "ctc_nasal_prob": 0.9895,
+      "band_200_400_ratio": 24.225
     },
     "हेरौँला": {
-      "ctc_nasal_prob": 0.9699,
-      "band_200_400_ratio": 23.816
+      "ctc_nasal_prob": 0.9495,
+      "band_200_400_ratio": 24.348
     }
   },
-  "utmos_15": 2.482,
+  "utmos_15": 2.425,
   "per_clip": [
     {
       "id": "ne_kathmandu",
       "lang": "ne",
       "style": "news",
-      "hyp": "नेपालको राजधानी काटमानो हिमालको कापमा रहेको एउटा ऐतिहासिक सहर हो",
+      "hyp": "नेपालको राजधानी काटमानौ हिमालको कापमा रहेको एउटा ऐतिहासिक सहर हो",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.2,
-      "utmos": 2.581
+      "utmos": 2.541
     },
     {
       "id": "ne_story",
       "lang": "ne",
       "style": "storytelling",
-      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुढी आमा बस् थिन् उनी बिहानै उठे र चरालाई दाना हाल थिन्",
+      "hyp": "एक समयको कुरा हो एउटा सानो गाउँमा एउटी बुढी हामा बस्थिन् उनी बिहानै उठे र चरालाई दाना हाल्थिन्",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 2.427
+      "utmos": 2.419
     },
     {
       "id": "ne_chat",
@@ -68,8 +68,8 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.514
+      "max_jump_st": 0.6,
+      "utmos": 2.368
     },
     {
       "id": "ne_warm",
@@ -80,116 +80,116 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.724
+      "max_jump_st": 0.3,
+      "utmos": 2.648
     },
     {
       "id": "ne_expressive",
       "lang": "ne",
       "style": "expressive",
-      "hyp": "वाहके अद्भुत दृश्य हो यो माछा पुच्रे हिमाल विहानको घाममा सुनजस्तै चम्की रहेको छ",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.652
-    },
-    {
-      "id": "ne_tricky_real",
-      "lang": "ne",
-      "style": "conversational",
-      "hyp": "बाटोबाट हिँदै गर्दा ग्राउँका साथीहरूसँग भेद भयो अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौं",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.481
-    },
-    {
-      "id": "ne_loan_num",
-      "lang": "ne",
-      "style": "news",
-      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशत वृद्धि भएको छ र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बढेका छन्",
+      "hyp": "वाके अद्भुत दृश्य हो यो माछा पुछ्रे हिमाल विहानको घाममा सुनजस्तै चम्की रहेको छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 2.704
+      "utmos": 2.501
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "बाटोबाट हिँदै गर्दा ग्राउँका साथीहरूसँग भेद भयो अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौँ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.36
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशतवृद्धि भएको छ र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बढेका छन्",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.4,
+      "utmos": 2.605
     },
     {
       "id": "sa_om",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "ओमि पूणतपूरणमुधचयते पूरय पूरणमदाय पूरणमेवावशिष्यते",
+      "hyp": "ओ पूरणमद पूर्णमिदम पूरणातपूर्णमुदचयते पूर्णस्य पूरणमादाय पूर्णमेवावशिष्यते",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.1,
-      "utmos": 2.094
+      "max_jump_st": 0.2,
+      "utmos": 2.13
     },
     {
       "id": "sa_rv",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "अgnिमिै पुरोहित यञञस्य देवमृतविजम होतारम रथnधातमम",
+      "hyp": "अgnिमिजै पुरोहितम यञञस्य देवमृत्विजम होतारम रथनधातमं",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 2.341
+      "utmos": 2.581
     },
     {
       "id": "sa_gita",
       "lang": "sa",
       "style": "storytelling",
-      "hyp": "धर्मक्षेत्रे कुरु क्षेत्र समवेता युयुतsवह मामक हफडवाचै किमकुरवत सञजयत",
+      "hyp": "धर्म क्षेत्रे कुरु क्षेत्र समवेत युयुतवह मामकपnडवा चइव किमकुरवत सञजय",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.122
+      "max_jump_st": 0.5,
+      "utmos": 2.13
     },
     {
       "id": "sa_gayatri",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "ओ भूरभूवहसव तसवितुर वरेnयम भरगो दैवश्य धिम हि धिोो n आपरचोदयात",
+      "hyp": "भूरभूवहसव तत वितुर वरेnयम भरगो देवस्यधिमहि धिोो nपरचोदयात",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.7,
-      "utmos": 2.375
+      "max_jump_st": 0.2,
+      "utmos": 2.113
     },
     {
       "id": "mixed_owner",
       "lang": "auto",
       "style": "news",
-      "hyp": "हेलो साथीहरू म सख्या हुँ निकित हमालज्यउले बनाउनुभएको सानो टेक्स्ट टु स्पेच मोडेल म संस्कृत पनि स्पष्ट बोन सक्छु धर्मकक्षेत्र कुरु क्षेत्र समवेता युयुत्सवह मामका फाण्डवास चैव किमा कुर्वत सञ्जयक आज मौसम निक्कै रमाइलो र शान्त छ",
+      "hyp": "हेलो साथीहरू म सख्या हुँ निकित हमालज्यउले बनाउनुभएको सानो टेक्स्ट टु स्पेच मोडेलम संस्कृत पनि स्पष्ट बोन सक्छु धर्मक क्षेत्र कुरु क्षेत्र समवेता युयुत्सवह मामका पाण्डवास चैव किम कुर्वत सञ्जय आज मौसम निक्कै रमाइलो र शान्त छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.179
+      "max_jump_st": 0.4,
+      "utmos": 2.183
     },
     {
       "id": "ne_unseen_dialogue",
       "lang": "ne",
       "style": "conversational",
-      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी साचप्ख सँगै गएर हेराौलानि हुँदैन रह",
+      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी साँचपख सँगै गएर हेरौँलानि हुँदैन रह",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.583
+      "max_jump_st": 0.6,
+      "utmos": 2.638
     },
     {
       "id": "ne_unseen_narrative",
@@ -202,20 +202,20 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.59
+      "max_jump_st": 0.4,
+      "utmos": 2.465
     },
     {
       "id": "ne_unseen_prose",
       "lang": "ne",
       "style": "news",
-      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स््थानीयतहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिवीर सञ्चालन गरेको छ",
+      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स्थानीयतहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.87
+      "max_jump_st": 0.3,
+      "utmos": 2.69
     }
   ]
 }
