@@ -210,26 +210,29 @@ class SakhiyaPicoAM(nn.Module):
         """Fold constant 1-step velocity time+speaker FiLM conditioning and 4-step duration time embeddings into step parameters."""
         dev = next(s.parameters()).device
         if not isinstance(s.vel.tm1, nn.Identity):
-            tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)[:, :, None]
-            tm_out = s.vel.tm2(F.silu(s.vel.tm1(tb0)))[0]
-            s.vel.step_emb.data.add_(tm_out[None, :, :])
+            if float(s.vel.film_steps.abs().max()) < 1e-7:
+                tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)[:, :, None]
+                tm_out = s.vel.tm2(F.silu(s.vel.tm1(tb0)))[0]
+                s.vel.step_emb.data.add_(tm_out[None, :, :])
             s.vel.tm1 = nn.Identity()
             s.vel.tm2 = nn.Identity()
         if not isinstance(s.vel.ublock_early.film, nn.Identity):
-            g0 = (s.enc.spk.weight[0:1] + s.enc.lang.weight[0:1] + s.enc.studio.weight[1:2] + s.enc.sty.weight[0:1])[:, :, None]
-            n_early = (s.vel.nb + 1) // 2
-            f_list = []
-            for k in range(s.vel.nb):
-                c_k = g0 + s.vel.step_emb[k : k + 1]
-                blk = s.vel.ublock_early if k < n_early else s.vel.ublock_late
-                f_list.append(blk.film(c_k)[0])
-            s.vel.film_steps.data.copy_(torch.stack(f_list, dim=0))
+            if float(s.vel.film_steps.abs().max()) < 1e-7:
+                g0 = (s.enc.spk.weight[0:1] + s.enc.lang.weight[0:1] + s.enc.studio.weight[1:2] + s.enc.sty.weight[0:1])[:, :, None]
+                n_early = (s.vel.nb + 1) // 2
+                f_list = []
+                for k in range(s.vel.nb):
+                    c_k = g0 + s.vel.step_emb[k : k + 1]
+                    blk = s.vel.ublock_early if k < n_early else s.vel.ublock_late
+                    f_list.append(blk.film(c_k)[0])
+                s.vel.film_steps.data.copy_(torch.stack(f_list, dim=0))
             s.vel.ublock_early.film = nn.Identity()
             s.vel.ublock_late.film = nn.Identity()
         if not isinstance(s.dur.t, nn.Identity):
-            ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
-            tbs = temb(ts, s.dur.d)[:, :, None]
-            s.dur.t_steps.data.copy_(s.dur.t(tbs))
+            if float(s.dur.t_steps.abs().max()) < 1e-7:
+                ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
+                tbs = temb(ts, s.dur.d)[:, :, None]
+                s.dur.t_steps.data.copy_(s.dur.t(tbs))
             s.dur.t = nn.Identity()
         return s
 
