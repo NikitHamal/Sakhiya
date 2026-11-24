@@ -371,6 +371,7 @@ def step4_train_and_render_pro_v4(anchors_meta, vc_rows):
     )
 
     # Evaluate checkpoints on accent_eval_v4.py
+    shutil.rmtree('/work/sp/v4/eval/v4b_checkpoint-0', ignore_errors=True)
     for c, tag in [(init_dir, 'v4b_checkpoint-0'), ('/work/sp/exp/v4b/checkpoint-100', 'v4b_checkpoint-100'), ('/work/sp/exp/v4b/checkpoint-200', 'v4b_checkpoint-200')]:
         if os.path.isdir(c):
             sh(f'python3 {HERE}/accent_eval_v4.py {c} /work/sp/v4/eval/{tag} > {L}/eval_{tag}.log 2>&1')

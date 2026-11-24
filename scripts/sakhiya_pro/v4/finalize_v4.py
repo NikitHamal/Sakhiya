@@ -65,8 +65,11 @@ def freeze():
         + f'\nEpisode 01 v4 Broadcast Master: **{ok}/{n}** lines pass the forensic gate (-14.0 LUFS, -56 dB studio room-tone bed, zero clicks/karkar).\n'
     )
     eval_md = f'{REPO}/docs/sakhiya_pro/EVAL.md'
-    if os.path.exists(eval_md) and '## Sakhiya-Pro v4' not in open(eval_md).read():
-        open(eval_md, 'a').write(t)
+    if os.path.exists(eval_md):
+        cur_md = open(eval_md).read()
+        if '## Sakhiya-Pro v4' in cur_md:
+            cur_md = cur_md.split('\n\n## Sakhiya-Pro v4')[0]
+        open(eval_md, 'w').write(cur_md + t)
 
     sh('git add docs/sakhiya_pro/ep01_v4 docs/samples/versions/sakhiya_pro_v4 docs/samples/versions/registry.json docs/sakhiya_pro/EVAL.md')
     sh(f'git commit -m "sakhiya_pro_v4: freeze 15-clip pack + EP01 v4 Broadcast Master + eval ({sel})"')
