@@ -100,7 +100,9 @@ def snap_f0_int8(voc):
     with torch.no_grad():
         for idx in (0, 2):
             w = voc.src.f0_net[idx].weight
-            w.copy_(w.half().float())
+            w.copy_(ste_int8_weight(w.float(), axis=0, enabled=True))
+        if len(voc.src.f0_net) > 4:
+            voc.src.f0_net[4].weight.copy_(voc.src.f0_net[4].weight.half().float())
         for p in voc.src.f0_net.parameters():
             p.requires_grad_(False)
 

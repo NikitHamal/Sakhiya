@@ -125,7 +125,7 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
             continue
         op = use.get(init.name, "")
         skip_fp16 = (
-            a.shape in ((64, 100, 3), (2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
+            a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
             or a.shape[0] in (1, 66)
             or (a.ndim == 3 and a.shape[1] == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
