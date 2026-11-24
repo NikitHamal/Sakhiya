@@ -222,7 +222,7 @@ import marimo as _mo
 sp5_rescan.value
 def _discover():
     import glob, os
-    pats = ["/work/sp/tiers/*/best/wav/*", "/work/sp/tiers/*/c_*/wav/*", "/work/sp/listen/*/*", "/work/sp/out/listen/*/*",
+    pats = ["/work/sp/listen/blind_ab_*/*", "/work/sp/tiers/*/best/wav/*", "/work/sp/tiers/*/c_*/wav/*", "/work/sp/listen/*/*", "/work/sp/out/listen/*/*",
             "/work/sp/repo/docs/samples/versions/*/*.mp3", "/work/sp/repo/docs/samples/versions/*/*.wav", "/work/sp/repo/docs/samples/versions/*/*/*.mp3"]
     seen = {}
     for p in pats:

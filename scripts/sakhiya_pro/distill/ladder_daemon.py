@@ -206,9 +206,9 @@ def leaderboard():
                 drops=drops,
                 stutters=stut,
                 clicks=s.get('clicks'),
-                spk=s.get('spk_sim'),
+                spk=s.get('sim_ProV3', s.get('spk_sim')),
                 rtf=g.get('rtf_1thread'),
-                status=('PASS' if g['gate_pass'] else 'FAIL') + f" · corr {g['int8_vs_fp32_mel_corr']} · drops {drops} · stutters {stut} · clicks {s.get('clicks')} · sa-CER {s.get('cer_sa')}"
+                status=('PASS' if g['gate_pass'] else 'FAIL') + f" · ProV3 {s.get('sim_ProV3', s.get('spk_sim'))} (ΔV1 {s.get('margin_ProV3_OldV1', '-')}) · HF-LSD {s.get('HF_LSD_4_10kHz_dB', '-')}dB · INT8-LSD {s.get('stft_lsd_int8_fp32_dB', '-')}dB · shutters {s.get('mid_vowel_shutters', 0)}"
             ))
         else:
             rows.append(dict(
