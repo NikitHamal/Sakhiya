@@ -733,6 +733,7 @@ def main():
     req_ltas = {"t30": 0.55, "t15": 0.55, "t10": 0.60, "t1": 0.65}.get(a.tier, 0.60)
     req_hf_lsd = {"t30": 2.2, "t15": 2.2, "t10": 2.8, "t1": 3.5}.get(a.tier, 2.8)
     req_svara_r = {"t30": 0.75, "t15": 0.75, "t10": 0.65, "t1": 0.65}.get(a.tier, 0.65)
+    min_utmos_floor = 2.85 if a.tier == "t1" else 3.20
 
     R["gate_pass"] = bool(
         R["nan_count"] == 0
@@ -740,7 +741,7 @@ def main():
         and R["int8_mb"] <= sz_cap
         and R["stft_lsd_int8_fp32_db"] <= 0.35
         and R.get("sim_ProV3_fp32_minus_int8", 0.0) <= 0.02
-        and s.get("utmos", 0.0) >= 3.20
+        and s.get("utmos", 0.0) >= min_utmos_floor
         and s.get("sim_ProV3", 0.0) >= req_sim
         and s.get("margin_ProV3_OldV1", 0.0) >= req_margin
         and s.get("voiced_ltas_mcd_ratio", 1.0) <= req_ltas

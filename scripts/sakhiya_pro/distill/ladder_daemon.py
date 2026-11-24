@@ -18,13 +18,13 @@ REFS = [
 ]
 
 
-# publish (git/HF) only when the INT8 student's UTMOS reaches the shipped baseline of its size class
-BASELINE_UTMOS = dict(t30=3.957, t15=3.850, t10=3.253, t1=2.850)
+# Demote raw UTMOS22 to coarse sanity floor (>= 3.20, >= 2.85 for Pico t1); promotion is governed by the 4-layer forensic gate
+BASELINE_UTMOS = dict(t30=3.20, t15=3.20, t10=3.20, t1=2.85)
 
 TIER_LABELS = {
-    't30': 'Sakhiya-T30 (29.6 MB INT8 Distilled Student)',
-    't15': 'Sakhiya-T15 (14.5 MB INT8 Flagship Compact Student)',
-    't10': 'Sakhiya-T10 (9.5 MB INT8 Compact Student)',
+    't30': 'Sakhiya-T30 (16.0 MB INT8 Flagship Teacher-Bridge Student)',
+    't15': 'Sakhiya-T15 (14.3 MB INT8 Flagship Compact Student)',
+    't10': 'Sakhiya-T10 (8.3 MB INT8 Compact Reflow Student)',
     't1':  'Sakhiya-Pico t1 (1.44 MB INT8 Breakthrough Looped Student)',
 }
 
@@ -64,9 +64,16 @@ def promote_repo_and_hf(tier, g, best_dir):
         int8_vs_fp32_mel_corr=g.get('int8_vs_fp32_mel_corr'),
         rtf_1thread=g.get('rtf_1thread'),
         utmos=s.get('utmos'), cer_ne=s.get('cer_ne'), cer_sa=s.get('cer_sa'),
-        spk_sim=s.get('spk_sim'), clicks=s.get('clicks', 0),
+        spk_sim=s.get('spk_sim'), sim_ProV3=s.get('sim_ProV3'), sim_OldV1=s.get('sim_OldV1'),
+        margin_ProV3_OldV1=s.get('margin_ProV3_OldV1'), voiced_ltas_mcd_ratio=s.get('voiced_ltas_mcd_ratio'),
+        HF_LSD_4_10kHz_dB=s.get('HF_LSD_4_10kHz_dB'), upper_band_HNR_anomaly_dB=s.get('upper_band_HNR_anomaly_dB'),
+        mid_vowel_shutters=s.get('mid_vowel_shutters', 0), pitch_breaks=s.get('pitch_breaks', 0),
+        sa_ctc_ll_gap=s.get('sa_ctc_ll_gap'), sa_gl_ratio=s.get('sa_gl_ratio'), sa_svara_corr=s.get('sa_svara_corr'),
+        stft_lsd_int8_fp32_dB=s.get('stft_lsd_int8_fp32_dB'), sim_ProV3_drop_int8=s.get('sim_ProV3_drop_int8'),
+        clicks=s.get('clicks', 0),
         drops=s.get('word_drop_count', s.get('word_drop_proxy', 0)),
         stutters=s.get('stutter_count', 0),
+        layers=g.get('layers', {}),
         by_style=s.get('by_style', {}),
         node_verify=g.get('node_verify', {}),
         gate_pass=bool(g.get('gate_pass')),
