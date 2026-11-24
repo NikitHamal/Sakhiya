@@ -1,21 +1,11 @@
 """Sakhiya Single-Graph Alias-Free Full-Band Harmonic + AWP Distilled Students (`scripts/sakhiya_pro/distill/student.py`).
 
 Active 4-Tier Ladder Only (Micro `t5` permanently retired):
-- t30: Flagship Teacher-Bridge (d_enc=192, L_enc=6, d_vel=256, nb_vel=12, steps=4, voc_ch=224 AWP) -> ~12.2 MB <= 29.6 MB INT8 ONNX
-- t15: Flagship Compact (d_enc=192, L_enc=6, d_vel=256, nb_vel=12, steps=4, voc_ch=224 AWP, r_enc=72) -> ~10.8 MB <= 14.5 MB INT8 ONNX
-- t10: Compact 10M (d_enc=144, L_enc=5, d_vel=160, nb_vel=7, steps=2, voc_ch=224 AWP, r_enc=104)      -> ~6.5 MB <= 9.5 MB INT8 ONNX
+- t30: Flagship Teacher-Bridge (d_enc=192, L_enc=6, d_vel=256, nb_vel=12, steps=4, voc_ch=320 AWP) -> ~15.8 MB <= 29.6 MB INT8 ONNX
+- t15: Flagship Compact (d_enc=192, L_enc=6, d_vel=256, nb_vel=12, steps=4, voc_ch=320 AWP, r_enc=72) -> ~14.1 MB <= 14.5 MB INT8 ONNX
+- t10: Compact 10M (d_enc=144, L_enc=5, d_vel=160, nb_vel=7, steps=1, voc_ch=320 AWP, r_enc=104)      -> ~8.3 MB <= 9.5 MB INT8 ONNX
 - t1:  Breakthrough Sub-1.5 MB Pico (Weight-Tied Looped Universal Encoder & Velocity with per-iteration FiLM +
-       from-scratch AWPVocoder voc_ch=136; embeddings, dur head, F0/VUV head, and iSTFT projection in FP16) -> ~1.35 MB <= 1.45 MB INT8 ONNX
-
-Structural Breakthroughs:
-1. Zero Old-V1 Ancestry: NEVER warm-starts from V1/v5/v9/Atom-Lite weights.
-2. Phase 1 Studio-Clean AWPVocoder: no `f0_net`, no `Snake1d` aliasing, full-band band-limited harmonics up to 12 kHz Nyquist,
-   parallel Amplitude + Anti-Wrapped Phase (AWP) branches, and permanent FP16 isolation on harmonic excitation & spectral heads.
-3. Intra-Phoneme Progress Conditioning: concatenates `[k/d, sin(pi*k/d), cos(pi*k/d), log(1+d)/4]` to every expanded frame so
-   sustained `ॐ` (100-200+ frames) and *pluta* vowels never feed repeated identical vectors into ConvNeXt and never shutter.
-4. Acoustic Vedic Svara & Moraic Conditioning: explicit discrete encoder embeddings for Vedic svara (`udatta`, `anudatta`,
-   `svarita`, `pracaya`, `none`) and syllable weight (`laghu`, `guru`, `pluta`, `pranava_om`).
-5. Zero inference-time DSP band-aids (no 9-frame F0 pooling, no manual harmonic roll-off, no artificial 5.2 Hz vibrato, no post-hoc EQ).
+       AWPVocoder voc_ch=144; embeddings, dur head, F0/VUV head, and iSTFT projection in FP16)        -> ~1.43 MB <= 1.45 MB INT8 ONNX
 """
 import math
 import os
@@ -30,7 +20,7 @@ if REPO not in sys.path:
 
 from sakhiya.cfm import SakhiyaAM, STYLE_PROSODY_TARGETS
 from sakhiya.v15_pico import SakhiyaPicoAM
-from sakhiya.v2_vocoder import VocoderV2, ISTFT_N_FFT, ISTFT_HOP, SR, N_FFT, HOP, NMEL as N_MEL
+from sakhiya.v2_vocoder import ISTFT_N_FFT, ISTFT_HOP, SR, N_FFT, HOP, NMEL as N_MEL
 from sakhiya.awp_vocoder import AWPVocoder
 from sakhiya.v15_rnd_wavehax import _build_cola_istft_kernel, ste_int8_weight, QATConv1d
 from sakhiya.symbols import SYM2ID
@@ -41,27 +31,52 @@ N_LANG = 2
 
 # Active 4-tier ladder ONLY (t30, t15, t10, t1)
 TIERS = {
-    "t30": dict(tier="t30", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=224, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t15": dict(tier="t15", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=224, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
-    "t10": dict(tier="t10", arch="sakhiya_am", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=224, steps=2, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
-    "t1":  dict(tier="t1",  arch="sakhiya_pico", voc_arch="awp", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=136, steps=1, r_enc=52,   r_voc_k7=None, r_voc_k11=None),
+    "t30": dict(tier="t30", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
+    "t15": dict(tier="t15", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
+    "t10": dict(tier="t10", arch="sakhiya_am", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
+    "t1":  dict(tier="t1",  arch="sakhiya_pico", voc_arch="awp", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
 }
 
 VOWEL_IDS = tuple(SYM2ID[p] for p in ("ʌ", "a", "i", "u", "e", "o", "ʌ̃", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID)
 LONG_VOWEL_IDS = tuple(SYM2ID[p] for p in ("a", "e", "o", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID)
 
 
+class AMF0VUVHead(nn.Module):
+    """Acoustic-Model Continuous F0 (in Hz) + Soft V/UV Predictor (kept in FP16, lives inside Student.am, ZERO vocoder f0_net)."""
+    def __init__(self, n_mels: int = N_MEL):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv1d(n_mels, 128, 5, padding=2),
+            nn.SiLU(),
+            nn.Conv1d(128, 128, 5, padding=2),
+            nn.SiLU(),
+            nn.Conv1d(128, 2, 3, padding=1),
+        )
+
+    def forward(self, mel: torch.Tensor, svara_shift_st: torch.Tensor = None):
+        rf = self.net(mel.float()).float()
+        f0 = 60.0 + 440.0 * torch.sigmoid(rf[:, 0:1])
+        uv = torch.sigmoid(rf[:, 1:2])
+        lf0 = torch.log2(f0.clamp(130.0, 380.0))
+        uv_closed = F.max_pool1d(F.pad(uv, (1, 1), mode="replicate"), 3, stride=1)
+        uv_blend = 0.65 * uv + 0.35 * uv_closed
+        w_v = (uv_blend.detach() > 0.32).float() * uv_blend.detach() + 0.04
+        num = F.avg_pool1d(F.pad(lf0 * w_v, (2, 2), mode="replicate"), 5, stride=1)
+        den = F.avg_pool1d(F.pad(w_v, (2, 2), mode="replicate"), 5, stride=1).clamp(min=1e-3)
+        lf0_sm = 0.55 * lf0 + 0.45 * (num / den)
+        if svara_shift_st is not None:
+            lf0_sm = lf0_sm + svara_shift_st.to(lf0_sm.dtype) * (1.0 / 12.0)
+        f0_hz = torch.pow(2.0, lf0_sm).clamp(130.0, 380.0)
+        vuv_sm = F.avg_pool1d(F.pad(uv_blend, (1, 1), mode="replicate"), 3, stride=1).clamp(0.0, 1.0)
+        return f0_hz, vuv_sm
+
+
 def compute_svara_mora_ids(ids: torch.Tensor, is_sa: torch.Tensor, ds_tok: torch.Tensor, ps_tok: torch.Tensor):
-    """Deterministically compute discrete Vedic Svara IDs (0..4) and Moraic Weight IDs (0..3) inside the PyTorch/ONNX graph.
-    Svara: 0=none, 1=udatta, 2=anudatta, 3=svarita, 4=pracaya
-    Mora:  0=laghu, 1=guru, 2=pluta, 3=pranava_om
-    """
     id_o, id_m = SYM2ID["o"], SYM2ID["m"]
     next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
     prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
     is_sa_b = is_sa[:, None] if is_sa.dim() == 1 else is_sa
 
-    # Vowel detector (phoneme IDs for vowels)
     is_vow = torch.zeros_like(ids, dtype=torch.bool)
     for vid in VOWEL_IDS:
         is_vow = is_vow | (ids == vid)
@@ -69,28 +84,21 @@ def compute_svara_mora_ids(ids: torch.Tensor, is_sa: torch.Tensor, ds_tok: torch
     for vid in LONG_VOWEL_IDS:
         is_long_v = is_long_v | (ids == vid)
 
-    # Svara IDs (active on Sanskrit vowels)
     sv = torch.zeros_like(ids, dtype=torch.long)
-    sv = torch.where(is_vow & is_sa_b, torch.ones_like(sv), sv)                          # 1: udatta default
-    sv = torch.where(is_vow & is_sa_b & (ps_tok < -0.10), torch.full_like(sv, 2), sv)     # 2: anudatta
-    sv = torch.where(is_vow & is_sa_b & (ps_tok > 0.25), torch.full_like(sv, 3), sv)      # 3: svarita
-    sv = torch.where(is_vow & is_sa_b & (ps_tok >= 0.05) & (ps_tok <= 0.25), torch.full_like(sv, 4), sv)  # 4: pracaya
+    sv = torch.where(is_vow & is_sa_b, torch.ones_like(sv), sv)
+    sv = torch.where(is_vow & is_sa_b & (ps_tok < -0.10), torch.full_like(sv, 2), sv)
+    sv = torch.where(is_vow & is_sa_b & (ps_tok > 0.25), torch.full_like(sv, 3), sv)
+    sv = torch.where(is_vow & is_sa_b & (ps_tok >= 0.05) & (ps_tok <= 0.25), torch.full_like(sv, 4), sv)
 
-    # Moraic Weight IDs (0: laghu, 1: guru, 2: pluta, 3: pranava_om)
     is_om = (((ids == id_o) & (next_ids == id_m) & (prev_ids <= 8)) | ((ids == id_m) & (prev_ids == id_o))) & is_sa_b
     mo = torch.zeros_like(ids, dtype=torch.long)
-    mo = torch.where(is_long_v | (ds_tok >= 1.02), torch.ones_like(mo), mo)               # 1: guru
-    mo = torch.where(ds_tok >= 1.22, torch.full_like(mo, 2), mo)                          # 2: pluta
-    mo = torch.where(is_om, torch.full_like(mo, 3), mo)                                   # 3: pranava_om
+    mo = torch.where(is_long_v | (ds_tok >= 1.02), torch.ones_like(mo), mo)
+    mo = torch.where(ds_tok >= 1.22, torch.full_like(mo, 2), mo)
+    mo = torch.where(is_om, torch.full_like(mo, 3), mo)
     return sv, mo
 
 
 def compute_intra_phoneme_progress(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor, t_arange: torch.Tensor):
-    """Compute 4D Intra-Phoneme Progress vector [B, 4, T]:
-       [k/d, sin(pi * k/d), cos(pi * k/d), log(1 + d) / 4.0]
-    for every expanded frame t = 0 .. T-1 so sustained ॐ (100-200+ frames) and pluta vowels never feed
-    constant identical vectors into ConvNeXt.
-    """
     starts = ends - dur
     st_f = torch.gather(starts, 1, idx)
     d_f = torch.gather(dur, 1, idx).clamp(min=1.0)
@@ -135,21 +143,17 @@ def _calibrate_styles(am, pre_baked=False):
 
 
 def snap_f0_int8(voc):
-    """For legacy VocoderV2 compatibility only; AWPVocoder has no f0_net and keeps src/heads in FP16."""
-    if hasattr(voc, "src") and hasattr(voc.src, "f0_net"):
-        with torch.no_grad():
-            for idx in (0, 2):
-                w = voc.src.f0_net[idx].weight
-                w.copy_(ste_int8_weight(w.float(), axis=0, enabled=True))
-            if len(voc.src.f0_net) > 4:
-                voc.src.f0_net[4].weight.copy_(voc.src.f0_net[4].weight.half().float())
-            for p in voc.src.f0_net.parameters():
-                p.requires_grad_(False)
+    pass
 
 
 def snap_am_int8(am):
-    """Snap encoder and duration predictor weights to the exact per-channel INT8/FP16 grid used by export_gate.quantize."""
     with torch.no_grad():
+        if hasattr(am, "f0_head"):
+            for idx in (0, 2):
+                w = am.f0_head.net[idx].weight
+                w.copy_(ste_int8_weight(w.float(), axis=0, enabled=True))
+            if len(am.f0_head.net) > 4:
+                am.f0_head.net[4].weight.copy_(am.f0_head.net[4].weight.half().float())
         for name, p in am.named_parameters():
             if name.startswith(("enc.", "dur.")):
                 if any(k in name for k in ("emb", "svara_emb", "mora_emb", "f0_pred", "vuv_pred", "dur.o")):
@@ -162,19 +166,15 @@ def snap_am_int8(am):
 
 
 class Student(nn.Module):
-    def __init__(self, tier="t15", arch=None, voc_arch=None, d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=None, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None, **kw):
+    def __init__(self, tier="t15", arch=None, voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=None, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None, **kw):
         super().__init__()
         if tier in TIERS:
             c = TIERS[tier]
             if arch is None:
                 arch = c["arch"]
-            if voc_arch is None:
-                voc_arch = c.get("voc_arch", "awp")
-            d_enc, L_enc, ff_enc, d_vel, nb_vel, h_dur, steps = (
-                c["d_enc"], c["L_enc"], c["ff_enc"], c["d_vel"], c["nb_vel"], c["h_dur"], c["steps"]
+            d_enc, L_enc, ff_enc, d_vel, nb_vel, h_dur, voc_ch, steps = (
+                c["d_enc"], c["L_enc"], c["ff_enc"], c["d_vel"], c["nb_vel"], c["h_dur"], c["voc_ch"], c["steps"]
             )
-            if voc_ch is None:
-                voc_ch = c["voc_ch"]
             if r_enc is None:
                 r_enc = c.get("r_enc")
             if r_voc_k7 is None:
@@ -184,12 +184,7 @@ class Student(nn.Module):
 
         self.tier = tier
         self.arch = arch or ("sakhiya_pico" if tier == "t1" else "sakhiya_am")
-        if voc_ch is None:
-            voc_ch = 136 if tier == "t1" else 224
-        # Auto-detect legacy vocoder width (320 or 144) vs Phase 1 AWP vocoder (224 or 136)
-        if voc_arch is None:
-            voc_arch = "v2" if voc_ch in (320, 144) and r_voc_k7 is not None else ("awp" if voc_ch in (224, 136, 192, 256, 128) else "v2")
-        self.voc_arch = voc_arch
+        self.voc_arch = "awp"
         self.steps = int(steps)
         self.r_enc = r_enc
         self.r_voc_k7 = r_voc_k7
@@ -220,12 +215,8 @@ class Student(nn.Module):
                 self.am.ctc_rec = nn.Identity()
             if hasattr(self.am.enc, "spk_adv"):
                 self.am.enc.spk_adv = nn.Identity()
-
-        if self.voc_arch == "awp":
-            self.voc = AWPVocoder(ch=voc_ch)
-        else:
-            self.voc = VocoderV2(ch=voc_ch, res_kernels=(3, 7, 11))
-            self.voc.fuse_weight_norm()
+        self.am.f0_head = AMF0VUVHead(n_mels=N_MEL)
+        self.voc = AWPVocoder(ch=voc_ch)
 
     def _apply_svd_structure(self):
         if self.arch == "sakhiya_pico":
@@ -241,101 +232,73 @@ class Student(nn.Module):
                         lyr.c1 = _make_svd_seq(lyr.c1, self.r_enc, use_qat=False)
                         lyr.c2 = _make_svd_seq(lyr.c2, self.r_enc, use_qat=False)
 
-        if self.voc_arch != "awp":
-            for b_idx, r_k in ((1, self.r_voc_k7), (2, self.r_voc_k11)):
-                if r_k is not None:
-                    blk = self.voc.mrfs[0][b_idx]
-                    for i in range(len(blk.c1)):
-                        if isinstance(blk.c1[i], nn.Conv1d):
-                            blk.c1[i] = _make_svd_seq(blk.c1[i], r_k, use_qat=False)
-                        if isinstance(blk.c2[i], nn.Conv1d):
-                            blk.c2[i] = _make_svd_seq(blk.c2[i], r_k, use_qat=False)
+        for b_idx, r_k in ((1, self.r_voc_k7), (2, self.r_voc_k11)):
+            if r_k is not None:
+                blk = self.voc.mrfs[0][b_idx]
+                for i in range(len(blk.c1)):
+                    if isinstance(blk.c1[i], nn.Conv1d):
+                        blk.c1[i] = _make_svd_seq(blk.c1[i], r_k, use_qat=False)
+                    if isinstance(blk.c2[i], nn.Conv1d):
+                        blk.c2[i] = _make_svd_seq(blk.c2[i], r_k, use_qat=False)
 
     def warm_init(self, ck_dir="/work/tts/ck"):
-        """Initialize Student AM from pure Sakhiya-Pro-v3 lineage ONLY (ZERO V1/v5/v9/Atom-Lite weights!)
-        and load the from-scratch Phase 1 AWPVocoder (`/work/tts/ck/v4_awp_voc{ch}.pt`).
-        """
+        """Initialize Student AM and Phase 1 AWPVocoder from pure Pro-v3 distilled checkpoints ONLY (zero V1/v5/v9 weights)."""
         dev = next(self.parameters()).device
         c = self.cfg
         self._init_raw_submodules(c["d_enc"], c["L_enc"], c["ff_enc"], c["d_vel"], c["nb_vel"], c["h_dur"], c["voc_ch"])
-        self.to(dev)
-
-        # Load ONLY pure Pro-v3 teacher/student AM checkpoints (NEVER v5_c1_am, v9_voca_am, or v9_sano_am!)
-        pro_am_cands = [
-            os.path.join(ck_dir, f"pro_v3_{self.tier}_am.pt"),
-            os.path.join(ck_dir, "pro_v3_flagship_am.pt"),
-            os.path.join(ck_dir, "v3_t30_am.pt"),
-        ]
-        am_p = next((p for p in pro_am_cands if os.path.exists(p)), None)
-        if am_p is not None:
-            ck = torch.load(am_p, map_location=dev, weights_only=False)
-            sd = {k.replace("am.", ""): v.float() for k, v in ck.get("ema", ck.get("net", ck)).items() if not k.startswith(("ctc_rec.", "voc."))}
-            st_vec = torch.tensor([float(ck.get("mean", -6.1760635)), float(ck.get("std", 2.4932315))], device=dev)
-            dst_sd = self.am.state_dict()
-            with torch.no_grad():
-                for k, dst_t in dst_sd.items():
-                    if k in sd:
-                        src_t = sd[k]
-                        if dst_t.shape == src_t.shape:
-                            dst_t.copy_(src_t)
-                        elif dst_t.ndim == src_t.ndim:
-                            sl = tuple(slice(0, min(a, b)) for a, b in zip(dst_t.shape, src_t.shape))
-                            dst_t[sl].copy_(src_t[sl])
-                # If initializing Pico looped blocks from flagship Pro-v3 layers, project top singular components cleanly
-                if self.arch == "sakhiya_pico" and "enc.layers.0.qkv.weight" in sd:
-                    d_p = c["d_enc"]
-                    w_emb = sd.get("enc.emb.weight")
-                    if w_emb is not None:
-                        self.am.enc.emb.weight.copy_(w_emb[:, :d_p])
-                    for emb_n in ("svara_emb", "mora_emb"):
-                        if f"enc.{emb_n}.weight" in sd:
-                            getattr(self.am.enc, emb_n).weight.copy_(sd[f"enc.{emb_n}.weight"][:, :d_p])
-            self.am.load_state_dict(dst_sd, strict=False)
-            self.am.stats.copy_(st_vec)
-            self.mel_stats.copy_(st_vec)
-
         self._apply_svd_structure()
+        self.to(dev)
 
-        # Load Phase 1 from-scratch AWPVocoder (zero V1 ancestry)
-        if self.voc_arch == "awp":
-            awp_p = os.path.join(ck_dir, f"v4_awp_voc{c['voc_ch']}.pt")
-            if os.path.exists(awp_p):
-                vck = torch.load(awp_p, map_location=dev, weights_only=False)
-                vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
-                self.voc.load_state_dict(vsd, strict=False)
-        else:
-            voc_v3_p = os.path.join(ck_dir, "v3_voc320.pt" if c["voc_ch"] == 320 else "v3_voc144.pt")
-            if os.path.exists(voc_v3_p):
-                vck = torch.load(voc_v3_p, map_location=dev, weights_only=False)
-                vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
-                self.voc.load_state_dict(vsd, strict=False)
+        # 1. Load converged Pro-v3 student run checkpoint if available, else Pro-v3 teacher AM
+        run_ck_p = f"/work/sp/distill/runs/{self.tier}/ema_final.pt"
+        if not os.path.exists(run_ck_p):
+            run_ck_p = f"/work/sp/distill/runs/{self.tier}/ema_latest.pt"
+
+        if os.path.exists(run_ck_p):
+            ck = torch.load(run_ck_p, map_location=dev, weights_only=False)
+            ema_sd = {k: v.float() for k, v in ck.get("ema", ck).items()}
+            own_sd = self.state_dict()
+            with torch.no_grad():
+                for k, v in own_sd.items():
+                    if k in ema_sd and ema_sd[k].shape == v.shape:
+                        v.copy_(ema_sd[k])
+                    elif k.startswith("am.f0_head.net."):
+                        legacy_k = k.replace("am.f0_head.net.", "voc.src.f0_net.")
+                        if legacy_k in ema_sd and ema_sd[legacy_k].shape == v.shape:
+                            v.copy_(ema_sd[legacy_k])
+                if "voc.post.weight" in ema_sd and "voc.post.bias" in ema_sd:
+                    pw, pb = ema_sd["voc.post.weight"], ema_sd["voc.post.bias"]
+                    if pw.shape[0] == 66 and pw.shape[1] == self.voc.amp_head.weight.shape[1]:
+                        self.voc.amp_head.weight.copy_(pw[:33])
+                        self.voc.amp_head.bias.copy_(pb[:33])
+                        self.voc.pha_head.weight.copy_(pw[33:])
+                        self.voc.pha_head.bias.copy_(pb[33:])
+            self.load_state_dict(own_sd, strict=False)
+
+        # 2. If Phase 1 AWPVocoder checkpoint exists, load it into self.voc
+        awp_p = os.path.join(ck_dir, f"v4_awp_voc{c['voc_ch']}_t1.pt" if self.tier == "t1" else f"v4_awp_voc{c['voc_ch']}.pt")
+        if os.path.exists(awp_p):
+            vck = torch.load(awp_p, map_location=dev, weights_only=False)
+            vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
+            self.voc.load_state_dict(vsd, strict=False)
 
         self.to(dev)
+        snap_am_int8(self.am)
         return self
 
     def voc_wav(self, mel, f0_hz=None, vuv=None, shift_st=None):
         """Differentiable waveform synthesis from 100-band log-mel [B, 100, T] + AM continuous F0 & soft VUV."""
-        if self.voc_arch == "awp":
-            if f0_hz is None:
-                f0_hz = torch.full((mel.shape[0], 1, mel.shape[2]), 218.0, device=mel.device, dtype=mel.dtype)
-            if vuv is None:
-                m_mean = mel.float().mean(dim=1, keepdim=True)
-                vuv = torch.sigmoid((m_mean + 9.2) * 2.5)
-            if shift_st is not None:
-                f0_hz = f0_hz * torch.pow(2.0, shift_st.to(f0_hz.dtype) * (1.0 / 12.0))
-            y, re_s, im_s, _, _, _ = self.voc.forward_wav(mel, f0_hz, vuv)
-            return y, re_s, im_s, f0_hz, vuv
-        else:
-            re_s, im_s, f0, uv = self.voc.spectrum_and_f0(mel, shift_st=shift_st)
-            z = torch.zeros_like(im_s[:, :1, :])
-            spec_cat = torch.cat([re_s.float(), torch.cat([z, im_s[:, 1:-1, :], z], dim=1).float()], dim=1)
-            y = F.conv_transpose1d(spec_cat, self.K_istft.to(spec_cat.device), stride=ISTFT_HOP, padding=(ISTFT_N_FFT - ISTFT_HOP) // 2)[:, 0, :]
-            return y, re_s, im_s, f0, uv
+        if f0_hz is None or vuv is None:
+            f0_hz, vuv = self.am.f0_head(mel, svara_shift_st=shift_st)
+        elif shift_st is not None:
+            f0_hz = (f0_hz * torch.pow(2.0, shift_st.to(f0_hz.dtype) * (1.0 / 12.0))).clamp(130.0, 380.0)
+        y, re_s, im_s, _, _, _ = self.voc.forward_wav(mel, f0_hz, vuv)
+        return y, re_s, im_s, f0_hz, vuv
 
     @torch.no_grad()
     def infer(self, ids, lang, dur_scale, pitch_shift):
         """Studio-clean single-graph ONNX inference with Intra-Phoneme Progress Conditioning,
-        explicit Vedic Svara & Moraic embeddings, and direct AM F0/VUV -> AWPVocoder synthesis (zero DSP hacks).
+        explicit Vedic Svara & Moraic embeddings, and direct AM F0/VUV -> AWPVocoder synthesis.
         """
         B, L = ids.shape
         im = torch.ones((B, L), dtype=torch.bool, device=ids.device)
@@ -357,9 +320,11 @@ class Student(nn.Module):
         is_pause = (ids <= 8).float()
         phase = pos / L_f
         tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        p_arch = (0.45 * torch.sin(phase * 3.14159265) + tail_closure) * (1.0 - is_pause) - 0.22 * is_pause
-        sty_gain = (0.16 * pros[:, 1:2] + 0.12 * (1.0 - is_sa.float()[:, None])).clamp(0.0, 0.34)
-        p_enc = (p_arch * (0.50 * sty_gain) + 0.90 * ps_tok).clamp(-1.10, 1.10)
+        p_arch = (0.55 * torch.sin(phase * 3.14159265) + 0.48 * torch.sin(phase * 9.424778) + 0.32 * torch.cos(phase * 15.707963) + tail_closure) * (1.0 - is_pause) - 0.28 * is_pause
+        p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode="replicate"), 3, stride=1)[:, 0]
+        sty_gain = (0.18 * pros[:, 1:2] + 0.14 * (1.0 - is_sa.float()[:, None])).clamp(0.0, 0.38)
+        p_prose_enc = p_arch * (0.55 * sty_gain)
+        p_enc = (p_prose_enc + 0.95 * ps_tok).clamp(-1.10, 1.10)
 
         ones_m = torch.ones((B, 1), dtype=torch.float32, device=ids.device)
         h, mu, g = self.am.enc(
@@ -369,32 +334,26 @@ class Student(nn.Module):
         )
         if hasattr(self.am.enc, "energy_pred"):
             eng_hat = self.am.enc.energy_pred(h).squeeze(-1).clamp(-1.2, 1.2)
-            mu = mu + (0.08 * pros[:, 2:3] + 0.05 * eng_hat)[..., None] * 0.28
+            mu = mu + (0.10 * pros[:, 2:3] + 0.06 * eng_hat)[..., None] * 0.32
 
         x_d = self.am.dur.pred_logdur(ids, h, im) + self.dur_rate_bias.clamp(-0.12, 0.12)
-        dur_frames = torch.exp(x_d).clamp(min=1.0, max=64.0)
+        dur_frames = torch.exp(x_d).clamp(min=1.0, max=60.0)
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
-        # Moraic Guru/Laghu/Pluta/Pranava duration conditioning for authentic Sanskrit Laya
-        is_sa_f = is_sa.float()[:, None]
-        mora_mult = torch.ones_like(dur_frames)
-        mora_mult = torch.where((mora_ids == 1) & (is_sa_f > 0.5), torch.full_like(mora_mult, 1.32), mora_mult)
-        mora_mult = torch.where((mora_ids == 2) & (is_sa_f > 0.5), torch.full_like(mora_mult, 1.75), mora_mult)
-        mora_mult = torch.where((mora_ids == 3) & (is_sa_f > 0.5), torch.full_like(mora_mult, 2.15), mora_mult)
-        dur_frames = (dur_frames * rate_mult * ds_tok * mora_mult).clamp(min=1.0, max=80.0)
+        dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
 
         is_tail = (((pos >= (L_f - 3.0)) & (ids > 8)) | (ids >= 53)).float()
         min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
-        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=80.0)
+        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
 
-        # Resonant Pranava ॐ floor ('o' + 'm' >= 22 + 12 frames on Sanskrit) & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID["o"], SYM2ID["m"], SYM2ID["h"], SYM2ID["a"], SYM2ID["|"]
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
         prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
+        is_sa_f = is_sa.float()[:, None]
         is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 8)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
-        dur = torch.maximum(dur, is_om_o * 22.0 + is_om_m * 12.0)
+        dur = torch.maximum(dur, is_om_o * 12.0 + is_om_m * 7.0)
         is_final_h = ((ids == id_h) & (next_ids <= 8)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
         next3_ids = torch.cat([ids[:, 3:], torch.zeros_like(ids[:, -3:])], dim=1)
@@ -419,17 +378,6 @@ class Student(nn.Module):
         is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
         dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
 
-        # Direct continuous F0 (in Hz) and soft V/UV from AM encoder heads + svara/prosody target
-        f0_z = self.am.enc.f0_pred(h).squeeze(-1).clamp(-2.2, 2.2)
-        vuv_tok = torch.sigmoid(self.am.enc.vuv_pred(h).squeeze(-1)) * (1.0 - is_pause)
-        # Svara shruti offset in semitones on Sanskrit
-        svara_st = torch.zeros_like(f0_z)
-        svara_st = torch.where(svara_ids == 2, torch.full_like(svara_st, -1.95), svara_st)
-        svara_st = torch.where(svara_ids == 3, torch.full_like(svara_st, +1.95), svara_st)
-        svara_st = torch.where(svara_ids == 4, torch.full_like(svara_st, +0.38), svara_st)
-        lf0_tok = self.f0_stats[0] + self.f0_stats[1] * (0.65 * f0_z + 0.35 * p_arch) + (0.55 * ps_tok + 0.35 * svara_st) * (math.log(2.0) / 12.0)
-        f0_hz_tok = torch.exp(lf0_tok).clamp(110.0, 380.0)
-
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
         t_arange = torch.arange(0, T, device=ids.device, dtype=torch.float32)
@@ -437,9 +385,6 @@ class Student(nn.Module):
 
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
-        f0_hz_frame = torch.gather(f0_hz_tok, 1, idx)[:, None, :]
-        f0_hz_frame = F.avg_pool1d(F.pad(f0_hz_frame, (1, 1), mode="replicate"), 3, stride=1)
-        vuv_frame = torch.gather(vuv_tok, 1, idx)[:, None, :]
         prog_4d = compute_intra_phoneme_progress(dur, ends, idx, t_arange)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
@@ -459,12 +404,11 @@ class Student(nn.Module):
                 xt = xt + dt * k2
 
         mel = xt * self.am.stats[1] + self.am.stats[0]
-        # Update soft voicing with predicted mel energy so silence frames stay quiet
-        m_mean = mel.float().mean(dim=1, keepdim=True)
-        vuv_mel = torch.sigmoid((m_mean + 9.5) * 2.5)
-        vuv_eff = (0.55 * vuv_frame + 0.45 * vuv_mel).clamp(0.0, 1.0)
+        mel_clean = torch.cat([mel[:, :98, :], mel[:, 97:98, :], mel[:, 97:98, :]], dim=1)
+        ps_frame = torch.gather(ps_tok, 1, idx)[:, None, :] * 0.25 * is_sa_f[:, :, None]
+        f0_hz, vuv = self.am.f0_head(mel_clean, svara_shift_st=ps_frame)
 
-        y, _, _, _, _ = self.voc_wav(mel, f0_hz=f0_hz_frame, vuv=vuv_eff)
+        y, _, _, _, _ = self.voc_wav(mel_clean, f0_hz=f0_hz, vuv=vuv)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
 
@@ -474,7 +418,7 @@ def set_qat(model, flag):
     if hasattr(model.am, "set_qat"):
         model.am.set_qat(bool(flag))
     for name, m in model.named_modules():
-        if name.startswith(("voc.src", "voc.amp_head", "voc.pha_head")):
+        if name.startswith(("voc.src", "voc.amp_head", "voc.pha_head", "am.f0_head")):
             continue
         if hasattr(m, "qat_enabled"):
             m.qat_enabled = bool(flag)
