@@ -22,7 +22,12 @@
       (text ? "<small lang=\"ne\">" + esc(text) + "</small>" : "") +
       '<audio controls preload="none" src="' + esc(src) + '"></audio></div>';
   }
-  $("#eps").innerHTML = EPS.map(function (e) { return clipCard(e[0], e[1], e[2]); }).join("");
+  Promise.all(EPS.map(function (e) { return fetch(e[0], { method: "HEAD" }).then(function (r) { return r.ok ? e : null; }).catch(function () { return null; }); }))
+    .then(function (ok) {
+      ok = ok.filter(Boolean);
+      if (!ok.length) { $("#featured").style.display = "none"; return; }
+      $("#eps").innerHTML = ok.map(function (e) { return clipCard(e[0], e[1], e[2]); }).join("");
+    });
 
   $("#theme").addEventListener("click", function () {
     var n = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
