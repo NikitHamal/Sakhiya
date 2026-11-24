@@ -198,14 +198,14 @@ def ground_nepali_clause_endings(w: np.ndarray, sr: int, target_slope_st: float 
                     modified = True
         if not modified:
             return w
-        # Resample w along cumulative phase integral of r_prof
-        pos = np.cumsum(r_prof, dtype=np.float64)
-        pos -= pos[0]
-        n_out = int(pos[-1])
+        # Resample w with instantaneous step d(src_idx)/dn = r_prof (r_prof < 1 lowers pitch cleanly)
+        inv_r = 1.0 / np.maximum(r_prof.astype(np.float64), 0.5)
+        n_out = int(np.sum(inv_r))
         if n_out < 512:
             return w
-        grid = np.linspace(0.0, pos[-1], n_out, dtype=np.float64)
-        src_idx = np.interp(grid, pos, np.arange(len(w), dtype=np.float64))
+        out_t = np.cumsum(inv_r) - inv_r[0]
+        grid = np.linspace(0.0, out_t[-1], n_out, dtype=np.float64)
+        src_idx = np.interp(grid, out_t, np.arange(len(w), dtype=np.float64))
         return np.interp(src_idx, np.arange(len(w), dtype=np.float64), w).astype(np.float32)
     except Exception:
         return w

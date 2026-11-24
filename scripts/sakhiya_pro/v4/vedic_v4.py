@@ -155,16 +155,30 @@ def extract_or_stretch_neural_pranava_om(dur_s: float = 1.68) -> np.ndarray:
             s1 = (f_lo + int(np.argmin(rms[f_lo:f_hi]))) * 128 if f_hi > f_lo else int(0.65 * SR)
             om_raw = w_full[s0:s1].copy()
             cur_d = len(om_raw) / float(SR)
-            if 0.30 <= cur_d < dur_s:
-                # Keep crisp 70ms onset, stretch steady vocalic+nasal core with phase vocoder, keep 90ms release
-                n_on = int(0.07 * SR)
-                n_off = int(0.09 * SR)
-                core = om_raw[n_on:-n_off]
-                target_core_d = max(0.20, dur_s - 0.16)
-                rate = max(0.28, len(core) / float(SR) / target_core_d)
-                core_st = librosa.effects.time_stretch(core, rate=rate)
+            if 0.25 <= cur_d < dur_s:
+                # Phase-coherent WSOLA raised-cosine overlap-add on the steady vocalic nucleus (zero FFT phase smear!)
+                n_on = int(0.08 * SR)
+                n_off = int(0.14 * SR)
+                core = om_raw[n_on:max(n_on + int(0.12 * SR), len(om_raw) - n_off)]
+                target_core_n = max(int(0.20 * SR), int(dur_s * SR) - n_on - n_off)
+                win_n = min(len(core), int(0.16 * SR))
+                ov_n = win_n // 2
+                step_n = win_n - ov_n
+                fade = 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, ov_n, dtype=np.float32))
+                buf = np.zeros(target_core_n + win_n, dtype=np.float32)
+                pos = 0
+                seg_idx = 0
+                while pos < target_core_n:
+                    seg = core[:win_n].copy() if seg_idx % 2 == 0 else core[-win_n:].copy()
+                    if pos > 0:
+                        seg[:ov_n] *= fade
+                        buf[pos:pos + ov_n] *= (1.0 - fade)
+                    buf[pos:pos + win_n] += seg
+                    pos += step_n
+                    seg_idx += 1
+                core_st = buf[:target_core_n]
                 w_om = np.concatenate([om_raw[:n_on], core_st, om_raw[-n_off:]]).astype(np.float32)
-                w_om = _apply_gamaka_vibrato(w_om, SR, rate_hz=5.2, depth_cents=12.0)
+                w_om = _apply_gamaka_vibrato(w_om, SR, rate_hz=5.2, depth_cents=10.0)
                 fi = int(0.035 * SR); fo = int(0.095 * SR)
                 w_om[:fi] *= np.linspace(0.0, 1.0, fi, dtype=np.float32)
                 w_om[-fo:] *= np.linspace(1.0, 0.0, fo, dtype=np.float32)
@@ -194,11 +208,10 @@ def _impose_chandas_svara_envelope(w: np.ndarray, sr: int, text: str) -> np.ndar
         st_sm = np.convolve(np.pad(st_target, (4, 4), mode='edge'), ker, mode='valid')
         st_sm = np.clip((st_sm - np.mean(st_sm)) * 0.95, -2.2, 2.2)
         st_samp = np.interp(np.linspace(0, len(st_sm) - 1, n), np.arange(len(st_sm)), st_sm)
-        r_prof = (2.0 ** (st_samp / 12.0)).astype(np.float64)
-        pos = np.cumsum(r_prof)
-        pos -= pos[0]
-        grid = np.linspace(0.0, pos[-1], n, dtype=np.float64)
-        src_idx = np.interp(grid, pos, np.arange(n, dtype=np.float64))
+        inv_r = (2.0 ** (-st_samp / 12.0)).astype(np.float64)
+        out_t = np.cumsum(inv_r) - inv_r[0]
+        grid = np.linspace(0.0, out_t[-1], n, dtype=np.float64)
+        src_idx = np.interp(grid, out_t, np.arange(n, dtype=np.float64))
         return np.interp(src_idx, np.arange(n, dtype=np.float64), w).astype(np.float32)
     except Exception:
         return w

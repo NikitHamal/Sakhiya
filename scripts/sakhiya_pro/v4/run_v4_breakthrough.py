@@ -321,13 +321,15 @@ def step4_train_and_render_pro_v4(anchors_meta, vc_rows):
                 continue
             r = json.loads(l)
             if r.get('lang') == 'ne' and r.get('wav') and os.path.exists(r['wav']) and 3.0 <= r.get('dur', 0) <= 12.0:
-                train_rows.append(dict(id=r['id'], audio_path=r['wav'], text=r['text'], language_id='npi', speaker_id='sakhiya', duration=r['dur']))
+                clean_id = re.sub(r'[^A-Za-z0-9_-]', '_', str(r['id']))
+                train_rows.append(dict(id=clean_id, audio_path=r['wav'], text=r['text'], language_id='npi', speaker_id='sakhiya', duration=r['dur']))
                 if len(train_rows) >= 120:
                     break
 
     for r in vc_rows[:100]:
         if os.path.exists(r['audio_path']) and r['dur'] >= 3.0:
-            train_rows.append(dict(id='ved_' + r['id'], audio_path=r['audio_path'], text=r['text'], language_id='sa', speaker_id='sakhiya', duration=r['dur']))
+            clean_id = re.sub(r'[^A-Za-z0-9_-]', '_', 'ved_' + str(r['id']))
+            train_rows.append(dict(id=clean_id, audio_path=r['audio_path'], text=r['text'], language_id='sa', speaker_id='sakhiya', duration=r['dur']))
 
     random.Random(42).shuffle(train_rows)
     dev_rows = train_rows[:16]

@@ -219,8 +219,6 @@ class StudentV4(nn.Module):
         self.voc.fuse_weight_norm()
 
     def _apply_svd_structure(self, r_enc=None, r_voc_k7=None, r_voc_k11=None, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None):
-        if self.arch == 'sakhiya_pico':
-            self.am.vel.ublock_late = self.am.vel.ublock_early
         if r_enc is not None:
             if self.arch == 'sakhiya_pico':
                 self.am.enc.ublock.c1 = _make_svd_seq(self.am.enc.ublock.c1, r_enc, use_qat=True)
