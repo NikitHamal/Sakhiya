@@ -1,5 +1,12 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 71 — verification pass, release, live cards
+- Box `sb-5977659b13d89dc0` (deadline file 21:02 UTC) re-inspected: GPU idle, no chain process, HF backup log healthy. Nothing killed.
+- Re-verified on the box: pytest 26 passed (ggml C++ tests excluded), `node --check docs/*.js` OK; Pages `listen.html` HTTP 200, last Pages build `built`.
+- Marimo cards (`monitor/cells_pro4.py`) re-installed via `marimo._code_mode`: 4 cells, all idle, 0 errors.
+- HF already holds `sakhiya-pro-v1/v4/` (120 files) and `sakhiya-v1-train/sakhiya_pro_v4/` (670 files). Created GitHub Release `sakhiya-pro-v4` (Micro 3.97 MB, Pico 1.37 MB INT8 ONNX + frozen packs zip).
+- Caveats: no human MOS; not verified in a real browser; the shipped Micro/Pico sizes are the committed ONNX files (Pico 1.37 MB, not ~1.16 MB).
+
 ## Session 70 — v4 pickup on the new MoLab box; merge to main; Listening Desk
 - New box (`sb-5977659b13d89dc0`, RTX PRO 6000 Blackwell) inspected: no chain_v4 process alive, GPU idle, `/work/tts/logs/` shows v4b eval (`checkpoint-200`: CER 0.0288, UTMOS 3.859, clicks 1.42, end-slope -1.36 st, karkar 0.0017) and a healthy 15-min HF backup log. Nothing was killed or reset.
 - Frozen packs already in `docs/samples/versions/`: `sakhiya_pro_v4`, `sakhiya_pro_v4_vedic`, `sakhiya_v4_micro` (4.176 MB INT8, corr 0.9954, nan 0, Node RTF 0.016), `sakhiya_v4_pico` (1.26 MB INT8 ONNX, corr 0.9921, nan 0, Node RTF 0.013); all registered in `registry.json`.
