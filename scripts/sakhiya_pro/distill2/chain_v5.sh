@@ -21,7 +21,8 @@ mkdir -p $D/runs/t30 $D/runs/t15 $D/runs/t10 $D/runs/t5 $D/runs/t1
 
 st 60_micro "Pro-v3 Shrink Ladder (t30, t15, t10, t5, t1)" run "concurrent ${MIN} min + INT8 QAT"
 for T in t30 t15 t10 t5 t1; do
-  BS=36; [ $T = t1 ] && BS=48
+  BS=32; [ $T = t1 ] && BS=48
+  if [ $T = t30 ] || [ $T = t15 ]; then BS=18; fi
   nohup python3 $R/train_student_gt.py --tier $T --minutes $MIN --bs $BS > $L/stu_$T.log 2>&1 < /dev/null &
 done
 
