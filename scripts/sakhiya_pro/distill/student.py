@@ -112,7 +112,7 @@ def snap_am_int8(am):
     with torch.no_grad():
         for name, p in am.named_parameters():
             if name.startswith(("enc.", "dur.")):
-                if p.ndim >= 2 and p.numel() >= 128 and p.shape[0] > 1:
+                if p.ndim >= 2 and p.numel() >= 128 and p.shape[0] >= 16:
                     p.copy_(ste_int8_weight(p.float(), axis=0, enabled=True))
                 elif p.numel() > 16:
                     p.copy_(p.half().float())

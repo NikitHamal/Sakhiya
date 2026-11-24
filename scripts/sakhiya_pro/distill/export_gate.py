@@ -126,12 +126,13 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
         op = use.get(init.name, "")
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
-            or a.shape[0] in (1, 66)
+            or a.shape[0] <= 8
+            or a.shape[0] == 66
             or (a.ndim == 3 and a.shape[1] == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
-        if a.ndim >= 2 and a.size >= 128 and a.shape[ax] > 1 and not skip_fp16:
+        if a.ndim >= 2 and a.size >= 128 and a.shape[ax] >= 16 and not skip_fp16:
             red = tuple(i for i in range(a.ndim) if i != ax)
             sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
             shp = [1] * a.ndim

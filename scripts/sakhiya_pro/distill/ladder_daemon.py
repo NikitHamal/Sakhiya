@@ -259,7 +259,8 @@ if __name__ == '__main__':
             except Exception as e:
                 print(t, 'ERR', str(e)[:200], flush=True)
             leaderboard()
-            refresh_marimo_cards()
+            if not a.once:
+                refresh_marimo_cards()
         leaderboard()
         if a.once:
             break
