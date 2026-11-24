@@ -93,25 +93,27 @@ def promote_repo_and_hf(tier, g, best_dir):
         v4_tag, v5_tag, tier_id, mdir_name = alias_map[tier]
         tags_to_write.extend([v4_tag, v5_tag])
         src_i8 = os.path.join(best_dir, 'model.int8.onnx')
-        dst_mdir = os.path.join(REPO, 'docs', mdir_name)
-        if os.path.exists(src_i8) and os.path.isdir(dst_mdir):
-            shutil.copy(src_i8, os.path.join(dst_mdir, 'model.int8.onnx'))
-            extra_git_paths.append(f'docs/{mdir_name}/model.int8.onnx')
-            sz_p = os.path.join(dst_mdir, 'size.json')
-            sz_obj = dict(
-                tier=tier_id, int8_mb=g.get('int8_mb'), fp32_mb=g.get('fp32_mb'),
-                int8_vs_fp32_mel_corr=g.get('int8_vs_fp32_mel_corr'),
-                nan_count=g.get('nan_count', 0), rtf_1thread=g.get('rtf_1thread'),
-                bad_ops=g.get('bad_ops', []), node_verify=g.get('node_verify', {})
-            )
-            json.dump(sz_obj, open(sz_p, 'w'), indent=2, ensure_ascii=False)
-            extra_git_paths.append(f'docs/{mdir_name}/size.json')
+        v5_mdir_name = f'models_v5_{tier_id}'
+        for cur_mdir in (mdir_name, v5_mdir_name):
+            dst_mdir = os.path.join(REPO, 'docs', cur_mdir)
+            if os.path.exists(src_i8) and os.path.isdir(dst_mdir):
+                shutil.copy(src_i8, os.path.join(dst_mdir, 'model.int8.onnx'))
+                extra_git_paths.append(f'docs/{cur_mdir}/model.int8.onnx')
+                sz_p = os.path.join(dst_mdir, 'size.json')
+                sz_obj = dict(
+                    tier=tier_id, int8_mb=g.get('int8_mb'), fp32_mb=g.get('fp32_mb'),
+                    int8_vs_fp32_mel_corr=g.get('int8_vs_fp32_mel_corr'),
+                    nan_count=g.get('nan_count', 0), rtf_1thread=g.get('rtf_1thread'),
+                    bad_ops=g.get('bad_ops', []), node_verify=g.get('node_verify', {})
+                )
+                json.dump(sz_obj, open(sz_p, 'w'), indent=2, ensure_ascii=False)
+                extra_git_paths.append(f'docs/{cur_mdir}/size.json')
         tiers_p = os.path.join(REPO, 'docs', 'tiers.json')
         if os.path.exists(tiers_p):
             try:
                 td = json.load(open(tiers_p))
                 for tr_row in td.get('tiers', []):
-                    if tr_row.get('id') == tier_id:
+                    if tr_row.get('id') in (tier_id, f'v5_{tier_id}'):
                         tr_row['mb'] = g.get('int8_mb')
                         tr_row['onnx_mb'] = g.get('int8_mb')
                         tr_row['rtf'] = g.get('rtf_1thread')
