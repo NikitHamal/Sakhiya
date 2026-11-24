@@ -118,7 +118,7 @@ def _card3():
     tail, box, esc = H["tail"], H["box"], H["esc"]
     rx_v = re.compile(r"Step (\d+) mel ([\d.]+) stft ([\d.]+) (?:f0|teach) ([\d.]+) D ([\d.]+) \| ([\d.]+)/(\d+) min")
     vrows = ""
-    for vlbl, vlg in (("voc320 (GTA)", "/work/tts/logs/voc320_gta.log"), ("voc144 (GTA)", "/work/tts/logs/voc144.log"), ("voc144_t1 (GTA)", "/work/tts/logs/voc144_t1.log")):
+    for vlbl, vlg in (("awp_voc224 (Phase 1)", "/work/tts/logs/awp_voc224.log"), ("awp_voc136 (Phase 1)", "/work/tts/logs/awp_voc136.log")):
         vlast = None
         for ln in reversed(tail(vlg, 30)):
             m = rx_v.search(ln)
