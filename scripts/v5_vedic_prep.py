@@ -57,8 +57,9 @@ def main():
         w = trim(w)
         if w is None: drop["trim"] += 1; continue
         if t[-1] not in "।॥?!": t += " ।"
-        o = f"{OUT}/wav/{os.path.basename(p)}"; sf.write(o, w, 24000)
-        rows.append(dict(id=os.path.basename(p)[:-4], audio_path=o, text=t, language_id="sa", dur=len(w) / 24000,
+        o = f"{OUT}/wav/{os.path.basename(p)[:-4].replace(chr(46), chr(45))}.wav"; sf.write(o, w, 24000)
+        rows.append(dict(id=os.path.basename(p)[:-4].replace(".", "-"),   # WebDataset splits keys at the first dot
+                          audio_path=o, text=t, language_id="sa", dur=len(w) / 24000,
                          src=("gita" if "gss_" in p or "gita" in p.lower() or "Gita" in p else "vag")))
     random.Random(7).shuffle(rows)
     dev, tr = rows[:40], rows[40:]

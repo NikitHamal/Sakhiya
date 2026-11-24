@@ -42,7 +42,7 @@ def load_vedic(model, adapter_dir):
     return model
 
 
-def pick_refs(n=3, lo=6.0, hi=8.0, min_match=90):
+def pick_refs(n=3, lo=6.0, hi=8.0, min_match=float(os.environ.get("REF_MATCH", 90)), min_voiced=float(os.environ.get("REF_VOICED", 0.85))):
     """Razor-clean 6-8 s prompts: full clip, verbatim text, high ASR match, no Gita/Nepali, distinct texts."""
     gold = json.load(open(f"{V}/meta/vedic/gold.json")); rows = [json.loads(l) for l in open(f"{V}/ft/dev.jsonl")]
     rows += [json.loads(l) for l in open(f"{V}/ft/train.jsonl")]
@@ -50,7 +50,7 @@ def pick_refs(n=3, lo=6.0, hi=8.0, min_match=90):
     for r in rows:
         if r["src"] != "vag" or not (lo <= r["dur"] <= hi): continue
         g = gold.get(f"/work/tts/segments/vedic_chant/{r['id']}.wav", {})
-        if float(g.get("match", 0)) < min_match or float(g.get("voiced", 0)) < 0.85: continue
+        if float(g.get("match", 0)) < min_match or float(g.get("voiced", 0)) < min_voiced: continue
         c.append((float(g["match"]) + 20 * float(g.get("steady", 0)), r))
     c.sort(key=lambda x: -x[0]); return [r for _, r in c[:n]]
 
@@ -65,7 +65,11 @@ def render(model, out, nref=3, seeds=3, num_step=32, gs=2.0):
                 torch.manual_seed(1000 * ri + sd)
                 a = model.generate(text=txt, language="sa", ref_audio=ref["audio_path"], ref_text=ref["text"], num_step=num_step,
                                    guidance_scale=gs, instruct=None)
-                w = np.asarray(a[0], dtype=np.float32); p = f"{out}/{cid}_r{ri}_s{sd}.wav"; sf.write(p, w, model.sampling_rate)
+                w = np.asarray(a[0], dtype=np.float32)
+                if os.environ.get("V5_RAW") != "1":   # same zero-click de-karkar chain as the Nepali master (removes RVQ crackle/hiss)
+                    from v4_pro_render import declick_and_deess
+                    w = declick_and_deess(w, model.sampling_rate)
+                p = f"{out}/{cid}_r{ri}_s{sd}.wav"; sf.write(p, w, model.sampling_rate)
                 man.append(dict(wav=p, target_text=txt, ref_text=ref["text"], mode="vedic", id=cid, ref=ri, seed=sd))
     json.dump(man, open(f"{out}/manifest.json", "w"), ensure_ascii=False, indent=1); return man
 
