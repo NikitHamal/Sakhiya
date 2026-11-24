@@ -198,6 +198,8 @@ class SakhiyaONNX:
                 if w.size > 256:
                     ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
                     w[:128] *= ramp; w[-128:] *= ramp[::-1]
+                    pad_n = int(0.055 * self.cfg.get("sample_rate", 24000))
+                    w = np.concatenate([np.zeros(pad_n, dtype=np.float32), w, np.zeros(pad_n // 2, dtype=np.float32)])
                 return w
             dur_ov = np.maximum(np.round(dm_arr * 6.0 / k["rate"]), 3).astype(np.int64)[None, :]
             feeds_add["dur_override"] = dur_ov
