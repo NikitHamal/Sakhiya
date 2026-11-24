@@ -7,7 +7,7 @@ ST = V5 + "/state"
 LISTEN = V5 + "/listen"
 GROUPS = ["nepali", "episode01", "vedic", "micro", "pico"]
 GROUP_LABEL = {"nepali": "Clean Nepali (v5 master)", "episode01": "Episode 01 (v5 broadcast)", "vedic": "Isolated Vedic",
-               "micro": "Micro (INT8)", "pico": "Pico (INT8)"}
+               "micro": "Micro (INT8 · live v4 baseline)", "pico": "Pico (INT8 · live v4 baseline)"}
 STYLE = ("<style>.v5{font-family:system-ui,sans-serif;background:#10151c;color:#e8edf3;padding:14px 16px;border-radius:12px;line-height:1.5}"
          ".v5 h3{margin:0 0 8px;font-size:17px}.v5 table{border-collapse:collapse;width:100%;font-size:13px}"
          ".v5 td,.v5 th{border-bottom:1px solid #26303c;padding:4px 8px;text-align:left}.ok{color:#4ade80}.bad{color:#f87171}"
@@ -76,10 +76,18 @@ def card2():
         v4 = "".join(f"<tr><td>{html.escape(r['pack'].replace('sakhiya_pro_', ''))}/{r['id']}</td>"
                      f"<td class='{'ok' if r['ok'] else 'bad'}'>{'PASS' if r['ok'] else 'REJECT'}</td>"
                      f"<td>{html.escape(', '.join(r['rejects'])[:140])}</td></tr>" for r in a.get("v4_vedic", []))
+        nep = ""
+        for f in sorted(glob.glob(ST + "/nepali_*.json")):
+            try:
+                j = json.load(open(f)); g = j["agg"]
+                nep += (f"<tr><td>{html.escape(j['tag'])}</td><td>gate {g['gate_pass']}/{g['clips']} · all-thresholds {g['all_pass']}/{g['clips']} · "
+                        f"end_slope {g['end_slope']} · rise {g['rise_frac']} · CER {g['cer']} · UTMOS {g['utmos']}</td></tr>")
+            except Exception:
+                pass
         cause = "".join(f"<li>{html.escape(c)}</li>" for c in a.get("root_cause", []))
         body = (f"<b>Poisoned v4 Vedic:</b> <span class='bad'>{a.get('v4_rejected')}/{len(a.get('v4_vedic', []))} rejected</span> · "
                 f"leaked-prompt clips <b>{a.get('v4_leak_clips')}</b> · repeated-loop (stutter) clips <b>{a.get('v4_loop_clips')}</b>"
-                f"<table>{v4}</table><br><b>Nepali checkpoints (stored evals)</b><table>{rows}</table><br><b>Root cause</b><ul>{cause}</ul>")
+                f"<table>{v4}</table><br><b>Nepali v5 candidates (v3b-600, gate + thresholds)</b><table>{nep}</table><br><b>Nepali checkpoints (stored evals)</b><table>{rows}</table><br><b>Root cause</b><ul>{cause}</ul>")
         return _wrap("2 · Rollback audit (Pro v3b 400/200/600 vs poisoned v4)", body)
     except Exception as e:
         return _wrap("2 · Rollback audit", f"<span class='warn'>{html.escape(repr(e)[:100])}</span>")
