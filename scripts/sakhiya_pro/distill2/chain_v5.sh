@@ -16,7 +16,7 @@ MIN=$(( (END_EPOCH - $(date +%s)) / 60 ))
 nohup python3 $Q/ladder_daemon.py --every 1200 --tiers t15,t10,t5,t1 > $L/ladder_daemon.log 2>&1 < /dev/null &
 st 60_micro "Student ladder (GT Pro-v3, fixed vocoder, GAN+WavLM+QAT)" run "t15 t10 t5 t1 concurrent, ${MIN} min"
 for T in t15 t5 t1 t10; do
-  BS=24; [ $T = t1 ] && BS=32
+  BS=40; [ $T = t1 ] && BS=48
   nohup python3 $R/train_student_gt.py --tier $T --minutes $MIN --bs $BS --resume > $L/stu_$T.log 2>&1 < /dev/null &
 done
 echo "students launched $(date -u) for ${MIN} min"
