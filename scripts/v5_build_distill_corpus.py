@@ -113,7 +113,7 @@ def main():
     ep_tl = "/work/tts/v5_recovery/ep01_a4/timeline.json"
     if os.path.exists(ep_tl):
         tl = json.load(open(ep_tl, encoding="utf8"))
-        for row in tl.get("lines", tl if isinstance(tl, list) else []):
+        for row in (tl if isinstance(tl, list) else tl.get("lines", [])):
             lid = row.get("id", "")
             txt = row.get("text", "")
             wp = f"/work/tts/v5_recovery/ep01_a4/lines/{lid}.wav"
