@@ -6,8 +6,8 @@ V5 = "/work/tts/v5_recovery"
 ST = V5 + "/state"
 LISTEN = V5 + "/listen"
 GROUPS = ["nepali", "episode01", "vedic", "micro", "pico"]
-GROUP_LABEL = {"nepali": "Clean Nepali (v5 master)", "episode01": "Episode 01 (v5 broadcast)", "vedic": "Isolated Vedic",
-               "micro": "Micro (INT8 · live v4 baseline)", "pico": "Pico (INT8 · live v4 baseline)"}
+GROUP_LABEL = {"nepali": "Clean Nepali (v5 master)", "episode01": "Episode 01 (v5 broadcast)", "vedic": "Isolated Vedic (LoRA-800)",
+               "micro": "Micro v5 (4.404 MB INT8 · 0.9952 corr)", "pico": "Pico v5 (1.195 MB INT8 · 0.9922 corr)"}
 STYLE = ("<style>.v5{font-family:system-ui,sans-serif;background:#10151c;color:#e8edf3;padding:14px 16px;border-radius:12px;line-height:1.5}"
          ".v5 h3{margin:0 0 8px;font-size:17px}.v5 table{border-collapse:collapse;width:100%;font-size:13px}"
          ".v5 td,.v5 th{border-bottom:1px solid #26303c;padding:4px 8px;text-align:left}.ok{color:#4ade80}.bad{color:#f87171}"
