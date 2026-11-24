@@ -116,6 +116,21 @@ def _card3():
     _g = {}
     exec(_COMMON_SRC, _g); H = _g["_sp5_helpers"]()
     tail, box, esc = H["tail"], H["box"], H["esc"]
+    rx_v = re.compile(r"Step (\d+) mel ([\d.]+) stft ([\d.]+) f0 ([\d.]+) D ([\d.]+) \| ([\d.]+)/(\d+) min")
+    vrows = ""
+    for vch in (320, 144):
+        vlg = f"/work/tts/logs/voc{vch}.log"
+        vlast = None
+        for ln in reversed(tail(vlg, 30)):
+            m = rx_v.search(ln)
+            if m:
+                vlast = m
+                break
+        if vlast:
+            vst, vmel, vstft, vf0, vd, vel, vbud = int(vlast[1]), float(vlast[2]), float(vlast[3]), float(vlast[4]), float(vlast[5]), float(vlast[6]), float(vlast[7])
+            vdone = any("VOC_GT_DONE" in ln for ln in tail(vlg, 5))
+            vstate = "✅ done" if vdone else ("🟢 running" if int(time.time() - os.path.getmtime(vlg)) < 120 else "⏸️ idle")
+            vrows += f"<tr><td><b>voc{vch} (Pro-v3 GAN)</b></td><td align=right>{vst}</td><td align=right>mel {vmel:.3f}</td><td align=right>stft {vstft:.3f}</td><td align=right>{vel:.1f}/{vbud:.0f} min</td><td align=right>{max(0.0, vbud-vel):.0f} min</td><td>{vstate}</td></tr>"
     rx = re.compile(r"Step (\d+) \| ([\d.]+) it/s \| mel ([\d.]+).*?\| ([\d.]+)/(\d+) min")
     rows = ""
     for tier in ("t30", "t15", "t10", "t5", "t1"):
@@ -141,7 +156,9 @@ def _card3():
         rows += (f"<tr><td><b>{tier}</b></td><td align=right>{step}</td><td align=right>{its:.2f}</td><td align=right>{mel:.3f}</td>"
                  f"<td align=right>{el:.0f}/{bud:.0f} min</td><td align=right>{eta:.0f} min</td><td>{bar}</td><td>{alive}</td></tr>")
     ld = tail("/work/tts/logs/ladder_daemon.log", 4) + tail("/work/sp/distill/ladder_daemon.log", 4)
-    body = ("<table style='font-size:12.5px;border-spacing:10px 2px'><tr><th>tier</th><th>step</th><th>step/s</th><th>mel</th><th>elapsed</th><th>ETA</th><th></th><th>state</th></tr>"
+    vtbl = (f"<div style='margin-bottom:6px'><b>Stage V · Pro-v3 Harmonic-iSTFT Vocoder GANs:</b>"
+            f"<table style='font-size:12px;border-spacing:10px 2px'>{vrows}</table></div>") if vrows else ""
+    body = (vtbl + "<table style='font-size:12.5px;border-spacing:10px 2px'><tr><th>tier</th><th>step</th><th>step/s</th><th>mel</th><th>elapsed</th><th>ETA</th><th></th><th>state</th></tr>"
             + rows + "</table>"
             "<div style='margin-top:6px;color:#555'>INT8 forensic gate (ladder daemon, every 20 min):</div>"
             f"<pre style='font-size:11px;white-space:pre-wrap'>{esc(chr(10).join(ld[-5:])) or 'waiting for first gate'}</pre>")

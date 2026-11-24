@@ -10,6 +10,7 @@ RUNS, OUT, LISTEN = '/work/sp/distill/runs', '/work/sp/tiers', '/work/sp/listen'
 REFS = [
     dict(name='Sakhiya-Pro v1 (ft3_s200 Teacher)', size_mb=2400.0, utmos=3.973, cer=0.064, sa_cer=0.137, drops=0, stutters=0, clicks=35, spk=0.670, rtf='GPU', status='anchor teacher'),
     dict(name='Sakhiya-Pro v2 (s2_300 Teacher)', size_mb=2400.0, utmos=3.796, cer=0.066, sa_cer=0.147, drops=0, stutters=0, clicks=44, spk=0.669, rtf='GPU', status='shipped v2'),
+    dict(name='Sakhiya-Pro v3 (v3b_s600 Native-Nepal Teacher)', size_mb=2400.0, utmos=3.918, cer=0.032, sa_cer=0.068, drops=0, stutters=0, clicks=0, spk=0.852, rtf='GPU', status='shipped Pro v3'),
     dict(name='Sakhiya-V1 (Live Site)', size_mb=15.98, utmos=3.957, cer=0.014, sa_cer=0.025, drops=0, stutters=0, clicks=0, spk=0.987, rtf=0.1884, status='shipped'),
     dict(name='Sakhiya-V1-Nano (Live Site)', size_mb=8.93, utmos=3.253, cer=0.027, sa_cer=0.046, drops=0, stutters=0, clicks=0, spk=0.960, rtf=0.0217, status='shipped'),
     dict(name='Sakhiya-V1-Atom (Live Site)', size_mb=6.51, utmos=3.262, cer=0.017, sa_cer=0.068, drops=0, stutters=0, clicks=0, spk=0.955, rtf=0.0189, status='shipped'),
