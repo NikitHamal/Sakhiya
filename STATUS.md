@@ -1,5 +1,12 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 70 — v4 pickup on the new MoLab box; merge to main; Listening Desk
+- New box (`sb-5977659b13d89dc0`, RTX PRO 6000 Blackwell) inspected: no chain_v4 process alive, GPU idle, `/work/tts/logs/` shows v4b eval (`checkpoint-200`: CER 0.0288, UTMOS 3.859, clicks 1.42, end-slope -1.36 st, karkar 0.0017) and a healthy 15-min HF backup log. Nothing was killed or reset.
+- Frozen packs already in `docs/samples/versions/`: `sakhiya_pro_v4`, `sakhiya_pro_v4_vedic`, `sakhiya_v4_micro` (4.176 MB INT8, corr 0.9954, nan 0, Node RTF 0.016), `sakhiya_v4_pico` (1.26 MB INT8 ONNX, corr 0.9921, nan 0, Node RTF 0.013); all registered in `registry.json`.
+- Merged `origin/main` (distill2 / T10 tiers) into `sakhiya-pro-v4`: 3 conflicts (`registry.json`, `student_tiers.json` unioned; `v15_pico.py` kept the v4 superset). pytest: 26 passed (ggml tests need the C++ build/soundfile and were excluded here); `node --check` passes on all `docs/*.js`.
+- New `docs/listen.html` Listening Desk (play every frozen pack, incl. Vedic v4, Micro, Pico) linked from the Studio nav. The 365-prompt Ampixa self-test remains in `index.html#ampixa` (local only, nothing is submitted).
+- Caveats: not verified in a real browser; Vedic/Micro/Pico quality is automatic-metric + forensic-gate based, not human MOS.
+
 ## Session 69 — Atom-Lite GGUF under 3 MB (`--profile tiny`), WASM Node test without emsdk (picked up from Session 68; nothing re-done)
 - **Audit of Session 68:** all four tiers' F32/F16/Q8_0/Q8_0-exact GGUFs, `sakhiya.wasm`, C ABI / JNI / Python wrapper, Pages runtime selector and the `v15-ggml-gguf` release were already published and still pass. Re-checked in a fresh sandbox: `tests/test_ggml_tiers.py` (all four tiers, `ALL_TIERS_PASSED`), `node tests/test_wasm_node.mjs` (`WASM_NODE_PASSED`), pytest (28 collected, all pass/skip), `node --check` on every `docs/*.js` and `docs/wasm/*.js`, and `SakhiyaGGML.from_pretrained("atom-lite")` end-to-end from Hugging Face.
 - **Micro / Pico:** re-checked `NikitHamal/sakhiya-v1-train` — still no Micro/Pico checkpoint (only `box4/logs/v15_pico*.log` and the OmniVoice-based `sakhiya_pro_v2/*`), so `arch = "istft_v6"` remains a converter/loader stub (`--tier micro|pico|istft_v6`).
