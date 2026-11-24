@@ -1,5 +1,12 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 73 — Pickup on `sb-1b37f31b21bf1be3`: Root-Cause Fix for Old-V1 Timbre in Student Exports (`sim_ProV3 0.212 -> 0.871`) + Live OT-CFM Rectified Distillation Ladder
+
+- **Acoustic/Forensic Diagnosis of Why Earlier `t30`/`t15`/`t10`/`t5` Exports Sounded Like Old V1**:
+  - Measured ECAPA speaker similarity on `ne_kathmandu.mp3` against both `sakhiya_pro_v3` (`sim_ProV3`) and `v5_final` (`sim_OldV1`). Earlier shipped packs (`sakhiya_v3_t30`, `t15`, `t10`, `t5`) had `sim_OldV1 = 0.846–0.947` and `sim_ProV3 = 0.080–0.243` because their acoustic models (`v5_c1_am`, `v9_voca_am`, `v9_sano_am`) were generating Old-V1 log-mel formant envelopes, and had only been distilled for ~100 steps before export.
+  - With the 2,200-step OT-CFM Sakhiya-Pro v3 Teacher AM (`/work/tts/ck/v3_t30_am.pt`) and Rectified Cache (`/work/sp/distill/v3_rectified_cache.pt`, 2,647 filtered clean Pro-v3 items + 20x oversampled `sakhiya_pro_v3` studio master clips), fresh warm-started `t30` and `t15` immediately jump to `sim_ProV3 = 0.871` / `0.823` (`sim_OldV1 = 0.384` / `0.429`) and `UTMOS = 4.062` / `3.914` at step 0.
+  - Fixed `t5` warm-initialization in `scripts/sakhiya_pro/distill/student.py` to load the 47k-step SVD-converged acoustic model from `t5_v3_init.pt` while retaining `v3_voc144.pt` (raising step-0 `t5` UTMOS from `2.943 -> 3.369`, CER `0.071 -> 0.036`), and launched all 5 student tiers (`t30, t15, t10, t5, t1`) + `ladder_daemon.py` on `v3_rectified_cache.pt`.
+
 ## Session 72 — new box `sb-1b37f31b21bf1be3`: why the old ladder exports sounded like V1 (root cause found), restart (honest, in progress)
 
 - **Audit by exact PID**: gen_corpus workers had already finished (`DONE tried 528 kept 342`); corpus 5.38 h teacher + 8.07 h GT cache (`gt_report.json`). A 4-student ladder (t15/t10/t5/t1) had been launched 4 min earlier by `chain_gt.sh`; it and its ladder daemon were stopped by PID and their runs archived (`runs_stale_voc1k`).
