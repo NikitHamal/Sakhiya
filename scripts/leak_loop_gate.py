@@ -107,7 +107,7 @@ def count_clicks(w, sr):
     return int(1 + (np.diff(idx) > int(0.002 * sr)).sum())
 
 
-def find_splices(w, sr, step_db=25.0, voiced_db=-38.0):
+def find_splices(w, sr, step_db=25.0, voiced_db=-30.0):
     """Hard envelope steps between voiced levels (a cut that lands mid-word) within ~6 ms. Returns times (s)."""
     w = w.astype(np.float32)
     db, n = _frames_db(w, sr, 3.0)
@@ -117,7 +117,7 @@ def find_splices(w, sr, step_db=25.0, voiced_db=-38.0):
         if a - b >= step_db and a > voiced_db:
             # real word-final decay never drops 25 dB in 6 ms; require the loud side to be sustained 30 ms prior
             lo = max(0, i - 10)
-            if np.median(db[lo:i]) > voiced_db - 6:
+            if np.median(db[lo:i]) > voiced_db - 6 and db[max(0, i - 6):i - 2].min() > a - 12:   # not a gradual fade
                 out.append(round(i * n / sr, 3))
         elif b - a >= step_db and b > voiced_db and np.median(db[i:i + 10]) > voiced_db - 6 and a > -75:
             # abrupt onset out of NON-silent floor (spliced into the middle of other audio)
