@@ -112,11 +112,16 @@ class HarmonicSource(nn.Module):
         amp = (1.0 / torch.sqrt(ks)) * aa
         k_ph = ks * ph
         har = torch.cat([torch.sin(k_ph) * amp, torch.cos(k_ph) * amp], dim=1) * uv_16
-        # Analytic multi-band unvoiced noise excitation (deterministic incommensurate sinusoids for 100% ONNX parity)
+        # Energy-gated phase-dispersed unvoiced excitation (0.0 during silence/pauses, zero stationary metallic tones)
+        e_gate = ((mel.mean(dim=1, keepdim=True) + 9.5) / 3.0).clamp(0.0, 1.0)
+        e_gate_16 = F.interpolate(e_gate.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=ph.dtype)[None, None, :]
         ap_freqs = torch.tensor([1.41421, 1.73205, 2.23607, 2.64575, 3.14159, 3.60555, 4.12311, 4.58258], device=ph.device, dtype=ph.dtype)[None, :, None]
-        ap = torch.cat([torch.sin(t_idx * ap_freqs), torch.cos(t_idx * (ap_freqs * 1.17))], dim=1)
-        har = (har + (1.0 - uv_16) * 0.14 * ap).to(mel.dtype)
+        ap = torch.cat([
+            torch.sin(t_idx * ap_freqs + 7.13 * torch.sin(t_idx * 0.173)),
+            torch.cos(t_idx * (ap_freqs * 1.17) + 5.71 * torch.cos(t_idx * 0.231)),
+        ], dim=1)
+        har = (har + (1.0 - uv_16) * e_gate_16 * 0.06 * ap).to(mel.dtype)
         return s.proj4(har), s.proj16(har), f0, uv
 
 

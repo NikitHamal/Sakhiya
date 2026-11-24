@@ -38,7 +38,7 @@ N_LANG = 2
 
 TIERS = {
     "t30": dict(tier="t30", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=92,   r_voc_k7=None, r_voc_k11=None),
+    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
     "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
@@ -108,14 +108,15 @@ def snap_f0_int8(voc):
 
 
 def snap_am_int8(am):
-    """Snap encoder and duration predictor weights to the per-channel INT8 grid so FP32 and INT8 ONNX durations never flip."""
+    """Snap encoder and duration predictor weights to the exact per-channel INT8/FP16 grid used by export_gate.quantize."""
     with torch.no_grad():
         for name, p in am.named_parameters():
             if name.startswith(("enc.", "dur.")):
-                if p.ndim >= 2 and p.numel() >= 128 and p.shape[0] >= 16:
+                if (p.ndim == 3 and p.shape[1] == 1) or (p.ndim >= 2 and p.shape[0] <= 8) or p.shape == (66, 1, 64):
+                    if p.numel() >= 256:
+                        p.copy_(p.half().float())
+                elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
                     p.copy_(ste_int8_weight(p.float(), axis=0, enabled=True))
-                elif p.numel() > 16:
-                    p.copy_(p.half().float())
 
 
 class Student(nn.Module):
@@ -452,14 +453,19 @@ class Student(nn.Module):
         p_s1 = F.avg_pool1d(F.pad(p_zero[:, None, :], (4, 4), mode="replicate"), 9, stride=1)
         p_sm = F.avg_pool1d(F.pad(p_s1, (2, 2), mode="replicate"), 5, stride=1)
         env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
-        kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
-        wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
-        comb_gain = 0.10 if self.steps == 1 else 0.0
-        mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
+        kb = torch.arange(100, device=mel.device, dtype=mel.dtype)[None, :, None]
+        wk = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)
+        diff = mel - env
+        if self.tier == "t1":
+            mel_w = env + torch.where(diff < 0.0, diff * (1.0 + 0.16 * wk), diff * (1.0 + 0.12 * wk))
+        elif self.steps == 1:
+            mel_w = env + torch.where(diff < 0.0, diff * (1.0 + 0.12 * wk), diff * (1.0 + 0.09 * wk))
+        else:
+            mel_w = env + torch.where(diff < 0.0, diff * (1.0 + 0.11 * wk), diff * (1.0 + 0.05 * wk))
         st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
-        tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode="replicate"), 5, stride=1)
-        gamaka = 0.05 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
+        tot_shift = F.avg_pool1d(F.pad((0.05 * st_shift[:, None, :]).clamp(-0.20, 0.20), (2, 2), mode="replicate"), 5, stride=1)
+        gamaka = 0.025 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
         tot_shift = tot_shift + gamaka
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)

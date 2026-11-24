@@ -108,6 +108,7 @@ def load_clean_pro_v3_items(data_path='/work/sp/distill/gt_feats.pt', dev='cuda'
                             id='master_' + c['id'],
                             ids=torch.tensor(ids_list, dtype=torch.long),
                             lang=(1 if c['lang'] == 'sa' else 0),
+                            wav=torch.from_numpy(np.clip(w * 32767.0, -32767.0, 32767.0).astype(np.int16)),
                             mel=m.half().cpu(),
                             dur=d_cpu.to(torch.int16),
                             split='train',

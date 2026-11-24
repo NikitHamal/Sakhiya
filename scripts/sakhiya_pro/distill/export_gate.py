@@ -120,19 +120,19 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
     keep, new = [], []
     for init in m.graph.initializer:
         a = numpy_helper.to_array(init)
-        if init.data_type != TensorProto.FLOAT or a.size <= 16:
+        if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
             keep.append(init)
             continue
         op = use.get(init.name, "")
+        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
-            or a.shape[0] <= 8
+            or a.shape[ax] <= 8
             or a.shape[0] == 66
             or (a.ndim == 3 and a.shape[1] == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
-        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
-        if a.ndim >= 2 and a.size >= 128 and a.shape[ax] >= 16 and not skip_fp16:
+        if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
             red = tuple(i for i in range(a.ndim) if i != ax)
             sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
             shp = [1] * a.ndim

@@ -293,7 +293,7 @@ def gta_train_voc(
         print(s, flush=True)
         open(logf, "a").write(s + "\n")
 
-    valid_idx = [idx for idx, x in enumerate(gt_items) if len(x["wav"]) // HOP > seg + 2 and gta_mels[idx].shape[1] >= len(x["wav"]) // HOP]
+    valid_idx = [idx for idx, x in enumerate(gt_items) if "wav" in x and len(x["wav"]) // HOP > seg + 2 and gta_mels[idx].shape[1] >= len(x["wav"]) // HOP]
     WAV = torch.cat([gt_items[i]["wav"] for i in valid_idx]).to(dev)
     lens = torch.tensor([len(gt_items[i]["wav"]) // HOP for i in valid_idx], device=dev)
     starts = torch.cumsum(torch.tensor([len(gt_items[i]["wav"]) for i in valid_idx], device=dev), 0) - torch.tensor([len(gt_items[i]["wav"]) for i in valid_idx], device=dev)
@@ -358,19 +358,31 @@ def gta_train_voc(
         xm = mel_spec_24k(x, dev)
         mgta = MEL_GTA[:, (m_starts[idx] + f)[:, None] + ar_m[None]].permute(1, 0, 2).float()
 
-        # Use 70% real student GTA predicted mels, 30% ground-truth mels
-        use_gta = (torch.rand(bs, 1, 1, device=dev) < 0.70).float()
-        mel_raw = use_gta * mgta + (1.0 - use_gta) * xm
-        mel_in = vin_tier(mel_raw, comb_gain)
+        if teacher_voc320 is not None:
+            B_gta = bs // 2
+            mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
+            with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(mel_in)
+            y_t = ola64(torch.complex(re_t.float(), im_t.float()), teacher_voc320.win)
+        else:
+            sm_m = (torch.rand(bs, 1, 1, device=dev) < 0.35).float()
+            xm_sm = 0.70 * xm + 0.30 * F.avg_pool1d(F.pad(xm, (1, 1), mode="replicate"), 3, stride=1)
+            mel_in = vin_tier(sm_m * xm_sm + (1.0 - sm_m) * xm, comb_gain)
+            re_t, im_t, y_t = None, None, None
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             re_v, im_v, f0_p, uv_p = G.spectrum_and_f0(mel_in)
         y = ola64(torch.complex(re_v.float(), im_v.float()), G.win)
         T = min(y.shape[1], x.shape[1])
-        y, x = y[:, :T], x[:, :T]
+        if y_t is not None:
+            T = min(T, y_t.shape[1])
+            y_target = torch.cat([y_t[:bs // 2, :T].detach(), x[bs // 2:, :T]], dim=0)
+        else:
+            y_target = x[:, :T]
+        y = y[:, :T]
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-            dr, fr_d = D(x[:, None])
+            dr, fr_d = D(y_target[:, None])
             df, _ = D(y.detach()[:, None])
             ld = sum(F.relu(1.0 - r.float()).mean() + F.relu(1.0 + q.float()).mean() for r, q in zip(dr, df)) / len(dr)
         oD.zero_grad(set_to_none=True)
@@ -380,19 +392,20 @@ def gta_train_voc(
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             ym = mel_spec_24k(y, dev)
-            l_mel = F.l1_loss(ym, xm[:, :, :ym.shape[2]])
-            l_st = mr_complex_stft_loss(y, x, dev)
+            ym_tgt = mel_spec_24k(y_target, dev)
+            l_mel = F.l1_loss(ym, ym_tgt[:, :, :ym.shape[2]])
+            l_st = mr_complex_stft_loss(y, y_target, dev)
             l_teach = torch.zeros((), device=dev)
-            if teacher_voc320 is not None:
-                with torch.no_grad():
-                    re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(vin_tier(xm, 0.0))
-                l_teach = spec_phase_gd_loss(re_v, im_v, re_t, im_t)
+            if re_t is not None:
+                mag_s = torch.sqrt(re_v.float() ** 2 + im_v.float() ** 2 + 1e-7)
+                mag_t = torch.sqrt(re_t.float() ** 2 + im_t.float() ** 2 + 1e-7)
+                l_teach = F.l1_loss(torch.log(mag_s + 1e-5), torch.log(mag_t + 1e-5))
             fr = [[t.detach() for t in fs] for fs in fr_d]
             df, ff = D(y[:, None])
             l_adv = sum(F.relu(1.0 - q.float()).mean() for q in df) / len(df)
             n_fm = sum(len(A) for A in fr)
             l_fm = sum(F.l1_loss(b.float(), a_.float()) for A, B in zip(fr, ff) for a_, b in zip(A, B)) / n_fm
-            lg = 45.0 * l_mel + 2.5 * l_st + 2.5 * l_teach + l_adv + 4.0 * l_fm
+            lg = 45.0 * l_mel + 2.5 * l_st + 2.0 * l_teach + l_adv + 4.0 * l_fm
 
         oG.zero_grad(set_to_none=True)
         lg.backward()
@@ -558,10 +571,15 @@ def main():
             if not os.path.exists(p):
                 continue
             ck = torch.load(p, map_location="cpu", weights_only=False)
-            mt = Student(**ck["cfg"]).eval()
-            mt.load_state_dict(ck["ema"], strict=False)
+            cfg_t = dict(ck["cfg"])
+            if tier == "t15":
+                cfg_t["r_voc_k7"] = None
+                cfg_t["r_voc_k11"] = None
+            mt = Student(**cfg_t).eval()
+            mt.load_state_dict({k: v for k, v in ck["ema"].items() if not (tier == "t15" and k.startswith("voc."))}, strict=False)
             mt.voc.load_state_dict(vsd, strict=True)
             snap_f0_int8(mt.voc)
+            ck["cfg"] = mt.cfg
             ck["ema"] = mt.state_dict()
             ck["qat"] = True
             torch.save(ck, p + ".tmp")
