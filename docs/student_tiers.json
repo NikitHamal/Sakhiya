@@ -80,75 +80,75 @@
     "label": "Sakhiya-V2-Pico (<=1.4 MB INT8 Extreme Breakthrough · Looped FiLM + Micro-Distilled)",
     "step": 29000,
     "qat": true,
-    "int8_mb": 1.26,
-    "fp32_mb": 4.49,
-    "int8_vs_fp32_mel_corr": 0.9921,
+    "int8_mb": 1.39,
+    "fp32_mb": 5.03,
+    "int8_vs_fp32_mel_corr": 0.9949,
     "nan_count": 0,
-    "rtf_1thread": 0.0134,
-    "utmos": 1.273,
-    "cer_ne": 0.095,
-    "cer_sa": 0.234,
-    "spk_sim": 0.847,
+    "rtf_1thread": 0.0171,
+    "utmos": 1.294,
+    "cer_ne": 0.914,
+    "cer_sa": 0.904,
+    "spk_sim": 0.518,
     "clicks": 0,
-    "drops": 0,
+    "drops": 19,
     "stutters": 0,
     "by_style": {
       "conversational": {
         "n": 9,
-        "utmos": 1.279,
-        "cer": 0.103,
-        "spk_sim": 0.831,
+        "utmos": 1.32,
+        "cer": 0.896,
+        "spk_sim": 0.51,
         "clicks": 0
       },
       "expressive": {
         "n": 1,
-        "utmos": 1.263,
-        "cer": 0.098,
-        "spk_sim": 0.889,
+        "utmos": 1.278,
+        "cer": 0.918,
+        "spk_sim": 0.63,
         "clicks": 0
       },
       "news": {
         "n": 6,
-        "utmos": 1.281,
-        "cer": 0.092,
-        "spk_sim": 0.885,
+        "utmos": 1.283,
+        "cer": 0.924,
+        "spk_sim": 0.579,
         "clicks": 0
       },
       "storytelling": {
         "n": 3,
-        "utmos": 1.265,
-        "cer": 0.129,
-        "spk_sim": 0.897,
+        "utmos": 1.255,
+        "cer": 0.939,
+        "spk_sim": 0.478,
         "clicks": 0
       },
       "vedic": {
         "n": 4,
-        "utmos": 1.28,
-        "cer": 0.211,
-        "spk_sim": 0.79,
+        "utmos": 1.308,
+        "cer": 0.905,
+        "spk_sim": 0.443,
         "clicks": 0
       },
       "vedic_chant": {
         "n": 3,
-        "utmos": 1.247,
-        "cer": 0.28,
-        "spk_sim": 0.814,
+        "utmos": 1.26,
+        "cer": 0.916,
+        "spk_sim": 0.534,
         "clicks": 0
       },
       "warm_soft": {
         "n": 1,
-        "utmos": 1.256,
-        "cer": 0.034,
-        "spk_sim": 0.888,
+        "utmos": 1.29,
+        "cer": 0.874,
+        "spk_sim": 0.5,
         "clicks": 0
       }
     },
     "node_verify": {
       "ok": true,
       "nan_count": 0,
-      "rtf_1thread": 0.013
+      "rtf_1thread": 0.0167
     },
     "gate_pass": true,
-    "score": 1.314
+    "score": -6.7141
   }
 ]
