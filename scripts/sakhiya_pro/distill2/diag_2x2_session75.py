@@ -28,7 +28,7 @@ for p in (HERE, DIST, REPO, os.path.join(REPO, "scripts", "sakhiya_pro"), "/work
         sys.path.insert(0, p)
 
 import sp_common as C
-from student import Student, SR, HOP, N_FFT, ids_of if hasattr(sys.modules.get("student"), "ids_of") else None
+from student import Student, SR, HOP, N_FFT
 from sakhiya.v2_vocoder import VocoderV2, mel_spec_24k
 from sakhiya import chandas as _ch, g2p as _g2p, symbols as _S
 import nep_norm as _nn
