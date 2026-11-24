@@ -17,6 +17,9 @@ REFS = [
 ]
 
 
+# publish (git/HF) only when the INT8 student's UTMOS reaches the shipped baseline of its size class
+BASELINE_UTMOS = dict(t30=3.957, t15=3.957, t10=3.253, t5=3.262, t1=2.944)
+
 TIER_LABELS = {
     't30': 'Sakhiya-T30 (29.6 MB INT8 Distilled Student)',
     't15': 'Sakhiya-T15 (14.5 MB INT8 Flagship Compact Student)',
@@ -178,10 +181,14 @@ def evaluate(tier, ck, tag):
         for f in glob.glob(d + '/wav/*.mp3') + glob.glob(d + '/wav/*.wav'):
             shutil.copy(f, ld)
         print(f'[{time.strftime("%T")}] {tier} PROMOTED step {g["step"]} score {g.get("score")} {g["int8_mb"]} MB', flush=True)
-        try:
-            promote_repo_and_hf(tier, g, f'{OUT}/{tier}/best')
-        except Exception as ex:
-            print(f'[{time.strftime("%T")}] {tier} promote hook err: {ex}', flush=True)
+        _u = (g.get('summary') or {}).get('utmos'); _b = BASELINE_UTMOS.get(tier, 0.0)
+        if _u is None or float(_u) < _b:
+            print(f'[{time.strftime("%T")}] {tier} gate PASS but UTMOS {_u} < baseline {_b}: kept for the listening desk only, NOT published', flush=True)
+        else:
+            try:
+                promote_repo_and_hf(tier, g, f'{OUT}/{tier}/best')
+            except Exception as ex:
+                print(f'[{time.strftime("%T")}] {tier} promote hook err: {ex}', flush=True)
     else:
         print(f'[{time.strftime("%T")}] {tier} step {g["step"]} not promoted (pass={g["gate_pass"]} score={g.get("score")} best={cur and cur.get("score")})', flush=True)
     if not (g['gate_pass'] and cur is None):
