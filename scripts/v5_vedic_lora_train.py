@@ -62,7 +62,7 @@ def save(step):
     sd = {k: v.detach().cpu().contiguous() for k, v in get_peft_model_state_dict(model.llm).items()}
     d = f"{OUT}/adapter-{step}"; os.makedirs(d, exist_ok=True)
     save_file(sd, f"{d}/vedic_lora.safetensors")
-    json.dump(dict(r=a.rank, alpha=2 * a.rank, targets=lcfg.target_modules, base=a.base, step=step, base_sha=sha0, style="vedic_chant"),
+    json.dump(dict(r=a.rank, alpha=2 * a.rank, targets=sorted(lcfg.target_modules), base=a.base, step=step, base_sha=sha0, style="vedic_chant"),
               open(f"{d}/adapter_config.json", "w"))
 
 
