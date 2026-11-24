@@ -44,14 +44,17 @@ def vin_tier(mel, comb_gain: float):
 
 
 def load_or_warm_student(tier: str, dev="cuda") -> Student:
-    G = build(tier).to(dev)
-    G.warm_init("/work/tts/ck")
     ck_p = f"/work/sp/distill/runs/{tier}/ema_final.pt"
     if not os.path.exists(ck_p):
         ck_p = f"/work/sp/distill/runs/{tier}/ema_latest.pt"
     if os.path.exists(ck_p):
         ck = torch.load(ck_p, map_location=dev, weights_only=False)
+        cfg = ck.get("cfg") or dict(tier=tier)
+        G = Student(**cfg).to(dev)
         G.load_state_dict({k: v.float() for k, v in ck.get("ema", ck).items()}, strict=False)
+        return G
+    G = build(tier).to(dev)
+    G.warm_init("/work/tts/ck")
     return G
 
 
@@ -456,10 +459,18 @@ def main():
 
     # 1. Polish Student Acoustic Models with non-mutating out-of-place STE QAT + gentle cosine LR
     if not a.skip_am:
-        polish_am("t1",  cache, ctc, steps=1600, lr_e=1.5e-4, lr_v=1.5e-4, bs=48, dev=dev)
-        polish_am("t5",  cache, ctc, steps=1000, lr_e=8.0e-5, lr_v=8.0e-5, bs=48, dev=dev)
-        polish_am("t10", cache, ctc, steps=1000, lr_e=7.0e-5, lr_v=7.0e-5, bs=44, dev=dev)
-        polish_am("t15", cache, ctc, steps=500,  lr_e=2.5e-5, lr_v=2.5e-5, bs=36, dev=dev)
+        for t_am, st_am, lre, lrv, bs_am, min_done in (
+            ("t1",  1600, 1.5e-4, 1.5e-4, 48, 7000),
+            ("t5",  1000, 8.0e-5, 8.0e-5, 48, 5900),
+            ("t10", 1000, 7.0e-5, 7.0e-5, 44, 4900),
+            ("t15", 500,  2.5e-5, 2.5e-5, 36, 1800),
+        ):
+            ck_chk_p = f"/work/sp/distill/runs/{t_am}/ema_latest.pt"
+            cur_st = int(torch.load(ck_chk_p, map_location="cpu", weights_only=False).get("step", 0)) if os.path.exists(ck_chk_p) else 0
+            if cur_st >= min_done:
+                print(f"[{t_am}-polish] already at step {cur_st} >= {min_done}, skipping to next stage", flush=True)
+                continue
+            polish_am(t_am, cache, ctc, steps=st_am, lr_e=lre, lr_v=lrv, bs=bs_am, dev=dev)
 
     # Ensure t30 has an up-to-date checkpoint in /work/sp/distill/runs/t30/
     os.makedirs("/work/sp/distill/runs/t30", exist_ok=True)
@@ -557,7 +568,10 @@ def main():
             os.replace(p + ".tmp", p)
         print(f"[inject] Updated {tier} with GTA-converged vocoder", flush=True)
 
-    print("GTA_POLISH_ALL_DONE", flush=True)
+    print("GTA_POLISH_ALL_DONE — launching ladder_daemon --once for all 5 tiers", flush=True)
+    import subprocess
+    subprocess.run([sys.executable, os.path.join(DIST, "ladder_daemon.py"), "--tiers", "t30,t15,t10,t5,t1", "--once"], check=False)
+    print("GTA_LADDER_GATE_ALL_DONE", flush=True)
 
 
 if __name__ == "__main__":
