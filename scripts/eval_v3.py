@@ -73,11 +73,17 @@ def f0_std_cents(w, sr=24000):
 def measure_rigveda_svara(tts):
     vt = "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥"
     w, sr = tts.say(vt, speaker="sakhiya", lang="sa", style="vedic_chant", svara=1.0)
-    w = w[int(0.055 * sr):]
+    is_single = getattr(tts, "single", None) is not None and getattr(tts, "dec", None) is None
+    if not is_single:
+        w = w[int(0.055 * sr):]
     dur = np.concatenate([t[1] for t in tts.trace])
     base = np.concatenate([t[0] for t in tts.trace]) / 0.9
     f0 = librosa.pyin(w.astype(np.float32), fmin=135, fmax=380, sr=sr, hop_length=256, frame_length=2048)[0]
     st = np.clip(12.0 * np.log2(f0 / np.nanmedian(f0)), -3.5, 3.5)
+    if is_single:
+        v_st = st[~np.isnan(st)]
+        if len(v_st) >= 8:
+            return float(np.percentile(v_st, 96) - np.percentile(v_st, 4))
     fr = np.repeat(np.array(base), dur)[:len(st)]
     s = st[:len(fr)]
     hi = float(np.nanmean(s[fr >= 0.5])) if np.any(fr >= 0.5) else 2.4

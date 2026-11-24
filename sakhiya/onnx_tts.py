@@ -172,7 +172,7 @@ class SakhiyaONNX:
         if self.single is not None and self.dec is None:
             if "dur_scale" in self.enc_in:
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
-                sv_sc = ((1.45 if has_vm else 1.15) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
+                sv_sc = ((0.65 if has_vm else 0.52) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
                 if lang == "sa":
                     ds_in = np.array([(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
                     ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
@@ -198,8 +198,6 @@ class SakhiyaONNX:
                 if w.size > 256:
                     ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
                     w[:128] *= ramp; w[-128:] *= ramp[::-1]
-                    pad_n = int(0.055 * self.cfg.get("sample_rate", 24000))
-                    w = np.concatenate([np.zeros(pad_n, dtype=np.float32), w, np.zeros(pad_n // 2, dtype=np.float32)])
                 return w
             dur_ov = np.maximum(np.round(dm_arr * 6.0 / k["rate"]), 3).astype(np.int64)[None, :]
             feeds_add["dur_override"] = dur_ov

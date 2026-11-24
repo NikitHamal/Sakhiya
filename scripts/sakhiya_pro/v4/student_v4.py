@@ -35,7 +35,7 @@ TIERS = {
         tier='micro', arch='sakhiya_am',
         d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
         voc_ch=144, steps=1,
-        r_enc=88, r_voc_k7=None, r_voc_k11=None, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=88, r_voc_k7=None, r_voc_k11=48, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     'pico': dict(
         tier='pico', arch='sakhiya_pico',
@@ -390,7 +390,7 @@ class StudentV4(nn.Module):
         p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode='replicate'), 3, stride=1)[:, 0]
         sty_gain = (0.18 * pros[:, 1:2]).clamp(0.0, 0.38)
         p_prose_enc = p_arch * (0.55 * sty_gain)
-        p_enc = (p_prose_enc + 0.35 * ps_tok).clamp(-0.48, 0.48)
+        p_enc = (p_prose_enc + 0.95 * ps_tok).clamp(-1.10, 1.10)
 
         ones_m = torch.ones((B, 1), dtype=torch.float32, device=ids.device)
         h, mu, g = self.am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_enc, prosody=pros, sty_mask=ones_m)
@@ -417,14 +417,22 @@ class StudentV4(nn.Module):
         dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
         is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
+        is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb)).float()
         is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()
         is_hiatus_a1 = ((ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
         is_hiatus_a2 = ((ids == id_a) & (prev_ids == id_wb) & (prev2_ids == id_a)).float()
+        dur = torch.where(is_pre_hiatus_wb > 0.5, torch.full_like(dur, 12.0), dur)
         dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
         dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
-        # Glottal re-articulation dip at hiatus boundary so 'आआफ्नो' never merges into 'आफ्नो'
-        hw_m = is_hiatus_wb[:, :, None]
-        mu = mu * (1.0 - 0.55 * hw_m) + mu[:, -1:, :] * (0.55 * hw_m)
+        # Exact 3-token hiatus re-articulation matching multi-graph SakhiyaONNX so 'आआफ्नो' never merges into 'आफ्नो'
+        mu_next2 = torch.cat([mu[:, 2:, :], mu[:, -2:, :]], dim=1)
+        mu_next1 = torch.cat([mu[:, 1:, :], mu[:, -1:, :]], dim=1)
+        m_pre = is_pre_hiatus_wb[:, :, None]
+        m_a1 = is_hiatus_a1[:, :, None]
+        m_wb = is_hiatus_wb[:, :, None]
+        mu = mu * (1.0 - m_pre) + mu[:, -1:, :] * m_pre
+        mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
+        mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu[:, -1:, :]) * m_wb
         # Short Nepali function-word floor ('र', 'हो', 'छ', 'त', 'न', 'म' between word boundaries)
         id_r, id_schwa = SYM2ID['r'], SYM2ID['ʌ']
         is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
@@ -471,7 +479,7 @@ class StudentV4(nn.Module):
         # Add smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-8c Gamaka vibrato on Sanskrit chants
         ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode='replicate'), 7, stride=1)
         gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift * (1.0 - 0.85 * is_sa_f[:, :, None]) + is_sa_f[:, :, None] * (1.55 * ps_sm + gamaka).clamp(-2.8, 2.8)
+        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.85 * ps_sm + gamaka).clamp(-1.35, 1.35)
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
