@@ -34,7 +34,7 @@ TIERS = {
     "t30": dict(tier="t30", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
     "t15": dict(tier="t15", arch="sakhiya_am", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
-    "t1":  dict(tier="t1",  arch="sakhiya_pico", voc_arch="awp", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
+    "t1":  dict(tier="t1",  arch="sakhiya_pico", voc_arch="awp", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=44,   r_voc_k11=27),
 }
 
 VOWEL_IDS = tuple(SYM2ID[p] for p in ("ʌ", "a", "i", "u", "e", "o", "ʌ̃", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID)
@@ -260,8 +260,13 @@ class Student(nn.Module):
             own_sd = self.state_dict()
             with torch.no_grad():
                 for k, v in own_sd.items():
-                    if k in ema_sd and ema_sd[k].shape == v.shape:
-                        v.copy_(ema_sd[k])
+                    if k in ema_sd:
+                        src_t = ema_sd[k]
+                        if src_t.shape == v.shape:
+                            v.copy_(src_t)
+                        elif src_t.ndim == v.ndim:
+                            sl = tuple(slice(0, min(a, b)) for a, b in zip(v.shape, src_t.shape))
+                            v[sl].copy_(src_t[sl])
                     elif k.startswith("am.f0_head.net."):
                         legacy_k = k.replace("am.f0_head.net.", "voc.src.f0_net.")
                         if legacy_k in ema_sd and ema_sd[legacy_k].shape == v.shape:

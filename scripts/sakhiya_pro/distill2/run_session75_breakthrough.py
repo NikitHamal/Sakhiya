@@ -130,7 +130,7 @@ def train_phase1_awp_vocoder(tag: str, ch: int, base_ck: str, save_p: str, cache
 
     G = AWPVocoder(ch=ch).to(dev)
     if is_t1:
-        for b_idx, r_k in ((1, 50), (2, 31)):
+        for b_idx, r_k in ((1, 44), (2, 27)):
             blk = G.mrfs[0][b_idx]
             for i in range(len(blk.c1)):
                 if isinstance(blk.c1[i], nn.Conv1d):

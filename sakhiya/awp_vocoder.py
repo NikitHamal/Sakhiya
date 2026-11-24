@@ -47,11 +47,12 @@ class ConvNeXtParallelBranch(nn.Module):
     """Clean SiLU/GELU ConvNeXt-V2 refinement block for Parallel Amplitude & Anti-Wrapped Phase branches (zero Snake1d)."""
     def __init__(self, dim: int, kernel_size: int = 7):
         super().__init__()
+        h = max(16, dim // 2)
         self.dw = nn.Conv1d(dim, dim, kernel_size, padding=kernel_size // 2, groups=dim)
         self.norm = nn.GroupNorm(1, dim)
-        self.pw1 = nn.Conv1d(dim, dim, 1)
+        self.pw1 = nn.Conv1d(dim, h, 1)
         self.act = nn.GELU()
-        self.pw2 = nn.Conv1d(dim, dim, 1)
+        self.pw2 = nn.Conv1d(h, dim, 1)
         nn.init.zeros_(self.pw2.weight)
         nn.init.zeros_(self.pw2.bias)
 
@@ -164,8 +165,12 @@ class AWPVocoder(nn.Module):
             for k, v in own.items():
                 if k.startswith("src.f0_net"):
                     continue
-                if k in sd and sd[k].shape == v.shape:
-                    v.copy_(sd[k])
+                if k in sd:
+                    if sd[k].shape == v.shape:
+                        v.copy_(sd[k])
+                    elif sd[k].ndim == v.ndim:
+                        sl = tuple(slice(0, min(a, b)) for a, b in zip(v.shape, sd[k].shape))
+                        v[sl].copy_(sd[k][sl])
             if "post.weight" in sd and "post.bias" in sd:
                 pw, pb = sd["post.weight"], sd["post.bias"]
                 if pw.shape[0] == 2 * N_BINS and pw.shape[1] == self.amp_head.weight.shape[1]:
