@@ -545,8 +545,10 @@ def main():
                 snap_f0_int8(ema.voc)
                 del t_voc, D_v, oV, oD
                 torch.cuda.empty_cache()
+                tstep = time.time()
                 log(f'[{a.tier}] Completed 200-step GAN-restorative voc144 sharpening')
             except Exception as ve:
+                tstep = time.time()
                 log(f'[{a.tier}] voc144 GAN polish warn: {ve}')
 
         if step in (100, 300, 600, 1200) or step % a.save_every == 0:

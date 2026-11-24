@@ -8,8 +8,8 @@ export PYTHONPATH=/work/sp/repo:/work/sp/repo/scripts/sakhiya_pro/distill:/work/
 st(){ echo "{\"label\":\"$2\",\"state\":\"$3\",\"note\":\"$4\"}" > /work/sp/stage/$1.json; }
 END_EPOCH=${END_EPOCH:-$(date -u -d "today 19:30" +%s)}
 
-st 58_voc "Pro-v3 OT-CFM Teacher AM + Rectified Cache" run "2200 steps OT-CFM + cache build"
-python3 $R/train_student_gt.py --tier t30 --prep_only --force_teacher > $L/prep_v3_teacher.log 2>&1
+st 58_voc "Pro-v3 OT-CFM Teacher AM + Rectified Cache" run "verify OT-CFM teacher + rectified cache"
+python3 $R/train_student_gt.py --tier t30 --prep_only >> $L/prep_v3_teacher.log 2>&1
 st 58_voc "Pro-v3 OT-CFM Teacher AM + Rectified Cache" done "$(tail -n 2 $L/prep_v3_teacher.log | tr '\n' ' ' | cut -c1-80)"
 
 MIN=$(( (END_EPOCH - $(date +%s)) / 60 ))
