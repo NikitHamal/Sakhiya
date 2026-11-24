@@ -152,81 +152,6 @@
     "score": 2.0203
   },
   {
-    "tier": "t10",
-    "label": "Sakhiya-T10 (9.5 MB INT8 Compact Student)",
-    "step": 100,
-    "qat": true,
-    "int8_mb": 8.557,
-    "fp32_mb": 33.29,
-    "int8_vs_fp32_mel_corr": 0.9943,
-    "rtf_1thread": 0.047,
-    "utmos": 3.566,
-    "cer_ne": 0.049,
-    "cer_sa": 0.109,
-    "spk_sim": 0.802,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 3.724,
-        "cer": 0.046,
-        "spk_sim": 0.78,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 3.398,
-        "cer": 0.033,
-        "spk_sim": 0.864,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 3.561,
-        "cer": 0.057,
-        "spk_sim": 0.862,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 3.456,
-        "cer": 0.069,
-        "spk_sim": 0.807,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.704,
-        "cer": 0.115,
-        "spk_sim": 0.761,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 3.088,
-        "cer": 0.109,
-        "spk_sim": 0.753,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 3.544,
-        "cer": 0.023,
-        "spk_sim": 0.86,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0453
-    },
-    "gate_pass": true,
-    "score": 2.0713
-  },
-  {
     "tier": "t5",
     "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
     "step": 21000,
@@ -450,5 +375,80 @@
     },
     "gate_pass": true,
     "score": 1.9931
+  },
+  {
+    "tier": "t10",
+    "label": "Sakhiya-T10 (9.5 MB INT8 Compact Student)",
+    "step": 5000,
+    "qat": true,
+    "int8_mb": 8.861,
+    "fp32_mb": 31.74,
+    "int8_vs_fp32_mel_corr": 0.9851,
+    "rtf_1thread": 0.0466,
+    "utmos": 3.675,
+    "cer_ne": 0.069,
+    "cer_sa": 0.141,
+    "spk_sim": 0.675,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.572,
+        "cer": 0.056,
+        "spk_sim": 0.657,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 4.07,
+        "cer": 0.066,
+        "spk_sim": 0.765,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.494,
+        "cer": 0.106,
+        "spk_sim": 0.692,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.94,
+        "cer": 0.061,
+        "spk_sim": 0.723,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.835,
+        "cer": 0.16,
+        "spk_sim": 0.612,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.661,
+        "cer": 0.13,
+        "spk_sim": 0.68,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.912,
+        "cer": 0.023,
+        "spk_sim": 0.75,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0448
+    },
+    "gate_pass": true,
+    "score": 1.8375
   }
 ]
