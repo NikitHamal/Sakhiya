@@ -172,12 +172,12 @@ class SakhiyaONNX:
         if self.single is not None and self.dec is None:
             if "dur_scale" in self.enc_in:
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
-                sv_sc = ((0.55 if has_vm else 0.48) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
+                sv_sc = ((1.45 if has_vm else 1.15) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
                 if lang == "sa":
                     ds_in = np.array([(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
                     ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
                 else:
-                    ds_in = np.array([1.0 / max(float(k.get("rate", 1.0)), 0.5)], dtype=np.float32)
+                    ds_in = np.array([1.0], dtype=np.float32)
                     ps_in = np.array([float(k.get("pitch_shift", 0.0))], dtype=np.float32)
                 w = self.single.run(None, {
                     "ids": ids,
@@ -186,7 +186,11 @@ class SakhiyaONNX:
                     "pitch_shift": ps_in,
                 })[0][0].astype(np.float32)
                 n_fr = max(len(w) // 256, ids.shape[1] * 5)
-                dur_est = np.maximum(np.round(dm_arr * (n_fr / max(float(np.sum(dm_arr)), 1.0))), 5).astype(int) if dm_arr.size else np.full(ids.shape[1], 6, dtype=int)
+                if chandas_info and "dur_frames" in chandas_info:
+                    df_keep = np.array([d for d, i in zip(chandas_info["dur_frames"], sid) if i >= 0], dtype=np.float32)
+                    dur_est = np.maximum(np.round(df_keep * (n_fr / max(float(np.sum(df_keep)), 1.0))), 5).astype(int)
+                else:
+                    dur_est = np.maximum(np.round(dm_arr * (n_fr / max(float(np.sum(dm_arr)), 1.0))), 5).astype(int) if dm_arr.size else np.full(ids.shape[1], 6, dtype=int)
                 self.trace.append((trace_p, dur_est))
                 pk = float(np.max(np.abs(w))) if w.size else 0.0
                 if pk > 1e-4:
@@ -194,6 +198,8 @@ class SakhiyaONNX:
                 if w.size > 256:
                     ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
                     w[:128] *= ramp; w[-128:] *= ramp[::-1]
+                    pad_n = int(0.055 * self.cfg.get("sample_rate", 24000))
+                    w = np.concatenate([np.zeros(pad_n, dtype=np.float32), w, np.zeros(pad_n // 2, dtype=np.float32)])
                 return w
             dur_ov = np.maximum(np.round(dm_arr * 6.0 / k["rate"]), 3).astype(np.int64)[None, :]
             feeds_add["dur_override"] = dur_ov
@@ -302,7 +308,8 @@ class SakhiyaONNX:
                 k["rate"] = k["rate"] * 0.90; k["pitch_scale"] = 1.00; k["pause_scale"] = k["pause_scale"] * 1.00
         sr = 24000 if use_sa else self.cfg["sample_rate"]
         sa_segs = _segment(text)
-        chunks = [str(text).strip()] if (lang == "sa" and len(str(text).split()) <= 45 and len(sa_segs) <= 2) else sa_segs
+        is_single = (self.single is not None and self.dec is None)
+        chunks = [str(text).strip()] if ((lang == "sa" or is_single) and len(str(text).split()) <= 45 and len(sa_segs) <= 2) else sa_segs
         if len(chunks) == 1:
             return _declick_np(self._say_one(chunks[0], spk, lang, k, True)), sr
         wavs = [self._say_one(c, spk, lang, k, i == len(chunks) - 1) for i, c in enumerate(chunks)]

@@ -91,8 +91,8 @@ class SakhiyaWeb {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
     if (this.sess.single) {
       const keep = ph.map(p => S.indexOf(p) >= 0), rate = o.rate || 1, basePitch = o.pitch_shift || 0, svDepth = o.svara ?? 1;
-      const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 0.55 : 0.48) : 0.35) * svDepth;
-      const dmArr = o.lang === "sa" ? (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => (0.75 + 0.25 * Math.min(1.35, Math.max(0.85, v))) / rate) : [1 / rate];
+      const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 1.45 : 1.15) : 0.35) * svDepth;
+      const dmArr = o.lang === "sa" ? (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => (0.75 + 0.25 * Math.min(1.35, Math.max(0.85, v))) / rate) : [1.0];
       const offArr = o.lang === "sa" ? (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => basePitch + v * svScale) : [basePitch];
       const r = await this.sess.single.run({
         ids: new ort.Tensor("int64", ids, [1, ids.length]),

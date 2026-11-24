@@ -420,8 +420,16 @@ class StudentV4(nn.Module):
         is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()
         is_hiatus_a1 = ((ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
         is_hiatus_a2 = ((ids == id_a) & (prev_ids == id_wb) & (prev2_ids == id_a)).float()
-        dur = torch.maximum(dur, is_hiatus_a1 * 18.0 + is_hiatus_a2 * 18.0)
+        dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
         dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
+        # Glottal re-articulation dip at hiatus boundary so 'आआफ्नो' never merges into 'आफ्नो'
+        hw_m = is_hiatus_wb[:, :, None]
+        mu = mu * (1.0 - 0.55 * hw_m) + mu[:, -1:, :] * (0.55 * hw_m)
+        # Short Nepali function-word floor ('र', 'हो', 'छ', 'त', 'न', 'म' between word boundaries)
+        id_r, id_schwa = SYM2ID['r'], SYM2ID['ʌ']
+        is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
+        is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
+        dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
 
         f0_hat = F.avg_pool1d(F.pad(self.am.enc.f0_pred(h).transpose(1, 2), (1, 1), mode='replicate'), 3, stride=1)[:, 0].clamp(-1.2, 1.2)
         p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.35 * ps_tok
@@ -463,7 +471,7 @@ class StudentV4(nn.Module):
         # Add smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-8c Gamaka vibrato on Sanskrit chants
         ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode='replicate'), 7, stride=1)
         gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.95 * ps_sm + gamaka).clamp(-1.8, 1.8)
+        tot_shift = tot_shift * (1.0 - 0.85 * is_sa_f[:, :, None]) + is_sa_f[:, :, None] * (1.55 * ps_sm + gamaka).clamp(-2.8, 2.8)
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
