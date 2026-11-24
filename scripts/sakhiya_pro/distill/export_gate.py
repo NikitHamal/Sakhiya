@@ -125,7 +125,7 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
             continue
         op = use.get(init.name, "")
         skip_fp16 = (
-            a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
+            a.shape in ((64, 100, 3), (2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
             or a.shape[0] in (1, 66)
             or (a.ndim == 3 and a.shape[1] == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
@@ -176,9 +176,14 @@ def logmel(w):
 
 def ids_of(text, lang):
     import nep_norm
-    from sakhiya import g2p, symbols
-    t = text if lang == "sa" else nep_norm.normalize(re.sub("[\u0951-\u0954]", "", text))
-    return symbols.encode(g2p.text_to_phones(t, "sa" if lang == "sa" else "ne"))
+    from sakhiya import g2p, symbols, chandas
+    if lang == "sa":
+        ph = chandas.compile_chandas(text)["ph"]
+    else:
+        t = nep_norm.normalize(re.sub("[\u0951-\u0954]", "", text))
+        ph = g2p.text_to_phones(t, "ne")
+    ph = [q for p in ph for q in (["o", "m"] if p == "<om>" else [p])]
+    return symbols.encode(ph)
 
 
 def eval_set(n_dev):

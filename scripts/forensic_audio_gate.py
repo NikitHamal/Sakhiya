@@ -116,7 +116,7 @@ def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/fore
     fe_sv = AutoFeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
     sv_m = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
     ctc_rec, ctc_mean, ctc_std = None, -6.177, 2.492
-    for cp in ("/work/tts/feats/v5_ctc_recognizer.pt", "/work/tts/feats/v31_ctc_recognizer.pt", "/work/tts/feats/v3_ctc_recognizer.pt"):
+    for cp in ("/work/tts/feats/v5_ctc_recognizer.pt", "/work/tts/feats/v31_ctc_recognizer.pt", "/work/tts/ck/v31_ctc_recognizer.pt", "/work/tts/feats/v3_ctc_recognizer.pt"):
         if os.path.exists(cp):
             ck = torch.load(cp, map_location=dev, weights_only=False)
             ctc_mean, ctc_std = float(ck.get("mean", -6.177)), float(ck.get("std", 2.492))
