@@ -248,8 +248,7 @@
 
     const tierOpts = [
       ["v1", "Sakhiya-V1 (15.98 MB Flagship)"],
-      ["micro", "Sakhiya-V2-Micro (4.18 MB INT8)"],
-      ["pico", "Sakhiya-V2-Pico (1.39 MB INT8)"],
+      ["pico", "Sakhiya-V2-Pico (1.44 MB INT8)"],
       ["nano", "Sakhiya-V1-Nano (8.93 MB)"],
       ["atom", "Sakhiya-V1-Atom (6.51 MB)"],
       ["atom_lite", "Sakhiya-V1-Atom-Lite (2.72 MB)"],

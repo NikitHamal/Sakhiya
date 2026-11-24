@@ -73,7 +73,6 @@ def promote_repo_and_hf(tier, g, best_dir):
         score=g.get('score')
     )
     alias_map = {
-        't5': ('sakhiya_v4_micro', 'sakhiya_v5_micro', 'micro', 'models_micro'),
         't1': ('sakhiya_v4_pico',  'sakhiya_v5_pico',  'pico',  'models_pico'),
     }
     st_list = [x for x in st_list if x.get('tier') != tier] + [entry_t]
@@ -182,7 +181,7 @@ def promote_repo_and_hf(tier, g, best_dir):
 
 def leaderboard():
     rows = list(REFS)
-    for tier in ('t30', 't15', 't10', 't5', 't1'):
+    for tier in ('t30', 't15', 't10', 't1'):
         bp = f'{OUT}/{tier}/best/gate.json'
         if not os.path.exists(bp):
             cands = sorted(glob.glob(f'{OUT}/{tier}/c_*/gate.json'))
@@ -207,7 +206,7 @@ def leaderboard():
         else:
             rows.append(dict(
                 name=f'Sakhiya-{tier}',
-                size_mb='~' + str({'t30': 29.6, 't15': 14.5, 't10': 9.5, 't5': 4.8, 't1': 1.05}[tier]),
+                size_mb='~' + str({'t30': 29.6, 't15': 14.5, 't10': 9.5, 't1': 1.44}[tier]),
                 utmos='-', cer='-', sa_cer='-', drops='-', stutters='-', clicks='-', spk='-', rtf='-',
                 status='training / awaiting INT8 gate'
             ))
@@ -251,7 +250,7 @@ def evaluate(tier, ck, tag):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--every', type=int, default=1200)
-    ap.add_argument('--tiers', default='t30,t15,t10,t5,t1')
+    ap.add_argument('--tiers', default='t30,t15,t10,t1')
     ap.add_argument('--once', action='store_true')
     a = ap.parse_args()
     last = {}

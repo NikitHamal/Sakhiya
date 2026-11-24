@@ -4,12 +4,12 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var TIER_ORDER = ["t30", "t15", "v1", "micro", "pico"];
+  var TIER_ORDER = ["t30", "t15", "t10", "v1", "pico"];
   var TIER_UI = {
     t30: { name: "Pro-v3 T30", c: "#0058df" },
     t15: { name: "Pro-v3 T15", c: "#006782" },
+    t10: { name: "Pro-v3 T10", c: "#157f3b" },
     v1: { name: "Sakhiya-V1", c: "#7a4cc4" },
-    micro: { name: "V2-Micro", c: "#b4561b" },
     pico: { name: "V2-Pico", c: "#b3261e" }
   };
   var CATS = {
