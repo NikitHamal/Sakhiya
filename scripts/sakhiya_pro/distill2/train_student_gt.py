@@ -36,8 +36,8 @@ from sakhiya import g2p, symbols  # noqa: E402
 
 # Synchronized encoder + velocity learning rates for 1-step students (t10, t5, t1) so mu_y and vel(mu_y) adapt in lock-step
 # to Sakhiya-Pro v3 without harmonic mismatch; gentle polishing LR for 4-step OT-CFM students (t30, t15) initialized from v3_t30_am.pt.
-LR_ENC = dict(t30=4.0e-5, t15=4.5e-5, t10=3.5e-4, t5=3.5e-4, t1=3.0e-4)
-LR_VEL = dict(t30=3.5e-5, t15=4.0e-5, t10=3.5e-4, t5=3.5e-4, t1=3.0e-4)
+LR_ENC = dict(t30=4.0e-5, t15=4.5e-5, t10=3.5e-4, t5=3.5e-4, t1=9.0e-4)
+LR_VEL = dict(t30=3.5e-5, t15=4.0e-5, t10=3.5e-4, t5=3.5e-4, t1=9.0e-4)
 
 BAD_OLD_SRCS = {'vc_slr54', 'vc_v13', 'vc_slr43', 'anchor_6834_stitched'}
 
@@ -426,7 +426,16 @@ def main():
                 if torch.isfinite(c_val):
                     l_ctc = F.relu(c_val - 0.12)
 
-            # 3. Differentiable Vocoder-in-the-Loop Complex-iSTFT Magnitude + Phase + Instantaneous-Frequency Loss (32-frame crop)
+            # 3. Direct voc.src.f0_net F0 & Voicing (uv) logit supervision across the full utterance (eliminates F0 shutters & voiced dropouts!)
+            mp_full = y_pred.float() * G.am.stats[1] + G.am.stats[0]
+            mt_full = y_clean.float() * G.am.stats[1] + G.am.stats[0]
+            with torch.no_grad():
+                rf_t = G.voc.src.f0_net(mt_full)
+            rf_s = G.voc.src.f0_net(mp_full)
+            l_f0net = (F.smooth_l1_loss(rf_s[:, 0:1].float(), rf_t[:, 0:1].float(), reduction='none') * ymf).sum() / ymf.sum().clamp(min=1.0) \
+                    + 1.5 * (F.l1_loss(torch.sigmoid(rf_s[:, 1:2].float()), torch.sigmoid(rf_t[:, 1:2].float()), reduction='none') * ymf).sum() / ymf.sum().clamp(min=1.0)
+
+            # 4. Differentiable Vocoder-in-the-Loop Complex-iSTFT Magnitude + Phase + Instantaneous-Frequency Loss (32-frame crop)
             l_vspec = torch.zeros((), device=dev)
             if T >= 36:
                 seg_v = 32
@@ -448,7 +457,7 @@ def main():
                 if torch.isfinite(v_val):
                     l_vspec = v_val
 
-            loss = l_mel + 2.4 * l_df + 0.9 * l_std + 1.2 * l_dt + 0.85 * l_cep + 1.6 * l_prior + 0.8 * l_dur + l_heads + 0.25 * l_ctc + 0.45 * l_vspec
+            loss = l_mel + 2.4 * l_df + 0.9 * l_std + 1.2 * l_dt + 0.85 * l_cep + 1.6 * l_prior + 0.8 * l_dur + l_heads + 0.25 * l_ctc + 1.2 * l_f0net + 0.50 * l_vspec
 
         oG.zero_grad(set_to_none=True)
         loss.backward()

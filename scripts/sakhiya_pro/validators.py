@@ -30,6 +30,12 @@ def norm(t, fold=False):
 
 def pron_cer(ref, hyp, lang='npi'):
     """CER used by the render gate. Sound-folded for both npi and sa (Kriti CTC is phonetic, not orthographic)."""
+    if lang != 'sa' and re.search(r'[०-९0-9]', ref):
+        try:
+            import nep_norm
+            ref = nep_norm.normalize(ref)
+        except Exception:
+            pass
     has_lat = bool(LAT.search(ref) or _DEV_LOAN.search(ref))
     r = _SKIP_LOAN.sub(' ', LAT.sub(' ', ref)); h = _SKIP_LOAN.sub(' ', LAT.sub(' ', hyp))
     r, h = norm(r, True), norm(h, True)

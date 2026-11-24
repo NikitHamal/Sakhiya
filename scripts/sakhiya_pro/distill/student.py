@@ -259,51 +259,59 @@ class Student(nn.Module):
             self.voc.load_state_dict(vtmp.state_dict(), strict=True)
 
         self._apply_svd_structure()
-        # For t10 and t5, prefer Pro-v3 distilled t10 AM (sim_ProV3 >= 0.80) over old V1 checkpoints
-        t10_v3_cands = [
-            os.path.join(ck_dir, "v3_t10_am.pt"),
-            "/work/sp/distill/prev_runs/t10/ema_latest.pt",
-        ]
-        t10_v3_p = next((p for p in t10_v3_cands if os.path.exists(p)), None)
-        if self.tier in ("t10", "t5") and t10_v3_p is not None:
+        # For t5, prefer direct Pro-v3 distilled v3_t5_am.pt if available
+        if self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "v3_t5_am.pt")):
             try:
-                ck10 = torch.load(t10_v3_p, map_location=dev, weights_only=False)
-                sd10 = {k: v.float() for k, v in ck10.get("ema", ck10).items() if k.startswith("am.")}
-                if self.tier == "t10":
-                    self.load_state_dict(sd10, strict=False)
-                else:
-                    # Copy non-SVD AM weights directly and SVD-project enc convs from rank 104 -> rank 88
-                    own_sd = self.state_dict()
-                    for k, v in sd10.items():
-                        if k in own_sd and own_sd[k].shape == v.shape:
-                            own_sd[k].copy_(v)
-                    self.load_state_dict(own_sd, strict=False)
-                    with torch.no_grad():
-                        for li, l5 in enumerate(self.am.enc.layers):
-                            for attr in ("c1", "c2"):
-                                k0 = f"am.enc.layers.{li}.{attr}.0.weight"
-                                k1 = f"am.enc.layers.{li}.{attr}.1.weight"
-                                kb = f"am.enc.layers.{li}.{attr}.1.bias"
-                                if k0 in sd10 and k1 in sd10:
-                                    W_full = torch.einsum("or,rik->oik", sd10[k1][:, :, 0], sd10[k0])
-                                    Co, Ci, K = W_full.shape
-                                    r = int(self.r_enc or 88)
-                                    U, S_v, Vh = torch.linalg.svd(W_full.float().reshape(Co, Ci * K), full_matrices=False)
-                                    sq = torch.sqrt(S_v[:r])
-                                    seq5 = getattr(l5, attr)
-                                    seq5[0].weight.copy_((sq[:, None] * Vh[:r, :]).reshape(r, Ci, K))
-                                    seq5[1].weight.copy_((U[:, :r] * sq[None, :]).reshape(Co, r, 1))
-                                    if kb in sd10 and seq5[1].bias is not None:
-                                        seq5[1].bias.copy_(sd10[kb])
+                ck_v3_5 = torch.load(os.path.join(ck_dir, "v3_t5_am.pt"), map_location=dev, weights_only=False)
+                sd_v3_5 = {k: v.float() for k, v in ck_v3_5.get("ema", ck_v3_5).items() if k.startswith("am.")}
+                self.load_state_dict(sd_v3_5, strict=False)
             except Exception:
                 pass
-        elif self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "t5_v3_init.pt")):
-            try:
-                ck_p5 = torch.load(os.path.join(ck_dir, "t5_v3_init.pt"), map_location=dev, weights_only=False)
-                sd_p5 = {k: v.float() for k, v in ck_p5.get("ema", ck_p5).items() if k.startswith("am.")}
-                self.load_state_dict(sd_p5, strict=False)
-            except Exception:
-                pass
+        else:
+            # For t10 (and t5 fallback), prefer Pro-v3 distilled t10 AM (sim_ProV3 >= 0.80) over old V1 checkpoints
+            t10_v3_cands = [
+                os.path.join(ck_dir, "v3_t10_am.pt"),
+                "/work/sp/distill/prev_runs/t10/ema_latest.pt",
+            ]
+            t10_v3_p = next((p for p in t10_v3_cands if os.path.exists(p)), None)
+            if self.tier in ("t10", "t5") and t10_v3_p is not None:
+                try:
+                    ck10 = torch.load(t10_v3_p, map_location=dev, weights_only=False)
+                    sd10 = {k: v.float() for k, v in ck10.get("ema", ck10).items() if k.startswith("am.")}
+                    if self.tier == "t10":
+                        self.load_state_dict(sd10, strict=False)
+                    else:
+                        own_sd = self.state_dict()
+                        for k, v in sd10.items():
+                            if k in own_sd and own_sd[k].shape == v.shape:
+                                own_sd[k].copy_(v)
+                        self.load_state_dict(own_sd, strict=False)
+                        with torch.no_grad():
+                            for li, l5 in enumerate(self.am.enc.layers):
+                                for attr in ("c1", "c2"):
+                                    k0 = f"am.enc.layers.{li}.{attr}.0.weight"
+                                    k1 = f"am.enc.layers.{li}.{attr}.1.weight"
+                                    kb = f"am.enc.layers.{li}.{attr}.1.bias"
+                                    if k0 in sd10 and k1 in sd10:
+                                        W_full = torch.einsum("or,rik->oik", sd10[k1][:, :, 0], sd10[k0])
+                                        Co, Ci, K = W_full.shape
+                                        r = int(self.r_enc or 88)
+                                        U, S_v, Vh = torch.linalg.svd(W_full.float().reshape(Co, Ci * K), full_matrices=False)
+                                        sq = torch.sqrt(S_v[:r])
+                                        seq5 = getattr(l5, attr)
+                                        seq5[0].weight.copy_((sq[:, None] * Vh[:r, :]).reshape(r, Ci, K))
+                                        seq5[1].weight.copy_((U[:, :r] * sq[None, :]).reshape(Co, r, 1))
+                                        if kb in sd10 and seq5[1].bias is not None:
+                                            seq5[1].bias.copy_(sd10[kb])
+                except Exception:
+                    pass
+            elif self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "t5_v3_init.pt")):
+                try:
+                    ck_p5 = torch.load(os.path.join(ck_dir, "t5_v3_init.pt"), map_location=dev, weights_only=False)
+                    sd_p5 = {k: v.float() for k, v in ck_p5.get("ema", ck_p5).items() if k.startswith("am.")}
+                    self.load_state_dict(sd_p5, strict=False)
+                except Exception:
+                    pass
         if self.tier == "t1":
             t1_p = os.path.join(ck_dir, "v3_t1_am.pt") if os.path.exists(os.path.join(ck_dir, "v3_t1_am.pt")) else os.path.join(ck_dir, "t1_am_pretrained.pt")
             if os.path.exists(t1_p):
@@ -370,23 +378,24 @@ class Student(nn.Module):
         dur_frames = torch.exp(x_d).clamp(min=1.0, max=60.0)
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
-        # Protect sentence-final tokens and short Nepali function words from frame collapse
+        # Protect sentence-final tokens, non-pause phonemes (>= 3 frames), and short Nepali function words from frame collapse
         is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
-        dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 1.0)).clamp(min=1.0, max=60.0)
+        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 6).float() * 3.0 + (ids <= 6).float() * 1.0)
+        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
         # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID["o"], SYM2ID["m"], SYM2ID["h"], SYM2ID["a"], SYM2ID["|"]
-        next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
-        prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
-        next2_ids = torch.cat([ids[:, 2:], ids[:, -2:]], dim=1)
-        prev2_ids = torch.cat([ids[:, :2], ids[:, :-2]], dim=1)
+        next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
+        prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
+        next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
+        prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
         is_sa_f = is_sa.float()[:, None]
         is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
         dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
         is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
-        next3_ids = torch.cat([ids[:, 3:], ids[:, -3:]], dim=1)
-        prev3_ids = torch.cat([ids[:, :3], ids[:, :-3]], dim=1)
+        next3_ids = torch.cat([ids[:, 3:], torch.zeros_like(ids[:, -3:])], dim=1)
+        prev3_ids = torch.cat([torch.zeros_like(ids[:, :3]), ids[:, :-3]], dim=1)
         # Strict reduplicated hiatus detector: only fires on '| a | a...' (e.g. 'आआफ्नो'), never on normal word boundaries
         is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb) & (next3_ids == id_a)).float()
         is_hiatus_wb = ((prev2_ids == id_wb) & (prev_ids == id_a) & (ids == id_wb) & (next_ids == id_a)).float()
