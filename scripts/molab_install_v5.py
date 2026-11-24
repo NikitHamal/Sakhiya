@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import molab_exec as M
 code = '''
 import subprocess
-subprocess.run("cd /work/tts/repo && GIT_ASKPASS=/tmp/gitenv.sh GIT_TERMINAL_PROMPT=0 git pull -q --rebase origin sakhiya-v5-recovery", shell=True)
+subprocess.run("cd /work/tts/repo && GIT_ASKPASS=/tmp/gitenv.sh GIT_TERMINAL_PROMPT=0 git pull -q --rebase origin sakhiya-v5-recovery-synced", shell=True)
 exec(open("/work/tts/repo/monitor/cells_v5.py").read())
 await install()
 await check()
