@@ -1,156 +1,5 @@
 [
   {
-    "tier": "sakhiya_v4_micro",
-    "label": "Sakhiya-V2-Micro (<=4.5 MB INT8 Hero Compact · Harmonic-iSTFT)",
-    "step": 47021,
-    "qat": true,
-    "int8_mb": 4.176,
-    "fp32_mb": 15.95,
-    "int8_vs_fp32_mel_corr": 0.9954,
-    "nan_count": 0,
-    "rtf_1thread": 0.0165,
-    "utmos": 3.297,
-    "cer_ne": 0.039,
-    "cer_sa": 0.073,
-    "spk_sim": 0.817,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 3.414,
-        "cer": 0.03,
-        "spk_sim": 0.795,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 3.25,
-        "cer": 0.016,
-        "spk_sim": 0.878,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 3.308,
-        "cer": 0.063,
-        "spk_sim": 0.872,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 3.303,
-        "cer": 0.033,
-        "spk_sim": 0.816,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.3,
-        "cer": 0.067,
-        "spk_sim": 0.789,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 2.891,
-        "cer": 0.089,
-        "spk_sim": 0.769,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 3.42,
-        "cer": 0.023,
-        "spk_sim": 0.881,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0161
-    },
-    "gate_pass": true,
-    "score": 2.226
-  },
-  {
-    "tier": "t5",
-    "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
-    "step": 21000,
-    "qat": true,
-    "int8_mb": 4.562,
-    "fp32_mb": 17.46,
-    "int8_vs_fp32_mel_corr": 0.9953,
-    "rtf_1thread": 0.0166,
-    "utmos": 3.33,
-    "cer_ne": 0.037,
-    "cer_sa": 0.087,
-    "spk_sim": 0.822,
-    "clicks": 0,
-    "drops": 0,
-    "stutters": 0,
-    "by_style": {
-      "conversational": {
-        "n": 9,
-        "utmos": 3.429,
-        "cer": 0.032,
-        "spk_sim": 0.801,
-        "clicks": 0
-      },
-      "expressive": {
-        "n": 1,
-        "utmos": 2.609,
-        "cer": 0.016,
-        "spk_sim": 0.88,
-        "clicks": 0
-      },
-      "news": {
-        "n": 6,
-        "utmos": 3.341,
-        "cer": 0.055,
-        "spk_sim": 0.872,
-        "clicks": 0
-      },
-      "storytelling": {
-        "n": 3,
-        "utmos": 3.337,
-        "cer": 0.044,
-        "spk_sim": 0.823,
-        "clicks": 0
-      },
-      "vedic": {
-        "n": 4,
-        "utmos": 3.396,
-        "cer": 0.075,
-        "spk_sim": 0.801,
-        "clicks": 0
-      },
-      "vedic_chant": {
-        "n": 3,
-        "utmos": 3.099,
-        "cer": 0.103,
-        "spk_sim": 0.771,
-        "clicks": 0
-      },
-      "warm_soft": {
-        "n": 1,
-        "utmos": 3.501,
-        "cer": 0.023,
-        "spk_sim": 0.877,
-        "clicks": 0
-      }
-    },
-    "node_verify": {
-      "ok": true,
-      "nan_count": 0,
-      "rtf_1thread": 0.0165
-    },
-    "gate_pass": true,
-    "score": 2.0775
-  },
-  {
     "tier": "t30",
     "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student)",
     "step": 2200,
@@ -599,5 +448,230 @@
     },
     "gate_pass": true,
     "score": 1.4175
+  },
+  {
+    "tier": "t5",
+    "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
+    "step": 6369,
+    "qat": true,
+    "int8_mb": 4.766,
+    "fp32_mb": 15.9,
+    "int8_vs_fp32_mel_corr": 0.9898,
+    "rtf_1thread": 0.0162,
+    "utmos": 3.364,
+    "cer_ne": 0.075,
+    "cer_sa": 0.134,
+    "spk_sim": 0.677,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.232,
+        "cer": 0.095,
+        "spk_sim": 0.648,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.857,
+        "cer": 0.066,
+        "spk_sim": 0.75,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.183,
+        "cer": 0.068,
+        "spk_sim": 0.662,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.572,
+        "cer": 0.057,
+        "spk_sim": 0.733,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.639,
+        "cer": 0.152,
+        "spk_sim": 0.649,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.291,
+        "cer": 0.119,
+        "spk_sim": 0.745,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.642,
+        "cer": 0.023,
+        "spk_sim": 0.695,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0161
+    },
+    "gate_pass": true,
+    "score": 1.7327
+  },
+  {
+    "tier": "sakhiya_v4_micro",
+    "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
+    "step": 6369,
+    "qat": true,
+    "int8_mb": 4.766,
+    "fp32_mb": 15.9,
+    "int8_vs_fp32_mel_corr": 0.9898,
+    "rtf_1thread": 0.0162,
+    "utmos": 3.364,
+    "cer_ne": 0.075,
+    "cer_sa": 0.134,
+    "spk_sim": 0.677,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.232,
+        "cer": 0.095,
+        "spk_sim": 0.648,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.857,
+        "cer": 0.066,
+        "spk_sim": 0.75,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.183,
+        "cer": 0.068,
+        "spk_sim": 0.662,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.572,
+        "cer": 0.057,
+        "spk_sim": 0.733,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.639,
+        "cer": 0.152,
+        "spk_sim": 0.649,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.291,
+        "cer": 0.119,
+        "spk_sim": 0.745,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.642,
+        "cer": 0.023,
+        "spk_sim": 0.695,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0161
+    },
+    "gate_pass": true,
+    "score": 1.7327
+  },
+  {
+    "tier": "sakhiya_v5_micro",
+    "label": "Sakhiya-Micro t5 (4.8 MB INT8 Hero Sub-5 MB Student)",
+    "step": 6369,
+    "qat": true,
+    "int8_mb": 4.766,
+    "fp32_mb": 15.9,
+    "int8_vs_fp32_mel_corr": 0.9898,
+    "rtf_1thread": 0.0162,
+    "utmos": 3.364,
+    "cer_ne": 0.075,
+    "cer_sa": 0.134,
+    "spk_sim": 0.677,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.232,
+        "cer": 0.095,
+        "spk_sim": 0.648,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.857,
+        "cer": 0.066,
+        "spk_sim": 0.75,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.183,
+        "cer": 0.068,
+        "spk_sim": 0.662,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 3.572,
+        "cer": 0.057,
+        "spk_sim": 0.733,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.639,
+        "cer": 0.152,
+        "spk_sim": 0.649,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.291,
+        "cer": 0.119,
+        "spk_sim": 0.745,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.642,
+        "cer": 0.023,
+        "spk_sim": 0.695,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0161
+    },
+    "gate_pass": true,
+    "score": 1.7327
   }
 ]
