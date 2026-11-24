@@ -31,7 +31,7 @@ def main():
     a = ap.parse_args()
     dev = 'cuda'; out = a.out or f'/work/sp/distill/voc{a.ch}'; os.makedirs(out, exist_ok=True)
     save = a.save or f'/work/tts/ck/v3_voc{a.ch}.pt'
-    torch.backends.cudnn.benchmark = True; torch.backends.cuda.matmul.allow_tf32 = True; torch.backends.cudnn.allow_tf32 = True
+    torch.backends.cuda.matmul.allow_tf32 = True; torch.backends.cudnn.allow_tf32 = True
     logf = out + '/train.log'
 
     def log(s):

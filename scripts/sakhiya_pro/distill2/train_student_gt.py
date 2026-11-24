@@ -41,7 +41,7 @@ def main():
     ap.add_argument('--resume', action='store_true'); ap.add_argument('--no_wavlm', action='store_true'); ap.add_argument('--lr_mult', type=float, default=1.0)
     a = ap.parse_args()
     dev = 'cuda'; out = a.out or f'/work/sp/distill/runs/{a.tier}'; os.makedirs(out, exist_ok=True)
-    random.seed(1); torch.manual_seed(1); torch.backends.cuda.matmul.allow_tf32 = True; torch.backends.cudnn.allow_tf32 = True; torch.backends.cudnn.benchmark = True
+    random.seed(1); torch.manual_seed(1); torch.backends.cuda.matmul.allow_tf32 = True; torch.backends.cudnn.allow_tf32 = True
 
     def log(s):
         print(s, flush=True); open(out + '/train.log', 'a').write(s + '\n')
