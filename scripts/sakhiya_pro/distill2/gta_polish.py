@@ -34,12 +34,17 @@ from scripts.train_v2_voc import DiscV2, mr_complex_stft_loss, gpu_f0_uv  # noqa
 
 
 def vin_tier(mel, comb_gain: float):
-    """Exact post-ODE mel conditioning used by Student.infer before feeding VocoderV2."""
-    if comb_gain > 0.0:
-        env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
-        kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
-        wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
-        mel = env + (mel - env) * (1.0 + comb_gain * wk)
+    """Exact post-ODE mel conditioning matching Student.infer before feeding VocoderV2."""
+    env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
+    kb = torch.arange(100, device=mel.device, dtype=mel.dtype)[None, :, None]
+    wk = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)
+    diff = mel - env
+    if comb_gain >= 0.13:
+        mel = env + torch.where(diff < 0.0, diff * (1.0 + 0.16 * wk), diff * (1.0 + 0.12 * wk))
+    elif comb_gain > 0.0:
+        mel = env + torch.where(diff < 0.0, diff * (1.0 + 0.12 * wk), diff * (1.0 + 0.09 * wk))
+    else:
+        mel = env + torch.where(diff < 0.0, diff * (1.0 + 0.11 * wk), diff * (1.0 + 0.05 * wk))
     return torch.cat([mel[:, :98, :], mel[:, 97:98, :], mel[:, 97:98, :]], dim=1)
 
 
@@ -387,13 +392,13 @@ def gta_train_voc(
         mgta = MEL_GTA[:, (m_starts[idx] + f)[:, None] + ar_m[None]].permute(1, 0, 2).float()
         B_gta = bs // 2
 
+        B_gta = (3 * bs) // 4
+        mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
         if teacher_voc320 is not None:
-            mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
             with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(vin_tier(xm, 0.0))
+                re_t, im_t, _, _ = teacher_voc320.spectrum_and_f0(mel_in)
             y_t = ola64(torch.complex(re_t.float(), im_t.float()), teacher_voc320.win)
         else:
-            mel_in = torch.cat([vin_tier(mgta[:B_gta], comb_gain), vin_tier(xm[B_gta:], comb_gain)], dim=0)
             re_t, im_t, y_t = None, None, None
 
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
@@ -402,7 +407,7 @@ def gta_train_voc(
         T = min(y.shape[1], x.shape[1])
         if y_t is not None:
             T = min(T, y_t.shape[1])
-            y_target = torch.cat([y_t[:B_gta, :T].detach(), x[B_gta:, :T]], dim=0)
+            y_target = y_t[:, :T].detach()
         else:
             y_target = x[:, :T]
         y = y[:, :T]
@@ -421,6 +426,7 @@ def gta_train_voc(
             ym_tgt = mel_spec_24k(y_target, dev)
             l_mel = F.l1_loss(ym, ym_tgt[:, :, :ym.shape[2]])
             l_st = mr_complex_stft_loss(y, y_target, dev)
+            l_wav = F.l1_loss(y, y_target)
             l_teach = torch.zeros((), device=dev)
             if re_t is not None:
                 l_teach = spec_phase_gd_loss(re_v, im_v, re_t, im_t)
@@ -429,7 +435,7 @@ def gta_train_voc(
             l_adv = sum(F.relu(1.0 - q.float()).mean() for q in df) / len(df)
             n_fm = sum(len(A) for A in fr)
             l_fm = sum(F.l1_loss(b.float(), a_.float()) for A, B in zip(fr, ff) for a_, b in zip(A, B)) / n_fm
-            lg = 45.0 * l_mel + 2.5 * l_st + 2.0 * l_teach + l_adv + 4.0 * l_fm
+            lg = 45.0 * l_mel + 2.5 * l_st + 2.5 * l_teach + 10.0 * l_wav + l_adv + 4.0 * l_fm
 
         oG.zero_grad(set_to_none=True)
         lg.backward()
@@ -514,67 +520,40 @@ def main():
     m30 = load_or_warm_student("t30", dev=dev).eval()
 
     if not a.skip_voc:
-        # 2A. GTA Fine-tune v3_voc320.pt on t30/t15 4-step predicted mels (comb_gain=0.0)
+        # 2A. Keep converged 4.24-UTMOS v3_voc320.pt frozen as the phase-locked teacher vocoder!
         v320_p = "/work/tts/ck/v3_voc320.pt"
-        if os.path.exists(v320_p) and (time.time() - os.path.getmtime(v320_p)) < 1800:
-            print(f"[voc320_gta] reusing freshly converged {v320_p}", flush=True)
-            voc320_ema = copy.deepcopy(m30.voc).to(dev).eval()
-            voc320_ema.load_state_dict(torch.load(v320_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
-        else:
-            m15 = load_or_warm_student("t15", dev=dev).eval()
-            gta_mels_320 = extract_gta_mels(m15, tr_items, dev=dev)
-            voc320_ema = gta_train_voc(
-                tag="voc320_gta",
-                voc_model=copy.deepcopy(m30.voc),
-                teacher_voc320=None,
-                gt_items=tr_items,
-                gta_mels=gta_mels_320,
-                comb_gain=0.0,
-                steps=800,
-                lr=4.5e-5,
-                bs=48,
-                seg=40,
-                save_path=v320_p,
-                svd_t1=False,
-                dev=dev,
-            )
+        voc320_ema = copy.deepcopy(m30.voc).to(dev).eval()
+        voc320_ema.load_state_dict(torch.load(v320_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
+        snap_f0_int8(voc320_ema)
+        for p_ in voc320_ema.parameters():
+            p_.requires_grad_(False)
 
-        # 2B. GTA + voc320-Teacher Distill v3_voc144.pt on t5 1-step predicted mels (comb_gain=0.10)
+        # 2B. Same-input phase-locked voc320(mel_in) -> voc144(mel_in) distillation on t5 1-step predicted mels
         m5 = load_or_warm_student("t5", dev=dev).eval()
         v144_p = "/work/tts/ck/v3_voc144.pt"
-        if os.path.exists(v144_p) and (time.time() - os.path.getmtime(v144_p)) < 1800:
-            print(f"[voc144] reusing freshly converged {v144_p}", flush=True)
-            voc144_ema = copy.deepcopy(m5.voc).to(dev).eval()
-            voc144_ema.load_state_dict(torch.load(v144_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
-        else:
-            gta_mels_t5 = extract_gta_mels(m5, tr_items, dev=dev)
-            voc144_ema = gta_train_voc(
-                tag="voc144",
-                voc_model=copy.deepcopy(m5.voc),
-                teacher_voc320=voc320_ema,
-                gt_items=tr_items,
-                gta_mels=gta_mels_t5,
-                comb_gain=0.10,
-                steps=1100,
-                lr=7.0e-5,
-                bs=48,
-                seg=40,
-                save_path=v144_p,
-                svd_t1=False,
-                dev=dev,
-            )
+        gta_mels_t5 = extract_gta_mels(m5, tr_items, dev=dev)
+        voc144_ema = gta_train_voc(
+            tag="voc144",
+            voc_model=copy.deepcopy(m5.voc),
+            teacher_voc320=voc320_ema,
+            gt_items=tr_items,
+            gta_mels=gta_mels_t5,
+            comb_gain=0.10,
+            steps=1800,
+            lr=1.1e-4,
+            bs=48,
+            seg=40,
+            save_path=v144_p,
+            svd_t1=False,
+            dev=dev,
+        )
 
-        # 2C. GTA + voc320-Teacher Distill v3_voc144_t1.pt on t1 1-step predicted mels (comb_gain=0.10)
-        # Warm-start t1's SVD vocoder directly from the newly converged voc144_ema via exact SVD factorization!
-        voc_t1_init = copy.deepcopy(voc144_ema).to(dev)
-        for b_idx, r_k in ((1, 50), (2, 31)):
-            blk = voc_t1_init.mrfs[0][b_idx]
-            for i in range(len(blk.c1)):
-                if isinstance(blk.c1[i], nn.Conv1d):
-                    blk.c1[i] = _make_svd_seq(blk.c1[i], r_k, use_qat=False).to(dev)
-                if isinstance(blk.c2[i], nn.Conv1d):
-                    blk.c2[i] = _make_svd_seq(blk.c2[i], r_k, use_qat=False).to(dev)
+        # 2C. Same-input phase-locked voc320(mel_in) -> voc144_t1(mel_in) distillation on t1 1-step predicted mels
         m1 = load_or_warm_student("t1", dev=dev).eval()
+        voc_t1_init = copy.deepcopy(m1.voc).to(dev)
+        vt1_p = "/work/tts/ck/v3_voc144_t1.pt"
+        if os.path.exists(vt1_p):
+            voc_t1_init.load_state_dict(torch.load(vt1_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
         gta_mels_t1 = extract_gta_mels(m1, tr_items, dev=dev)
         voc144_t1_ema = gta_train_voc(
             tag="voc144_t1",
@@ -582,12 +561,12 @@ def main():
             teacher_voc320=voc320_ema,
             gt_items=tr_items,
             gta_mels=gta_mels_t1,
-            comb_gain=0.10,
-            steps=1100,
-            lr=7.0e-5,
+            comb_gain=0.15,
+            steps=1800,
+            lr=1.1e-4,
             bs=48,
             seg=40,
-            save_path="/work/tts/ck/v3_voc144_t1.pt",
+            save_path=vt1_p,
             svd_t1=True,
             dev=dev,
         )

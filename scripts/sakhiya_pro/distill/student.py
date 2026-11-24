@@ -112,7 +112,7 @@ def snap_am_int8(am):
     with torch.no_grad():
         for name, p in am.named_parameters():
             if name.startswith(("enc.", "dur.")):
-                if (p.ndim == 3 and p.shape[1] == 1) or (p.ndim >= 2 and p.shape[0] <= 8) or p.shape == (66, 1, 64):
+                if (p.ndim == 3 and p.shape[1] == 1) or (p.ndim >= 2 and p.shape[0] <= 8) or p.shape == (66, 1, 64) or (p.ndim == 2 and p.shape[0] == 100):
                     if p.numel() >= 256:
                         p.copy_(p.half().float())
                 elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
@@ -462,13 +462,10 @@ class Student(nn.Module):
             mel_w = env + torch.where(diff < 0.0, diff * (1.0 + 0.12 * wk), diff * (1.0 + 0.09 * wk))
         else:
             mel_w = env + torch.where(diff < 0.0, diff * (1.0 + 0.11 * wk), diff * (1.0 + 0.05 * wk))
-        st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
-        tot_shift = F.avg_pool1d(F.pad((0.02 * st_shift[:, None, :]).clamp(-0.10, 0.10), (2, 2), mode="replicate"), 5, stride=1)
-        gamaka = 0.025 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift + gamaka
+        gamaka = 0.020 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
 
-        y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
+        y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=gamaka)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
 

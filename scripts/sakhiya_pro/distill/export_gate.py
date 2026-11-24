@@ -117,13 +117,14 @@ def export_fp32(m, path, fp16_names=("voc.post", "am.vel.out")):
         if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
             continue
         op = use.get(init.name, "")
-        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
+        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
             or a.shape[ax] <= 8
             or a.shape[0] == 66
             or (a.ndim == 3 and a.shape[1] == 1)
             or (a.ndim == 2 and min(a.shape) == 1)
+            or (a.ndim == 2 and a.shape[1] == 100)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         if any(k in init.name for k in ("enc.", "dur.", "MatMul", "f0_net", "onnx::Conv")):
@@ -156,13 +157,14 @@ def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
             keep.append(init)
             continue
         op = use.get(init.name, "")
-        ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
+        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
             or a.shape[ax] <= 8
             or a.shape[0] == 66
             or (a.ndim == 3 and a.shape[1] == 1)
             or (a.ndim == 2 and min(a.shape) == 1)
+            or (a.ndim == 2 and a.shape[1] == 100)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
@@ -283,9 +285,21 @@ def main():
     R["step"] = S.get("step", 0)
     R["qat"] = bool(S.get("qat"))
     f32, i8 = a.out + "/model.fp32.onnx", a.out + "/model.int8.onnx"
-    export_fp32(m, f32)
-    fp16 = [x for x in a.fp16.split(",") if x]
+    TIER_FP16 = {
+        "t30": ("voc.post", "am.vel", "voc.pre", "voc.ups"),
+        "t15": ("voc.post", "am.vel.out", "am.vel.inp", "voc.pre", "am.enc.proj"),
+        "t10": ("voc.post", "am.vel", "voc.pre"),
+        "t5":  ("voc.post", "am.vel.out", "am.vel.inp", "voc.pre", "voc.ups", "am.vel.blocks.0", "am.vel.blocks.6"),
+        "t1":  ("voc.post", "am.vel.out", "am.vel.inp", "voc.pre"),
+    }
+    fp16 = [x for x in a.fp16.split(",") if x] or list(TIER_FP16.get(a.tier, ("voc.post", "am.vel.out")))
+    export_fp32(m, f32, fp16)
     quantize(f32, i8, fp16)
+    sz_cap_init = SIZE_CAPS_MB.get(a.tier, 30.0)
+    if os.path.getsize(i8) / 1e6 > sz_cap_init:
+        fp16 = ["voc.post", "am.vel.out"]
+        export_fp32(m, f32, fp16)
+        quantize(f32, i8, fp16)
     sz = os.path.getsize(i8) / 1e6
     R.update(int8_mb=round(sz, 3), fp32_mb=round(os.path.getsize(f32) / 1e6, 2), ops=ops(i8))
     R["bad_ops"] = sorted(set(R["ops"]) & BAD_OPS)
