@@ -449,6 +449,8 @@ def render_pack(R: RendererV4, out: str):
     meta = []
     for c in clips:
         lang = 'sa' if c['lang'] == 'sa' else 'npi'
+        if lang == 'sa' and os.environ.get('SP_SKIP_SA'):   # v5: Vedic is isolated behind its own adapter + leak gate
+            continue
         w, wsr, info = R.take(c['text'], lang=lang)
         raw = f"{out}/{c['id']}_raw.wav"
         sf.write(raw, w, wsr)
