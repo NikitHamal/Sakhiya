@@ -30,6 +30,7 @@ from sakhiya.cfm import SakhiyaAM, STYLE_PROSODY_TARGETS
 from sakhiya.v15_pico import SakhiyaPicoAM
 from sakhiya.v2_vocoder import VocoderV2, ISTFT_N_FFT, ISTFT_HOP, SR, N_FFT, HOP, NMEL as N_MEL
 from sakhiya.v15_rnd_wavehax import _build_cola_istft_kernel, ste_int8_weight, QATConv1d
+from sakhiya.symbols import SYM2ID
 
 NB = N_FFT // 2 + 1
 N_SYM = 64
@@ -285,7 +286,7 @@ class Student(nn.Module):
 
     @torch.no_grad()
     def infer(self, ids, lang, dur_scale, pitch_shift):
-        """Single-graph ONNX inference: ids [1,L] int64, lang [1] int64, dur_scale [1] float, pitch_shift [1] float -> wav [1,N]."""
+        """Single-graph ONNX inference supporting both scalar [1] and per-phoneme Chandas vector [L] dur_scale & pitch_shift."""
         B, L = ids.shape
         im = torch.ones((B, L), dtype=torch.bool, device=ids.device)
         spk0 = torch.zeros((B,), dtype=torch.long, device=ids.device)
@@ -295,15 +296,21 @@ class Student(nn.Module):
         sty = torch.where(is_sa, torch.full_like(lang, 5), torch.zeros_like(lang))
         pros = self.pros_tbl[sty]
 
+        z_tok = torch.zeros((B, L), dtype=torch.float32, device=ids.device)
+        ds_tok = dur_scale.reshape(B, -1) + z_tok
+        ps_tok = pitch_shift.reshape(B, -1) + z_tok
+
         pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
         L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
         is_pause = (ids <= 6).float()
         phase = pos / L_f
-        # Grounded Kathmandu/Nepal-native downward clause ending + gentle natural phrase arch (active on both Nepali & Sanskrit!)
+        # Grounded Kathmandu/Nepal-native downward clause ending + natural multi-clause phrase arch
         tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        p_arch = (0.14 * torch.sin(phase * 3.14159265) + tail_closure) * (1.0 - is_pause) - 0.15 * is_pause
+        p_arch = (0.55 * torch.sin(phase * 3.14159265) + 0.48 * torch.sin(phase * 9.424778) + 0.32 * torch.cos(phase * 15.707963) + tail_closure) * (1.0 - is_pause) - 0.28 * is_pause
         p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode="replicate"), 3, stride=1)[:, 0]
-        p_enc = (p_arch + 0.35 * pitch_shift[:, None]).clamp(-0.48, 0.48)
+        sty_gain = (0.18 * pros[:, 1:2] + 0.14 * (1.0 - is_sa.float()[:, None])).clamp(0.0, 0.38)
+        p_prose_enc = p_arch * (0.55 * sty_gain)
+        p_enc = (p_prose_enc + 0.95 * ps_tok).clamp(-1.10, 1.10)
 
         ones_m = torch.ones((B, 1), dtype=torch.float32, device=ids.device)
         h, mu, g = self.am.enc(ids, spk0, lang_eff, sty, studio, im, pitch_add=p_enc, prosody=pros, sty_mask=ones_m)
@@ -314,14 +321,46 @@ class Student(nn.Module):
         x_d = self.am.dur.pred_logdur(ids, h, im) + self.dur_rate_bias.clamp(-0.12, 0.12)
         dur_frames = torch.exp(x_d).clamp(min=1.0, max=60.0)
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
-        dur_frames = (dur_frames * rate_mult * dur_scale[:, None]).clamp(min=1.0, max=60.0)
+        dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
         # Protect sentence-final tokens and short Nepali function words from frame collapse
         is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
         dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 1.0)).clamp(min=1.0, max=60.0)
-        # Resonant Pranava ॐ floor on Sanskrit utterances starting with 'o' (17) + 'm' (39)
-        is_om_o = (is_sa[:, None] & (pos == 1.0) & (ids == 17)).float()
-        is_om_m = (is_sa[:, None] & (pos == 2.0) & (ids == 39)).float()
+        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
+        id_o, id_m, id_h, id_a, id_wb = SYM2ID["o"], SYM2ID["m"], SYM2ID["h"], SYM2ID["a"], SYM2ID["|"]
+        next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
+        prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
+        next2_ids = torch.cat([ids[:, 2:], ids[:, -2:]], dim=1)
+        prev2_ids = torch.cat([ids[:, :2], ids[:, :-2]], dim=1)
+        is_sa_f = is_sa.float()[:, None]
+        is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
+        is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
         dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
+        is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
+        dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
+        is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb)).float()
+        is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()
+        is_hiatus_a1 = ((ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
+        is_hiatus_a2 = ((ids == id_a) & (prev_ids == id_wb) & (prev2_ids == id_a)).float()
+        dur = torch.where(is_pre_hiatus_wb > 0.5, torch.full_like(dur, 12.0), dur)
+        dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
+        dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
+        # Exact 3-token hiatus re-articulation matching multi-graph SakhiyaONNX so 'आआफ्नो' never merges into 'आफ्नो'
+        mu_next2 = torch.cat([mu[:, 2:, :], mu[:, -2:, :]], dim=1)
+        mu_next1 = torch.cat([mu[:, 1:, :], mu[:, -1:, :]], dim=1)
+        m_pre = is_pre_hiatus_wb[:, :, None]
+        m_a1 = is_hiatus_a1[:, :, None]
+        m_wb = is_hiatus_wb[:, :, None]
+        mu = mu * (1.0 - m_pre) + mu[:, -1:, :] * m_pre
+        mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
+        mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu[:, -1:, :]) * m_wb
+        # Short Nepali function-word floor ('र', 'हो', 'छ', 'त', 'न', 'म' between word boundaries)
+        id_r, id_schwa = SYM2ID["r"], SYM2ID["ʌ"]
+        is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
+        is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
+        dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
+
+        f0_hat = F.avg_pool1d(F.pad(self.am.enc.f0_pred(h).transpose(1, 2), (1, 1), mode="replicate"), 3, stride=1)[:, 0].clamp(-1.2, 1.2)
+        p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.35 * ps_tok
 
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
@@ -330,6 +369,9 @@ class Student(nn.Module):
 
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
+        p_xe = torch.gather(p_out, 1, idx)
+        ps_fr = torch.gather(ps_tok, 1, idx)[:, None, :]
+        is_wb_fr = torch.gather(is_hiatus_wb, 1, idx)[:, None, :]
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
         if self.steps == 1:
@@ -346,8 +388,12 @@ class Student(nn.Module):
                 k1 = self.am.vel(xt, ti, mu_y, g, m_t)
                 k2 = self.am.vel(xt + 0.5 * dt * k1, ti + 0.5 * dt, mu_y, g, m_t)
                 xt = xt + dt * k2
+        xt = xt * (1.0 - 0.65 * is_wb_fr) + xt[:, :, -1:] * (0.65 * is_wb_fr)
 
         mel = xt * self.am.stats[1] + self.am.stats[0]
+        p_zero = p_xe - p_xe.mean(dim=1, keepdim=True)
+        p_s1 = F.avg_pool1d(F.pad(p_zero[:, None, :], (4, 4), mode="replicate"), 9, stride=1)
+        p_sm = F.avg_pool1d(F.pad(p_s1, (2, 2), mode="replicate"), 5, stride=1)
         env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
         kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
         wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
@@ -359,12 +405,16 @@ class Student(nn.Module):
             env_f = F.avg_pool1d(F.pad(mel_w.transpose(1, 2), (2, 2), mode="replicate"), 5, stride=1).transpose(1, 2)
             wf = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)[None, :, None]
             mel_w = mel_w + 0.14 * wf * (mel_w - env_f)
+        st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
-        ext_shift = (0.35 * pitch_shift[:, None, None]).clamp(-0.85, 0.85).expand(B, 1, T)
+        tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode="replicate"), 5, stride=1)
+        ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode="replicate"), 7, stride=1)
+        gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
+        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.85 * ps_sm + gamaka).clamp(-1.35, 1.35)
 
-        y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=ext_shift)
+        y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
-        return y * (0.88 / pk)
+        return (y * (0.88 / pk)).clamp(-0.98, 0.98)
 
 
 def set_qat(model, flag):

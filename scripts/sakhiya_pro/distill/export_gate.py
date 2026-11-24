@@ -92,13 +92,13 @@ def load(ck):
 
 def export_fp32(m, path):
     ids = torch.randint(3, 50, (1, 40))
-    args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(1), torch.zeros(1))
+    args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(40), torch.zeros(40))
     kw = dict(
         input_names=["ids", "lang", "dur_scale", "pitch_shift"],
         output_names=["wav"],
-        dynamic_axes={"ids": {1: "L"}, "wav": {1: "N"}},
+        dynamic_axes={"ids": {1: "L"}, "dur_scale": {0: "D"}, "pitch_shift": {0: "P"}, "wav": {1: "N"}},
         opset_version=17,
-        do_constant_folding=True,
+        do_constant_folding=False,
     )
     try:
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
@@ -109,22 +109,9 @@ def export_fp32(m, path):
     onnx.save(om, path)
 
 
-def quantize(src, dst, fp16_names=()):
+def quantize(src, dst, fp16_names=("voc.post", "am.vel.out")):
     """Weight-only per-output-channel int8 (QDQ: DequantizeLinear) with deduplication for looped universal blocks."""
     m = onnx.load(src)
-    # Convert large Constant float nodes (e.g., K_istft) into initializers so they are quantized/deduplicated
-    rem_nodes = []
-    for n in m.graph.node:
-        if n.op_type == "Constant" and len(n.output) == 1:
-            val_attr = next((a for a in n.attribute if a.name == "value"), None)
-            if val_attr is not None and val_attr.t.data_type == TensorProto.FLOAT:
-                arr_c = numpy_helper.to_array(val_attr.t)
-                if arr_c.size >= 64:
-                    m.graph.initializer.append(numpy_helper.from_array(arr_c, n.output[0]))
-                    continue
-        rem_nodes.append(n)
-    del m.graph.node[:]
-    m.graph.node.extend(rem_nodes)
     _dedup_initializers(m)
     use = {}
     for n in m.graph.node:
@@ -139,7 +126,8 @@ def quantize(src, dst, fp16_names=()):
         op = use.get(init.name, "")
         skip_fp16 = (
             a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64))
-            or a.shape[0] == 1
+            or a.shape[0] in (1, 66)
+            or (a.ndim == 3 and a.shape[1] == 1)
             or any(init.name.endswith(n) or n in init.name for n in fp16_names)
         )
         ax = 1 if (op == "ConvTranspose" and a.ndim >= 2 and a.shape[1] > 1) else 0
