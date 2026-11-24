@@ -378,15 +378,10 @@ class Student(nn.Module):
         dur_frames = torch.exp(x_d).clamp(min=1.0, max=60.0)
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
-        # Phonological duration floors: chandrabindu nasalized vowels (>=8f), oral vowels (>=6f), consonants (>=4f), and clamp plain '|' <= 8f
-        is_tail = ((pos >= (L_f - 3.0)) & (ids > 8)).float()
-        is_nasv = (ids >= 53).float()
-        is_vow = ((ids >= 45) & (ids <= 52)).float()
-        is_cons = ((ids >= 9) & (ids <= 44)).float()
-        base_min = is_nasv * 8.0 + is_vow * 6.0 + is_cons * 4.0 + (ids <= 8).float() * 1.0
-        min_ph = torch.maximum(base_min, is_tail * 6.0)
-        dur_raw = torch.where(ids == 1, dur_frames.clamp(min=2.0, max=8.0), dur_frames)
-        dur = torch.round(torch.maximum(dur_raw, min_ph)).clamp(min=1.0, max=60.0)
+        # Protect sentence-final tokens, chandrabindu nasalized vowels (>= 5 frames), and non-pause phonemes (>= 3 frames) from frame collapse
+        is_tail = (((pos >= (L_f - 3.0)) & (ids > 8)) | (ids >= 53)).float()
+        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
+        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
         # Natural Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 12 + 7 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID["o"], SYM2ID["m"], SYM2ID["h"], SYM2ID["a"], SYM2ID["|"]
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
