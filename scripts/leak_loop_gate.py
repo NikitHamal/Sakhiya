@@ -107,13 +107,13 @@ def count_clicks(w, sr):
     return int(1 + (np.diff(idx) > int(0.002 * sr)).sum())
 
 
-def find_splices(w, sr, step_db=25.0, voiced_db=-30.0):
+def find_splices(w, sr, step_db=25.0, voiced_db=-24.0):
     """Hard envelope steps between voiced levels (a cut that lands mid-word) within ~6 ms. Returns times (s)."""
     w = w.astype(np.float32)
     db, n = _frames_db(w, sr, 3.0)
     out = []
     for i in range(2, len(db) - 2):
-        a, b = db[i - 2:i].max(), db[i:i + 2].min()          # level just before vs just after, 6 ms apart
+        a, b = db[i - 1], db[i + 1]          # level just before vs just after (one 3 ms frame skipped to allow a partial frame)
         if a - b >= step_db and a > voiced_db:
             # real word-final decay never drops 25 dB in 6 ms; require the loud side to be sustained 30 ms prior
             lo = max(0, i - 10)
