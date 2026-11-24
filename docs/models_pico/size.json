@@ -1,14 +1,14 @@
 {
   "tier": "pico",
-  "int8_mb": 1.26,
-  "fp32_mb": 4.49,
-  "int8_vs_fp32_mel_corr": 0.9921,
+  "int8_mb": 1.45,
+  "fp32_mb": 5.17,
+  "int8_vs_fp32_mel_corr": 0.9896,
   "nan_count": 0,
-  "rtf_1thread": 0.0134,
+  "rtf_1thread": 0.0144,
   "bad_ops": [],
   "node_verify": {
     "ok": true,
     "nan_count": 0,
-    "rtf_1thread": 0.013
+    "rtf_1thread": 0.0142
   }
 }
