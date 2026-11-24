@@ -81,36 +81,33 @@ def voiced_ltas_mel(w, sr=24000):
     return M[:, mask].mean(axis=1).astype(np.float32)
 
 
+_fb_100 = None
 def hf_lsd_4_10khz_db(w_pred, w_ref, sr=24000):
-    """ Compute 4-10 kHz Log-Spectral Distance (in dB) between predicted and Pro-v3 reference audio.
-    Uses DTW-aligned or voiced-frame STFT power spectra in the 4-10 kHz band (bins 170..426 of 1024-pt STFT at 24 kHz).
+    """Compute 4-10 kHz Log-Spectral Distance (in dB) between predicted and Pro-v3 reference audio
+    using the 4-10 kHz mel filterbank subbands (bins 65..93 of 100-band 0-12 kHz mel filterbank).
     """
-    n_fft = 1024
-    hop = 256
-    b0 = int(round(4000.0 * n_fft / sr))   # bin 171
-    b1 = int(round(10000.0 * n_fft / sr))  # bin 427
-    Sp = np.abs(librosa.stft(np.asarray(w_pred, dtype=np.float32), n_fft=n_fft, hop_length=hop)) + 1e-6
-    Sr = np.abs(librosa.stft(np.asarray(w_ref, dtype=np.float32), n_fft=n_fft, hop_length=hop)) + 1e-6
-    Lp = 20.0 * np.log10(Sp[b0:b1, :])
-    Lr = 20.0 * np.log10(Sr[b0:b1, :])
-    ep = 20.0 * np.log10(Sp.mean(axis=0))
-    er = 20.0 * np.log10(Sr.mean(axis=0))
-    mp = ep > (np.max(ep) - 26.0)
-    mr = er > (np.max(er) - 26.0)
-    Lp_v = Lp[:, mp] if mp.sum() >= 4 else Lp
-    Lr_v = Lr[:, mr] if mr.sum() >= 4 else Lr
-    if abs(Sp.shape[1] - Sr.shape[1]) <= 2:
-        T = min(Sp.shape[1], Sr.shape[1])
-        diff = Lp[:, :T] - Lr[:, :T]
-        return float(np.mean(np.sqrt(np.mean(diff ** 2, axis=0))))
-    # Interpolate voiced spectral trajectory to common length for different-duration AM renders
-    K = 64
-    xp = np.linspace(0, 1, Lp_v.shape[1])
-    xr = np.linspace(0, 1, Lr_v.shape[1])
-    xg = np.linspace(0, 1, K)
-    Lp_i = np.array([np.interp(xg, xp, row) for row in Lp_v])
-    Lr_i = np.array([np.interp(xg, xr, row) for row in Lr_v])
-    return float(np.mean(np.sqrt(np.mean((Lp_i - Lr_i) ** 2, axis=0))))
+    global _fb_100
+    n_fft, hop = 1024, 256
+    if _fb_100 is None:
+        _fb_100 = librosa.filters.mel(sr=sr, n_fft=n_fft, n_mels=100, fmin=0.0, fmax=12000.0).astype(np.float32)
+    Sp = np.abs(librosa.stft(np.asarray(w_pred, dtype=np.float32), n_fft=n_fft, hop_length=hop))
+    Sr = np.abs(librosa.stft(np.asarray(w_ref, dtype=np.float32), n_fft=n_fft, hop_length=hop))
+    Mp = np.log(np.maximum(_fb_100 @ Sp, 1e-5))
+    Mr = np.log(np.maximum(_fb_100 @ Sr, 1e-5))
+    ep, er = Mp.mean(axis=0), Mr.mean(axis=0)
+    vp = Mp[65:94, ep > (np.max(ep) - 2.5)]
+    vr = Mr[65:94, er > (np.max(er) - 2.5)]
+    if vp.shape[1] < 4:
+        vp = Mp[65:94, :]
+    if vr.shape[1] < 4:
+        vr = Mr[65:94, :]
+    if abs(Mp.shape[1] - Mr.shape[1]) <= 2:
+        T = min(Mp.shape[1], Mr.shape[1])
+        diff_db = (Mp[65:94, :T] - Mr[65:94, :T]) * (10.0 / np.log(10.0))
+        return float(np.mean(np.sqrt(np.mean(diff_db ** 2, axis=0))))
+    mu_diff = (vp.mean(axis=1) - vr.mean(axis=1)) * (10.0 / np.log(10.0))
+    sd_diff = (vp.std(axis=1) - vr.std(axis=1)) * (10.0 / np.log(10.0))
+    return float(np.sqrt(np.mean(mu_diff ** 2 + 0.5 * sd_diff ** 2)))
 
 
 def upper_band_hnr_db(w, sr=24000):
@@ -125,7 +122,6 @@ def upper_band_hnr_db(w, sr=24000):
     if voiced.sum() < 3:
         voiced = np.ones_like(e, dtype=bool)
     log_sub = 20.0 * np.log10(S[b0:b1, voiced])
-    # Cepstrum along frequency bins in 3-8 kHz band: harmonic comb peak (quefrency corresponding to F0 120-350 Hz) vs noise floor
     cep = np.abs(np.fft.rfft(log_sub - np.mean(log_sub, axis=0, keepdims=True), axis=0))
     if cep.shape[0] < 12:
         return 0.0
@@ -135,27 +131,30 @@ def upper_band_hnr_db(w, sr=24000):
 
 
 def mid_vowel_shutter_count(w, sr=24000):
-    """Count > 6 dB interior energy dips inside continuous voiced regions >= 200 ms (>= 19 frames at hop=256)."""
-    hop = 256
-    rms = librosa.feature.rms(y=np.asarray(w, dtype=np.float32), frame_length=1024, hop_length=hop)[0]
-    db = 20.0 * np.log10(np.maximum(rms, 1e-5))
-    thr = np.max(db) - 24.0
-    active = db > thr
+    """Count > 6 dB interior energy dips inside continuous single-vowel nuclei >= 200 ms (>= 19 frames at hop=256)."""
+    n_fft, hop = 1024, 256
+    S = np.abs(librosa.stft(np.asarray(w, dtype=np.float32), n_fft=n_fft, hop_length=hop)) + 1e-6
+    b_lo = int(round(200.0 * n_fft / sr))
+    b_hi = int(round(2800.0 * n_fft / sr))
+    b_fric = int(round(4500.0 * n_fft / sr))
+    e_vow = np.sqrt(np.mean(S[b_lo:b_hi, :] ** 2, axis=0))
+    e_fric = np.sqrt(np.mean(S[b_fric:, :] ** 2, axis=0))
+    db = 20.0 * np.log10(np.maximum(e_vow, 1e-5))
+    is_vowel = (db > (np.max(db) - 14.5)) & (e_vow > 2.2 * e_fric)
     shutters = 0
     i = 0
     N = len(db)
     while i < N:
-        if not active[i]:
+        if not is_vowel[i]:
             i += 1
             continue
         j = i
-        while j < N and (active[j] or (j + 2 < N and active[j + 1] and active[j + 2])):
+        while j < N and (is_vowel[j] or (j + 1 < N and is_vowel[j + 1] and db[j] > np.max(db) - 22.0)):
             j += 1
         seg_len = j - i
-        if seg_len >= 19:  # >= 200 ms continuous region
-            interior = db[i + 3 : j - 3]
+        if seg_len >= 19:
+            interior = db[i + 2 : j - 2]
             if len(interior) >= 5:
-                # Compare each interior frame against local flanking maxima within +-4 frames
                 for k in range(2, len(interior) - 2):
                     left_max = np.max(interior[max(0, k - 4) : k])
                     right_max = np.max(interior[k + 1 : min(len(interior), k + 5)])
@@ -171,12 +170,10 @@ def build_20_clip_suite():
     reg = json.load(open(os.path.join(REPO, "docs", "samples", "versions", "registry.json")))
     base_clips = {c["id"]: c for c in reg["versions"][0]["clips"]}
     v3_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3")
-    v5_ved_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_v5_vedic")
-    v4_ved_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v4_vedic")
 
     ne_ids = [
         "ne_kathmandu", "ne_unseen_narrative", "ne_unseen_dialogue", "ne_unseen_prose",
-        "ne_news", "ne_story", "ne_conv", "ne_soft", "ne_expr", "ne_loan_num"
+        "ne_story", "ne_chat", "ne_warm", "ne_expressive", "ne_tricky_real", "ne_loan_num"
     ]
     sa_ids = [
         "sa_om", "sa_rv", "sa_gayatri", "sa_gita",
@@ -193,7 +190,6 @@ def build_20_clip_suite():
             p = os.path.join(v3_dir, f"{cid}.mp3")
             suite.append(dict(id=cid, lang="sa", text=c["text"], ref_path=p))
 
-    # Add 6 more Sanskrit/Vedic clips from dev split in gt_feats.pt (so total = 10 Nepali + 10 Sanskrit = 20 clips)
     D = torch.load("/work/sp/distill/gt_feats.pt", weights_only=False)
     mf = {}
     if os.path.exists("/work/sp/distill/manifest.jsonl"):
