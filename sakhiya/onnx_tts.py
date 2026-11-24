@@ -177,8 +177,8 @@ class SakhiyaONNX:
                     ds_in = np.array([(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
                     ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
                 else:
-                    ds_in = np.array([1.0], dtype=np.float32)
-                    ps_in = np.array([float(k.get("pitch_shift", 0.0))], dtype=np.float32)
+                    ds_in = np.array([(0.82 + 0.18 * float(d)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
+                    ps_in = np.array([float(k.get("pitch_shift", 0.0)) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
                 w = self.single.run(None, {
                     "ids": ids,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),

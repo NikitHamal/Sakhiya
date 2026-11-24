@@ -35,13 +35,13 @@ TIERS = {
         tier='micro', arch='sakhiya_am',
         d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
         voc_ch=144, steps=1,
-        r_enc=88, r_voc_k7=52, r_voc_k11=32, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=88, r_voc_k7=None, r_voc_k11=None, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     'pico': dict(
         tier='pico', arch='sakhiya_pico',
         d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
         voc_ch=144, steps=1,
-        r_enc=50, r_voc_k7=40, r_voc_k11=24, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=48, r_voc_k7=36, r_voc_k11=22, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=80,
     ),
     't10': dict(
         tier='t10', arch='sakhiya_am',
@@ -111,6 +111,13 @@ def _calibrate_styles(am, pre_baked=False):
         for lid in range(w_l.shape[0]):
             if lid != 4:
                 w_l[lid].copy_(w_l[0])
+        w_e = am.enc.emb.weight
+        if "l" in SYM2ID and "ɽ" in SYM2ID:
+            id_l, id_r = SYM2ID["l"], SYM2ID["ɽ"]
+            w_e[id_r].copy_(0.60 * w_e[id_l] + 0.40 * w_e[id_r])
+        if all(k in SYM2ID for k in ("ũ", "u", "ã", "a", "õ", "o", "ŋ")):
+            nas_d = 0.5 * (w_e[SYM2ID["ũ"]] - w_e[SYM2ID["u"]]) + 0.5 * (w_e[SYM2ID["ã"]] - w_e[SYM2ID["a"]])
+            w_e[SYM2ID["õ"]].copy_(0.25 * w_e[SYM2ID["õ"]] + 0.75 * (w_e[SYM2ID["o"]] + 1.0 * nas_d + 0.2 * (w_e[SYM2ID["ŋ"]] - w_e[SYM2ID["o"]])))
 
 
 def snap_f0_int8(voc):

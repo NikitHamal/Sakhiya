@@ -216,6 +216,15 @@ def chandas_inputs(text, lang):
         except Exception:
             pass
     t = text if lang == 'sa' else nep_norm.normalize(re.sub('[\u0951-\u0954]', '', text))
+    if lang != 'sa':
+        ph, off = g2p.text_to_phones_acc(t, 'ne')
+        dm = g2p.phone_dm(ph)
+        keep = [p in SYM.SYM2ID for p in ph]
+        ids = SYM.encode(ph)
+        dm_a = [float(0.82 + 0.18 * d) for d, k in zip(dm, keep) if k]
+        off_a = [float(o) * 0.35 for o, k in zip(off, keep) if k]
+        if len(ids) == len(dm_a) == len(off_a) and len(ids) >= 2:
+            return ids, 0, np.array(dm_a, dtype=np.float32), np.array(off_a, dtype=np.float32)
     ids = SYM.encode(g2p.text_to_phones(t, 'sa' if lang == 'sa' else 'ne'))
     return ids, (1 if lang == 'sa' else 0), np.array([1.0], np.float32), np.array([0.0], np.float32)
 
