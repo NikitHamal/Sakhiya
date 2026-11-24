@@ -38,7 +38,7 @@ N_LANG = 2
 
 TIERS = {
     "t30": dict(tier="t30", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=100,  r_voc_k7=None, r_voc_k11=132),
+    "t15": dict(tier="t15", arch="sakhiya_am", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=92,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t5":  dict(tier="t5",  arch="sakhiya_am", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=144, steps=1, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
     "t1":  dict(tier="t1",  arch="sakhiya_pico", d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,  voc_ch=144, steps=1, r_enc=52,   r_voc_k7=50,   r_voc_k11=31),
@@ -358,11 +358,11 @@ class Student(nn.Module):
 
         pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
         L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
-        is_pause = (ids <= 6).float()
+        is_pause = (ids <= 8).float()
         phase = pos / L_f
-        # Grounded Kathmandu/Nepal-native downward clause ending + natural multi-clause phrase arch
+        # Grounded Kathmandu/Nepal-native downward clause ending + natural phrase arch matching training p_enc
         tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        p_arch = (0.55 * torch.sin(phase * 3.14159265) + 0.48 * torch.sin(phase * 9.424778) + 0.32 * torch.cos(phase * 15.707963) + tail_closure) * (1.0 - is_pause) - 0.28 * is_pause
+        p_arch = (0.22 * torch.sin(phase * 3.14159265) + 0.12 * torch.sin(phase * 6.2831853) + tail_closure) * (1.0 - is_pause) - 0.20 * is_pause
         p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode="replicate"), 3, stride=1)[:, 0]
         sty_gain = (0.18 * pros[:, 1:2] + 0.14 * (1.0 - is_sa.float()[:, None])).clamp(0.0, 0.38)
         p_prose_enc = p_arch * (0.55 * sty_gain)
@@ -379,20 +379,20 @@ class Student(nn.Module):
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
         # Protect sentence-final tokens, non-pause phonemes (>= 3 frames), and short Nepali function words from frame collapse
-        is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
-        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 6).float() * 3.0 + (ids <= 6).float() * 1.0)
+        is_tail = ((pos >= (L_f - 3.0)) & (ids > 8)).float()
+        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
         dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
-        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
+        # Natural Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 12 + 7 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID["o"], SYM2ID["m"], SYM2ID["h"], SYM2ID["a"], SYM2ID["|"]
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
         prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
         is_sa_f = is_sa.float()[:, None]
-        is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
+        is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 8)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
-        dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
-        is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
+        dur = torch.maximum(dur, is_om_o * 12.0 + is_om_m * 7.0)
+        is_final_h = ((ids == id_h) & (next_ids <= 8)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
         next3_ids = torch.cat([ids[:, 3:], torch.zeros_like(ids[:, -3:])], dim=1)
         prev3_ids = torch.cat([torch.zeros_like(ids[:, :3]), ids[:, :-3]], dim=1)

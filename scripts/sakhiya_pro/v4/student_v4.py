@@ -383,10 +383,10 @@ class StudentV4(nn.Module):
 
         pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
         L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
-        is_pause = (ids <= 6).float()
+        is_pause = (ids <= 8).float()
         phase = pos / L_f
         tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        p_arch = (0.55 * torch.sin(phase * 3.14159265) + 0.48 * torch.sin(phase * 9.424778) + 0.32 * torch.cos(phase * 15.707963) + tail_closure) * (1.0 - is_pause) - 0.28 * is_pause
+        p_arch = (0.22 * torch.sin(phase * 3.14159265) + 0.12 * torch.sin(phase * 6.2831853) + tail_closure) * (1.0 - is_pause) - 0.20 * is_pause
         p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode='replicate'), 3, stride=1)[:, 0]
         sty_gain = (0.18 * pros[:, 1:2]).clamp(0.0, 0.38)
         p_prose_enc = p_arch * (0.55 * sty_gain)
@@ -403,20 +403,20 @@ class StudentV4(nn.Module):
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
         # Protect sentence-final tokens, non-pause phonemes (>= 3 frames), and short Nepali function words from frame collapse
-        is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
-        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 6).float() * 3.0 + (ids <= 6).float() * 1.0)
+        is_tail = ((pos >= (L_f - 3.0)) & (ids > 8)).float()
+        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
         dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
-        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
+        # Natural Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 12 + 7 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID['o'], SYM2ID['m'], SYM2ID['h'], SYM2ID['a'], SYM2ID['|']
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
         prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
         is_sa_f = is_sa.float()[:, None]
-        is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
+        is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 8)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
-        dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
-        is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
+        dur = torch.maximum(dur, is_om_o * 12.0 + is_om_m * 7.0)
+        is_final_h = ((ids == id_h) & (next_ids <= 8)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
         is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb)).float()
         is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()

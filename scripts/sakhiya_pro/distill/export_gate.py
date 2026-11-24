@@ -309,17 +309,19 @@ def main():
             ci = _ch.compile_chandas(txt_c, bpm=75.0, tonic_hz=215.0)
             ph, off, dm = ci["ph"], ci["off"], ci["dm"]
             ph_exp, off_exp, dm_exp = [], [], []
-            for p_i, o_i, d_i in zip(ph, off, dm):
+            for idx_p, (p_i, o_i, d_i) in enumerate(zip(ph, off, dm)):
+                if p_i == "," and idx_p == 1 and ph[0] == "<om>":
+                    continue
                 if p_i == "<om>":
-                    ph_exp.extend(["o", "m"]); off_exp.extend([o_i, o_i]); dm_exp.extend([d_i, d_i])
+                    ph_exp.extend(["o", "m"]); off_exp.extend([o_i, o_i]); dm_exp.extend([1.0, 1.0])
                 else:
                     ph_exp.append(p_i); off_exp.append(o_i); dm_exp.append(d_i)
             sid = [_S.SYM2ID.get(p_i, -1) for p_i in ph_exp]
             ids_c = [i for i in sid if i >= 0]
             dm_arr = [d_i for d_i, i in zip(dm_exp, sid) if i >= 0]
             off_arr = [o_i for o_i, i in zip(off_exp, sid) if i >= 0]
-            sv_sc = 0.65 if ci.get("has_vedic_marks") else 0.52
-            ds_in = np.array([(0.75 + 0.25 * min(max(float(d_i), 0.85), 1.35)) / 0.90 for d_i in dm_arr], dtype=np.float32)
+            sv_sc = 0.45 if ci.get("has_vedic_marks") else 0.35
+            ds_in = np.array([0.92 * (0.80 + 0.20 * min(max(float(d_i), 0.85), 1.25)) for d_i in dm_arr], dtype=np.float32)
             ps_in = np.array([float(o_i) * sv_sc for o_i in off_arr], dtype=np.float32)
             w_c = s8.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
         else:

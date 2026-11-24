@@ -78,17 +78,20 @@ class HarmonicSource(nn.Module):
         with torch.amp.autocast("cuda", enabled=False):
             rf = s.f0_net(mel.float()).float()
         f0 = torch.round(60.0 + 440.0 * torch.sigmoid(rf[:, 0:1]))  # (B, 1, T) in [60, 500] Hz in fp32 (pre-smoothing 1 Hz snap eliminates cross-runtime cumsum drift)
-        uv = torch.round(torch.sigmoid(rf[:, 1:2]) * 32.0) * 0.03125
-        # Voiced-weighted local log-F0 interpolation + soft-ramped vuv (eliminates voiced/unvoiced phase snaps & clicks!)
-        w_v = (uv.detach() > 0.35).float() * uv.detach() + 0.04
+        uv_raw = torch.round(torch.sigmoid(rf[:, 1:2]) * 32.0) * 0.03125
+        # Voiced-weighted local log-F0 interpolation + 3-frame closing on uv (eliminates 1-frame intra-vowel voicing shutters & phase snaps!)
         lf0_raw = torch.log2(f0.clamp(130.0, 380.0))
         if f0.shape[-1] >= 7:
+            uv_closed = F.max_pool1d(F.pad(uv_raw, (1, 1), mode="replicate"), 3, stride=1)
+            uv_blend = 0.65 * uv_raw + 0.35 * uv_closed
+            w_v = (uv_blend.detach() > 0.32).float() * uv_blend.detach() + 0.04
             num = F.avg_pool1d(F.pad(lf0_raw * w_v, (3, 3), mode="replicate"), 7, stride=1)
             den = F.avg_pool1d(F.pad(w_v, (3, 3), mode="replicate"), 7, stride=1).clamp(min=1e-3)
             lf0_loc = num / den
             lf0_sm = F.avg_pool1d(F.pad(0.50 * lf0_raw + 0.50 * lf0_loc, (2, 2), mode="replicate"), 5, stride=1)
-            uv = torch.round(F.avg_pool1d(F.pad(uv, (1, 1), mode="replicate"), 3, stride=1) * 1024.0) * 0.0009765625
+            uv = torch.round(F.avg_pool1d(F.pad(uv_blend, (1, 1), mode="replicate"), 3, stride=1) * 1024.0) * 0.0009765625
         else:
+            uv = uv_raw
             lf0_sm = lf0_raw
         sh = shift_st if shift_st is not None else getattr(s, "shift_st", None)
         if sh is not None:
@@ -102,7 +105,9 @@ class HarmonicSource(nn.Module):
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
         ks = torch.arange(1, s.n_har + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
-        amp = (1.0 / torch.sqrt(ks)) * (ks * f0_16 < 720.0).float()
+        # Smooth anti-aliasing roll-off near 750 Hz Nyquist instead of hard binary step at 720 Hz (which popped 3*F0 at F0=240 Hz)
+        anti_alias = ((745.0 - ks * f0_16) / 145.0).clamp(0.0, 1.0)
+        amp = (1.0 / torch.sqrt(ks)) * anti_alias
         k_ph = ks * ph
         har = torch.cat([torch.sin(k_ph) * amp, torch.cos(k_ph) * amp], dim=1) * uv_16
         # Analytic multi-band unvoiced noise excitation (deterministic incommensurate sinusoids for 100% ONNX parity)
