@@ -1,14 +1,14 @@
 {
   "tier": "micro",
-  "int8_mb": 4.335,
-  "fp32_mb": 14.65,
-  "int8_vs_fp32_mel_corr": 0.9223,
+  "int8_mb": 4.176,
+  "fp32_mb": 15.95,
+  "int8_vs_fp32_mel_corr": 0.9954,
   "nan_count": 0,
-  "rtf_1thread": 0.0246,
+  "rtf_1thread": 0.0165,
   "bad_ops": [],
   "node_verify": {
-    "ok": false,
+    "ok": true,
     "nan_count": 0,
-    "rtf_1thread": 0.0234
+    "rtf_1thread": 0.0161
   }
 }
