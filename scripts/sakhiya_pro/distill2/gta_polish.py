@@ -24,7 +24,7 @@ for p in (HERE, DIST, REPO, "/work/sp"):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from student import Student, build, set_qat, snap_f0_int8, snap_am_int8, ste_int8_weight  # noqa: E402
+from student import Student, build, set_qat, snap_f0_int8, snap_am_int8, ste_int8_weight, _make_svd_seq  # noqa: E402
 from train_student import install_ste_qat_hooks, _ode_solve, spec_phase_gd_loss  # noqa: E402
 from train_student_gt import load_clean_pro_v3_items, _mel_env  # noqa: E402
 from sakhiya.cfm import STYLE_PROSODY_TARGETS, _dur_to_attn  # noqa: E402
@@ -515,54 +515,70 @@ def main():
 
     if not a.skip_voc:
         # 2A. GTA Fine-tune v3_voc320.pt on t30/t15 4-step predicted mels (comb_gain=0.0)
-        m15 = load_or_warm_student("t15", dev=dev).eval()
-        gta_mels_320 = extract_gta_mels(m15, tr_items, dev=dev)
-        voc320_ema = gta_train_voc(
-            tag="voc320_gta",
-            voc_model=copy.deepcopy(m30.voc),
-            teacher_voc320=None,
-            gt_items=tr_items,
-            gta_mels=gta_mels_320,
-            comb_gain=0.0,
-            steps=800,
-            lr=4.5e-5,
-            bs=48,
-            seg=40,
-            save_path="/work/tts/ck/v3_voc320.pt",
-            svd_t1=False,
-            dev=dev,
-        )
+        v320_p = "/work/tts/ck/v3_voc320.pt"
+        if os.path.exists(v320_p) and (time.time() - os.path.getmtime(v320_p)) < 1800:
+            print(f"[voc320_gta] reusing freshly converged {v320_p}", flush=True)
+            voc320_ema = copy.deepcopy(m30.voc).to(dev).eval()
+            voc320_ema.load_state_dict(torch.load(v320_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
+        else:
+            m15 = load_or_warm_student("t15", dev=dev).eval()
+            gta_mels_320 = extract_gta_mels(m15, tr_items, dev=dev)
+            voc320_ema = gta_train_voc(
+                tag="voc320_gta",
+                voc_model=copy.deepcopy(m30.voc),
+                teacher_voc320=None,
+                gt_items=tr_items,
+                gta_mels=gta_mels_320,
+                comb_gain=0.0,
+                steps=800,
+                lr=4.5e-5,
+                bs=48,
+                seg=40,
+                save_path=v320_p,
+                svd_t1=False,
+                dev=dev,
+            )
 
         # 2B. GTA + voc320-Teacher Distill v3_voc144.pt on t5 1-step predicted mels (comb_gain=0.10)
         m5 = load_or_warm_student("t5", dev=dev).eval()
-        gta_mels_t5 = extract_gta_mels(m5, tr_items, dev=dev)
-        voc144_ema = gta_train_voc(
-            tag="voc144",
-            voc_model=copy.deepcopy(m5.voc),
-            teacher_voc320=voc320_ema,
-            gt_items=tr_items,
-            gta_mels=gta_mels_t5,
-            comb_gain=0.10,
-            steps=1100,
-            lr=7.0e-5,
-            bs=48,
-            seg=40,
-            save_path="/work/tts/ck/v3_voc144.pt",
-            svd_t1=False,
-            dev=dev,
-        )
+        v144_p = "/work/tts/ck/v3_voc144.pt"
+        if os.path.exists(v144_p) and (time.time() - os.path.getmtime(v144_p)) < 1800:
+            print(f"[voc144] reusing freshly converged {v144_p}", flush=True)
+            voc144_ema = copy.deepcopy(m5.voc).to(dev).eval()
+            voc144_ema.load_state_dict(torch.load(v144_p, map_location=dev, weights_only=False)["G_ema"], strict=True)
+        else:
+            gta_mels_t5 = extract_gta_mels(m5, tr_items, dev=dev)
+            voc144_ema = gta_train_voc(
+                tag="voc144",
+                voc_model=copy.deepcopy(m5.voc),
+                teacher_voc320=voc320_ema,
+                gt_items=tr_items,
+                gta_mels=gta_mels_t5,
+                comb_gain=0.10,
+                steps=1100,
+                lr=7.0e-5,
+                bs=48,
+                seg=40,
+                save_path=v144_p,
+                svd_t1=False,
+                dev=dev,
+            )
 
         # 2C. GTA + voc320-Teacher Distill v3_voc144_t1.pt on t1 1-step predicted mels (comb_gain=0.10)
         # Warm-start t1's SVD vocoder directly from the newly converged voc144_ema via exact SVD factorization!
-        m1_tmp = Student(tier="t1", r_voc_k7=None, r_voc_k11=None).to(dev)
-        m1_tmp.voc.load_state_dict(voc144_ema.state_dict(), strict=True)
-        m1_tmp.r_voc_k7, m1_tmp.r_voc_k11 = 50, 31
-        m1_tmp._apply_svd_structure()
+        voc_t1_init = copy.deepcopy(voc144_ema).to(dev)
+        for b_idx, r_k in ((1, 50), (2, 31)):
+            blk = voc_t1_init.mrfs[0][b_idx]
+            for i in range(len(blk.c1)):
+                if isinstance(blk.c1[i], nn.Conv1d):
+                    blk.c1[i] = _make_svd_seq(blk.c1[i], r_k, use_qat=False).to(dev)
+                if isinstance(blk.c2[i], nn.Conv1d):
+                    blk.c2[i] = _make_svd_seq(blk.c2[i], r_k, use_qat=False).to(dev)
         m1 = load_or_warm_student("t1", dev=dev).eval()
         gta_mels_t1 = extract_gta_mels(m1, tr_items, dev=dev)
         voc144_t1_ema = gta_train_voc(
             tag="voc144_t1",
-            voc_model=copy.deepcopy(m1_tmp.voc),
+            voc_model=voc_t1_init,
             teacher_voc320=voc320_ema,
             gt_items=tr_items,
             gta_mels=gta_mels_t1,
