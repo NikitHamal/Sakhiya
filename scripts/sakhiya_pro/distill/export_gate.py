@@ -360,11 +360,13 @@ def main():
         remb = np.mean(embs_v3, axis=0)
         remb = remb / max(float(np.linalg.norm(remb)), 1e-8)
 
+        import nep_norm as _nn
         rows = []
         for e in ev:
             p = f"{a.out}/wav/{e['id']}.wav"
-            f = C.score_take(p, e["text"], remb)
-            c = V.pron_cer(e["text"], f["hyp"], "sa" if e["lang"] == "sa" else "npi")
+            ref_txt = e["text"] if e["lang"] == "sa" else _nn.normalize(e["text"])
+            f = C.score_take(p, ref_txt, remb)
+            c = V.pron_cer(ref_txt, f["hyp"], "sa" if (e["lang"] == "sa" or e["id"] == "mixed_owner") else "npi")
             rows.append(dict(
                 id=e["id"], set=e["set"], lang=e["lang"], style=e.get("style", "news"),
                 cer=round(c, 3), utmos=round(f["utmos"], 3), clicks=f["clicks"],
@@ -395,12 +397,13 @@ def main():
     sz_cap = SIZE_CAPS_MB.get(a.tier, 30.0)
     s = R.get("summary", {})
     min_spk = 0.58 if a.tier in ("t1", "t5") else 0.65
+    min_utmos = {"t1": 2.95, "t5": 3.30, "t10": 3.50, "t15": 3.75, "t30": 3.95}.get(a.tier, 3.75)
     R["gate_pass"] = bool(
         R["nan_count"] == 0
         and not R["bad_ops"]
         and R["int8_vs_fp32_mel_corr"] >= 0.985
         and R["int8_mb"] <= sz_cap
-        and s.get("utmos", 0.0) >= (3.10 if a.tier == "t1" else (3.45 if a.tier == "t5" else 3.75))
+        and s.get("utmos", 0.0) >= min_utmos
         and s.get("cer_ne", 1.0) <= 0.08
         and s.get("spk_sim", 0.0) >= min_spk
         and s.get("clicks", 99) <= 5

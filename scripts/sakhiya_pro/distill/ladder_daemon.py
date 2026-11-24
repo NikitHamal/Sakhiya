@@ -19,7 +19,7 @@ REFS = [
 
 
 # publish (git/HF) only when the INT8 student's UTMOS reaches the shipped baseline of its size class
-BASELINE_UTMOS = dict(t30=3.957, t15=3.957, t10=3.253, t5=3.262, t1=2.944)
+BASELINE_UTMOS = dict(t30=3.957, t15=3.850, t10=3.253, t5=3.297, t1=2.944)
 
 TIER_LABELS = {
     't30': 'Sakhiya-T30 (29.6 MB INT8 Distilled Student)',

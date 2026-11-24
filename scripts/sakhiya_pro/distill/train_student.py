@@ -70,7 +70,7 @@ def spec_phase_gd_loss(re_s, im_s, re_t, im_t):
 def install_ste_qat_hooks(model):
     hooks = []
     for name, m in model.named_modules():
-        if name.startswith("voc.src.f0_net"):
+        if name.startswith("voc.src.f0_net") or hasattr(m, "qat_enabled"):
             continue
         if isinstance(m, (nn.Conv1d, nn.Linear)) and m.weight.numel() >= 256:
             if name.endswith(("vel.out", "enc.mu", "dur.o", "voc.post")):
