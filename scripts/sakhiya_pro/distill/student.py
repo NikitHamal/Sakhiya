@@ -262,6 +262,13 @@ class Student(nn.Module):
             self.voc.load_state_dict(vtmp.state_dict(), strict=True)
 
         self._apply_svd_structure()
+        if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "t1_am_pretrained.pt")):
+            try:
+                ck_p1 = torch.load(os.path.join(ck_dir, "t1_am_pretrained.pt"), map_location=dev, weights_only=False)
+                sd_p1 = {k: v.float() for k, v in ck_p1.get("ema", ck_p1).items() if k.startswith("am.")}
+                self.load_state_dict(sd_p1, strict=False)
+            except Exception:
+                pass
         # If pre-adapted SVD vocoder exists for t1, load it after _apply_svd_structure
         if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "v3_voc144_t1.pt")):
             try:
