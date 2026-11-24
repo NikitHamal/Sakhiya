@@ -58,7 +58,9 @@ def main():
     step, t0 = 0, time.time(); G.train(); D.train()
 
     def save_fused(path_, step_):
-        g = copy.deepcopy(G_ema).cpu().fuse_weight_norm()
+        # NOTE: never deepcopy a parametrized module and fuse it: the copy shares its dynamic ParametrizedConv1d class with G,
+        # and removing the parametrization strips `.weight` from the live generator (crash at step 1000). Build a fresh module.
+        g = VocoderV2(ch=a.ch); g.load_state_dict({k: v.detach().cpu() for k, v in G_ema.state_dict().items()}); g = g.fuse_weight_norm()
         torch.save(dict(G_ema={k: v.float() for k, v in g.state_dict().items()}, step=step_, ch=a.ch), path_ + '.tmp'); os.replace(path_ + '.tmp', path_)
 
     @torch.no_grad()
