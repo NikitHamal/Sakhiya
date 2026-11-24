@@ -65,15 +65,19 @@ class TextEncoder(nn.Module):
     def __init__(s, n_mel=100, d=192, L=6, n_spk=16, n_lang=8, n_sty=32, ff=256):
         super().__init__(); s.emb = nn.Embedding(N_SYMBOLS, d, padding_idx=0)
         s.spk = nn.Embedding(n_spk, d); s.lang = nn.Embedding(n_lang, d); s.sty = nn.Embedding(n_sty, d); s.studio = nn.Embedding(2, d)
+        # Explicit discrete Vedic Svara (0:none, 1:udatta, 2:anudatta, 3:svarita, 4:pracaya) & Moraic Weight (0:laghu, 1:guru, 2:pluta, 3:pranava_om)
+        s.svara_emb = nn.Embedding(5, d); nn.init.zeros_(s.svara_emb.weight)
+        s.mora_emb = nn.Embedding(4, d); nn.init.zeros_(s.mora_emb.weight)
         s.pitch = nn.Linear(1, d); nn.init.zeros_(s.pitch.weight); nn.init.zeros_(s.pitch.bias)
         s.prosody = nn.Linear(4, d); nn.init.zeros_(s.prosody.weight); nn.init.zeros_(s.prosody.bias)
         s.f0_pred = nn.Linear(d, 1); nn.init.zeros_(s.f0_pred.weight); nn.init.zeros_(s.f0_pred.bias)
+        s.vuv_pred = nn.Linear(d, 1); nn.init.zeros_(s.vuv_pred.weight); nn.init.constant_(s.vuv_pred.bias, 2.0)
         s.energy_pred = nn.Linear(d, 1); nn.init.zeros_(s.energy_pred.weight); nn.init.zeros_(s.energy_pred.bias)
         s.spk_adv = nn.Sequential(nn.Linear(d, d // 2), nn.SiLU(), nn.Linear(d // 2, n_spk))
         s.layers = nn.ModuleList(EncLayer(d, ff=ff) for _ in range(L)); s.nf = nn.LayerNorm(d)
         s.mu = nn.Linear(d, n_mel)
 
-    def forward(s, ids, spk, lang, sty, studio, m, pitch_add=None, prosody=None, sty_mask=None):
+    def forward(s, ids, spk, lang, sty, studio, m, pitch_add=None, prosody=None, sty_mask=None, svara_ids=None, mora_ids=None):
         lang0 = torch.zeros_like(lang)
         lang_eff = torch.where(lang == 4, lang, lang0)
         # Strict Single-Voice Timbre Lock: g_vel uses constant style-0 anchor s.sty(0) so FiLM is 100% calibrated AND invariant across styles/languages!
@@ -88,6 +92,10 @@ class TextEncoder(nn.Module):
         g_vel = g_base + s.sty(sty0)
         g_enc = g_base + g_sty_full + 0.18 * (s.lang(lang_eff) - s.lang(lang0))
         x = s.emb(ids) * math.sqrt(s.emb.embedding_dim) + g_enc[:, None]
+        if svara_ids is not None:
+            x = x + s.svara_emb(svara_ids.clamp(0, 4))
+        if mora_ids is not None:
+            x = x + s.mora_emb(mora_ids.clamp(0, 3))
         if pitch_add is not None: x = x + s.pitch(pitch_add.to(x.dtype)[..., None])
         for l in s.layers: x = l(x, m)
         h_content = s.nf(x)
@@ -114,15 +122,19 @@ class Block(nn.Module):
 
 
 class Velocity(nn.Module):
-    """v_theta(x_t, t | mu_y, g): ConvNeXt-1D stack, FiLM on (time + speaker/lang/style/studio)."""
+    """v_theta(x_t, t | mu_y, g, prog): ConvNeXt-1D stack with 4D Intra-Phoneme Progress Conditioning."""
     def __init__(s, n_mel=100, d=256, nb=12, c=192):
         super().__init__(); s.inp = nn.Conv1d(2 * n_mel, d, 1); s.tm = nn.Sequential(nn.Linear(c, c), nn.SiLU(), nn.Linear(c, c))
+        s.prog_proj = nn.Conv1d(4, d, 1); nn.init.zeros_(s.prog_proj.weight); nn.init.zeros_(s.prog_proj.bias)
         s.blocks = nn.ModuleList(Block(d, c) for _ in range(nb)); s.out = nn.Conv1d(d, n_mel, 1); s.c = c
         nn.init.zeros_(s.out.weight); nn.init.zeros_(s.out.bias)
 
-    def forward(s, x, t, mu, g, m):
+    def forward(s, x, t, mu, g, m, prog=None):
         c = g if isinstance(s.tm, nn.Identity) else (s.tm(temb(t, s.c).to(x.dtype)) + g)
-        h = s.inp(torch.cat([x, mu], 1)) * m
+        h = s.inp(torch.cat([x, mu], 1))
+        if prog is not None:
+            h = h + s.prog_proj(prog.to(x.dtype))
+        h = h * m
         for b in s.blocks: h = b(h, c, m)
         return s.out(h) * m
 

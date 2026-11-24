@@ -67,15 +67,18 @@ class PicoTextEncoder(nn.Module):
         s.lang = nn.Embedding(n_lang, d)
         s.sty = nn.Embedding(n_sty, d)
         s.studio = nn.Embedding(2, d)
+        s.svara_emb = nn.Embedding(5, d); nn.init.zeros_(s.svara_emb.weight)
+        s.mora_emb = nn.Embedding(4, d); nn.init.zeros_(s.mora_emb.weight)
         s.pitch = nn.Linear(1, d); nn.init.zeros_(s.pitch.weight); nn.init.zeros_(s.pitch.bias)
         s.prosody = nn.Linear(4, d); nn.init.zeros_(s.prosody.weight); nn.init.zeros_(s.prosody.bias)
         s.f0_pred = nn.Linear(d, 1); nn.init.zeros_(s.f0_pred.weight); nn.init.zeros_(s.f0_pred.bias)
+        s.vuv_pred = nn.Linear(d, 1); nn.init.zeros_(s.vuv_pred.weight); nn.init.constant_(s.vuv_pred.bias, 2.0)
         s.energy_pred = nn.Linear(d, 1); nn.init.zeros_(s.energy_pred.weight); nn.init.zeros_(s.energy_pred.bias)
         s.ublock = UniversalEncBlock(d=d, h=4, ff=ff, k=5, n_loops=L)
         s.nf = nn.LayerNorm(d)
         s.mu = QATConv1d(d, n_mel, 1)
 
-    def forward(s, ids, spk, lang, sty, studio, m, pitch_add=None, prosody=None, sty_mask=None):
+    def forward(s, ids, spk, lang, sty, studio, m, pitch_add=None, prosody=None, sty_mask=None, svara_ids=None, mora_ids=None):
         lang0 = torch.zeros_like(lang)
         lang_eff = torch.where(lang == 4, lang, lang0).clamp(0, s.lang.num_embeddings - 1)
         spk0 = torch.zeros_like(spk)
@@ -91,6 +94,10 @@ class PicoTextEncoder(nn.Module):
         g_vel = g_base + s.sty(sty0)
         g_enc = g_base + g_sty_full + 0.18 * (s.lang(lang_eff) - s.lang(lang0))
         x = s.emb(ids) * math.sqrt(s.emb.embedding_dim) + g_enc[:, None]
+        if svara_ids is not None:
+            x = x + s.svara_emb(svara_ids.clamp(0, 4))
+        if mora_ids is not None:
+            x = x + s.mora_emb(mora_ids.clamp(0, 3))
         if pitch_add is not None:
             x = x + s.pitch(pitch_add.to(x.dtype)[..., None])
         for k in range(s.L):
@@ -160,13 +167,14 @@ class UniversalVelBlock(nn.Module):
 class PicoVelocity(nn.Module):
     """Looped Universal ConvNeXt-1D Velocity Decoder:
     2 shared universal blocks (`ublock_early` looped 3x + `ublock_late` looped 2x = 5 effective layers)
-    modulated by per-iteration `step_emb` and `(out_gamma, out_beta)` (~225K params -> ~240 KB int8 ONNX)."""
+    modulated by per-iteration `step_emb` and `(out_gamma, out_beta)` + 4D Intra-Phoneme Progress Conditioning."""
     def __init__(s, n_mel=100, d=112, nb=5, c=96):
         super().__init__()
         s.d = d
         s.nb = nb
         s.c = c
         s.inp = QATConv1d(2 * n_mel, d, 1)
+        s.prog_proj = nn.Conv1d(4, d, 1); nn.init.zeros_(s.prog_proj.weight); nn.init.zeros_(s.prog_proj.bias)
         s.tm1 = QATConv1d(c, c, 1)
         s.tm2 = QATConv1d(c, c, 1)
         s.ublock_early = UniversalVelBlock(d=d, c=c, k=7, h_ff=256)
@@ -179,14 +187,17 @@ class PicoVelocity(nn.Module):
         nn.init.zeros_(s.out.weight)
         nn.init.zeros_(s.out.bias)
 
-    def forward(s, x, t, mu, g, m):
+    def forward(s, x, t, mu, g, m, prog=None):
         has_folded_film = isinstance(s.ublock_early.film, nn.Identity)
         if isinstance(s.tm1, nn.Identity):
             c_base = g[:, :, None]
         else:
             tb = temb(t, s.c).to(x.dtype)[:, :, None]
             c_base = s.tm2(F.silu(s.tm1(tb))) + g[:, :, None]
-        h = s.inp(torch.cat([x, mu], 1)) * m
+        h = s.inp(torch.cat([x, mu], 1))
+        if prog is not None:
+            h = h + s.prog_proj(prog.to(x.dtype))
+        h = h * m
         n_early = (s.nb + 1) // 2  # 3 iterations of early block, 2 iterations of late block
         for k in range(s.nb):
             c_k = None if has_folded_film else (c_base + s.step_emb[k].to(x.dtype))
