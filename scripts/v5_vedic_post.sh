@@ -16,4 +16,5 @@ for f in sorted(glob.glob("$V/eval/*/summary.json")):
     s=json.load(open(f)); out["evals"][s["tag"]]={k:s[k] for k in ("passed","n","per_chant_pass","chants_with_a_clean_take")}
 json.dump(out,open("$S/vedic_lora.json","w"),ensure_ascii=False,indent=1); print(json.dumps(out,ensure_ascii=False))
 EOF
+python3 $R/v5_vedic_state.py > /dev/null 2>&1
 echo POST_DONE

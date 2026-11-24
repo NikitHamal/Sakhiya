@@ -84,7 +84,7 @@ def main():
     subprocess.call([sys.executable, f"{HERE}/leak_loop_gate.py", "--manifest", f"{out}/manifest.json", "--out", f"{out}/gate.json"])
     g = json.load(open(f"{out}/gate.json")); best = {}
     for c in g["clips"]:
-        cid = os.path.basename(c["wav"]).split("_r")[0]
+        cid = __import__("re").sub(r"_r\d+_s\d+\.wav$", "", os.path.basename(c["wav"]))
         if c["ok"]: best.setdefault(cid, c["wav"])
     summ = dict(tag=a.tag, adapter=a.adapter, passed=g["passed"], n=g["n"], per_chant_pass={k: sum(1 for c in g["clips"] if os.path.basename(c["wav"]).startswith(k + "_") and c["ok"]) for k, _ in BENCH},
                 chants_with_a_clean_take=sorted(best), best=best)
