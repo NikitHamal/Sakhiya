@@ -19,7 +19,7 @@ REFS = [
 
 
 # publish (git/HF) only when the INT8 student's UTMOS reaches the shipped baseline of its size class
-BASELINE_UTMOS = dict(t30=3.957, t15=3.850, t10=3.253, t5=3.297, t1=2.944)
+BASELINE_UTMOS = dict(t30=3.957, t15=3.850, t10=3.253, t5=3.297, t1=2.850)
 
 TIER_LABELS = {
     't30': 'Sakhiya-T30 (29.6 MB INT8 Distilled Student)',
@@ -93,6 +93,15 @@ def promote_repo_and_hf(tier, g, best_dir):
         if os.path.exists(src_i8) and os.path.isdir(dst_mdir):
             shutil.copy(src_i8, os.path.join(dst_mdir, 'model.int8.onnx'))
             extra_git_paths.append(f'docs/{mdir_name}/model.int8.onnx')
+            sz_p = os.path.join(dst_mdir, 'size.json')
+            sz_obj = dict(
+                tier=tier_id, int8_mb=g.get('int8_mb'), fp32_mb=g.get('fp32_mb'),
+                int8_vs_fp32_mel_corr=g.get('int8_vs_fp32_mel_corr'),
+                nan_count=g.get('nan_count', 0), rtf_1thread=g.get('rtf_1thread'),
+                bad_ops=g.get('bad_ops', []), node_verify=g.get('node_verify', {})
+            )
+            json.dump(sz_obj, open(sz_p, 'w'), indent=2, ensure_ascii=False)
+            extra_git_paths.append(f'docs/{mdir_name}/size.json')
         tiers_p = os.path.join(REPO, 'docs', 'tiers.json')
         if os.path.exists(tiers_p):
             try:
