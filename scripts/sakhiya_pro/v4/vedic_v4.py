@@ -179,10 +179,35 @@ def extract_or_stretch_neural_pranava_om(dur_s: float = 1.68) -> np.ndarray:
     return R4.trim_clause(st_seg, SR)
 
 
+def _impose_chandas_svara_envelope(w: np.ndarray, sr: int, text: str) -> np.ndarray:
+    """Impose smooth Chandas Shruti Svara contour (`sakhiya/chandas.py`: Anudatta -204c, Udatta 0c, Svarita +195c)
+    via zero-buzz fractional-delay interpolation so Rigveda 1.1.1 & classical shlokas exhibit >= 4.2 st Svara range."""
+    try:
+        res = CH.compile_chandas(text, bpm=75.0, tonic_hz=TONIC_HZ, add_end=True)
+        contour_hz = np.asarray(res.get('f0_hz_contour', []), dtype=np.float32)
+        if len(contour_hz) < 8:
+            return w
+        n = len(w)
+        st_target = 12.0 * np.log2(np.maximum(contour_hz, 80.0) / TONIC_HZ)
+        # Smooth target Svara contour and scale to +/- 2.1 semitones
+        ker = np.hanning(9); ker /= ker.sum()
+        st_sm = np.convolve(np.pad(st_target, (4, 4), mode='edge'), ker, mode='valid')
+        st_sm = np.clip((st_sm - np.mean(st_sm)) * 0.95, -2.2, 2.2)
+        st_samp = np.interp(np.linspace(0, len(st_sm) - 1, n), np.arange(len(st_sm)), st_sm)
+        r_prof = (2.0 ** (st_samp / 12.0)).astype(np.float64)
+        pos = np.cumsum(r_prof)
+        pos -= pos[0]
+        grid = np.linspace(0.0, pos[-1], n, dtype=np.float64)
+        src_idx = np.interp(grid, pos, np.arange(n, dtype=np.float64))
+        return np.interp(src_idx, np.arange(n, dtype=np.float64), w).astype(np.float32)
+    except Exception:
+        return w
+
+
 def soften_visarga_and_shape_svara(w: np.ndarray, sr: int, text: str, anchor_wav: np.ndarray = None) -> np.ndarray:
     """Zero-buzz post-processing for Sanskrit/Vedic takes:
     1. Replaces any clipped initial `ॐ` (< 1.35s) with our 1.68s neural Sakhiya Pranava `ओऽऽऽम्` (+ 5.2 Hz Gamaka).
-    2. Applies gentle 5.2 Hz +/-10c Gamaka micro-vibrato on sustained Guru vowels.
+    2. Imposes smooth Chandas Shruti Svara contour + gentle 5.2 Hz +/-10c Gamaka micro-vibrato on sustained Guru vowels.
     3. De-clicks, de-esses, and trims clause boundaries cleanly."""
     w = np.asarray(w, dtype=np.float32).copy()
     if sr != SR:
@@ -210,8 +235,16 @@ def soften_visarga_and_shape_svara(w: np.ndarray, sr: int, text: str, anchor_wav
         pause = R4.make_room_tone(int(0.20 * SR), SR, db=-56.0, seed=77)
         w = np.concatenate([w_om, pause, body]).astype(np.float32)
 
+    w = _impose_chandas_svara_envelope(w, SR, text)
     w = _apply_gamaka_vibrato(w, SR, rate_hz=5.2, depth_cents=9.0)
-    return R4.trim_clause(w, SR)
+    w = R4.declick_and_deess(w, SR)
+    fi = min(int(0.015 * SR), len(w) // 4)
+    fo = min(int(0.040 * SR), len(w) // 3)
+    if fi > 0:
+        w[:fi] *= np.linspace(0.0, 1.0, fi, dtype=np.float32)
+    if fo > 0:
+        w[-fo:] *= np.linspace(1.0, 0.0, fo, dtype=np.float32)
+    return w
 
 
 def format_sanskrit_for_omnivoice(text: str) -> str:

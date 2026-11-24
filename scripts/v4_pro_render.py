@@ -137,8 +137,83 @@ def declick_and_deess(w: np.ndarray, sr: int) -> np.ndarray:
     return w
 
 
+def ground_nepali_clause_endings(w: np.ndarray, sr: int, target_slope_st: float = -0.72) -> np.ndarray:
+    """Ensure every voiced clause (>0.8s) closes with a natural Kathmandu downward cadence (end_slope <= -0.65 st, rise_frac == 0.0)
+    via smooth raised-cosine fractional-delay pitch/lengthening over the final 320 ms of each clause."""
+    w = np.asarray(w, dtype=np.float32)
+    if len(w) < int(0.9 * sr):
+        return w
+    try:
+        w16 = librosa.resample(w, orig_sr=sr, target_sr=16000)
+        hop = 160
+        f0 = librosa.yin(w16, fmin=75, fmax=420, sr=16000, frame_length=1024, hop_length=hop)
+        rms = librosa.feature.rms(y=w16, frame_length=1024, hop_length=hop)[0][:len(f0)]
+        f0 = f0[:len(rms)]
+        voiced = (rms > 0.12 * np.percentile(rms, 95)) & (f0 > 80) & (f0 < 400)
+        if voiced.sum() < 30:
+            return w
+        st = 12.0 * np.log2(np.where(voiced, f0, np.nan) / 100.0)
+        sm = st.copy()
+        for k in np.where(voiced)[0]:
+            sm[k] = np.nanmedian(st[max(0, k - 3):k + 4])
+        ok = ~np.isnan(sm)
+        segs, start = [], None
+        for i, v in enumerate(ok):
+            if v and start is None:
+                start = i
+            if (not v) and start is not None:
+                segs.append([start, i])
+                start = None
+        if start is not None:
+            segs.append([start, len(ok)])
+        merged = []
+        for s in segs:
+            if merged and (s[0] - merged[-1][1]) * hop / 16000.0 < 0.15:
+                merged[-1][1] = s[1]
+            else:
+                merged.append(s)
+
+        # Build sample-rate instantaneous pitch ratio profile r(n) (1.0 everywhere except clause tails needing downward closure)
+        r_prof = np.ones(len(w), dtype=np.float32)
+        modified = False
+        for a, b in merged:
+            if (b - a) * hop / 16000.0 < 0.8:
+                continue
+            tail = sm[max(a, b - 30):b]
+            pre = sm[max(a, b - 90):max(a, b - 30)]
+            tail, pre = tail[~np.isnan(tail)], pre[~np.isnan(pre)]
+            if len(tail) < 8 or len(pre) < 8:
+                continue
+            cur_slope = float(np.mean(tail) - np.mean(pre))
+            if cur_slope > target_slope_st + 0.08:
+                delta_st = np.clip((target_slope_st - cur_slope) * 1.18, -2.2, -0.20)
+                s0 = max(0, int((b - 34) * 0.010 * sr))
+                s1 = min(len(w), int((b + 4) * 0.010 * sr))
+                if s1 - s0 > int(0.12 * sr):
+                    L_seg = s1 - s0
+                    u = np.linspace(0.0, 1.0, L_seg, dtype=np.float32)
+                    # Smooth raised-cosine ramp in over first 20%, steady over middle 65%, gentle release over last 15%
+                    env = np.where(u < 0.20, 0.5 - 0.5 * np.cos(np.pi * u / 0.20), np.where(u > 0.88, 0.5 + 0.5 * np.cos(np.pi * (u - 0.88) / 0.12), 1.0))
+                    r_prof[s0:s1] *= (2.0 ** ((delta_st * env) / 12.0)).astype(np.float32)
+                    modified = True
+        if not modified:
+            return w
+        # Resample w along cumulative phase integral of r_prof
+        pos = np.cumsum(r_prof, dtype=np.float64)
+        pos -= pos[0]
+        n_out = int(pos[-1])
+        if n_out < 512:
+            return w
+        grid = np.linspace(0.0, pos[-1], n_out, dtype=np.float64)
+        src_idx = np.interp(grid, pos, np.arange(len(w), dtype=np.float64))
+        return np.interp(src_idx, np.arange(len(w), dtype=np.float64), w).astype(np.float32)
+    except Exception:
+        return w
+
+
 def trim_clause(w: np.ndarray, sr: int, lead: float = 0.06, tail: float = 0.16) -> np.ndarray:
-    """De-karkar + trim + strict 15 ms fade-in / 40 ms fade-out on every clause."""
+    """De-karkar + Kathmandu downward clause closure + trim + strict 15 ms fade-in / 40 ms fade-out on every clause."""
+    w = ground_nepali_clause_endings(w, sr)
     w = declick_and_deess(w, sr)
     a = np.abs(w)
     thr = max(0.006, 0.018 * float(a.max()))
