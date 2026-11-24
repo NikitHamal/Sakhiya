@@ -1,49 +1,49 @@
 {
-  "ne_pcer": 0.017,
-  "sa_pcer": 0.0489,
-  "ne_wer": 0.1387,
-  "rigveda_svara_st": 7.0,
+  "ne_pcer": 0.0182,
+  "sa_pcer": 0.0476,
+  "ne_wer": 0.1348,
+  "rigveda_svara_st": 4.51,
   "word_drop_count": 0,
   "word_drops": [],
   "stutter_count": 0,
   "stutters": [],
   "f0_shutters": 0,
   "clicks": 0,
-  "ltas_mcd_ne_sa": 12.363,
-  "formant_shift_hz": 22.2,
-  "sv_cos_ne_sa": 0.9934,
+  "ltas_mcd_ne_sa": 12.04,
+  "formant_shift_hz": 27.4,
+  "sv_cos_ne_sa": 0.9956,
   "min_func_word_frames": 8,
   "nasal_scores": {
     "काठमाडौँ": {
-      "ctc_nasal_prob": 0.0278,
-      "band_200_400_ratio": 12.771
+      "ctc_nasal_prob": 0.0347,
+      "band_200_400_ratio": 14.427
     },
     "गाउँ": {
-      "ctc_nasal_prob": 0.7551,
-      "band_200_400_ratio": 20.413
+      "ctc_nasal_prob": 0.6686,
+      "band_200_400_ratio": 23.013
     },
     "गर्‍यौँ": {
-      "ctc_nasal_prob": 0.9991,
-      "band_200_400_ratio": 17.308
+      "ctc_nasal_prob": 0.9982,
+      "band_200_400_ratio": 21.149
     },
     "हेरौँला": {
-      "ctc_nasal_prob": 0.9418,
-      "band_200_400_ratio": 20.767
+      "ctc_nasal_prob": 0.9469,
+      "band_200_400_ratio": 24.546
     }
   },
-  "utmos_15": 2.766,
+  "utmos_15": 2.421,
   "per_clip": [
     {
       "id": "ne_kathmandu",
       "lang": "ne",
       "style": "news",
-      "hyp": "नेपालको राजधानी काठमानो हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो",
+      "hyp": "नेपालको राजधानी काठमाणो हिमालको काँखमा रहेको एउटा ऐतिहासिक सहर हो",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.1,
-      "utmos": 3.15
+      "max_jump_st": 0.2,
+      "utmos": 2.663
     },
     {
       "id": "ne_story",
@@ -55,7 +55,7 @@
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 3.085
+      "utmos": 2.492
     },
     {
       "id": "ne_chat",
@@ -66,32 +66,32 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 2.531
+      "max_jump_st": 0.3,
+      "utmos": 2.185
     },
     {
       "id": "ne_warm",
       "lang": "ne",
       "style": "warm_soft",
-      "hyp": "शान्तमन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो श्वास लिनुहोस् र आजको पललाई हृदैँदेखि अनुभव गर्नुहोस्",
+      "hyp": "शान्तमन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ गहिरो स्वास लिनुहोस् र आजको पललाई हृदैँदेखि अनुभव गर्नुहोस्",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.5,
-      "utmos": 3.071
+      "utmos": 2.904
     },
     {
       "id": "ne_expressive",
       "lang": "ne",
       "style": "expressive",
-      "hyp": "वाकि अद्भुत दृश्य हो यो माछा पुच्रे हिमाल बिहानको घाममा सुन् जस्तै चम्किरहेको छ",
+      "hyp": "वाकि अद्भुत दृश्य हो यो माछा पुच्रे हिमाल बिहानको घामा सुन् जस्तै चम्कि रहेको छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 3.045
+      "max_jump_st": 0.6,
+      "utmos": 2.284
     },
     {
       "id": "ne_tricky_real",
@@ -102,92 +102,92 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.822
+      "max_jump_st": 0.4,
+      "utmos": 2.552
     },
     {
       "id": "ne_loan_num",
       "lang": "ne",
       "style": "news",
-      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशत वृद्धि भएको छ र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बनेका छन्",
+      "hyp": "सन् 2026 मा नेपालको प्रविधि क्षेत्रमा 15 प्रतिशतवृद्धि भएको छ र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन बढेका छन्",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.2,
-      "utmos": 3.284
+      "max_jump_st": 0.6,
+      "utmos": 2.821
     },
     {
       "id": "sa_om",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "ओम पूरणमद पूरणमिद पूरणातपूर्ण मुदचयते पूरणस्य पूरणमादाय पूर्णमेवआवशिषयते",
+      "hyp": "ओम पूर्णमद पूर्णमिदम पूर्णआतपूर्ण मुदच्य ते पूर्णस्य पूर्ण मादाय पूर्ण मेवआवशिष्य ते",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 2.394
+      "utmos": 2.303
     },
     {
       "id": "sa_rv",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "अगnीमिलए पुरोहितम यजञस्य देव ृत्विजम होतारम रतनधातमं",
+      "hyp": "अगnीमिलए पुरोहितम यजञसय देव ृत्विज होतारम रतनधातमं",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 2.18
+      "utmos": 2.111
     },
     {
       "id": "sa_gita",
       "lang": "sa",
       "style": "storytelling",
-      "hyp": "धर्मक्षेत्रे कुरु क्षेत्रे समवत युयुतसवह ममकह pवाचeव किमकुरवत सञजय",
+      "hyp": "धर्म क्षेत्र कुरु क्षेत्र समवेत युयुतसवह मामक pवxचिव किमकुरवत सञजय",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.3,
-      "utmos": 2.124
+      "max_jump_st": 0.2,
+      "utmos": 1.864
     },
     {
       "id": "sa_gayatri",
       "lang": "sa",
       "style": "vedic_chant",
-      "hyp": "ओभूरभुवहसव ततsवितुरवरेnयम भरगो देवस्य धिमहि धिोयोn परचोधयात",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.7,
-      "utmos": 2.214
-    },
-    {
-      "id": "mixed_owner",
-      "lang": "auto",
-      "style": "news",
-      "hyp": "हेलो साथीहरू म सखिया हुँ निकित हमालज्युले बनाउनुभएको सानो टेक्स्ट टु स्पिच मोडेल म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्म क्षेत्रे कुरु क्षेत्रे समावयता युयुत्सवह मामकाह पाण्ड वास्चइव किमा कुर्वत सञ्जय आज मौसम्नि कै रमाइलो र शान्त छ",
-      "drops": [],
-      "stutters": [],
-      "f0_shutters": 0,
-      "clicks": 0,
-      "max_jump_st": 0.5,
-      "utmos": 2.324
-    },
-    {
-      "id": "ne_unseen_dialogue",
-      "lang": "ne",
-      "style": "conversational",
-      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी सासपख सँगै गएर हेरौँला नि हुँदैन र",
+      "hyp": "ओूभुवहसव ततsवितुरवरेnयम भरगो देवस्य धिमहि धिोयोn परचोधयात",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.4,
-      "utmos": 2.683
+      "utmos": 2.181
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "hyp": "हेलो साथीहरू म सखिया हुँ निकित हमालजयउले बनाउनुभएको सानो टेक्स्ट टु स्पिच मोडेल म संस्कृत पनि स्पष्ट बोल्न सक्छु धर्म क्षेत्रे कुरु क्षेत्रे समावेता युयुत्सवह मामकाह पान्ड वास्चइव किम कुर्वत सञ्जय आज मौसमनी केै रमाइलो र शान्त छ",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.5,
+      "utmos": 1.938
+    },
+    {
+      "id": "ne_unseen_dialogue",
+      "lang": "ne",
+      "style": "conversational",
+      "hyp": "दिदि आज बजारमा नयाँ किताबहरू आएका रहेछन् हामी सास्फख सँगै गएर हेरौँला नि हुँदैन र",
+      "drops": [],
+      "stutters": [],
+      "f0_shutters": 0,
+      "clicks": 0,
+      "max_jump_st": 0.5,
+      "utmos": 2.435
     },
     {
       "id": "ne_unseen_narrative",
@@ -198,20 +198,20 @@
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
-      "max_jump_st": 0.4,
-      "utmos": 3.097
+      "max_jump_st": 0.3,
+      "utmos": 2.607
     },
     {
       "id": "ne_unseen_prose",
       "lang": "ne",
       "style": "news",
-      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ",
+      "hyp": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्याउन स्थानीयतहले डिजिटल पुस्तकालय र घुन्ती स्वास्थ्य शिविर सञ्चालन गरेको छ",
       "drops": [],
       "stutters": [],
       "f0_shutters": 0,
       "clicks": 0,
       "max_jump_st": 0.3,
-      "utmos": 3.493
+      "utmos": 2.968
     }
   ]
 }
