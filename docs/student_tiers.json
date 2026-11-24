@@ -82,73 +82,73 @@
     "qat": true,
     "int8_mb": 1.39,
     "fp32_mb": 5.03,
-    "int8_vs_fp32_mel_corr": 0.9949,
+    "int8_vs_fp32_mel_corr": 0.9945,
     "nan_count": 0,
-    "rtf_1thread": 0.0171,
-    "utmos": 1.294,
-    "cer_ne": 0.914,
-    "cer_sa": 0.904,
-    "spk_sim": 0.518,
+    "rtf_1thread": 0.0143,
+    "utmos": 2.708,
+    "cer_ne": 0.049,
+    "cer_sa": 0.09,
+    "spk_sim": 0.843,
     "clicks": 0,
-    "drops": 19,
+    "drops": 0,
     "stutters": 0,
     "by_style": {
       "conversational": {
         "n": 9,
-        "utmos": 1.32,
-        "cer": 0.896,
-        "spk_sim": 0.51,
+        "utmos": 2.749,
+        "cer": 0.041,
+        "spk_sim": 0.841,
         "clicks": 0
       },
       "expressive": {
         "n": 1,
-        "utmos": 1.278,
-        "cer": 0.918,
-        "spk_sim": 0.63,
+        "utmos": 2.985,
+        "cer": 0.016,
+        "spk_sim": 0.881,
         "clicks": 0
       },
       "news": {
         "n": 6,
-        "utmos": 1.283,
-        "cer": 0.924,
-        "spk_sim": 0.579,
+        "utmos": 2.686,
+        "cer": 0.076,
+        "spk_sim": 0.89,
         "clicks": 0
       },
       "storytelling": {
         "n": 3,
-        "utmos": 1.255,
-        "cer": 0.939,
-        "spk_sim": 0.478,
+        "utmos": 2.612,
+        "cer": 0.036,
+        "spk_sim": 0.859,
         "clicks": 0
       },
       "vedic": {
         "n": 4,
-        "utmos": 1.308,
-        "cer": 0.905,
-        "spk_sim": 0.443,
+        "utmos": 2.772,
+        "cer": 0.095,
+        "spk_sim": 0.792,
         "clicks": 0
       },
       "vedic_chant": {
         "n": 3,
-        "utmos": 1.26,
-        "cer": 0.916,
-        "spk_sim": 0.534,
+        "utmos": 2.576,
+        "cer": 0.096,
+        "spk_sim": 0.786,
         "clicks": 0
       },
       "warm_soft": {
         "n": 1,
-        "utmos": 1.29,
-        "cer": 0.874,
-        "spk_sim": 0.5,
+        "utmos": 2.606,
+        "cer": 0.023,
+        "spk_sim": 0.87,
         "clicks": 0
       }
     },
     "node_verify": {
       "ok": true,
       "nan_count": 0,
-      "rtf_1thread": 0.0167
+      "rtf_1thread": 0.0138
     },
     "gate_pass": true,
-    "score": -6.7141
+    "score": 2.0203
   }
 ]
