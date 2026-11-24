@@ -53,6 +53,23 @@
    "meets_quality": true
   },
   {
+   "tag": "sakhiya_v4_micro",
+   "label": "Sakhiya-V2-Micro (4.18 MB Single-Graph)",
+   "params_m": 4.02,
+   "int8_mb": 4.176,
+   "fp16_mb": 7.98,
+   "rtf_int8": 0.0161,
+   "rtf_fp16": 0.0195,
+   "utmos_15": 3.297,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 0,
+   "f0_shutters": 0,
+   "sv_cos": 0.817,
+   "utmos_target": 3.25,
+   "meets_quality": true
+  },
+  {
    "tag": "sakhiya_v1_atom_lite",
    "label": "Sakhiya-V1-Atom-Lite (2.7 MB)",
    "params_m": 2.54,
@@ -67,6 +84,23 @@
    "f0_shutters": 0,
    "sv_cos": 0.9946,
    "utmos_target": 2.9,
+   "meets_quality": true
+  },
+  {
+   "tag": "sakhiya_v4_pico",
+   "label": "Sakhiya-V2-Pico (1.39 MB Looped FiLM)",
+   "params_m": 1.24,
+   "int8_mb": 1.390,
+   "fp16_mb": 2.55,
+   "rtf_int8": 0.0139,
+   "rtf_fp16": 0.0165,
+   "utmos_15": 2.708,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 0,
+   "f0_shutters": 0,
+   "sv_cos": 0.843,
+   "utmos_target": 2.7,
    "meets_quality": true
   }
  ]

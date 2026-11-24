@@ -7,6 +7,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   const CAT_LABELS = {
+    submission_205: "Official #submit Pack (205)",
     all: "All Prompts (365)",
     phonological_minimal_pairs: "Minimal Pairs (149)",
     natural_speech: "Natural Speech (160)",
@@ -20,7 +21,7 @@
   };
 
   let PROMPTS = [];
-  let curCat = "all";
+  let curCat = "submission_205";
   let curSearch = "";
   let curPage = 0;
   const PAGE_SIZE = 12;
@@ -36,7 +37,11 @@
   function filteredPrompts() {
     const q = curSearch.trim().toLowerCase();
     return PROMPTS.filter(p => {
-      if (curCat !== "all" && p.category !== curCat) return false;
+      if (curCat === "submission_205") {
+        if (String(p.sent_id || "").startsWith("chirp_")) return false;
+      } else if (curCat !== "all" && p.category !== curCat) {
+        return false;
+      }
       if (!q) return true;
       return (
         String(p.sent_id || "").toLowerCase().includes(q) ||
@@ -241,16 +246,37 @@
       `<button type="button" class="chip ampixa-cat" data-cat="${esc(k)}" aria-checked="${String(curCat === k)}" role="radio">${esc(lbl)}</button>`
     ).join("");
 
+    const tierOpts = [
+      ["v1", "Sakhiya-V1 (15.98 MB Flagship)"],
+      ["micro", "Sakhiya-V2-Micro (4.18 MB INT8)"],
+      ["pico", "Sakhiya-V2-Pico (1.39 MB INT8)"],
+      ["nano", "Sakhiya-V1-Nano (8.93 MB)"],
+      ["atom", "Sakhiya-V1-Atom (6.51 MB)"],
+      ["atom_lite", "Sakhiya-V1-Atom-Lite (2.72 MB)"],
+    ];
+    const activeTier = (window.st && window.st.tier) || "v1";
+    const tierSelectHtml = `<select id="ampixa-tier-sel" style="height:38px;padding:0 12px;border-radius:12px;border:1.5px solid var(--md-outline-variant);background:var(--md-surface-container);color:var(--md-on-surface);font:600 13px Poppins,sans-serif">${tierOpts.map(([k, l]) => `<option value="${k}"${k === activeTier ? " selected" : ""}>Tier: ${l}</option>`).join("")}</select>`;
+
     mount.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;border-radius:12px;background:var(--md-surface-container-low)" id="ampixa-summary-bar"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-        <input type="search" id="ampixa-search" placeholder="Search 365 prompts by ID (sent_001, chirp_001), Devanagari, Roman, or contrast word…" style="flex:1;min-width:240px;padding:9px 14px;border-radius:12px;border:1.5px solid var(--md-outline-variant);background:var(--md-surface-container);color:var(--md-on-surface);font:400 14px Poppins,sans-serif">
+        <input type="search" id="ampixa-search" placeholder="Search 205 #submit / 365 total prompts by ID (sent_001, chirp_001), Devanagari, Roman, or contrast word…" style="flex:1;min-width:220px;padding:9px 14px;border-radius:12px;border:1.5px solid var(--md-outline-variant);background:var(--md-surface-container);color:var(--md-on-surface);font:400 14px Poppins,sans-serif">
+        ${tierSelectHtml}
         <button type="button" class="btn filled" id="ampixa-run9" style="height:38px"><span class="ms">bolt</span>Run 9-Category Self-Test (9 Prompts)</button>
         <button type="button" class="btn tonal" id="ampixa-export" style="height:38px"><span class="ms">download</span>Export Self-Test JSON</button>
       </div>
       <div class="chips wrap" id="ampixa-cats" style="margin-bottom:14px">${catChips}</div>
       <div class="gallery" id="ampixa-grid"></div>
       <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px" id="ampixa-pager"></div>`;
+
+    const tSel = document.getElementById("ampixa-tier-sel");
+    if (tSel) {
+      tSel.onchange = e => {
+        if (window.st) window.st.tier = e.target.value;
+        if (typeof window.renderTiers === "function") window.renderTiers();
+        renderCards();
+      };
+    }
 
     mount.querySelectorAll(".ampixa-cat").forEach(b => {
       b.onclick = () => {

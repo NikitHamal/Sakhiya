@@ -16,18 +16,23 @@
     const vB = vers.find(v => v.tag === verB) || vers[vers.length - 1];
     const mCard = (v, role) => {
       const m = v.metrics || {};
+      const neCer = m.ne_pcer ?? m.cer_ne ?? m.cer;
+      const saCer = m.sa_pcer ?? m.cer_sa;
+      const spkSim = m.cross_style_sv ?? m.spk_sim ?? m.sv_cos_sim;
+      const svaraOrSlope = m.rigveda_svara_st != null ? Number(m.rigveda_svara_st).toFixed(2) + " st" : (m.end_slope_st != null ? Number(m.end_slope_st).toFixed(2) + " st (end)" : (m.int8_mb != null ? m.int8_mb + " MB INT8" : "-"));
+      const glitchOrClicks = m.glitch_frames != null ? m.glitch_frames : (m.clicks != null ? m.clicks : "-");
       return `<div class="card" style="padding:14px 16px;background:var(--md-surface-container-low)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <b>${esc(role)}: ${esc(v.label)}</b>
           <span class="count">commit ${esc(v.commit_sha || "-")} · ${esc(v.timestamp_utc || "")}</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;font-size:12.5px">
-          <div><span class="muted">Nepali pCER:</span> <b>${m.ne_pcer != null ? Number(m.ne_pcer).toFixed(4) : "-"}</b></div>
-          <div><span class="muted">Sanskrit pCER:</span> <b>${m.sa_pcer != null ? Number(m.sa_pcer).toFixed(4) : "-"}</b></div>
-          <div><span class="muted">Speaker Lock:</span> <b>${m.cross_style_sv != null ? Number(m.cross_style_sv).toFixed(4) : (m.sv_cos_sim || "-")}</b></div>
+          <div><span class="muted">Nepali CER:</span> <b>${neCer != null ? Number(neCer).toFixed(4) : "-"}</b></div>
+          <div><span class="muted">Sanskrit CER:</span> <b>${saCer != null ? Number(saCer).toFixed(4) : "-"}</b></div>
+          <div><span class="muted">Speaker Lock:</span> <b>${spkSim != null ? Number(spkSim).toFixed(4) : "-"}</b></div>
           <div><span class="muted">UTMOS22:</span> <b>${m.utmos != null ? Number(m.utmos).toFixed(3) : "-"}</b></div>
-          <div><span class="muted">Rigveda Svara:</span> <b>${m.rigveda_svara_st != null ? Number(m.rigveda_svara_st).toFixed(2) + " st" : "-"}</b></div>
-          <div><span class="muted">Glitch Frames:</span> <b>${m.glitch_frames != null ? m.glitch_frames : "-"}</b></div>
+          <div><span class="muted">Svara / Size:</span> <b>${esc(svaraOrSlope)}</b></div>
+          <div><span class="muted">Clicks / Glitches:</span> <b>${esc(glitchOrClicks)}</b></div>
         </div>
       </div>`;
     };
@@ -113,10 +118,11 @@
     try {
       REG = await (await fetch("samples/versions/registry.json?t=" + Date.now(), { cache: "no-cache" })).json();
       if (REG && REG.versions && REG.versions.length) {
+        const hasProV4Vedic = REG.versions.some(v => v.tag === "sakhiya_pro_v4_vedic");
+        const hasProV4 = REG.versions.some(v => v.tag === "sakhiya_pro_v4");
         const hasV15 = REG.versions.some(v => v.tag === "v15_v1_chandas");
-        const hasGGML = REG.versions.some(v => v.tag === "v15_ggml_cpp");
-        verA = hasV15 ? "v15_v1_chandas" : REG.versions[0].tag;
-        verB = hasGGML ? "v15_ggml_cpp" : REG.versions[REG.versions.length - 1].tag;
+        verA = hasProV4 ? "sakhiya_pro_v4" : (hasV15 ? "v15_v1_chandas" : REG.versions[0].tag);
+        verB = hasProV4Vedic ? "sakhiya_pro_v4_vedic" : REG.versions[REG.versions.length - 1].tag;
         renderAllComparators();
       }
       const rep = await (await fetch("ggml_proof/diff_gate_report.json?t=" + Date.now(), { cache: "no-cache" })).json();
