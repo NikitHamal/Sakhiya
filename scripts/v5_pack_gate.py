@@ -8,6 +8,7 @@ sys.path.insert(0, HERE)
 import leak_loop_gate as G
 
 pack, anchor_json, tag = sys.argv[1:4]
+MODE = sys.argv[4] if len(sys.argv) > 4 else 'nepali'
 OUT = os.environ.get("V5_STATE", "/work/tts/v5_recovery/state"); os.makedirs(OUT, exist_ok=True)
 meta = json.load(open(f"{pack}/pack_meta.json"))
 ref_text = json.load(open(anchor_json))["ref_text"]
@@ -19,7 +20,7 @@ except Exception as e:
 rows = []
 for m, p in zip(meta, paths):
     w, sr = G.load_wav(p)
-    g = G.check_clip(w, sr, m["text"], ref_text, hyps.get(p), "nepali")
+    g = G.check_clip(w, sr, m["text"], ref_text, hyps.get(p), MODE)
     t = m["take"]; c = next((x for x in t["cands"] if x["seed"] == t["chosen"]), t["cands"][0])
     hard = []
     if c["end_slope"] > -0.55: hard.append("end_slope")
@@ -31,5 +32,5 @@ for m, p in zip(meta, paths):
 agg = {k: round(statistics.mean(r[k] for r in rows), 3) for k in ("end_slope", "rise_frac", "cer", "utmos", "hf_karkar", "spk_sim")}
 agg.update(clips=len(rows), gate_pass=sum(r["gate_ok"] for r in rows), metric_pass=sum(not r["metrics_fail"] for r in rows),
            all_pass=sum(r["gate_ok"] and not r["metrics_fail"] for r in rows))
-json.dump(dict(tag=tag, agg=agg, rows=rows), open(f"{OUT}/nepali_{tag}.json", "w"), ensure_ascii=False, indent=1)
+json.dump(dict(tag=tag, agg=agg, rows=rows), open(f"{OUT}/{MODE}_{tag}.json", "w"), ensure_ascii=False, indent=1)
 print("AGG", json.dumps(agg))
