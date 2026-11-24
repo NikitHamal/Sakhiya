@@ -278,8 +278,9 @@ def main():
         corr.append(_safe_mel_corr(w32, w8))
 
     R.update(int8_vs_fp32_mel_corr=round(float(np.mean(corr)), 4), nan_count=nan, rtf_1thread=round(float(np.mean(rtf)), 4))
-    if R["int8_vs_fp32_mel_corr"] < 0.985 and not fp16:
-        prot = ["voc.post", "am.vel.out"]
+    for prot in (["voc.post", "am.vel.out"], ["voc.post", "am.vel.out", "voc.ups", "am.dur", "voc.in_conv"]):
+        if R["int8_vs_fp32_mel_corr"] >= 0.985 or fp16:
+            break
         R["note"] = f"int8 corr {R['int8_vs_fp32_mel_corr']} < 0.985 -> output heads {prot} kept FP16 (selective mixed precision)"
         quantize(f32, i8, prot)
         R["int8_mb"] = round(os.path.getsize(i8) / 1e6, 3)
