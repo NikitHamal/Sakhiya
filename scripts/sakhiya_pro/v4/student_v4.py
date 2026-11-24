@@ -402,15 +402,16 @@ class StudentV4(nn.Module):
         dur_frames = torch.exp(x_d).clamp(min=1.0, max=60.0)
         rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
         dur_frames = (dur_frames * rate_mult * ds_tok).clamp(min=1.0, max=60.0)
-        # Protect sentence-final tokens and short Nepali function words from frame collapse
+        # Protect sentence-final tokens, non-pause phonemes (>= 3 frames), and short Nepali function words from frame collapse
         is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
-        dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 1.0)).clamp(min=1.0, max=60.0)
+        min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 6).float() * 3.0 + (ids <= 6).float() * 1.0)
+        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
         # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
         id_o, id_m, id_h, id_a, id_wb = SYM2ID['o'], SYM2ID['m'], SYM2ID['h'], SYM2ID['a'], SYM2ID['|']
-        next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
-        prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
-        next2_ids = torch.cat([ids[:, 2:], ids[:, -2:]], dim=1)
-        prev2_ids = torch.cat([ids[:, :2], ids[:, :-2]], dim=1)
+        next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
+        prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
+        next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
+        prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
         is_sa_f = is_sa.float()[:, None]
         is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
