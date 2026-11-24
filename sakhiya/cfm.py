@@ -127,7 +127,8 @@ class Velocity(nn.Module):
 
     def forward(s, x, t, mu, g, m, step_idx: int = -1):
         c = g if isinstance(s.tm, nn.Identity) else (s.tm(temb(t, s.c).to(x.dtype)) + g)
-        h = s.inp(torch.cat([x, mu], 1)) * m
+        inp_cat = mu if s.inp.weight.shape[1] == mu.shape[1] else torch.cat([x, mu], 1)
+        h = s.inp(inp_cat) * m
         for b in s.blocks: h = b(h, c, m, step_idx=step_idx)
         return s.out(h) * m
 
