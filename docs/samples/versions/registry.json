@@ -1907,210 +1907,6 @@
       ]
     },
     {
-      "tag": "sakhiya_v3_t30",
-      "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student) (step 100, 15.854 MB INT8 ONNX)",
-      "commit_sha": "678e076",
-      "timestamp_utc": "2026-11-23T22:45:06Z",
-      "notes": "Distilled from Sakhiya-Pro v3 + Nepal-native Seed-VC corpus; int8_mb=15.854, corr=0.9929, rtf_1thread=0.1001",
-      "metrics": {
-        "tier": "t30",
-        "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student)",
-        "step": 100,
-        "qat": true,
-        "int8_mb": 15.854,
-        "fp32_mb": 61.86,
-        "int8_vs_fp32_mel_corr": 0.9929,
-        "rtf_1thread": 0.1001,
-        "utmos": 4.045,
-        "cer_ne": 0.041,
-        "cer_sa": 0.1,
-        "spk_sim": 0.745,
-        "clicks": 0,
-        "drops": 0,
-        "stutters": 0,
-        "by_style": {
-          "conversational": {
-            "n": 9,
-            "utmos": 4.086,
-            "cer": 0.038,
-            "spk_sim": 0.706,
-            "clicks": 0
-          },
-          "expressive": {
-            "n": 1,
-            "utmos": 4.201,
-            "cer": 0.049,
-            "spk_sim": 0.848,
-            "clicks": 0
-          },
-          "news": {
-            "n": 6,
-            "utmos": 4.149,
-            "cer": 0.051,
-            "spk_sim": 0.81,
-            "clicks": 0
-          },
-          "storytelling": {
-            "n": 3,
-            "utmos": 3.866,
-            "cer": 0.053,
-            "spk_sim": 0.733,
-            "clicks": 0
-          },
-          "vedic": {
-            "n": 4,
-            "utmos": 3.991,
-            "cer": 0.093,
-            "spk_sim": 0.716,
-            "clicks": 0
-          },
-          "vedic_chant": {
-            "n": 3,
-            "utmos": 3.854,
-            "cer": 0.109,
-            "spk_sim": 0.735,
-            "clicks": 0
-          },
-          "warm_soft": {
-            "n": 1,
-            "utmos": 4.228,
-            "cer": 0.023,
-            "spk_sim": 0.781,
-            "clicks": 0
-          }
-        },
-        "node_verify": {
-          "ok": true,
-          "nan_count": 0,
-          "rtf_1thread": 0.1024
-        },
-        "gate_pass": true,
-        "score": 2.158
-      },
-      "clips": [
-        {
-          "id": "ne_kathmandu",
-          "lang": "ne",
-          "style": "news",
-          "text": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_kathmandu.mp3",
-          "duration_s": 5.92
-        },
-        {
-          "id": "ne_story",
-          "lang": "ne",
-          "style": "storytelling",
-          "text": "एक समयको कुरा हो, एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन्। उनी बिहानै उठेर चरालाई दाना हाल्थिन्।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_story.mp3",
-          "duration_s": 8.55
-        },
-        {
-          "id": "ne_chat",
-          "lang": "ne",
-          "style": "conversational",
-          "text": "नमस्ते! आज मौसम धेरै राम्रो छ, चिया खान जाऔँ न? तिमी कताबाट आउँदै छौ?",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_chat.mp3",
-          "duration_s": 6.65
-        },
-        {
-          "id": "ne_warm",
-          "lang": "ne",
-          "style": "warm_soft",
-          "text": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ। गहिरो श्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_warm.mp3",
-          "duration_s": 10.9
-        },
-        {
-          "id": "ne_expressive",
-          "lang": "ne",
-          "style": "expressive",
-          "text": "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_expressive.mp3",
-          "duration_s": 7.26
-        },
-        {
-          "id": "ne_tricky_real",
-          "lang": "ne",
-          "style": "conversational",
-          "text": "बाटोबाट हिँड्दै गर्दा गाउँका साथीहरूसँग भेट भयो, अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौँ।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_tricky_real.mp3",
-          "duration_s": 8.45
-        },
-        {
-          "id": "ne_loan_num",
-          "lang": "ne",
-          "style": "news",
-          "text": "सन् २०२६ मा नेपालको प्रविधि क्षेत्रमा १५ प्रतिशत वृद्धि भएको छ, र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन् बढेका छन्।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_loan_num.mp3",
-          "duration_s": 12.21
-        },
-        {
-          "id": "sa_om",
-          "lang": "sa",
-          "style": "vedic_chant",
-          "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
-          "mp3": "samples/versions/sakhiya_v3_t30/sa_om.mp3",
-          "duration_s": 8.11
-        },
-        {
-          "id": "sa_rv",
-          "lang": "sa",
-          "style": "vedic_chant",
-          "text": "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
-          "mp3": "samples/versions/sakhiya_v3_t30/sa_rv.mp3",
-          "duration_s": 5.56
-        },
-        {
-          "id": "sa_gita",
-          "lang": "sa",
-          "style": "storytelling",
-          "text": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥",
-          "mp3": "samples/versions/sakhiya_v3_t30/sa_gita.mp3",
-          "duration_s": 8.13
-        },
-        {
-          "id": "sa_gayatri",
-          "lang": "sa",
-          "style": "vedic_chant",
-          "text": "ॐ भूर्भुवः स्वः। तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि। धियो यो नः प्रचोदयात्॥",
-          "mp3": "samples/versions/sakhiya_v3_t30/sa_gayatri.mp3",
-          "duration_s": 7.78
-        },
-        {
-          "id": "mixed_owner",
-          "lang": "auto",
-          "style": "news",
-          "text": "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥ आज मौसम निकै रमाइलो र शान्त छ।",
-          "mp3": "samples/versions/sakhiya_v3_t30/mixed_owner.mp3",
-          "duration_s": 21.8
-        },
-        {
-          "id": "ne_unseen_dialogue",
-          "lang": "ne",
-          "style": "conversational",
-          "text": "दिदी, आज बजारमा नयाँ किताबहरू आएका रहेछन्। हामी साँझपख सँगै गएर हेरौँला नि, हुँदैन र?",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_dialogue.mp3",
-          "duration_s": 8.02
-        },
-        {
-          "id": "ne_unseen_narrative",
-          "lang": "ne",
-          "style": "storytelling",
-          "text": "वर्षा थामिएपछि पहाडको टुप्पोबाट कलकल बग्ने झरनाको आवाज अझै मीठो सुनियो। गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_narrative.mp3",
-          "duration_s": 10.78
-        },
-        {
-          "id": "ne_unseen_prose",
-          "lang": "ne",
-          "style": "news",
-          "text": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्‍याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ।",
-          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_prose.mp3",
-          "duration_s": 9.61
-        }
-      ]
-    },
-    {
       "tag": "sakhiya_v3_t15",
       "label": "Sakhiya-T15 (14.5 MB INT8 Flagship Compact Student) (step 4000, 14.472 MB INT8 ONNX)",
       "commit_sha": "71f2433",
@@ -3213,6 +3009,210 @@
           "text": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्‍याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ।",
           "mp3": "samples/versions/sakhiya_pro_v4_vedic/ne_unseen_prose.mp3",
           "duration_s": 9.56
+        }
+      ]
+    },
+    {
+      "tag": "sakhiya_v3_t30",
+      "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student) (step 2200, 15.853 MB INT8 ONNX)",
+      "commit_sha": "0f5db82",
+      "timestamp_utc": "2026-11-24T16:35:26Z",
+      "notes": "Distilled from Sakhiya-Pro v3 + Nepal-native Seed-VC corpus; int8_mb=15.853, corr=0.9926, rtf_1thread=0.0987",
+      "metrics": {
+        "tier": "t30",
+        "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student)",
+        "step": 2200,
+        "qat": true,
+        "int8_mb": 15.853,
+        "fp32_mb": 61.8,
+        "int8_vs_fp32_mel_corr": 0.9926,
+        "rtf_1thread": 0.0987,
+        "utmos": 4.081,
+        "cer_ne": 0.051,
+        "cer_sa": 0.099,
+        "spk_sim": 0.709,
+        "clicks": 1,
+        "drops": 0,
+        "stutters": 0,
+        "by_style": {
+          "conversational": {
+            "n": 9,
+            "utmos": 4.038,
+            "cer": 0.051,
+            "spk_sim": 0.683,
+            "clicks": 0
+          },
+          "expressive": {
+            "n": 1,
+            "utmos": 4.295,
+            "cer": 0.049,
+            "spk_sim": 0.771,
+            "clicks": 0
+          },
+          "news": {
+            "n": 6,
+            "utmos": 4.103,
+            "cer": 0.058,
+            "spk_sim": 0.733,
+            "clicks": 0
+          },
+          "storytelling": {
+            "n": 3,
+            "utmos": 4.153,
+            "cer": 0.052,
+            "spk_sim": 0.747,
+            "clicks": 0
+          },
+          "vedic": {
+            "n": 4,
+            "utmos": 4.169,
+            "cer": 0.103,
+            "spk_sim": 0.658,
+            "clicks": 0
+          },
+          "vedic_chant": {
+            "n": 3,
+            "utmos": 3.946,
+            "cer": 0.098,
+            "spk_sim": 0.724,
+            "clicks": 0
+          },
+          "warm_soft": {
+            "n": 1,
+            "utmos": 3.955,
+            "cer": 0.034,
+            "spk_sim": 0.788,
+            "clicks": 1
+          }
+        },
+        "node_verify": {
+          "ok": true,
+          "nan_count": 0,
+          "rtf_1thread": 0.0992
+        },
+        "gate_pass": true,
+        "score": 2.0753
+      },
+      "clips": [
+        {
+          "id": "ne_kathmandu",
+          "lang": "ne",
+          "style": "news",
+          "text": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_kathmandu.mp3",
+          "duration_s": 5.44
+        },
+        {
+          "id": "ne_story",
+          "lang": "ne",
+          "style": "storytelling",
+          "text": "एक समयको कुरा हो, एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन्। उनी बिहानै उठेर चरालाई दाना हाल्थिन्।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_story.mp3",
+          "duration_s": 8.3
+        },
+        {
+          "id": "ne_chat",
+          "lang": "ne",
+          "style": "conversational",
+          "text": "नमस्ते! आज मौसम धेरै राम्रो छ, चिया खान जाऔँ न? तिमी कताबाट आउँदै छौ?",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_chat.mp3",
+          "duration_s": 5.9
+        },
+        {
+          "id": "ne_warm",
+          "lang": "ne",
+          "style": "warm_soft",
+          "text": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ। गहिरो श्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_warm.mp3",
+          "duration_s": 10.21
+        },
+        {
+          "id": "ne_expressive",
+          "lang": "ne",
+          "style": "expressive",
+          "text": "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_expressive.mp3",
+          "duration_s": 7.04
+        },
+        {
+          "id": "ne_tricky_real",
+          "lang": "ne",
+          "style": "conversational",
+          "text": "बाटोबाट हिँड्दै गर्दा गाउँका साथीहरूसँग भेट भयो, अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौँ।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_tricky_real.mp3",
+          "duration_s": 7.93
+        },
+        {
+          "id": "ne_loan_num",
+          "lang": "ne",
+          "style": "news",
+          "text": "सन् २०२६ मा नेपालको प्रविधि क्षेत्रमा १५ प्रतिशत वृद्धि भएको छ, र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन् बढेका छन्।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_loan_num.mp3",
+          "duration_s": 11.4
+        },
+        {
+          "id": "sa_om",
+          "lang": "sa",
+          "style": "vedic_chant",
+          "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
+          "mp3": "samples/versions/sakhiya_v3_t30/sa_om.mp3",
+          "duration_s": 8.43
+        },
+        {
+          "id": "sa_rv",
+          "lang": "sa",
+          "style": "vedic_chant",
+          "text": "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
+          "mp3": "samples/versions/sakhiya_v3_t30/sa_rv.mp3",
+          "duration_s": 5.55
+        },
+        {
+          "id": "sa_gita",
+          "lang": "sa",
+          "style": "storytelling",
+          "text": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥",
+          "mp3": "samples/versions/sakhiya_v3_t30/sa_gita.mp3",
+          "duration_s": 7.56
+        },
+        {
+          "id": "sa_gayatri",
+          "lang": "sa",
+          "style": "vedic_chant",
+          "text": "ॐ भूर्भुवः स्वः। तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि। धियो यो नः प्रचोदयात्॥",
+          "mp3": "samples/versions/sakhiya_v3_t30/sa_gayatri.mp3",
+          "duration_s": 8.35
+        },
+        {
+          "id": "mixed_owner",
+          "lang": "auto",
+          "style": "news",
+          "text": "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥ आज मौसम निकै रमाइलो र शान्त छ।",
+          "mp3": "samples/versions/sakhiya_v3_t30/mixed_owner.mp3",
+          "duration_s": 20.32
+        },
+        {
+          "id": "ne_unseen_dialogue",
+          "lang": "ne",
+          "style": "conversational",
+          "text": "दिदी, आज बजारमा नयाँ किताबहरू आएका रहेछन्। हामी साँझपख सँगै गएर हेरौँला नि, हुँदैन र?",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_dialogue.mp3",
+          "duration_s": 7.63
+        },
+        {
+          "id": "ne_unseen_narrative",
+          "lang": "ne",
+          "style": "storytelling",
+          "text": "वर्षा थामिएपछि पहाडको टुप्पोबाट कलकल बग्ने झरनाको आवाज अझै मीठो सुनियो। गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_narrative.mp3",
+          "duration_s": 10.37
+        },
+        {
+          "id": "ne_unseen_prose",
+          "lang": "ne",
+          "style": "news",
+          "text": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्‍याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ।",
+          "mp3": "samples/versions/sakhiya_v3_t30/ne_unseen_prose.mp3",
+          "duration_s": 9.49
         }
       ]
     }
