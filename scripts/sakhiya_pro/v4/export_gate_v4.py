@@ -95,12 +95,13 @@ def load(ck):
 def export_fp32(m, path):
     ids = torch.randint(3, 50, (1, 40))
     args = (ids, torch.zeros(1, dtype=torch.long), torch.ones(40), torch.zeros(40))
+    fold_consts = bool(getattr(m, 'is_pico', False))
     kw = dict(
         input_names=['ids', 'lang', 'dur_scale', 'pitch_shift'],
         output_names=['wav'],
         dynamic_axes={'ids': {1: 'L'}, 'dur_scale': {0: 'D'}, 'pitch_shift': {0: 'P'}, 'wav': {1: 'N'}},
         opset_version=17,
-        do_constant_folding=True,
+        do_constant_folding=fold_consts,
     )
     try:
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
@@ -222,6 +223,9 @@ def chandas_inputs(text, lang):
             ids = SYM.encode(res['ph'])
             sv_sc = 0.55 if res.get('has_vedic_marks') else 0.48
             dm = [float(0.75 + 0.25 * min(max(d, 0.85), 1.35)) for d, k in zip(res['dm'], keep) if k]
+            if len(ids) >= 2 and ids[0] == SYM.SYM2ID.get('o') and ids[1] == SYM.SYM2ID.get('m'):
+                dm[0] = max(dm[0], 1.38)
+                dm[1] = max(dm[1], 1.32)
             off = [float(o) * sv_sc for o, k in zip(res['off'], keep) if k]
             if len(ids) == len(dm) == len(off) and len(ids) >= 2:
                 return ids, 1, np.array(dm, dtype=np.float32), np.array(off, dtype=np.float32)
