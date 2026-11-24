@@ -4,12 +4,12 @@
   const SR = 24000, HOP = 256, FPS = SR / HOP;
   const DEFAULT_TONIC_HZ = 215.0, DEFAULT_BPM = 75.0;
   const SHRUTI_CENTS = {
-    low_ni: -203.9100,
+    low_ni: -195.0000,
     komal_ni: -111.7313,
     sa: 0.0,
     prachaya: 38.0511,
     komal_re: 111.7313,
-    re: 203.9100,
+    re: 195.0000,
     komal_ga: 315.6413,
     ga: 386.3137,
   };
@@ -205,12 +205,12 @@
         const archTbl = [
           0.0,
           111.7313,
-          203.9100,
-          203.9100,
+          195.0000,
+          195.0000,
           111.7313,
-          padaNum % 2 === 0 ? 203.9100 : 38.0511,
+          padaNum % 2 === 0 ? 195.0000 : 38.0511,
           padaNum % 2 === 0 ? 38.0511 : -111.7313,
-          padaNum % 2 === 0 ? 0.0 : -203.9100,
+          padaNum % 2 === 0 ? 0.0 : -195.0000,
         ];
         const baseArch = archTbl[posInPada];
         const guruLift = ak.weight === "G" ? 32.0 : -18.0;

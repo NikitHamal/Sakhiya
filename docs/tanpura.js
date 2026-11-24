@@ -1,97 +1,125 @@
-// Zero-Weight WebAudio Sympathetic Tanpura Drone Layer (docs/tanpura.js)
-// Pure mathematical additive Jivari string synthesizer (Pa - Sa - Sa - LowSa) tuned to Sakhiya's chest tonic Sa (~215 Hz).
-// Off by default for regular speech; optional subtle -22 dB sympathetic drone for Vedic / Mantra Chant mode.
+// Toggleable Zero-Weight WebAudio Sympathetic Tanpura Drone (docs/tanpura.js)
+// Tuned to Sakhiya's natural chest tonic Sa (~215.0 Hz), subtle -22 dB default mix in Vedic mode, off for speech.
 (function (root) {
-  class TanpuraDrone {
-    constructor(tonicHz = 215.0, gainDb = -22.0) {
-      this.tonicHz = tonicHz;
-      this.gainDb = gainDb;
-      this.ctx = null;
-      this.timer = null;
-      this.active = false;
-    }
+  const DEFAULT_TONIC_HZ = 215.0;
+  const DEFAULT_DB_VEDIC = -22.0; // subtle -22 dB default mix in Vedic mode
 
-    // Render an offline sympathetic Pa-Sa-Sa-LowSa drone buffer at sample rate `sr` mixed at `gainDb` into `speechWav`
-    mixIntoBuffer(speechWav, sr = 24000, tonicHz = this.tonicHz, gainDb = this.gainDb) {
-      const n = speechWav.length;
-      const out = new Float32Array(n);
-      const linGain = Math.pow(10.0, gainDb / 20.0);
-      // 4 traditional strings: Pa (3/4 below Sa = 0.75 * Sa), Sa (1.0), Sa (1.0), Low Sa (0.5 * Sa)
-      const strFreqs = [tonicHz * 0.75, tonicHz, tonicHz * 1.0006, tonicHz * 0.5];
-      const pluckPeriod = 1.35; // seconds between gentle string plucks
-      for (let i = 0; i < n; i++) {
-        const t = i / sr;
-        let drone = 0.0;
-        for (let s = 0; s < 4; s++) {
-          const dt = (t - s * pluckPeriod + 100 * pluckPeriod) % (4 * pluckPeriod);
-          // Smooth raised-cosine attack (80ms) + slow Jivari decay
-          const attack = dt < 0.08 ? 0.5 * (1.0 - Math.cos(Math.PI * dt / 0.08)) : 1.0;
-          const env = attack * Math.exp(-dt * 0.42);
-          const f0 = strFreqs[s];
-          // Jivari bridge shimmer: harmonics 1..6 with gentle phase modulation
-          const jivari = 1.0 + 0.18 * Math.sin(2.0 * Math.PI * 0.45 * t + s);
-          const sig =
-            0.52 * Math.sin(2.0 * Math.PI * f0 * t) +
-            0.26 * jivari * Math.sin(2.0 * Math.PI * 2.0 * f0 * t + 0.3) +
-            0.14 * jivari * Math.sin(2.0 * Math.PI * 3.0 * f0 * t + 0.7) +
-            0.06 * Math.sin(2.0 * Math.PI * 4.0 * f0 * t) +
-            0.03 * Math.sin(2.0 * Math.PI * 5.0 * f0 * t);
-          drone += env * sig * 0.28;
+  function dbToGain(db) {
+    return Math.pow(10.0, Number(db) / 20.0);
+  }
+
+  // Synthesize sympathetic 4-string Tanpura cycle (Pa - Sa - Sa - low Sa) with subtle Jiva (Jawari) overtone shimmer
+  function synthesizeTanpuraBuffer(durationSec, sr = 24000, tonicHz = DEFAULT_TONIC_HZ, mixDb = DEFAULT_DB_VEDIC) {
+    const n = Math.max(1, Math.floor(Number(durationSec) * sr));
+    const out = new Float32Array(n);
+    const gain = dbToGain(mixDb);
+    const sa = Number(tonicHz) || DEFAULT_TONIC_HZ;
+    // 4 strings in Just Intonation: low Pa (3/4 Sa), upper Sa (1/1), upper Sa (1/1), low Sa (1/2 Sa)
+    const strings = [
+      { f0: sa * 0.75, offsetSec: 0.0, periodSec: 4.8 },
+      { f0: sa * 1.00, offsetSec: 1.2, periodSec: 4.8 },
+      { f0: sa * 1.0008, offsetSec: 2.4, periodSec: 4.8 }, // slight sympathetic detune
+      { f0: sa * 0.50, offsetSec: 3.6, periodSec: 4.8 },
+    ];
+    const harmonics = [
+      [1, 1.00, 0.9],
+      [2, 0.62, 1.1],
+      [3, 0.40, 1.4],
+      [4, 0.25, 1.7],
+      [5, 0.16, 2.0],
+      [6, 0.10, 2.4],
+    ];
+
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      let sample = 0.0;
+      for (const st of strings) {
+        const rel = ((t - st.offsetSec) % st.periodSec + st.periodSec) % st.periodSec;
+        const attack = Math.min(1.0, rel / 0.045);
+        for (const [h, amp, decay] of harmonics) {
+          const env = attack * Math.exp(-decay * (rel / st.periodSec));
+          // Subtle jawari bridge modulation
+          const jawari = 1.0 + 0.08 * Math.sin(2.0 * Math.PI * 3.2 * rel + h);
+          sample += amp * env * jawari * Math.sin(2.0 * Math.PI * (st.f0 * h) * t);
         }
-        // Gentle fade-in and fade-out at clip boundaries
-        let edge = 1.0;
-        if (i < sr * 0.06) edge = i / (sr * 0.06);
-        else if (n - i < sr * 0.08) edge = (n - i) / (sr * 0.08);
-        out[i] = Math.max(-0.98, Math.min(0.98, speechWav[i] + linGain * edge * drone));
       }
-      return out;
+      // Smooth fade-in and fade-out
+      const fadeIn = Math.min(1.0, t / 0.18);
+      const fadeOut = Math.min(1.0, (durationSec - t) / 0.35);
+      out[i] = sample * 0.18 * gain * Math.max(0.0, fadeIn * fadeOut);
     }
+    return out;
+  }
 
-    startLive(tonicHz = this.tonicHz, gainDb = this.gainDb) {
-      if (typeof window === "undefined") return;
-      this.stopLive();
-      this.tonicHz = tonicHz;
-      this.gainDb = gainDb;
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      this.ctx = new AudioCtx();
-      this.active = true;
-      const strFreqs = [tonicHz * 0.75, tonicHz, tonicHz * 1.0006, tonicHz * 0.5];
-      let step = 0;
-      const pluckOne = () => {
-        if (!this.active || !this.ctx) return;
-        const now = this.ctx.currentTime;
-        const f0 = strFreqs[step % 4];
-        step++;
-        const master = this.ctx.createGain();
-        const lin = Math.pow(10.0, this.gainDb / 20.0) * 0.22;
-        master.gain.setValueAtTime(0.0001, now);
-        master.gain.linearRampToValueAtTime(lin, now + 0.12);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
-        master.connect(this.ctx.destination);
-        [1, 2, 3, 4, 5].forEach((h, idx) => {
-          const osc = this.ctx.createOscillator();
-          const g = this.ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(f0 * h, now);
-          g.gain.setValueAtTime([0.52, 0.26, 0.14, 0.06, 0.03][idx], now);
-          osc.connect(g);
-          g.connect(master);
-          osc.start(now);
-          osc.stop(now + 4.9);
-        });
-      };
-      pluckOne();
-      this.timer = setInterval(pluckOne, 1350);
+  function mixTanpuraOnPcm(pcmFloat32, sr = 24000, opts = {}) {
+    const enabled = opts.enabled !== undefined ? Boolean(opts.enabled) : (opts.mode === "vedic" || opts.style === "vedic_chant");
+    if (!enabled || !pcmFloat32 || !pcmFloat32.length) return pcmFloat32;
+    const tonicHz = opts.tonicHz || DEFAULT_TONIC_HZ;
+    const mixDb = opts.mixDb !== undefined ? Number(opts.mixDb) : DEFAULT_DB_VEDIC;
+    const drone = synthesizeTanpuraBuffer(pcmFloat32.length / sr, sr, tonicHz, mixDb);
+    const mixed = new Float32Array(pcmFloat32.length);
+    for (let i = 0; i < pcmFloat32.length; i++) {
+      mixed[i] = Math.max(-0.98, Math.min(0.98, pcmFloat32[i] + drone[i]));
     }
+    return mixed;
+  }
 
-    stopLive() {
-      this.active = false;
-      if (this.timer) { clearInterval(this.timer); this.timer = null; }
-      if (this.ctx) { try { this.ctx.close(); } catch (_) {} this.ctx = null; }
+  class TanpuraDroneController {
+    constructor(audioCtx, opts = {}) {
+      this.ctx = audioCtx || null;
+      this.tonicHz = opts.tonicHz || DEFAULT_TONIC_HZ;
+      this.mixDb = opts.mixDb !== undefined ? opts.mixDb : DEFAULT_DB_VEDIC;
+      this.enabled = false;
+      this.source = null;
+      this.gainNode = null;
+    }
+    setMode(styleOrMode) {
+      const shouldEnable = styleOrMode === "vedic" || styleOrMode === "vedic_chant";
+      this.setEnabled(shouldEnable);
+    }
+    setEnabled(flag) {
+      this.enabled = Boolean(flag);
+      if (!this.enabled) this.stop();
+    }
+    setMixDb(db) {
+      this.mixDb = Number(db);
+      if (this.gainNode && this.ctx) {
+        this.gainNode.gain.setTargetAtTime(dbToGain(this.mixDb), this.ctx.currentTime, 0.05);
+      }
+    }
+    start(durationSec = 24.0) {
+      if (!this.enabled || !this.ctx) return;
+      this.stop();
+      const sr = this.ctx.sampleRate || 24000;
+      const pcm = synthesizeTanpuraBuffer(durationSec, sr, this.tonicHz, 0.0);
+      const buf = this.ctx.createBuffer(1, pcm.length, sr);
+      buf.getChannelData(0).set(pcm);
+      this.source = this.ctx.createBufferSource();
+      this.source.buffer = buf;
+      this.source.loop = true;
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.value = dbToGain(this.mixDb);
+      this.source.connect(this.gainNode);
+      this.gainNode.connect(this.ctx.destination);
+      this.source.start();
+    }
+    stop() {
+      if (this.source) {
+        try { this.source.stop(); } catch (_) {}
+        try { this.source.disconnect(); } catch (_) {}
+        this.source = null;
+      }
     }
   }
 
-  root.TanpuraDrone = TanpuraDrone;
-  if (typeof module !== "undefined" && module.exports) module.exports = { TanpuraDrone };
+  const exported = {
+    DEFAULT_TONIC_HZ,
+    DEFAULT_DB_VEDIC,
+    dbToGain,
+    synthesizeTanpuraBuffer,
+    mixTanpuraOnPcm,
+    TanpuraDroneController,
+  };
+  root.TANPURA = exported;
+  if (typeof module !== "undefined" && module.exports) module.exports = exported;
 })(typeof window !== "undefined" ? window : globalThis);

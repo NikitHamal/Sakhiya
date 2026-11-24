@@ -28,12 +28,12 @@ DEFAULT_BPM = 75.0
 
 # Just-Intonation Shruti intervals in cents relative to tonic Sa (1/1)
 SHRUTI_CENTS = {
-    "low_ni": -203.9100,   # 8/9 Chatushruti Dha / Komal Ni below Sa (Anudatta)
+    "low_ni": -195.0000,   # 8/9 Chatushruti Dha / Komal Ni below Sa (Anudatta)
     "komal_ni": -111.7313, # 15/16 Kakali Ni below Sa
     "sa": 0.0,             # 1/1 Shadja (Udatta tonic)
     "prachaya": 38.0511,   # gentle post-svarita sustain
     "komal_re": 111.7313,  # 16/15 Dvishruti Rishabha
-    "re": 203.9100,        # 9/8 Chatushruti Rishabha (Svarita peak)
+    "re": 195.0000,        # 9/8 Chatushruti Rishabha (Svarita peak)
     "komal_ga": 315.6413,  # 6/5 Sadharana Gandhara
     "ga": 386.3137,        # 5/4 Antara Gandhara
 }
@@ -248,12 +248,12 @@ def compile_chandas(text, bpm=DEFAULT_BPM, tonic_hz=DEFAULT_TONIC_HZ, add_end=Tr
             base_arch = [
                 0.0,
                 111.7313,
-                203.9100,
-                203.9100,
+                195.0000,
+                195.0000,
                 111.7313,
-                203.9100 if pada_num % 2 == 0 else 38.0511,
+                195.0000 if pada_num % 2 == 0 else 38.0511,
                 38.0511 if pada_num % 2 == 0 else -111.7313,
-                0.0 if pada_num % 2 == 0 else -203.9100,
+                0.0 if pada_num % 2 == 0 else -195.0000,
             ][pos_in_pada]
             guru_lift = 32.0 if ak["weight"] == "G" else -18.0
             ak["f0_cents"] = _round4(base_arch + guru_lift)
