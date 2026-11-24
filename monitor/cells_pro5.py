@@ -60,7 +60,7 @@ def _card1():
     dl_npt = (dl + datetime.timedelta(hours=5, minutes=45)).strftime("%H:%M NPT")
     ram = sh("free -h | awk '/Mem:/ {print $3 \" / \" $2}'")
     disk = sh("df -h / | awk 'NR==2 {print $3 \" used\"}'")
-    procs = sh("ps -eo pid,etime,pcpu,args --sort=-pcpu | grep -E '[t]rain_student|[l]adder_daemon|[g]en_corpus|[b]ackup_daemon|[t]rain_voc' | cut -c1-150 | head -12")
+    procs = sh("ps -eo pid,etime,pcpu,args --sort=-pcpu | grep -E '[t]rain_student|[l]adder_daemon|[g]en_corpus|[b]ackup_daemon|[t]rain_voc|[g]ta_polish' | cut -c1-150 | head -12")
     bk = tail("/work/tts/logs/backup_daemon_v3.log", 2)
     bk_alive = bool(sh("pgrep -f '[b]ackup_daemon.py'"))
     body = (f"<div>🕒 {npt} &nbsp;|&nbsp; ⏳ <b style='font-size:18px'>{cd}</b> to hard cutoff ({dl_npt})</div>"
@@ -116,10 +116,9 @@ def _card3():
     _g = {}
     exec(_COMMON_SRC, _g); H = _g["_sp5_helpers"]()
     tail, box, esc = H["tail"], H["box"], H["esc"]
-    rx_v = re.compile(r"Step (\d+) mel ([\d.]+) stft ([\d.]+) f0 ([\d.]+) D ([\d.]+) \| ([\d.]+)/(\d+) min")
+    rx_v = re.compile(r"Step (\d+) mel ([\d.]+) stft ([\d.]+) (?:f0|teach) ([\d.]+) D ([\d.]+) \| ([\d.]+)/(\d+) min")
     vrows = ""
-    for vch in (320, 144):
-        vlg = f"/work/tts/logs/voc{vch}.log"
+    for vlbl, vlg in (("voc320 (GTA)", "/work/tts/logs/voc320_gta.log"), ("voc144 (GTA)", "/work/tts/logs/voc144.log"), ("voc144_t1 (GTA)", "/work/tts/logs/voc144_t1.log")):
         vlast = None
         for ln in reversed(tail(vlg, 30)):
             m = rx_v.search(ln)
@@ -130,7 +129,7 @@ def _card3():
             vst, vmel, vstft, vf0, vd, vel, vbud = int(vlast[1]), float(vlast[2]), float(vlast[3]), float(vlast[4]), float(vlast[5]), float(vlast[6]), float(vlast[7])
             vdone = any("VOC_GT_DONE" in ln for ln in tail(vlg, 5))
             vstate = "✅ done" if vdone else ("🟢 running" if int(time.time() - os.path.getmtime(vlg)) < 120 else "⏸️ idle")
-            vrows += f"<tr><td><b>voc{vch} (Pro-v3 GAN)</b></td><td align=right>{vst}</td><td align=right>mel {vmel:.3f}</td><td align=right>stft {vstft:.3f}</td><td align=right>{vel:.1f}/{vbud:.0f} min</td><td align=right>{max(0.0, vbud-vel):.0f} min</td><td>{vstate}</td></tr>"
+            vrows += f"<tr><td><b>{vlbl}</b></td><td align=right>{vst}</td><td align=right>mel {vmel:.3f}</td><td align=right>stft {vstft:.3f}</td><td align=right>{vel:.1f}/{vbud:.0f} min</td><td align=right>{max(0.0, vbud-vel):.0f} min</td><td>{vstate}</td></tr>"
     rx = re.compile(r"Step (\d+) \| ([\d.]+) it/s \| mel ([\d.]+).*?\| ([\d.]+)/(\d+) min")
     rows = ""
     for tier in ("t30", "t15", "t10", "t5", "t1"):
