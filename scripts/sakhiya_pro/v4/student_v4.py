@@ -35,7 +35,7 @@ TIERS = {
         tier='micro', arch='sakhiya_am',
         d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7, h_dur=96,
         voc_ch=144, steps=1,
-        r_enc=88, r_voc_k7=None, r_voc_k11=54, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=88, r_voc_k7=None, r_voc_k11=None, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     'pico': dict(
         tier='pico', arch='sakhiya_pico',
@@ -286,8 +286,6 @@ class StudentV4(nn.Module):
                     r_vel_ff=c['r_vel_ff'],
                 )
                 self.to(dev)
-                if hasattr(self.am, 'fold_time_embeddings'):
-                    self.am.fold_time_embeddings()
                 snap_f0_int8(self.voc)
                 snap_am_int8(self.am)
                 print(f'[StudentV4] Warm-loaded {self.tier} from converged {v3_ck_p} (step={S3.get("step")})', flush=True)
@@ -336,8 +334,6 @@ class StudentV4(nn.Module):
             r_vel_ff=c['r_vel_ff'],
         )
         self.to(dev)
-        if hasattr(self.am, 'fold_time_embeddings'):
-            self.am.fold_time_embeddings()
         snap_f0_int8(self.voc)
         snap_am_int8(self.am)
         return self

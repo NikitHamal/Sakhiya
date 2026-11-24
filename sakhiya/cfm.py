@@ -105,9 +105,10 @@ class Block(nn.Module):
     def __init__(s, d, c, k=7, ff=3):
         super().__init__(); s.dw = nn.Conv1d(d, d, k, padding=k // 2, groups=d); s.n = nn.GroupNorm(1, d)
         s.p1 = nn.Conv1d(d, d * ff, 1); s.p2 = nn.Conv1d(d * ff, d, 1); s.film = nn.Linear(c, 2 * d)
+        s.film_const = nn.Parameter(torch.zeros(1, 2 * d, 1), requires_grad=False)
 
     def forward(s, x, c, m):
-        sc, sh = s.film(c)[:, :, None].chunk(2, 1)
+        sc, sh = (s.film_const.to(x.dtype) if isinstance(s.film, nn.Identity) else s.film(c)[:, :, None]).chunk(2, 1)
         y = s.n(s.dw(x * m)) * (1 + sc) + sh
         return x + s.p2(F.gelu(s.p1(y))) * m
 
@@ -120,7 +121,8 @@ class Velocity(nn.Module):
         nn.init.zeros_(s.out.weight); nn.init.zeros_(s.out.bias)
 
     def forward(s, x, t, mu, g, m):
-        c = s.tm(temb(t, s.c).to(x.dtype)) + g; h = s.inp(torch.cat([x, mu], 1)) * m
+        c = g if isinstance(s.tm, nn.Identity) else (s.tm(temb(t, s.c).to(x.dtype)) + g)
+        h = s.inp(torch.cat([x, mu], 1)) * m
         for b in s.blocks: h = b(h, c, m)
         return s.out(h) * m
 
@@ -129,11 +131,13 @@ class DurFlow(nn.Module):
     """Sakhiya-v3 Deterministic Unrolled Conformer/Conv1D Duration Predictor (100% train=inference parity with 4-step ONNX unroll)."""
     def __init__(s, d=192, h=128):
         super().__init__(); s.i = nn.Conv1d(d + 1, h, 1); s.t = nn.Linear(d, h)
+        s.t_steps = nn.Parameter(torch.zeros(4, h, 1), requires_grad=False)
         s.cv = nn.ModuleList(nn.Conv1d(h, h, 3, padding=1) for _ in range(4)); s.o = nn.Conv1d(h, 1, 1); s.d = d
 
-    def forward(s, x, t, hs, m):                              # x [B,L] ; hs [B,L,d]
+    def forward(s, x, t, hs, m, step_idx: int = 0):           # x [B,L] ; hs [B,L,d]
         hs_in = 0.85 * hs.detach() + 0.15 * hs
-        z = s.i(torch.cat([hs_in.transpose(1, 2), x[:, None].to(hs.dtype)], 1)) + s.t(temb(t, s.d).to(hs.dtype))[:, :, None]
+        t_add = s.t_steps[step_idx : step_idx + 1].to(hs.dtype) if isinstance(s.t, nn.Identity) else s.t(temb(t, s.d).to(hs.dtype))[:, :, None]
+        z = s.i(torch.cat([hs_in.transpose(1, 2), x[:, None].to(hs.dtype)], 1)) + t_add
         for c in s.cv: z = z + F.gelu(c(z * m[:, None]))
         return s.o(z)[:, 0] * m
 
@@ -144,7 +148,7 @@ class DurFlow(nn.Module):
         x = (torch.sin(pos * 1.6180339 + ids.float() * 0.37) * 0.20).to(hs.dtype)
         for i in range(4):
             t = torch.full((B,), i / 4.0, device=ids.device, dtype=torch.float32)
-            x = x + s.forward(x, t, hs, m) * 0.25
+            x = x + s.forward(x, t, hs, m, i) * 0.25
         return x * m
 
 
@@ -179,6 +183,30 @@ class SakhiyaAM(nn.Module):
         s.dur = DurFlow(d=d_enc, h=h_dur)
         s.register_buffer("stats", torch.tensor([-5.0, 2.5]))     # global log-mel mean / std (set by trainer)
         s.ctc_rec = None                                          # optional frozen MelCTCAligner for Pronunciation-CTC loss
+
+    @torch.no_grad()
+    def fold_time_embeddings(s):
+        """Fold constant 1-step velocity FiLM conditioning (t=0, spk=0, lang=0, studio=1, sty=0) and 4-step duration time embeddings."""
+        dev = next(s.parameters()).device
+        g0 = s.enc.spk.weight[0:1] + s.enc.lang.weight[0:1] + s.enc.studio.weight[1:2] + s.enc.sty.weight[0:1]
+        if not isinstance(s.vel.tm, nn.Identity):
+            tb0 = temb(torch.zeros((1,), device=dev), s.vel.c)
+            c0 = s.vel.tm(tb0) + g0
+            for b in s.vel.blocks:
+                if not isinstance(b.film, nn.Identity):
+                    if float(b.film_const.abs().max()) < 1e-7:
+                        b.film_const.data.copy_(b.film(c0)[:, :, None])
+                    b.film = nn.Identity()
+            s.vel.tm = nn.Identity()
+        else:
+            for b in s.vel.blocks:
+                b.film = nn.Identity()
+        if not isinstance(s.dur.t, nn.Identity):
+            if float(s.dur.t_steps.abs().max()) < 1e-7:
+                ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
+                s.dur.t_steps.data.copy_(s.dur.t(temb(ts, s.dur.d))[:, :, None])
+            s.dur.t = nn.Identity()
+        return s
 
     def load_state_dict(s, state_dict, strict=False, assign=False):
         res = super().load_state_dict(state_dict, strict=False, assign=assign)
