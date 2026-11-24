@@ -49,9 +49,9 @@ class ConvNeXtParallelBranch(nn.Module):
         super().__init__()
         self.dw = nn.Conv1d(dim, dim, kernel_size, padding=kernel_size // 2, groups=dim)
         self.norm = nn.GroupNorm(1, dim)
-        self.pw1 = nn.Conv1d(dim, dim * 2, 1)
+        self.pw1 = nn.Conv1d(dim, dim, 1)
         self.act = nn.GELU()
-        self.pw2 = nn.Conv1d(dim * 2, dim, 1)
+        self.pw2 = nn.Conv1d(dim, dim, 1)
         nn.init.zeros_(self.pw2.weight)
         nn.init.zeros_(self.pw2.bias)
 
@@ -76,10 +76,10 @@ class ResBlockAWP(nn.Module):
 
 
 class FullBandHarmonicExcitation(nn.Module):
-    """Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0))) + Noise Excitation, kept in FP16 (< 32 KB).
+    """Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0))) + Noise Excitation, kept in FP16 (< 24 KB).
     Takes continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T] directly from the AM (ZERO `f0_net` inside the vocoder!).
     """
-    def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 16):
+    def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 4):
         super().__init__()
         self.n_har_base = n_har_base
         self.n_har_upper = n_har_upper
