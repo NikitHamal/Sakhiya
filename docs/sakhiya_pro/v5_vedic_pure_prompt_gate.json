@@ -1,0 +1,86 @@
+{
+ "tag": "a4",
+ "agg": {
+  "end_slope": -2.863,
+  "rise_frac": 0.0,
+  "cer": 0.086,
+  "utmos": 2.994,
+  "hf_karkar": 0.002,
+  "spk_sim": 0.708,
+  "clips": 4,
+  "gate_pass": 3,
+  "metric_pass": 0,
+  "all_pass": 0
+ },
+ "rows": [
+  {
+   "id": "sa_om",
+   "gate_ok": false,
+   "rejects": [
+    "OM_COLLAPSED:0.28s"
+   ],
+   "metrics_fail": [
+    "cer",
+    "utmos"
+   ],
+   "hyp": "पूर्णमद पूर्णमिदम पूर्णात पूर्ण मुदच्यति पूर्णस्य पूर्णमादय पूर्णमेवावशिष्यति",
+   "end_slope": -1.599,
+   "rise_frac": 0.0,
+   "cer": 0.095,
+   "utmos": 2.433,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.7,
+   "clicks": 0
+  },
+  {
+   "id": "sa_rv",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer",
+    "utmos"
+   ],
+   "hyp": "अग्निमिडे पुरोहितम यज्नेस्य देवमृतुजम हो तारम रत्नधातमम",
+   "end_slope": -4.336,
+   "rise_frac": 0.0,
+   "cer": 0.136,
+   "utmos": 3.302,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.698,
+   "clicks": 0
+  },
+  {
+   "id": "sa_gita",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "utmos"
+   ],
+   "hyp": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सव मामका पाण्डवाशैव किमकुर्वत सन्जय",
+   "end_slope": -1.941,
+   "rise_frac": 0.0,
+   "cer": 0.034,
+   "utmos": 3.537,
+   "hf_karkar": 0.003,
+   "spk_sim": 0.742,
+   "clicks": 0
+  },
+  {
+   "id": "sa_gayatri",
+   "gate_ok": true,
+   "rejects": [],
+   "metrics_fail": [
+    "cer",
+    "utmos"
+   ],
+   "hyp": "म भुर्भुवह स्व तत्स वितुर्वरेण्यम भर्गो देवस्य धी महि धियो यो नह प्रचोदयात",
+   "end_slope": -3.575,
+   "rise_frac": 0.0,
+   "cer": 0.077,
+   "utmos": 2.702,
+   "hf_karkar": 0.001,
+   "spk_sim": 0.693,
+   "clicks": 0
+  }
+ ]
+}

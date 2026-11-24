@@ -824,3 +824,9 @@ BEST v3b_checkpoint-600 /work/sp/exp/v3b/checkpoint-600
 6
 20:13:12
 ```
+
+## Session 72 - v5 recovery (branch sakhiya-v5-recovery)
+* Root cause of v4 Vedic regression (scripts/sakhiya_pro/v4/vedic_v4.py): anchors were `anchor_v4[:3.2s]` + `chant[:5.8s]` hard slices while `ref_text` held the FULL verse, so OmniVoice completed the missing tail (leaked "प्रचोदयात्", "...सञ्जय"); Shanti reused the Gayatri anchor; `ओऽऽऽम्` stretch + post-hoc Om splice collapsed/looped ॐ.
+* New `scripts/leak_loop_gate.py` (leak / loop / splice / gasp / clicks / Om<0.45 s), unit-tested; on the 8 stored v4 Vedic clips it rejects sa_om (LEAK प्रचोदयात) and sa_rv (LOOP अग्नि अग्नि). ASR is a Nepali CTC, so Gayatri/Gita ॐ-collapse is only partially visible - Vedic gating is not yet complete.
+* v3b_checkpoint-400/200 weights are NOT recoverable (HF holds only eval wavs; `exp/v3b/latest` = step 600). Nepali v5 = v3b-600 + verbatim v4 anchor + de-karkar chain: 11/11 pack clips pass the leak/loop/splice/click gate, mean UTMOS 3.774 (< 3.90 bar), 2/11 meet every strict metric threshold. EP01: 33/33 gate pass, 0 clicks, -14.0 LUFS. Not promoted to main/registry.
+* Pure-prompt Vedic (full verbatim anchor, no hacks): zero leaks/loops/splices but sa_om ॐ collapses (0.28 s) and UTMOS ~3.0 -> needs the isolated Vedic LoRA (NOT trained this session). Micro/Pico distillation NOT started.
