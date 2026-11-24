@@ -23,7 +23,7 @@ from student_v4 import StudentV4, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
 import v4_pro_render as R4
 
 BAD_OPS = {'ConvInteger', 'MatMulInteger', 'DynamicQuantizeLinear', 'QLinearConv', 'QLinearMatMul'}
-SIZE_CAPS_MB = {'pico': 1.42, 't1': 1.42, 'micro': 4.50, 't5': 4.50, 't10': 9.50}
+SIZE_CAPS_MB = {'pico': 1.20, 't1': 1.20, 'micro': 4.50, 't5': 4.50, 't10': 9.50}
 
 
 class Wrap(torch.nn.Module):
@@ -100,7 +100,7 @@ def export_fp32(m, path):
         output_names=['wav'],
         dynamic_axes={'ids': {1: 'L'}, 'dur_scale': {0: 'D'}, 'pitch_shift': {0: 'P'}, 'wav': {1: 'N'}},
         opset_version=17,
-        do_constant_folding=False,
+        do_constant_folding=True,
     )
     try:
         torch.onnx.export(Wrap(m), args, path, dynamo=False, **kw)
@@ -111,9 +111,21 @@ def export_fp32(m, path):
     onnx.save(om, path)
 
 
-def quantize(src, dst, fp16_names=('voc.post', 'am.vel.out')):
-    """Weight-only per-channel INT8 QDQ with deduplication and selective FP16 protection."""
+def quantize(src, dst, fp16_names=('voc.post',)):
+    """Weight-only per-channel INT8 QDQ with Constant-to-initializer deduplication and selective FP16 protection."""
     m = onnx.load(src)
+    rem_nodes = []
+    for n in m.graph.node:
+        if n.op_type == 'Constant' and len(n.output) == 1:
+            val_attr = next((a for a in n.attribute if a.name == 'value'), None)
+            if val_attr is not None and val_attr.t.data_type == TensorProto.FLOAT:
+                arr_c = numpy_helper.to_array(val_attr.t)
+                if arr_c.size >= 64:
+                    m.graph.initializer.append(numpy_helper.from_array(arr_c, n.output[0]))
+                    continue
+        rem_nodes.append(n)
+    del m.graph.node[:]
+    m.graph.node.extend(rem_nodes)
     _dedup_initializers(m)
     use = {}
     for n in m.graph.node:
