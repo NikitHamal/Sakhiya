@@ -173,16 +173,21 @@ class SakhiyaONNX:
             if "dur_scale" in self.enc_in:
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
                 sv_sc = ((0.55 if has_vm else 0.48) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
-                ds_in = (dm_arr / float(k["rate"])).astype(np.float32)
-                ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+                if lang == "sa":
+                    ds_in = np.array([(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
+                    ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+                else:
+                    ds_in = np.array([1.0 / max(float(k.get("rate", 1.0)), 0.5)], dtype=np.float32)
+                    ps_in = np.array([float(k.get("pitch_shift", 0.0))], dtype=np.float32)
                 w = self.single.run(None, {
                     "ids": ids,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),
                     "dur_scale": ds_in,
                     "pitch_shift": ps_in,
                 })[0][0].astype(np.float32)
-                dur_est = np.maximum(np.round(ds_in * 6.0), 5).astype(int)
-                self.trace.append((ps_in, dur_est))
+                n_fr = max(len(w) // 256, ids.shape[1] * 5)
+                dur_est = np.maximum(np.round(dm_arr * (n_fr / max(float(np.sum(dm_arr)), 1.0))), 5).astype(int) if dm_arr.size else np.full(ids.shape[1], 6, dtype=int)
+                self.trace.append((trace_p, dur_est))
                 pk = float(np.max(np.abs(w))) if w.size else 0.0
                 if pk > 1e-4:
                     w = np.clip(w * (0.90 / pk), -1.0, 1.0)

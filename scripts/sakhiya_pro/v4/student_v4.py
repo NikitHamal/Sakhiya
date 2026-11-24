@@ -41,7 +41,7 @@ TIERS = {
         tier='pico', arch='sakhiya_pico',
         d_enc=96, L_enc=4, ff_enc=144, d_vel=112, nb_vel=5, h_dur=64,
         voc_ch=144, steps=1,
-        r_enc=52, r_voc_k7=46, r_voc_k11=28, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
+        r_enc=52, r_voc_k7=44, r_voc_k11=26, r_voc_1_k7=None, r_voc_1_k11=None, r_vel_ff=None,
     ),
     't10': dict(
         tier='t10', arch='sakhiya_am',
@@ -407,16 +407,23 @@ class StudentV4(nn.Module):
         # Protect sentence-final tokens and short Nepali function words from frame collapse
         is_tail = ((pos >= (L_f - 3.0)) & (ids > 6)).float()
         dur = torch.round(torch.maximum(dur_frames, is_tail * 5.0 + (1.0 - is_tail) * 1.0)).clamp(min=1.0, max=60.0)
-        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames) & light breathy visarga 'h'
-        id_o, id_m, id_h = SYM2ID['o'], SYM2ID['m'], SYM2ID['h']
+        # Resonant Pranava ॐ floor on Sanskrit utterances ('o' + 'm' >= 36 + 18 frames), light breathy visarga 'h', & Nepali hiatus ('आआफ्नो')
+        id_o, id_m, id_h, id_a, id_wb = SYM2ID['o'], SYM2ID['m'], SYM2ID['h'], SYM2ID['a'], SYM2ID['|']
         next_ids = torch.cat([ids[:, 1:], ids[:, -1:]], dim=1)
         prev_ids = torch.cat([ids[:, :1], ids[:, :-1]], dim=1)
+        next2_ids = torch.cat([ids[:, 2:], ids[:, -2:]], dim=1)
+        prev2_ids = torch.cat([ids[:, :2], ids[:, :-2]], dim=1)
         is_sa_f = is_sa.float()[:, None]
         is_om_o = ((ids == id_o) & (next_ids == id_m) & (prev_ids <= 6)).float() * is_sa_f
         is_om_m = ((ids == id_m) & (prev_ids == id_o)).float() * is_sa_f
         dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
         is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
+        is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()
+        is_hiatus_a1 = ((ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
+        is_hiatus_a2 = ((ids == id_a) & (prev_ids == id_wb) & (prev2_ids == id_a)).float()
+        dur = torch.maximum(dur, is_hiatus_a1 * 18.0 + is_hiatus_a2 * 18.0)
+        dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
 
         f0_hat = F.avg_pool1d(F.pad(self.am.enc.f0_pred(h).transpose(1, 2), (1, 1), mode='replicate'), 3, stride=1)[:, 0].clamp(-1.2, 1.2)
         p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.35 * ps_tok
