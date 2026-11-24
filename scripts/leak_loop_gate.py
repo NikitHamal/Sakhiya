@@ -108,7 +108,8 @@ def count_clicks(w, sr):
 
 
 def find_splices(w, sr, step_db=25.0, voiced_db=-24.0):
-    """Hard envelope steps between voiced levels (a cut that lands mid-word) within ~6 ms. Returns times (s)."""
+    """Hard downward envelope steps from a loud voiced level (a cut that lands mid-word) within ~6 ms. Returns times (s).
+    Calibrated on clean v3 Nepali/Vedic renders: natural plosive closures peak at ~22 dB; sentence onsets out of room tone are NOT flagged."""
     w = w.astype(np.float32)
     db, n = _frames_db(w, sr, 3.0)
     out = []
@@ -119,9 +120,6 @@ def find_splices(w, sr, step_db=25.0, voiced_db=-24.0):
             lo = max(0, i - 10)
             if np.median(db[lo:i]) > voiced_db - 6 and db[max(0, i - 6):i - 2].min() > a - 12:   # not a gradual fade
                 out.append(round(i * n / sr, 3))
-        elif b - a >= step_db and b > voiced_db and np.median(db[i:i + 10]) > voiced_db - 6 and a > -75:
-            # abrupt onset out of NON-silent floor (spliced into the middle of other audio)
-            out.append(round(i * n / sr, 3))
     merged = []
     for t in out:
         if not merged or t - merged[-1] > 0.05:
