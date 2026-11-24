@@ -50,18 +50,23 @@ else:
     gpu = gpu_raw
 npt = _sh("TZ=Asia/Kathmandu date '+%a %d %b %Y · %H:%M:%S NPT'")
 utc_now = datetime.datetime.now(datetime.timezone.utc)
-# 06:25 NPT on 24 Nov = 00:40 UTC (plus deadline_utc.txt if extended)
-cutoff_0625 = datetime.datetime(2026, 11, 24, 0, 40, tzinfo=datetime.timezone.utc)
-box_exp_0655 = datetime.datetime(2026, 11, 24, 1, 10, tzinfo=datetime.timezone.utc)
-dl_str = open('/work/sp/deadline_utc.txt').read().strip() if os.path.exists('/work/sp/deadline_utc.txt') else '2026-11-24T00:40:00'
-try:
-    dl_utc = datetime.datetime.fromisoformat(dl_str.rstrip('Z')).replace(tzinfo=datetime.timezone.utc)
-except Exception:
-    dl_utc = cutoff_0625
-target_stop = cutoff_0625 if utc_now < cutoff_0625 else dl_utc
-left_s = max(0.0, (target_stop - utc_now).total_seconds())
+pid1_et = _sh("ps -p 1 -o etimes=").strip()
+up_s = float(pid1_et) if pid1_et.isdigit() else 900.0
+box_start_utc = utc_now - datetime.timedelta(seconds=up_s)
+box_exp_utc = box_start_utc + datetime.timedelta(hours=12)
+cutoff_utc = box_exp_utc - datetime.timedelta(minutes=30)
+dl_str = cutoff_utc.strftime('%Y-%m-%dT%H:%M:%S')
+if os.path.exists('/work/sp/deadline_utc.txt'):
+    try:
+        cand_dl = datetime.datetime.fromisoformat(open('/work/sp/deadline_utc.txt').read().strip().rstrip('Z')).replace(tzinfo=datetime.timezone.utc)
+        if cand_dl > utc_now:
+            cutoff_utc = cand_dl
+            dl_str = cutoff_utc.strftime('%Y-%m-%dT%H:%M:%S')
+    except Exception:
+        pass
+left_s = max(0.0, (cutoff_utc - utc_now).total_seconds())
 lh, lm, ls_sec = int(left_s // 3600), int((left_s % 3600) // 60), int(left_s % 60)
-exp_s = max(0.0, (box_exp_0655 - utc_now).total_seconds())
+exp_s = max(0.0, (box_exp_utc - utc_now).total_seconds())
 eh, em = int(exp_s // 3600), int((exp_s % 3600) // 60)
 
 ram_info = _sh("free -h | awk '/Mem:/ {print $3 \" / \" $2}'")
