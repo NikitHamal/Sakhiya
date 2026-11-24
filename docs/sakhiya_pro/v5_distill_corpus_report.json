@@ -30,5 +30,6 @@
     "slr54_v13_nepal_vc": 13.1,
     "vagdhenu_vedic_vc": 1.51
   },
-  "elapsed_sec": 20.5
+  "elapsed_sec": 20.5,
+  "verified_single_voice_24k": true
 }
