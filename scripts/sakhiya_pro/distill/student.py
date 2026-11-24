@@ -82,6 +82,12 @@ def _calibrate_styles(am, pre_baked=False):
             am.enc.sty.weight[1].copy_(0.45 * w0 + 0.55 * w2)
             am.enc.sty.weight[3].copy_(0.60 * w0 + 0.40 * w2)
             am.enc.sty.weight[4].copy_(0.20 * w0 + 0.80 * w2)
+        if hasattr(am.enc, "emb") and am.enc.emb.weight.shape[0] > max(SYM2ID["ɽ"], SYM2ID["õ"]):
+            w_e = am.enc.emb.weight
+            id_l, id_r = SYM2ID["l"], SYM2ID["ɽ"]
+            w_e[id_r].copy_(0.60 * w_e[id_l] + 0.40 * w_e[id_r])
+            nas_d = 0.5 * (w_e[SYM2ID["ũ"]] - w_e[SYM2ID["u"]]) + 0.5 * (w_e[SYM2ID["ã"]] - w_e[SYM2ID["a"]])
+            w_e[SYM2ID["õ"]].copy_(0.25 * w_e[SYM2ID["õ"]] + 0.75 * (w_e[SYM2ID["o"]] + 1.0 * nas_d + 0.2 * (w_e[SYM2ID["ŋ"]] - w_e[SYM2ID["o"]])))
         w_l = am.enc.lang.weight
         if w_l.shape[0] > 4:
             w_l[4].copy_(0.94 * w_l[0] + 0.06 * w_l[4])
@@ -94,7 +100,7 @@ def snap_f0_int8(voc):
     with torch.no_grad():
         for idx in (0, 2):
             w = voc.src.f0_net[idx].weight
-            w.copy_(ste_int8_weight(w.float(), axis=0, enabled=True))
+            w.copy_(w.half().float())
         for p in voc.src.f0_net.parameters():
             p.requires_grad_(False)
 
@@ -251,20 +257,60 @@ class Student(nn.Module):
             self.voc.load_state_dict(vtmp.state_dict(), strict=True)
 
         self._apply_svd_structure()
-        if self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "t5_v3_init.pt")):
+        # For t10 and t5, prefer Pro-v3 distilled t10 AM (sim_ProV3 >= 0.80) over old V1 checkpoints
+        t10_v3_cands = [
+            os.path.join(ck_dir, "v3_t10_am.pt"),
+            "/work/sp/distill/prev_runs/t10/ema_latest.pt",
+        ]
+        t10_v3_p = next((p for p in t10_v3_cands if os.path.exists(p)), None)
+        if self.tier in ("t10", "t5") and t10_v3_p is not None:
+            try:
+                ck10 = torch.load(t10_v3_p, map_location=dev, weights_only=False)
+                sd10 = {k: v.float() for k, v in ck10.get("ema", ck10).items() if k.startswith("am.")}
+                if self.tier == "t10":
+                    self.load_state_dict(sd10, strict=False)
+                else:
+                    # Copy non-SVD AM weights directly and SVD-project enc convs from rank 104 -> rank 88
+                    own_sd = self.state_dict()
+                    for k, v in sd10.items():
+                        if k in own_sd and own_sd[k].shape == v.shape:
+                            own_sd[k].copy_(v)
+                    self.load_state_dict(own_sd, strict=False)
+                    with torch.no_grad():
+                        for li, l5 in enumerate(self.am.enc.layers):
+                            for attr in ("c1", "c2"):
+                                k0 = f"am.enc.layers.{li}.{attr}.0.weight"
+                                k1 = f"am.enc.layers.{li}.{attr}.1.weight"
+                                kb = f"am.enc.layers.{li}.{attr}.1.bias"
+                                if k0 in sd10 and k1 in sd10:
+                                    W_full = torch.einsum("or,rik->oik", sd10[k1][:, :, 0], sd10[k0])
+                                    Co, Ci, K = W_full.shape
+                                    r = int(self.r_enc or 88)
+                                    U, S_v, Vh = torch.linalg.svd(W_full.float().reshape(Co, Ci * K), full_matrices=False)
+                                    sq = torch.sqrt(S_v[:r])
+                                    seq5 = getattr(l5, attr)
+                                    seq5[0].weight.copy_((sq[:, None] * Vh[:r, :]).reshape(r, Ci, K))
+                                    seq5[1].weight.copy_((U[:, :r] * sq[None, :]).reshape(Co, r, 1))
+                                    if kb in sd10 and seq5[1].bias is not None:
+                                        seq5[1].bias.copy_(sd10[kb])
+            except Exception:
+                pass
+        elif self.tier == "t5" and os.path.exists(os.path.join(ck_dir, "t5_v3_init.pt")):
             try:
                 ck_p5 = torch.load(os.path.join(ck_dir, "t5_v3_init.pt"), map_location=dev, weights_only=False)
                 sd_p5 = {k: v.float() for k, v in ck_p5.get("ema", ck_p5).items() if k.startswith("am.")}
                 self.load_state_dict(sd_p5, strict=False)
             except Exception:
                 pass
-        if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "t1_am_pretrained.pt")):
-            try:
-                ck_p1 = torch.load(os.path.join(ck_dir, "t1_am_pretrained.pt"), map_location=dev, weights_only=False)
-                sd_p1 = {k: v.float() for k, v in ck_p1.get("ema", ck_p1).items() if k.startswith(("am.", "voc."))}
-                self.load_state_dict(sd_p1, strict=False)
-            except Exception:
-                pass
+        if self.tier == "t1":
+            t1_p = os.path.join(ck_dir, "v3_t1_am.pt") if os.path.exists(os.path.join(ck_dir, "v3_t1_am.pt")) else os.path.join(ck_dir, "t1_am_pretrained.pt")
+            if os.path.exists(t1_p):
+                try:
+                    ck_p1 = torch.load(t1_p, map_location=dev, weights_only=False)
+                    sd_p1 = {k: v.float() for k, v in ck_p1.get("ema", ck_p1).items() if k.startswith("am.")}
+                    self.load_state_dict(sd_p1, strict=False)
+                except Exception:
+                    pass
         # If pre-adapted SVD vocoder exists for t1, load it after _apply_svd_structure
         if self.tier == "t1" and os.path.exists(os.path.join(ck_dir, "v3_voc144_t1.pt")):
             try:
@@ -337,10 +383,13 @@ class Student(nn.Module):
         dur = torch.maximum(dur, is_om_o * 36.0 + is_om_m * 18.0)
         is_final_h = ((ids == id_h) & (next_ids <= 6)).float() * is_sa_f
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
-        is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb)).float()
-        is_hiatus_wb = ((ids == id_wb) & (prev_ids == id_a) & (next_ids == id_a)).float()
-        is_hiatus_a1 = ((ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
-        is_hiatus_a2 = ((ids == id_a) & (prev_ids == id_wb) & (prev2_ids == id_a)).float()
+        next3_ids = torch.cat([ids[:, 3:], ids[:, -3:]], dim=1)
+        prev3_ids = torch.cat([ids[:, :3], ids[:, :-3]], dim=1)
+        # Strict reduplicated hiatus detector: only fires on '| a | a...' (e.g. 'आआफ्नो'), never on normal word boundaries
+        is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb) & (next3_ids == id_a)).float()
+        is_hiatus_wb = ((prev2_ids == id_wb) & (prev_ids == id_a) & (ids == id_wb) & (next_ids == id_a)).float()
+        is_hiatus_a1 = ((prev_ids == id_wb) & (ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
+        is_hiatus_a2 = ((prev3_ids == id_wb) & (prev2_ids == id_a) & (prev_ids == id_wb) & (ids == id_a)).float()
         dur = torch.where(is_pre_hiatus_wb > 0.5, torch.full_like(dur, 12.0), dur)
         dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
         dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
@@ -360,7 +409,7 @@ class Student(nn.Module):
         dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
 
         f0_hat = F.avg_pool1d(F.pad(self.am.enc.f0_pred(h).transpose(1, 2), (1, 1), mode="replicate"), 3, stride=1)[:, 0].clamp(-1.2, 1.2)
-        p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.35 * ps_tok
+        p_out = (0.35 * f0_hat + 0.65 * p_arch) * sty_gain + 0.55 * ps_tok
 
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
@@ -369,9 +418,9 @@ class Student(nn.Module):
 
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
+        if self.steps == 1:
+            mu_y = 0.72 * mu_y + 0.28 * F.avg_pool1d(F.pad(mu_y, (1, 1), mode="replicate"), 3, stride=1)
         p_xe = torch.gather(p_out, 1, idx)
-        ps_fr = torch.gather(ps_tok, 1, idx)[:, None, :]
-        is_wb_fr = torch.gather(is_hiatus_wb, 1, idx)[:, None, :]
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=mu_y.device)
 
         if self.steps == 1:
@@ -388,7 +437,6 @@ class Student(nn.Module):
                 k1 = self.am.vel(xt, ti, mu_y, g, m_t)
                 k2 = self.am.vel(xt + 0.5 * dt * k1, ti + 0.5 * dt, mu_y, g, m_t)
                 xt = xt + dt * k2
-        xt = xt * (1.0 - 0.65 * is_wb_fr) + xt[:, :, -1:] * (0.65 * is_wb_fr)
 
         mel = xt * self.am.stats[1] + self.am.stats[0]
         p_zero = p_xe - p_xe.mean(dim=1, keepdim=True)
@@ -397,20 +445,13 @@ class Student(nn.Module):
         env = F.avg_pool1d(F.pad(mel.transpose(1, 2), (3, 3), mode="replicate"), 7, stride=1).transpose(1, 2)
         kb = torch.arange(100, device=mel.device, dtype=mel.dtype)
         wk = ((64.0 - kb) / 18.0).clamp(0.0, 1.0)[None, :, None]
-        comb_gain = 0.12 if self.steps == 1 else 0.08
+        comb_gain = 0.10 if self.steps == 1 else 0.08
         mel_w = env + (mel - env) * (1.0 + comb_gain * wk)
-        if self.arch == "sakhiya_pico":
-            mel_mu = mel_w.mean(dim=(1, 2), keepdim=True)
-            mel_w = (mel_w - mel_mu) * 1.04 + mel_mu - 0.04
-            env_f = F.avg_pool1d(F.pad(mel_w.transpose(1, 2), (2, 2), mode="replicate"), 5, stride=1).transpose(1, 2)
-            wf = ((72.0 - kb) / 24.0).clamp(0.0, 1.0)[None, :, None]
-            mel_w = mel_w + 0.14 * wf * (mel_w - env_f)
         st_shift = (p_sm[:, 0, :] * 1.45).clamp(-1.80, 1.80)
         mel_clean = torch.cat([mel_w[:, :98, :], mel_w[:, 97:98, :], mel_w[:, 97:98, :]], dim=1)
         tot_shift = F.avg_pool1d(F.pad((0.35 * st_shift[:, None, :]).clamp(-0.85, 0.85), (2, 2), mode="replicate"), 5, stride=1)
-        ps_sm = F.avg_pool1d(F.pad(ps_fr, (3, 3), mode="replicate"), 7, stride=1)
-        gamaka = 0.06 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
-        tot_shift = tot_shift + is_sa_f[:, :, None] * (0.85 * ps_sm + gamaka).clamp(-1.35, 1.35)
+        gamaka = 0.05 * torch.sin((2.0 * math.pi * 5.2 / (SR / HOP)) * t_arange[None, None, :]) * is_sa_f[:, :, None]
+        tot_shift = tot_shift + gamaka
 
         y, _, _, _, _ = self.voc_wav(mel_clean, shift_st=tot_shift)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)

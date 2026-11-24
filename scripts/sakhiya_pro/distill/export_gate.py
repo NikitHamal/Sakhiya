@@ -301,13 +301,45 @@ def main():
 
     os.makedirs(a.out + "/wav", exist_ok=True)
     import soundfile as sf
+    from sakhiya.onnx_tts import _declick_np, stitch, _segment
+    from sakhiya import chandas as _ch, g2p as _g2p, symbols as _S, mixed as _mixed
+
+    def _synth_clause(txt_c, lg_c):
+        if lg_c == "sa":
+            ci = _ch.compile_chandas(txt_c, bpm=75.0, tonic_hz=215.0)
+            ph, off, dm = ci["ph"], ci["off"], ci["dm"]
+            ph_exp, off_exp, dm_exp = [], [], []
+            for p_i, o_i, d_i in zip(ph, off, dm):
+                if p_i == "<om>":
+                    ph_exp.extend(["o", "m"]); off_exp.extend([o_i, o_i]); dm_exp.extend([d_i, d_i])
+                else:
+                    ph_exp.append(p_i); off_exp.append(o_i); dm_exp.append(d_i)
+            sid = [_S.SYM2ID.get(p_i, -1) for p_i in ph_exp]
+            ids_c = [i for i in sid if i >= 0]
+            dm_arr = [d_i for d_i, i in zip(dm_exp, sid) if i >= 0]
+            off_arr = [o_i for o_i, i in zip(off_exp, sid) if i >= 0]
+            sv_sc = 0.65 if ci.get("has_vedic_marks") else 0.52
+            ds_in = np.array([(0.75 + 0.25 * min(max(float(d_i), 0.85), 1.35)) / 0.90 for d_i in dm_arr], dtype=np.float32)
+            ps_in = np.array([float(o_i) * sv_sc for o_i in off_arr], dtype=np.float32)
+            w_c = s8.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
+        else:
+            ids_c = ids_of(txt_c, "ne")
+            w_c = run(s8, ids_c, 0).astype(np.float32)
+        if w_c.size > 256:
+            ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
+            w_c[:128] *= ramp
+            w_c[-128:] *= ramp[::-1]
+        return _declick_np(_declick_phase_safe(w_c))
+
     for e in ev:
-        w = run(s8, ids_of(e["text"], e["lang"]), 1 if e["lang"] == "sa" else 0).astype(np.float32)
-        w = _declick_phase_safe(w)
-        fn = min(int(0.01 * SR), len(w) // 4)
-        if fn > 0:
-            w[:fn] *= np.linspace(0, 1, fn, dtype=np.float32)
-            w[-fn:] *= np.linspace(1, 0, fn, dtype=np.float32)
+        if e["id"] == "mixed_owner":
+            wavs_m = [_synth_clause(seg_t, "sa" if seg_l == "sa" else "ne") for seg_l, seg_t in _mixed.route(e["text"])]
+            w = stitch(wavs_m, SR)
+        elif e["lang"] != "sa" and len(e["text"].split()) > 18:
+            segs_e = _segment(e["text"])
+            w = stitch([_synth_clause(sc_t, "ne") for sc_t in segs_e], SR) if len(segs_e) > 1 else _synth_clause(e["text"], "ne")
+        else:
+            w = _synth_clause(e["text"], e["lang"])
         sf.write(f"{a.out}/wav/{e['id']}.wav", w, SR)
 
     if not a.no_asr:
