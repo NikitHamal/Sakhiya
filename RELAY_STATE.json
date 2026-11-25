@@ -1,0 +1,41 @@
+{
+  "mission": "Sakhiya-News (Single-Style Studio Native Kathmandu Nepali News Flagship, 24 kHz 100-Band Full-Bandwidth)",
+  "leg1_box": "sb-ad64e87698f98ab5.sb.molab.run",
+  "leg1_cutoff_npt": "2026-11-26T01:35:00+05:45",
+  "hf_backup_repo": "NikitHamal/sakhiya-v1-train",
+  "hf_backup_prefix": "sakhiya_news_final",
+  "hf_backup_interval_min": 15,
+  "phase0_corpus": {
+    "status": "COMPLETED_AND_SYNCED",
+    "cache_dir": "/work/sp/sakhiya_news/cache_100mel",
+    "hf_path": "sakhiya_news_final/cache_100mel",
+    "total_hours": 16.13,
+    "human_hours": 13.65,
+    "human_pct": 84.6,
+    "prov3_hours": 2.48,
+    "prov3_pct": 15.4,
+    "old_v1_kept": 0,
+    "anchor_uid": "nep_6834_6786807069",
+    "anchor_snr_db": 44.0,
+    "mean_sim_anchor": 0.876,
+    "mean_sim_old_v1": 0.381,
+    "mean_margin_v1": 0.495,
+    "n_mels": 100,
+    "fmin": 0.0,
+    "fmax": 12000.0
+  },
+  "phase1_vocoder": {
+    "status": "IN_PROGRESS_HEALING_SVD_GATE",
+    "checkpoint": "/work/tts/ck/voc_100mel_best.pt",
+    "hf_path": "sakhiya_news_final/checkpoints/voc_100mel_best.pt",
+    "arch": "StudioVocoder100Mel (ConvNeXt-V2 GRN + Parallel Amp/AWP-iSTFT + MS-SB-CQT)"
+  },
+  "phase2_am": {
+    "status": "IN_PROGRESS_CONVERGENCE",
+    "checkpoint_last": "/work/tts/ck/am_last.pt",
+    "checkpoint_best": "/work/tts/ck/am_best.pt",
+    "hf_path": "sakhiya_news_final/checkpoints/am_last.pt",
+    "arch": "SakhiyaNewsFlagship (Single-Style RoPE + 5D Clause Cues + Layer-3 Engram + 4-Step Stochastic Flow Duration/Prosody + 10-Block iMF)"
+  },
+  "leg2_resume_script": "scripts/resume_sakhiya_news_leg2.sh"
+}
