@@ -1,5 +1,124 @@
 [
   {
+    "tier": "sakhiya_one",
+    "label": "Sakhiya-One Studio [8-blk / 2-step Hadamard-Monarch MeanFlow] (~8.4 MB INT8)",
+    "step": 2150,
+    "qat": true,
+    "int8_mb": 8.464,
+    "fp32_mb": 32.48,
+    "int8_vs_fp32_mel_corr": 1.0,
+    "rtf_1thread": 0.0507,
+    "utmos": 3.873,
+    "cer_ne": 0.059,
+    "cer_sa": 0.113,
+    "spk_sim": 0.8443,
+    "sim_ProV3": 0.8443,
+    "sim_OldV1": 0.406,
+    "margin_ProV3_OldV1": 0.4383,
+    "voiced_ltas_mcd_ratio": 0.4845,
+    "HF_LSD_4_10kHz_dB": 0.614,
+    "upper_band_HNR_anomaly_dB": 1.087,
+    "mid_vowel_shutters": 0,
+    "pitch_breaks": 0,
+    "sa_ctc_ll_gap": 0.0403,
+    "sa_gl_ratio": 2.0,
+    "sa_svara_corr": 0.78,
+    "stft_lsd_int8_fp32_dB": 0.0009,
+    "sim_ProV3_drop_int8": 0.0,
+    "clicks": 0,
+    "drops": 0,
+    "stutters": 0,
+    "layers": {
+      "layer1_timbre": {
+        "sim_ProV3": 0.8443,
+        "sim_OldV1": 0.406,
+        "margin_ProV3_OldV1": 0.4383,
+        "voiced_ltas_mcd_db": 3.004,
+        "voiced_ltas_mcd_ratio": 0.4845
+      },
+      "layer2_physics": {
+        "HF_LSD_4_10kHz_dB": 0.614,
+        "upper_band_HNR_anomaly_dB": 1.087,
+        "mid_vowel_shutters": 0,
+        "intra_voiced_pitch_breaks": 0,
+        "hf_impulse_clicks": 0
+      },
+      "layer3_pron_vedic": {
+        "ne_pcer": 0.059,
+        "ne_pcer_gap_vs_ProV3": 0.0,
+        "word_drop_count": 0,
+        "stutter_count": 0,
+        "sa_ctc_ll_gap_vs_ProV3": 0.0403,
+        "sa_moraic_guru_laghu_ratio": 2.0,
+        "sa_svara_f0_corr": 0.78
+      },
+      "layer4_int8_parity": {
+        "stft_lsd_int8_fp32_dB": 0.0009,
+        "sim_ProV3_fp32_minus_int8": 0.0,
+        "int8_vs_fp32_mel_corr": 1.0,
+        "lufs_target": -16.0
+      }
+    },
+    "by_style": {
+      "conversational": {
+        "n": 9,
+        "utmos": 3.865,
+        "cer": 0.058,
+        "spk_sim": 0.824,
+        "clicks": 0
+      },
+      "expressive": {
+        "n": 1,
+        "utmos": 3.505,
+        "cer": 0.082,
+        "spk_sim": 0.901,
+        "clicks": 0
+      },
+      "news": {
+        "n": 6,
+        "utmos": 3.846,
+        "cer": 0.064,
+        "spk_sim": 0.877,
+        "clicks": 0
+      },
+      "storytelling": {
+        "n": 3,
+        "utmos": 4.018,
+        "cer": 0.066,
+        "spk_sim": 0.889,
+        "clicks": 0
+      },
+      "vedic": {
+        "n": 4,
+        "utmos": 3.989,
+        "cer": 0.128,
+        "spk_sim": 0.764,
+        "clicks": 0
+      },
+      "vedic_chant": {
+        "n": 3,
+        "utmos": 3.787,
+        "cer": 0.103,
+        "spk_sim": 0.861,
+        "clicks": 0
+      },
+      "warm_soft": {
+        "n": 1,
+        "utmos": 3.838,
+        "cer": 0.023,
+        "spk_sim": 0.91,
+        "clicks": 0
+      }
+    },
+    "node_verify": {
+      "ok": true,
+      "nan_count": 0,
+      "rtf_1thread": 0.0495
+    },
+    "gate_pass": true,
+    "score": 2.9044
+  },
+  {
     "tier": "t30",
     "label": "Sakhiya-T30 (29.6 MB INT8 Distilled Student)",
     "step": 2200,

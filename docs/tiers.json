@@ -7,15 +7,15 @@
    "prec": "int8",
    "dir": "models_sakhiya_one/",
    "variant": "tiny",
-   "mb": 8.492,
-   "rtf": 0.0505,
-   "utmos": 3.88,
-   "ne_pcer": 0.048,
-   "sa_pcer": 0.085,
+   "mb": 8.464,
+   "rtf": 0.0507,
+   "utmos": 3.873,
+   "ne_pcer": 0.059,
+   "sa_pcer": 0.113,
    "ready": true,
    "desc": "Breakthrough 8-blk Walsh-Hadamard Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder · 100% Pro-v3 Voice",
-   "onnx_mb": 8.492,
-   "rtf_onnx": 0.0505
+   "onnx_mb": 8.464,
+   "rtf_onnx": 0.0507
   },
   {
    "id": "sakhiya_one_fast",
