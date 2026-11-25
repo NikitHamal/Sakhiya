@@ -929,6 +929,14 @@ def run_phase4_forensic_gate(ck_path: str):
             results[tier] = g
             s = g.get("summary", {})
             log(f"[Phase 4 Gate {tier}] pass={g.get('gate_pass')} MB={g.get('int8_mb')} sim_ProV3={s.get('sim_ProV3')} ΔV1={s.get('margin_ProV3_OldV1')} HF-LSD={s.get('HF_LSD_4_10kHz_dB')}dB CER={s.get('cer_ne')} UTMOS={s.get('utmos')} RTF={g.get('rtf_1thread')}")
+            if g.get("gate_pass"):
+                try:
+                    from ladder_daemon import promote_repo_and_hf
+                    log(f"[Phase 4 Promote] Promoting {tier} to GitHub Pages (docs/) & Hugging Face...")
+                    promote_repo_and_hf(tier, g, out_dir)
+                    log(f"[Phase 4 Promote] {tier} promoted successfully!")
+                except Exception as ex:
+                    log(f"[Phase 4 Promote] warn for {tier}: {ex}")
         else:
             log(f"[Phase 4 Gate {tier}] FAILED to write gate.json: {r.stderr[-600:]}")
         el_m = (time.time() - t0) / 60.0

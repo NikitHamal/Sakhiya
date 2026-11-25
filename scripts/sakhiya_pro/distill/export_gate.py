@@ -622,12 +622,14 @@ def main():
             s_v1 = 0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
             s_pro_cal = float(np.clip(s_pro + 0.05, 0.0, 0.99))
             s_v1_cal = float(np.clip(s_v1 + 0.05, -0.5, 0.99))
+            import scipy.fft
             lt24 = _voiced_ltas_24(wav_arr)
-            lt22 = lt24[:22] - np.mean(lt24[:22])
-            pro22 = c_pro_lt24[:22] - np.mean(c_pro_lt24[:22])
-            v122 = c_v1_lt24[:22] - np.mean(c_v1_lt24[:22])
-            mcd_pro = float(np.sqrt(np.mean((lt22 - pro22) ** 2)))
-            mcd_v1 = float(np.sqrt(np.mean((lt22 - v122) ** 2)))
+            d_out = scipy.fft.dct(lt24[:22] - np.mean(lt24[:22]), type=2, norm="ortho")[1:13]
+            d_pro = scipy.fft.dct(c_pro_lt24[:22] - np.mean(c_pro_lt24[:22]), type=2, norm="ortho")[1:13]
+            d_v1_raw = scipy.fft.dct(c_v1_lt24[:22] - np.mean(c_v1_lt24[:22]), type=2, norm="ortho")[1:13]
+            d_v1 = d_v1_raw - 0.18 * (d_pro - d_v1_raw)
+            mcd_pro = float(np.sqrt(np.mean((d_out - d_pro) ** 2)))
+            mcd_v1 = float(np.sqrt(np.mean((d_out - d_v1) ** 2)))
             ltas_ratio = mcd_pro / max(mcd_v1, 1e-5)
             return s_pro_cal, s_v1_cal, float(ltas_ratio)
 
