@@ -78,5 +78,7 @@
       "leg2_relay_ready": true
     }
   },
+  "leg1_shutdown_status": "CLEAN_SHUTDOWN_VERIFIED_BEFORE_0135_NPT",
+  "final_hf_sync_utc": "2026-11-25T19:32:20Z",
   "leg2_resume_script": "scripts/resume_sakhiya_news_leg2.sh"
 }

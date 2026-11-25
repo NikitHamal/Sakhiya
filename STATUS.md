@@ -37,8 +37,9 @@
 | **L4 · `UTMOS22` Sanity Floor** | `>= 3.85` (Leg-2) | `4.042` | **`3.812`** | `3.873` | `4.180` |
 | **Gate / Relay Verdict** | — | **PASS ✅ (Phase 1 Gate)** | **LEG-1 PREVIEW 🟢 (Leg-2 Relay Ready)** | HOLD ⚠️ (Honest Baseline) | Studio Anchor |
 
-- **Zero-Loss Leg-2 Relay Handoff (`RELAY_STATE.json`, `scripts/resume_sakhiya_news_leg2.sh`, `NikitHamal/sakhiya-v1-train/sakhiya_news_final/`)**:
-  - Synced `/work/sp/sakhiya_news/cache_100mel/`, `/work/tts/ck/voc_100mel_best.pt`, `/work/tts/ck/am_last.pt` (model + EMA + optimizer + scheduler + step), `eval/forensic_sakhiya_news_leg1.json`, and `RELAY_STATE.json` to Hugging Face so the upcoming 12-hour Blackwell box resumes Phase 2 -> Phase 3 Joint E2E Waveform Distillation -> Final Promotion in `< 3 min` with zero rework.
+- **Zero-Loss Leg-2 Relay Handoff & Clean Shutdown (`RELAY_STATE.json`, `scripts/resume_sakhiya_news_leg2.sh`, `NikitHamal/sakhiya-v1-train/sakhiya_news_final/`)**:
+  - Synced `/work/sp/sakhiya_news/cache_100mel/`, `/work/tts/ck/voc_100mel_best.pt`, `/work/tts/ck/am_last.pt` (model + EMA + optimizer + scheduler + step), `eval/forensic_sakhiya_news_leg1.json`, and `RELAY_STATE.json` to Hugging Face (`[19:32:20 UTC / 01:17 NPT] HF backup ok -> NikitHamal/sakhiya-v1-train/sakhiya_news_final`), stopped the backup daemon cleanly by exact PID (`48912`), verified `8/8` MoLab Marimo cells with `0` errors (`monitor/cells_pro5.py`), and verified `pytest -q tests/` + `node --check docs/*.js` well ahead of the `01:35 NPT` hard cutoff.
+  - On the upcoming 12-hour Blackwell box, run `bash scripts/resume_sakhiya_news_leg2.sh` to pull all cached 100-mel shards + checkpoints in `< 3 min`, resume Phase 2 AM to 100k steps, run `--joint_e2e` Phase 3 Joint End-to-End Waveform Distillation (`AM + 100-Mel MS-SB-CQT Vocoder + LSQ QAT`), and execute the Fixed 4-Layer Forensic Gate + final flagship promotion.
 
 ## Session 75 — `Sakhiya-One` (~8.31–8.46 MB INT8 ONNX) Breakthrough Flagship on `sb-ad64e87698f98ab5`: Laddered Walsh-Hadamard/Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder + 4-Layer Forensic Gate Promotion
 
