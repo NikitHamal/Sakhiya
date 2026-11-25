@@ -905,25 +905,35 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
     G = copy.deepcopy(ema_init).to(dev)
     ema = copy.deepcopy(G).eval()
 
-    # Stability Lock: freeze coupled_pros_flow & token embeddings so adversarial gradients never corrupt timing/pitch stability
+    # Reload clean Phase-1 Dual-Source Vocoder (0.578 dB HF_LSD, 0 clicks/shutters) before E2E polish
+    if os.path.exists("/work/tts/ck/voc_100mel_best.pt"):
+        G.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
+        ema.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
+
+    # Stability Lock: freeze coupled_pros_flow, f0_head, and vocoder phase/harmonic source so adversarial gradients
+    # NEVER cause F0 phase drift or pitch breaks, while unfreezing AM (enc + vel) and Vocoder amplitude/OLA-noise branches!
     e2e_params = []
     for n, p in G.named_parameters():
-        if n.endswith("had_rot.weight") or n.startswith(("coupled_pros_flow.", "enc.emb", "enc.spk_anchor_bias", "enc.post_anchor_bias", "enc.break_focus_head")):
+        if (
+            n.endswith("had_rot.weight")
+            or n.startswith(("coupled_pros_flow.", "f0_head.", "enc.emb", "enc.spk_anchor_bias", "enc.post_anchor_bias", "enc.break_focus_head"))
+            or n.startswith(("voc.src.", "voc.pha_branch.", "voc.pha_head.", "voc.ups.", "voc.pre."))
+        ):
             p.requires_grad_(False)
         else:
             p.requires_grad_(True)
             e2e_params.append(p)
 
     hooks = install_news_lsq_qat_hooks(G)
-    qat_start = int(e2e_steps * 0.35)
-    mid_check_step = max(100, e2e_steps // 2)
+    qat_start = int(e2e_steps * 0.25)
+    mid_check_step = max(50, e2e_steps // 2)
 
     D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
     D_mpd = MPDOnly().to(dev)
     D_band = LoHiBandStudioDiscriminator().to(dev)
 
-    oG = torch.optim.AdamW(e2e_params, lr=8.0e-6, betas=(0.8, 0.99), weight_decay=1e-4)
-    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=1.5e-5, betas=(0.8, 0.99))
+    oG = torch.optim.AdamW(e2e_params, lr=2.5e-6, betas=(0.8, 0.99), weight_decay=1e-4)
+    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=1.0e-5, betas=(0.8, 0.99))
 
     cc = torch.load("/work/tts/ck/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
     ctc = MelCTCAligner().to(dev).train()
@@ -1048,11 +1058,11 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
             mt_seg = torch.stack(s_t, dim=0)
             shr_seg = torch.stack(s_shr, dim=0)
 
+            # Strictly F0-synchronous E2E waveform supervision (shared f0_vt, uv_vt prevents cumulative harmonic phase drift!)
             with torch.no_grad():
                 f0_vt, uv_vt = G.f0_head(mt_seg)
                 y_vt, re_vt, im_vt, lmag_vt, _, _ = G.voc.forward_wav(mt_seg, f0_vt, uv_vt, shr_creak=shr_seg)
-            f0_vp, uv_vp = G.f0_head(mp_seg.detach())
-            y_vp, _, _, lmag_vp, cos_vp, sin_vp = G.voc.forward_wav(mp_seg, f0_vp, uv_vp, shr_creak=shr_seg)
+            y_vp, _, _, lmag_vp, cos_vp, sin_vp = G.voc.forward_wav(mp_seg, f0_vt, uv_vt, shr_creak=shr_seg)
 
             # Discriminator step strictly on genuine un-VC'd >=24 kHz studio slices (`xs_u`, first `len(xs_u)` items)
             n_adv = min(10, len(xs_u))
