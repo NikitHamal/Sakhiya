@@ -45,7 +45,7 @@ class WalshHadamardMonarchBlock(nn.Module):
     """Cactus-inspired ConvNeXt + Walsh-Hadamard Orthogonal Rotation + Monarch Block-Structured MLP.
     Uses 100% standard ONNX ops (Conv1d, Reshape, Transpose, Mul, Add, Gelu) -> zero custom ops, zero ConvInteger.
     """
-    def __init__(self, d: int = 240, c: int = 192, k: int = 7, ff_mult: int = 3, had_size: int = 16):
+    def __init__(self, d: int = 240, c: int = 192, k: int = 7, ff_mult: float = 3.0, had_size: int = 16):
         super().__init__()
         assert d % had_size == 0, f"d={d} must be divisible by had_size={had_size}"
         self.d = d
@@ -67,7 +67,7 @@ class WalshHadamardMonarchBlock(nn.Module):
         # Full-capacity FFN + Walsh-Hadamard rotated Monarch block-structured residual pathway
         self.ff_mult = ff_mult
         if ff_mult > 0:
-            h_ff = int(d * ff_mult)
+            h_ff = int(round(d * ff_mult))
             self.p1 = nn.Conv1d(d, h_ff, 1)
             self.p2 = nn.Conv1d(h_ff, d, 1)
         else:
@@ -194,6 +194,10 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
             WalshHadamardMonarchBlock(d=d, c=c, ff_mult=(0 if i >= 7 else 3))
             for i in range(nb)
         )
+        self.fast_blocks = nn.ModuleList(
+            WalshHadamardMonarchBlock(d=d, c=c, ff_mult=(0 if i >= 3 else 1.5))
+            for i in range(4)
+        )
         self.fast_adapter = nn.Sequential(
             nn.Conv1d(d, d, 7, padding=3, groups=d),
             nn.GroupNorm(1, d),
@@ -206,6 +210,31 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         self.step2_gate = nn.Parameter(torch.tensor(0.08))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
+
+    @torch.no_grad()
+    def init_fast_from_studio_blocks(self):
+        """Initialize the compact 4-block Fast tail (`fast_blocks`, ff_mult=1.5) from Studio `blocks[4..7]` via importance selection."""
+        if len(self.blocks) < 8:
+            return
+        for i in range(4):
+            src = self.blocks[4 + i]
+            dst = self.fast_blocks[i]
+            dst.dw.weight.copy_(src.dw.weight); dst.dw.bias.copy_(src.dw.bias)
+            dst.n.weight.copy_(src.n.weight); dst.n.bias.copy_(src.n.bias)
+            dst.film_const.copy_(src.film_const)
+            if not isinstance(src.film, nn.Identity) and not isinstance(dst.film, nn.Identity):
+                dst.film.weight.copy_(src.film.weight); dst.film.bias.copy_(src.film.bias)
+            dst.monarch_g1.weight.copy_(src.monarch_g1.weight); dst.monarch_g1.bias.copy_(src.monarch_g1.bias)
+            dst.monarch_g2.weight.copy_(src.monarch_g2.weight); dst.monarch_g2.bias.copy_(src.monarch_g2.bias)
+            dst.monarch_scale.copy_(src.monarch_scale)
+            if src.p1 is not None and dst.p1 is not None:
+                k_keep = dst.p1.weight.shape[0]
+                imp = src.p1.weight.data.float().norm(dim=(1, 2)) * src.p2.weight.data.float().norm(dim=(0, 2))
+                top_idx = torch.topk(imp, k=k_keep, largest=True).indices.sort().values
+                dst.p1.weight.copy_(src.p1.weight[top_idx])
+                dst.p1.bias.copy_(src.p1.bias[top_idx])
+                dst.p2.weight.copy_(src.p2.weight[:, top_idx, :])
+                dst.p2.bias.copy_(src.p2.bias)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, mu: torch.Tensor, g: torch.Tensor, m: torch.Tensor, prog: torch.Tensor = None, r: torch.Tensor = None, n_blocks: int = None) -> torch.Tensor:
         nb_run = self.nb if n_blocks is None else min(int(n_blocks), len(self.blocks))
@@ -222,6 +251,8 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         for i in range(nb_run):
             h = self.blocks[i](h, c, m)
         if nb_run <= 4:
+            for fb in self.fast_blocks:
+                h = fb(h, c, m)
             h = (h + self.fast_adapter(h * m)) * m
         return self.out(h) * m
 
@@ -240,6 +271,8 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         for i in range(min(4, len(self.blocks))):
             h = self.blocks[i](h, c, m)
         h_4 = h
+        for fb in self.fast_blocks:
+            h_4 = fb(h_4, c, m)
         h_4_bridged = (h_4 + self.fast_adapter(h_4 * m)) * m
         out_4 = self.out(h_4_bridged) * m
         for i in range(4, len(self.blocks)):
@@ -306,7 +339,7 @@ class SakhiyaOneAM(nn.Module):
         if not isinstance(self.vel.tm, nn.Identity):
             tb0 = temb(torch.zeros((1,), device=dev), self.vel.c)
             c0 = self.vel.tm(tb0) + g0
-            for b in self.vel.blocks:
+            for b in list(self.vel.blocks) + list(getattr(self.vel, "fast_blocks", [])):
                 if not isinstance(b.film, nn.Identity):
                     if b.film_const.abs().max().item() < 1e-6:
                         b.film_const.data.copy_(b.film(c0)[:, :, None])
@@ -315,7 +348,7 @@ class SakhiyaOneAM(nn.Module):
             self.vel.tm = nn.Identity()
             self.vel.rm = nn.Identity()
         else:
-            for b in self.vel.blocks:
+            for b in list(self.vel.blocks) + list(getattr(self.vel, "fast_blocks", [])):
                 b.film = nn.Identity()
                 b.film_const.requires_grad_(True)
             self.vel.rm = nn.Identity()
