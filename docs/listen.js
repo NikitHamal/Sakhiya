@@ -3,7 +3,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_one", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var WANT = ["sakhiya_news_leg1_preview", "sakhiya_one", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
   var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
@@ -45,10 +45,10 @@
     var revealed = false, curClipId = "ne_kathmandu";
     var baseClips = (by.sakhiya_one && by.sakhiya_one.clips) || (vs[0] && vs[0].clips) || [];
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-One Studio [8-blk · 8.464 MB INT8 ONNX]", metrics: "sim_ProV3=0.8443 · ΔV1=+0.4383 · LTAS=3.004dB · HF-LSD=0.614dB · UTMOS=3.873 · RTF=0.0507 · PASS ✅", tag: "sakhiya_one" },
-      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-Pro v3 Studio Teacher [2.4 GB bf16 Reference]", metrics: "sim_ProV3=0.9120 · ΔV1=+0.5280 · LTAS=1.820dB · HF-LSD=0.000dB · UTMOS=3.957 · GPU Master Anchor", tag: "sakhiya_pro_v3" },
-      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Fast [4-blk Slice · 8.313 MB INT8 ONNX]", metrics: "sim_ProV3=0.8388 · ΔV1=+0.4268 · LTAS=3.035dB · HF-LSD=0.617dB · UTMOS=3.783 · RTF=0.0484 · PASS ✅", tag: "sakhiya_one_fast" },
-      { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_ProV3=0.3910 · ΔV1=-0.5210 · LTAS=6.200dB · HF-LSD=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
+      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF + MS-SB-CQT INT8]", metrics: "95.4% True INT8 W · HF_LSD_4_12kHz=1.478dB · sim_Anchor=0.8364 · ΔV1=+0.4543 · gem=1.953x · F0_slope=-1.30st/s · RTF=0.060", tag: "sakhiya_news_leg1_preview" },
+      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-One Studio [80-Mel 8-blk · 8.464 MB INT8 ONNX Baseline]", metrics: "Re-scored Honest Gate: HF_LSD_4_12kHz=1.917dB · pCER=0.059 (+0.027 gap) · gem=1.587x · pre-snapped FP32 parity bug caught", tag: "sakhiya_one" },
+      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-Pro v3 Reference [2.4 GB bf16 Synthetic Anchor]", metrics: "sim_Anchor=0.9120 · ΔV1=+0.5280 · pCER=0.032 · GPU Reference", tag: "sakhiya_pro_v3" },
+      { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_Anchor=0.3910 · ΔV1=-0.5210 · HF_LSD_4_12kHz=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
     ];
     function renderBlindDesk() {
       if (!abMount || !baseClips.length) return;
