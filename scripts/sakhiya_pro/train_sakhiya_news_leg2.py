@@ -326,13 +326,17 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
 
         # Sibilant / high-frequency unvoiced turbulence flatness (4.5-10 kHz)
         S_mag = np.abs(librosa.stft(w_i8, n_fft=1024, hop_length=256))
-        uv_frames = uv_np[0, 0, :S_mag.shape[1]] < 0.45
+        T_sm = min(S_mag.shape[1], uv_np.shape[2])
+        S_mag = S_mag[:, :T_sm]
+        uv_frames = uv_np[0, 0, :T_sm] < 0.45
         sub_s = np.maximum(S_mag[sib_mask][:, uv_frames if np.any(uv_frames) else slice(None)], 1e-7)
         sib_flat_l.append(float(np.mean(np.exp(np.mean(np.log(sub_s), axis=0)) / (np.mean(sub_s, axis=0) + 1e-7))))
 
         # Phrase-final creak SHR
         S_2048 = np.abs(librosa.stft(w_i8, n_fft=2048, hop_length=256))
-        vo_i = np.where(uv_np[0, 0, :S_2048.shape[1]] >= 0.5)[0]
+        T_s2 = min(S_2048.shape[1], uv_np.shape[2])
+        S_2048 = S_2048[:, :T_s2]
+        vo_i = np.where(uv_np[0, 0, :T_s2] >= 0.5)[0]
         if len(vo_i) >= 10:
             ti = vo_i[-8:]
             df_2 = float(SR) / 2048.0
@@ -1638,6 +1642,7 @@ def main():
     ap.add_argument("--skip_phase1", action="store_true")
     ap.add_argument("--skip_phase2", action="store_true")
     ap.add_argument("--skip_phase3", action="store_true")
+    ap.add_argument("--skip_phase4", action="store_true")
     ap.add_argument("--resume_am", default="/work/tts/ck/am_last.pt")
     a = ap.parse_args()
 
@@ -1652,6 +1657,8 @@ def main():
     voc_ck_p = "/work/tts/ck/voc_100mel_best.pt"
     if not a.skip_phase1:
         train_phase1_leg2_vocoder(voc_cache, steps=a.voc_steps, dev="cuda")
+        if a.skip_phase2 and a.skip_phase3 and a.skip_phase4:
+            return
 
     if not a.skip_phase2:
         ema_am = train_phase2_leg2_am(am_cache, voc_ck_p, steps=a.am_steps, resume_path=a.resume_am, dev="cuda")
@@ -1664,8 +1671,9 @@ def main():
     if not a.skip_phase3:
         ema_am = train_phase3_leg2_unrolled_e2e(am_cache, ema_am, e2e_steps=a.e2e_steps, dev="cuda")
 
-    phase4_and_5_export_gate_and_ship(ema_am, dev="cuda")
-    log("SAKHIYA_NEWS_LEG2_ALL_DONE")
+    if not a.skip_phase4:
+        phase4_and_5_export_gate_and_ship(ema_am, dev="cuda")
+        log("SAKHIYA_NEWS_LEG2_ALL_DONE")
 
 
 if __name__ == "__main__":
