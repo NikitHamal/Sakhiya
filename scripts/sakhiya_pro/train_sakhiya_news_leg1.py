@@ -846,14 +846,14 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
 
 def _export_frame_sync_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str, i8_p: str):
     """Export `model.fp32.onnx` and `model.int8.onnx` with:
-    - Frame-synchronous encoder/duration/prosody alignment (`T_fp32 == T_int8`) so phoneme frame boundaries never shift by 1 frame,
-    - True un-snapped FP32 weights across the deep Monarch iMF blocks (`vel.blocks.4..9`) and 100-Mel ConvNeXt-V2 vocoder (`voc.*`) in `model.fp32.onnx`,
+    - Frame- and F0-synchronous AM trajectory (`T_fp32 == T_int8`, `f0_fp32 == f0_int8`) so harmonic phase never drifts over long sentences,
+    - True un-snapped FP32 weights across the entire 100-Mel ConvNeXt-V2 vocoder (`voc.*`, >4.8M weights) in `model.fp32.onnx`,
     - True per-channel `TensorProto.INT8` QDQ initializers (`>= 70%` of total weights) in `model.int8.onnx`.
     """
     m_f32 = copy.deepcopy(ema_model).cpu().eval()
     with torch.no_grad():
         for name, p in m_f32.named_parameters():
-            if name.startswith(("voc.", "vel.blocks.4", "vel.blocks.5", "vel.blocks.6", "vel.blocks.7", "vel.blocks.8", "vel.blocks.9")) or name.endswith("had_rot.weight"):
+            if name.startswith("voc.") or name.endswith("had_rot.weight"):
                 continue
             if any(name.startswith(s) or name.endswith(s) for s in FP16_ISOLATED_NEWS):
                 p.copy_(p.half().float())
