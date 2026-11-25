@@ -29,8 +29,8 @@ N_SYM = 64
 N_LANG = 2
 
 TIERS = {
-    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=8,  h_dur=96,  voc_ch=320, steps=2, n_engram=256, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
-    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=4,  h_dur=96,  voc_ch=320, steps=1, n_engram=256, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
+    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=8,  h_dur=96,  voc_ch=320, steps=2, n_engram=192, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
+    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=4,  h_dur=96,  voc_ch=320, steps=1, n_engram=192, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
     "t30": dict(tier="t30", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
     "t15": dict(tier="t15", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am",   voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
@@ -306,11 +306,8 @@ class Student(nn.Module):
             self._apply_svd_structure()
             self.to(dev)
 
-        if self.tier.startswith("sakhiya_one") and not os.path.exists(f"/work/sp/distill/runs/{self.tier}/ema_final.pt"):
-            with torch.no_grad():
-                self.dur_rate_bias.fill_(-0.04)
-                self.am.vel.out.weight.mul_(1.06)
-                self.am.vel.out.bias.mul_(1.06)
+        if hasattr(self.am, "fold_time_embeddings"):
+            self.am.fold_time_embeddings(steps=self.steps)
 
         self.to(dev)
         snap_am_int8(self.am)
@@ -426,7 +423,8 @@ class Student(nn.Module):
                 t_mid = torch.full((B,), 0.5, device=mu_y.device, dtype=torch.float32)
                 r_one = torch.ones((B,), device=mu_y.device, dtype=torch.float32)
                 v_mid = self.am.vel(x_mid, t_mid, mu_y, g, m_t, prog=prog_4d, r=r_one, n_blocks=self.cfg["nb_vel"])
-                xt = mu_y + 0.85 * v0 + 0.15 * v_mid
+                w2 = self.am.vel.step2_gate.clamp(0.0, 0.35)
+                xt = mu_y + (1.0 - w2) * v0 + w2 * v_mid
         elif self.steps == 1:
             t0 = torch.zeros((B,), device=mu_y.device, dtype=torch.float32)
             xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d)

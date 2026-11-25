@@ -185,13 +185,17 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         nn.init.zeros_(self.rm[2].weight); nn.init.zeros_(self.rm[2].bias)
         self.prog_proj = nn.Conv1d(4, d, 1)
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
-        self.blocks = nn.ModuleList(WalshHadamardMonarchBlock(d=d, c=c) for _ in range(nb))
+        self.blocks = nn.ModuleList(
+            WalshHadamardMonarchBlock(d=d, c=c, ff_mult=(1 if i >= 7 else 3))
+            for i in range(nb)
+        )
         if nb >= 8:
             nn.init.zeros_(self.blocks[-1].p2.weight)
             nn.init.zeros_(self.blocks[-1].p2.bias)
         self.fast_adapter = nn.Conv1d(d, d, 1)
         nn.init.eye_(self.fast_adapter.weight[:, :, 0])
         nn.init.zeros_(self.fast_adapter.bias)
+        self.step2_gate = nn.Parameter(torch.tensor(0.08))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
 
@@ -284,21 +288,27 @@ class SakhiyaOneAM(nn.Module):
     @torch.no_grad()
     def fold_time_embeddings(self, steps: int = 4):
         dev = next(self.parameters()).device
-        if int(steps) == 1:
-            g0 = self.enc.spk.weight[0:1] + self.enc.lang.weight[0:1] + self.enc.studio.weight[1:2] + self.enc.sty.weight[0:1]
-            if not isinstance(self.vel.tm, nn.Identity):
-                tb0 = temb(torch.zeros((1,), device=dev), self.vel.c)
-                c0 = self.vel.tm(tb0) + g0
-                for b in self.vel.blocks:
-                    if not isinstance(b.film, nn.Identity):
+        g0 = self.enc.spk.weight[0:1] + self.enc.lang.weight[0:1] + self.enc.studio.weight[1:2] + self.enc.sty.weight[0:1]
+        if not isinstance(self.vel.tm, nn.Identity):
+            tb0 = temb(torch.zeros((1,), device=dev), self.vel.c)
+            c0 = self.vel.tm(tb0) + g0
+            for b in self.vel.blocks:
+                if not isinstance(b.film, nn.Identity):
+                    if b.film_const.abs().max().item() < 1e-6:
                         b.film_const.data.copy_(b.film(c0)[:, :, None])
-                        b.film = nn.Identity()
-                    b.film_const.requires_grad_(True)
-                self.vel.tm = nn.Identity()
-                self.vel.rm = nn.Identity()
+                    b.film = nn.Identity()
+                b.film_const.requires_grad_(True)
+            self.vel.tm = nn.Identity()
+            self.vel.rm = nn.Identity()
+        else:
+            for b in self.vel.blocks:
+                b.film = nn.Identity()
+                b.film_const.requires_grad_(True)
+            self.vel.rm = nn.Identity()
         if not isinstance(self.dur.t, nn.Identity):
             ts = torch.tensor([0.0, 0.25, 0.50, 0.75], device=dev)
-            self.dur.t_steps.data.copy_(self.dur.t(temb(ts, self.dur.d))[:, :, None])
+            if self.dur.t_steps.abs().max().item() < 1e-6:
+                self.dur.t_steps.data.copy_(self.dur.t(temb(ts, self.dur.d))[:, :, None])
             self.dur.t = nn.Identity()
             self.dur.t_steps.requires_grad_(True)
         return self

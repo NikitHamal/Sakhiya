@@ -118,7 +118,7 @@ def load(ck):
 
 
 FP16_ISOLATED_NAMES = (
-    "voc.src", "voc.amp_head", "voc.pha_head", "voc.post",
+    "voc.src.proj4", "voc.src.proj16", "voc.amp_head", "voc.pha_head", "voc.post",
     "am.vel.out", "am.vel.prog_proj",
     "am.enc.emb", "am.enc.svara_emb", "am.enc.mora_emb", "am.enc.f0_pred", "am.enc.vuv_pred", "am.f0_head.net.4",
     "am.dur.o",
