@@ -206,7 +206,7 @@ class CoupledProsodyFlowHead(nn.Module):
             nn.SiLU(),
             nn.Conv1d(h_dim, h_dim, 5, padding=2),
             nn.SiLU(),
-            nn.Conv1d(h_dim, h_dim, 3, padding=1, dilation=2),
+            nn.Conv1d(h_dim, h_dim, 3, padding=2, dilation=2),
             nn.SiLU(),
             nn.Conv1d(h_dim, out_dim, 1),
         )
