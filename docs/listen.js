@@ -47,7 +47,7 @@
     var abSystems = [
       { blind: "Sample A (-16 LUFS)", real: "Sakhiya-One Studio [8-blk · 8.464 MB INT8 ONNX]", metrics: "sim_ProV3=0.8443 · ΔV1=+0.4383 · LTAS=3.004dB · HF-LSD=0.614dB · UTMOS=3.873 · RTF=0.0507 · PASS ✅", tag: "sakhiya_one" },
       { blind: "Sample B (-16 LUFS)", real: "Sakhiya-Pro v3 Studio Teacher [2.4 GB bf16 Reference]", metrics: "sim_ProV3=0.9120 · ΔV1=+0.5280 · LTAS=1.820dB · HF-LSD=0.000dB · UTMOS=3.957 · GPU Master Anchor", tag: "sakhiya_pro_v3" },
-      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Fast [4-blk Slice · 8.313 MB INT8 ONNX]", metrics: "sim_ProV3=0.8322 · ΔV1=+0.4130 · LTAS=3.041dB · HF-LSD=0.634dB · UTMOS=3.751 · RTF=0.0492 · PASS ✅", tag: "sakhiya_one_fast" },
+      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Fast [4-blk Slice · 8.313 MB INT8 ONNX]", metrics: "sim_ProV3=0.8388 · ΔV1=+0.4268 · LTAS=3.035dB · HF-LSD=0.617dB · UTMOS=3.783 · RTF=0.0484 · PASS ✅", tag: "sakhiya_one_fast" },
       { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_ProV3=0.3910 · ΔV1=-0.5210 · LTAS=6.200dB · HF-LSD=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
     ];
     function renderBlindDesk() {

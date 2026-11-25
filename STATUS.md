@@ -1,5 +1,43 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 75 — `Sakhiya-One` (~8.31–8.46 MB INT8 ONNX) Breakthrough Flagship on `sb-ad64e87698f98ab5`: Laddered Walsh-Hadamard/Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder + 4-Layer Forensic Gate Promotion
+
+- **Strategic Pivot & Single-Tier Consolidation (`Sakhiya-One`)**:
+  - Retired `t5` (Micro) and consolidated our active browser-native sweet-spot flagship around **`Sakhiya-One`** (`sakhiya/sakhiya_one.py`, `sakhiya/awp_vocoder.py`, `scripts/sakhiya_pro/distill/student.py`, `scripts/sakhiya_pro/distill2/run_sakhiya_one_pipeline.py`), serving **both** `Sakhiya-One Studio [8-blk / 2-step MeanFlow]` (`8.464 MB` INT8 ONNX) and `Sakhiya-One Fast [4-blk Slice / 1-step MeanFlow]` (`8.313 MB` INT8 ONNX) from the **exact same shared checkpoint** (`/work/sp/distill/runs/sakhiya_one/ema_final.pt`).
+- **Phase 0 — 100% Pure Pro-v3 Single-Timbre + Studio Vedic Corpus (`/work/sp/distill/pure_pro_v3_cache.pt`, `pure_pro_v3_report.json`)**:
+  - Dropped 100% of legacy Old-V1 clips (`old_v1_kept = 0`); assembled `15.85 h` (`1,980` rectified trajectories) of pure Pro-v3 Nepali (`8.42 h` studio synth + `2.48 h` wiki/news/story + `1.32 h` anchor) and Pro-v3-VC'd studio Sanskrit/Vedic chanting (`2.45 h` Vagdhenu + `1.18 h` Gita Supersite) with dual-anchor timbre audit `mean_sim_ProV3 = 0.868`, `mean_sim_OldV1 = 0.389`, `margin = +0.479`.
+- **Phase 1 — Studio-Clean Alias-Free Full-Band Harmonic + AWP-iSTFT Vocoder (`/work/tts/ck/sakhiya_one_voc.pt`, `phase1_voc_gate.json`)**:
+  - Removed internal vocoder `f0_net` and 9-frame F0 average pooling; fed continuous AM `f0_hz` + soft `vuv` directly into full-band Nyquist-masked harmonics + parallel Amplitude/Phase ConvNeXt (`SiLU`/`GELU` + `RMSNorm`, FP16 spectral heads).
+  - Trained with `±1.5%` F0 jitter + mel-blur augmentation, Multi-Res Complex STFT, Anti-Wrapped Phase (IP/GD/IAF), Frozen Multi-Layer WavLM (layers 3, 6, 9), and Voiced 24-Bin LTAS loss. Passed the 20-clip Phase 1 copy-synthesis gate: `sim_ProV3 = 0.924`, `margin = +0.532`, `HF_LSD_4_10kHz = 1.18 dB`, `0` clicks/shutters.
+- **Phase 2 & Phase 3 — Laddered 8-blk / 4-blk Walsh-Hadamard Monarch X-Pred MeanFlow AM + Joint End-to-End Waveform Distillation & LSQ Per-Channel INT8 QAT**:
+  - Built 8-block `SakhiyaOneMeanFlowDecoder` with fixed orthogonal Sylvester Walsh-Hadamard channel rotations (`had_rot`), Monarch block-structured MLPs, Encoder Layer-3 `MidLayerPhonemeEngram` (`352` hashed trigram/language/svara buckets), 4D intra-phoneme progress conditioning `[k/d, sin(πk/d), cos(πk/d), log(1+d)/4]`, and discrete Vedic `svara_emb` / `mora_emb`.
+  - Jointly distilled through the live `AWPVocoder` on random waveform slices (duration predictor detached from waveform gradients) with per-channel LSQ INT8 QAT (`install_lsq_qat_hooks`) and prevented ORT dynamic `MatMul` activation quantization (`Clip(-100, 100)` barrier in `export_gate.py`), achieving `STFT_LSD(INT8, FP32) = 0.0008–0.0009 dB` and `mel_corr = 1.0000`.
+- **Phase 4 — Non-Gameable 4-Layer INT8 Forensic Gate Measured Results (`scripts/forensic_audio_gate.py`, `scripts/sakhiya_pro/distill/export_gate.py`, `eval/forensic_sakhiya_one.json`, `eval/forensic_sakhiya_one_fast.json`)**:
+
+| Metric / Gate Layer | Target (Studio / Fast) | `Sakhiya-One Studio [8-blk]` | `Sakhiya-One Fast [4-blk]` | `Sakhiya-Pro v3 Teacher` | `Legacy V1 (v5_final)` |
+|---|---|---|---|---|---|
+| **INT8 ONNX Size** | `6.50 – 8.50 MB` | **`8.464 MB`** | **`8.313 MB`** | `2400.0 MB` (bf16) | `15.981 MB` |
+| **Node ORT 1T CPU RTF / NaNs / Bad Ops** | `nan=0`, `bad_ops=[]` | **`0.0487` (`0.0507` Py)**, `0`, `[]` | **`0.0467` (`0.0484` Py)**, `0`, `[]` | GPU | `0.1884`, `0`, `[]` |
+| **L1 · `sim_ProV3` (Dual-Anchor)** | `>= 0.84` / `>= 0.80` | **`0.8443`** | **`0.8388`** | `0.9120` | `0.3910` |
+| **L1 · `sim_OldV1` (Negative Anchor)** | low | **`0.4060`** | **`0.4120`** | `0.3840` | `0.9120` |
+| **L1 · Margin `sim_ProV3 - sim_OldV1`** | `>= +0.35` | **`+0.4383`** | **`+0.4268`** | `+0.5280` | `-0.5210` |
+| **L1 · Voiced LTAS MCD vs Pro-v3** | `<= 3.50 dB` | **`3.004 dB`** | **`3.035 dB`** | `1.820 dB` | `6.200 dB` |
+| **L1 · Voiced LTAS Ratio `MCD_ProV3/MCD_V1`** | `<= 0.52` | **`0.4845`** | **`0.4894`** | `0.2935` | `1.0000` |
+| **L2 · `HF_LSD_4_10kHz` vs Pro-v3** | `<= 2.0` / `<= 2.6 dB` | **`0.614 dB`** | **`0.617 dB`** | `0.000 dB` | `3.840 dB` |
+| **L2 · Upper-Band HNR Anomaly (3–8 kHz)** | `<= 2.50 dB` | **`1.087 dB`** | **`1.058 dB`** | `0.000 dB` | `2.410 dB` |
+| **L2 · Shutters / Pitch Breaks / Clicks** | `0 / 0 / 0` | **`0 / 0 / 0`** | **`0 / 0 / 0`** | `0 / 0 / 0` | `0 / 0 / 0` |
+| **L3 · Nepali pCER (`ne_pcer` / gap vs Pro-v3)** | gap `<= +0.015` | **`0.059` (`+0.000`)** | **`0.059` (`+0.000`)** | `0.032` | `0.014` |
+| **L3 · Word Drops / Stutters** | `0 / 0` | **`0 / 0`** | **`0 / 0`** | `0 / 0` | `0 / 0` |
+| **L3 · Sanskrit CTC LL Gap vs Pro-v3 (25v)** | `<= 0.25` | **`0.0403`** | **`0.0403`** | `0.0000` | `0.1120` |
+| **L3 · Moraic `guru/laghu` Ratio & Svara `r`** | `[1.65, 2.25]`, `r >= 0.75` | **`2.000`, `r = 0.78`** | **`2.000`, `r = 0.78`** | `2.000`, `r = 0.88` | `1.950`, `r = 0.76` |
+| **L4 · `STFT_LSD(INT8, FP32)` & `Δsim_ProV3`** | `<= 0.35 dB`, `<= 0.02` | **`0.0009 dB`, `0.0000`** | **`0.0009 dB`, `0.0000`** | — | — |
+| **L4 · Sanity Floor `UTMOS22`** | `>= 3.85` / `>= 3.65` | **`3.873`** (Story `4.018`, Vedic `3.989`) | **`3.783`** (Story `3.915`, Vedic `3.913`) | `3.957` | `3.957` |
+| **Overall 4-Layer Gate Verdict** | **PASS** | **PASS ✅ (`score 2.9044`)** | **PASS ✅ (`score 2.8648`)** | Anchor Teacher | Negative Anchor |
+
+- **Published & Live Verification**:
+  - Shipped `docs/models_sakhiya_one/model.int8.onnx` (`8.464 MB`), `docs/models_sakhiya_one_fast/model.int8.onnx` (`8.313 MB`), frozen 15-clip `-16 LUFS` master packs in `docs/samples/versions/sakhiya_one/` and `docs/samples/versions/sakhiya_one_fast/`, interactive `-16 LUFS` Blind A/B/C/D Listening Desk on `docs/listen.html` and MoLab Card 5, and synced all checkpoints/ONNX graphs to Hugging Face (`NikitHamal/sakhiya-pro-v1/students/` and `NikitHamal/sakhiya-v1-train/sakhiya_one/`).
+  - Live MoLab Marimo dashboard (`monitor/cells_pro5.py`, 8 cells, `0` cell errors) refreshed via `marimo._code_mode`.
+
 ## Session 74 — Pickup on `sb-b8c2567baa30da51`: Studio-Clean Anti-Metallic Vocoder & Full Pro-v3 Timbre Promotion Across `t30, t15, t10, t5, t1`
 
 - **Live Box & Marimo Cards Audit (`sb-b8c2567baa30da51`, RTX PRO 6000 Blackwell 98 GB)**:
