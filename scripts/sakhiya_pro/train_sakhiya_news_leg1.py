@@ -280,30 +280,36 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
 def train_phase1_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, seg_frames: int = 40, dev="cuda"):
     """Phase 1: Train 24 kHz 100-Band StudioVocoder100Mel with MS-SB-CQT + MPD/MRD + Magnitude-Aware AWP + Multi-Layer WavLM-FM + LTAS."""
     t0 = time.time()
-    update_telem(1, 0, steps, "–", "Initializing 240-ch ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT Discriminator", 0.0, 12.0, "running 🟢")
+    update_telem(1, 0, steps, "–", "Initializing SVD-Compact ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT Discriminator", 0.0, 12.0, "running 🟢")
 
-    G = StudioVocoder100Mel(n_mels=100, ch=240).to(dev)
+    G = StudioVocoder100Mel(n_mels=100, ch=320, r_k7=56, r_k11=38).to(dev)
     if os.path.exists("/work/tts/ck/sakhiya_one_voc.pt"):
         G.init_from_clean_studio_filterbank("/work/tts/ck/sakhiya_one_voc.pt")
     elif os.path.exists("/work/tts/ck/v3_voc320_fused.pt"):
         G.init_from_clean_studio_filterbank("/work/tts/ck/v3_voc320_fused.pt")
 
-    # Fine-tune GRN parameters, parallel ConvNeXt-V2 Amplitude/Phase branches, and upper-band Nyquist harmonic projections
-    # while keeping the COLA iSTFT projection heads & base filterbank rock-solid
-    train_p = []
+    # Unfreeze SVD-compressed MRF filterbank + ConvNeXt-V2 GRN + Parallel Amplitude/Phase branches so SVD truncation heals 100%
+    body_p, branch_p = [], []
     for n, p in G.named_parameters():
-        if any(k in n for k in ("amp_branch.", "pha_branch.", "src.upper_", "grn.")):
-            p.requires_grad_(True)
-            train_p.append(p)
-        else:
+        if n.startswith(("src.proj",)):
             p.requires_grad_(False)
+        elif any(k in n for k in ("amp_branch.", "pha_branch.", "src.upper_", "grn.")):
+            p.requires_grad_(True)
+            branch_p.append(p)
+        else:
+            p.requires_grad_(True)
+            body_p.append(p)
+    train_p = body_p + branch_p
 
     G_ema = copy.deepcopy(G).eval()
     D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
     D_mpd = DiscV2().to(dev)
     wavlm_fm = FrozenMultiLayerWavLM(dev=dev)
 
-    oG = torch.optim.AdamW(train_p, lr=2.5e-5, betas=(0.8, 0.99), weight_decay=1e-3)
+    oG = torch.optim.AdamW([
+        {"params": body_p, "lr": 3.5e-5, "initial_lr": 3.5e-5, "weight_decay": 1e-4},
+        {"params": branch_p, "lr": 8.0e-5, "initial_lr": 8.0e-5, "weight_decay": 1e-3},
+    ], betas=(0.8, 0.99))
     oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()), lr=5.0e-5, betas=(0.8, 0.99), weight_decay=1e-4)
 
     c_anc_24 = voc_cache["c_anchor_ltas24"].to(dev)
@@ -318,7 +324,8 @@ def train_phase1_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, seg_f
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
         mult = 0.15 + 0.85 * 0.5 * (1.0 + math.cos(math.pi * prog))
-        oG.param_groups[0]["lr"] = 2.5e-5 * mult
+        for pg in oG.param_groups:
+            pg["lr"] = pg["initial_lr"] * mult
 
         xs = random.sample(tr, bs)
         wav_seg = torch.zeros((bs, seg_frames * HOP), device=dev)
@@ -348,10 +355,12 @@ def train_phase1_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, seg_f
             y_pred = y_pred[:, :T_w]
             wav_gt = wav_seg[:, :T_w]
 
-            # Update MS-SB-CQT + MPD/MRD Discriminators every 2 steps
-            if st % 2 == 0:
-                l_d_cqt = D_cqt.d_loss(wav_gt[:16], y_pred[:16].detach())
-                l_d_mpd = D_mpd.d_loss(wav_gt[:16, None], y_pred[:16, None].detach())
+            # Update MS-SB-CQT + MPD/MRD Discriminators every 4 steps
+            if st % 4 == 0:
+                l_d_cqt = D_cqt.d_loss(wav_gt[:12], y_pred[:12].detach())
+                or_m, _ = D_mpd(wav_gt[:12, None].detach())
+                of_m, _ = D_mpd(y_pred[:12, None].detach())
+                l_d_mpd = sum(torch.mean(F.relu(1.0 - r)) + torch.mean(F.relu(1.0 + f)) for r, f in zip(or_m, of_m)) / len(or_m)
                 l_d = l_d_cqt + 0.5 * l_d_mpd
                 oD.zero_grad(set_to_none=True)
                 l_d.backward()
@@ -371,8 +380,15 @@ def train_phase1_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, seg_f
             l_awp = magnitude_aware_awp_losses(cos_p[:, :, :T_64], sin_p[:, :, :T_64], spec_gt64.real[:, :, :T_64], spec_gt64.imag[:, :, :T_64])
 
             l_ltas = contrastive_ltas_timbre_loss(ym[:, :, :T_m], mel_seg[:, :, :T_m], c_anc_24, c_v1_24, vuv_seg[:, :, :T_m])
-            l_cqt_adv, l_cqt_fm = D_cqt.g_adv_and_fm_loss(wav_gt[:16], y_pred[:16])
-            l_mpd_adv, l_mpd_fm = D_mpd.g_loss(wav_gt[:12, None], y_pred[:12, None]) if st % 2 == 0 else (torch.zeros((), device=dev), torch.zeros((), device=dev))
+            l_cqt_adv, l_cqt_fm = D_cqt.g_adv_and_fm_loss(wav_gt[:12], y_pred[:12])
+            if st % 4 == 0:
+                with torch.no_grad():
+                    _, fmr_m = D_mpd(wav_gt[:10, None].detach())
+                of_g, fmf_m = D_mpd(y_pred[:10, None])
+                l_mpd_adv = sum(torch.mean(F.relu(1.0 - f)) for f in of_g) / len(of_g)
+                l_mpd_fm = sum(F.l1_loss(ff, fr.detach()) for sub_f, sub_r in zip(fmf_m, fmr_m) for ff, fr in zip(sub_f, sub_r)) / 40.0
+            else:
+                l_mpd_adv, l_mpd_fm = torch.zeros((), device=dev), torch.zeros((), device=dev)
             l_wlm = wavlm_fm(y_pred[:10], wav_gt[:10]) if st % 4 == 0 else torch.zeros((), device=dev)
 
             loss = (

@@ -356,8 +356,8 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 
 class SakhiyaNewsFlagship(nn.Module):
-    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.1 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
-    def __init__(self, d_enc: int = 160, L_enc: int = 6, ff_enc: int = 256, d_vel: int = 192, nb_vel: int = 10, voc_ch: int = 240, n_engram: int = 384, steps: int = 4, cfg_scale: float = 1.20):
+    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.3 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
+    def __init__(self, d_enc: int = 160, L_enc: int = 6, ff_enc: int = 256, d_vel: int = 192, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, steps: int = 4, cfg_scale: float = 1.20):
         super().__init__()
         self.steps = steps
         self.cfg_scale = cfg_scale
@@ -370,7 +370,7 @@ class SakhiyaNewsFlagship(nn.Module):
         self.pros_flow = StochasticFlowVarianceHead(d_in=d_enc, out_dim=2, h_dim=80)  # [f0_offset, energy_offset]
         self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc, ff_mult=2.5)
         self.f0_head = AMF0VUVHead100Mel(n_mels=100)
-        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch)
+        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch).apply_svd_compression()
 
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
         self.closure_slope = nn.Parameter(torch.tensor(-0.18))  # Grounded downward Kathmandu clause-final F0 closure
