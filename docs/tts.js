@@ -112,7 +112,7 @@ class SakhiyaWeb {
       return { mel, F, wav };
     }
     const i64 = v => new ort.Tensor("int64", BigInt64Array.of(BigInt(v)), [1]);
-    const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
+    const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|one|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
     const lock = !!(o.lock_voice ?? (this.cfg && this.cfg.lock_voice)), effLang = (isV2 && (String(o.lang) !== "sa" || lock)) ? "ne" : o.lang;
     const feeds = { ids: new ort.Tensor("int64", ids, [1, ids.length]), spk: i64(o.spk), lang: i64((this.cfg.lang2id || SK.F.lang2id)[effLang] ?? 0), pitch_shift: f32(o.pitch_shift), pitch_scale: f32(o.pitch_scale), energy_scale: f32(o.energy_scale) };
     if (this.sess.encoder.inputNames.includes("pitch_add")) {   // Sanskrit svara + laya melody: per-phone pitch offsets

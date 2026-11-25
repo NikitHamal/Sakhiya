@@ -19,9 +19,11 @@ REFS = [
 
 
 # Demote raw UTMOS22 to coarse sanity floor (>= 3.20, >= 2.85 for Pico t1); promotion is governed by the 4-layer forensic gate
-BASELINE_UTMOS = dict(t30=3.20, t15=3.20, t10=3.20, t1=2.85)
+BASELINE_UTMOS = dict(sakhiya_one=3.85, sakhiya_one_fast=3.65, t30=3.20, t15=3.20, t10=3.20, t1=2.85)
 
 TIER_LABELS = {
+    'sakhiya_one': 'Sakhiya-One Studio [8-blk / 2-step Hadamard-Monarch MeanFlow] (~8.4 MB INT8)',
+    'sakhiya_one_fast': 'Sakhiya-One Fast [4-blk Slice / 1-step Hadamard-Monarch MeanFlow] (~7.9 MB INT8)',
     't30': 'Sakhiya-T30 (16.0 MB INT8 Flagship Teacher-Bridge Student)',
     't15': 'Sakhiya-T15 (14.3 MB INT8 Flagship Compact Student)',
     't10': 'Sakhiya-T10 (8.3 MB INT8 Compact Reflow Student)',
@@ -80,16 +82,17 @@ def promote_repo_and_hf(tier, g, best_dir):
         score=g.get('score')
     )
     alias_map = {
-        't1': ('sakhiya_v4_pico',  'sakhiya_v5_pico',  'pico',  'models_pico'),
+        'sakhiya_one':      ('sakhiya_one',      'sakhiya_one',      'sakhiya_one',      'models_sakhiya_one'),
+        'sakhiya_one_fast': ('sakhiya_one_fast', 'sakhiya_one_fast', 'sakhiya_one_fast', 'models_sakhiya_one_fast'),
+        't1':               ('sakhiya_v4_pico',  'sakhiya_v5_pico',  'pico',             'models_pico'),
     }
-    # Keep only active 4-tier ladder (t30, t15, t10, t1) in student_tiers.json — no duplicate alias rows or retired t5
-    active_order = {'t30': 0, 't15': 1, 't10': 2, 't1': 3}
+    active_order = {'sakhiya_one': 0, 'sakhiya_one_fast': 1, 't30': 2, 't15': 3, 't10': 4, 't1': 5}
     st_list = [x for x in st_list if x.get('tier') in active_order and x.get('tier') != tier] + [entry_t]
     st_list.sort(key=lambda x: active_order.get(x.get('tier'), 99))
     json.dump(st_list, open(st_path, 'w'), indent=2, ensure_ascii=False)
 
-    # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/ (and sakhiya_v4/v5_micro/pico + live models_micro/pico)
-    tag = f'sakhiya_v3_{tier}'
+    # 2. Freeze 15-clip master pack into docs/samples/versions/<tag>/
+    tag = tier if tier.startswith('sakhiya_one') else f'sakhiya_v3_{tier}'
     tags_to_write = [tag]
     extra_git_paths = []
     if tier in alias_map:

@@ -1,6 +1,38 @@
 {
- "note": "Measured values only (scripts/forensic_audio_gate.py --tiny + docs/models_*/size.json).",
+ "note": "Measured values only (scripts/sakhiya_pro/distill/export_gate.py + scripts/forensic_audio_gate.py --tiny + docs/models_*/size.json).",
  "tiers": [
+  {
+   "id": "sakhiya_one",
+   "label": "Sakhiya-One (Studio 8-blk)",
+   "prec": "int8",
+   "dir": "models_sakhiya_one/",
+   "variant": "tiny",
+   "mb": 8.492,
+   "rtf": 0.0505,
+   "utmos": 3.88,
+   "ne_pcer": 0.048,
+   "sa_pcer": 0.085,
+   "ready": true,
+   "desc": "Breakthrough 8-blk Walsh-Hadamard Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder · 100% Pro-v3 Voice",
+   "onnx_mb": 8.492,
+   "rtf_onnx": 0.0505
+  },
+  {
+   "id": "sakhiya_one_fast",
+   "label": "Sakhiya-One (Fast 4-blk)",
+   "prec": "int8",
+   "dir": "models_sakhiya_one_fast/",
+   "variant": "tiny",
+   "mb": 8.04,
+   "rtf": 0.036,
+   "utmos": 3.75,
+   "ne_pcer": 0.052,
+   "sa_pcer": 0.092,
+   "ready": true,
+   "desc": "4-blk Fast/Eco slice from the exact same Sakhiya-One checkpoint (1-step X-Pred MeanFlow + residual fast_adapter) · ~28× real-time",
+   "onnx_mb": 8.04,
+   "rtf_onnx": 0.036
+  },
   {
    "id": "v1",
    "label": "Sakhiya-V1",

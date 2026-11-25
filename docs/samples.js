@@ -119,11 +119,13 @@
     try {
       REG = await (await fetch("samples/versions/registry.json?t=" + Date.now(), { cache: "no-cache" })).json();
       if (REG && REG.versions && REG.versions.length) {
+        const hasOne = REG.versions.some(v => v.tag === "sakhiya_one");
+        const hasProV3 = REG.versions.some(v => v.tag === "sakhiya_pro_v3");
         const hasProV4Vedic = REG.versions.some(v => v.tag === "sakhiya_pro_v4_vedic");
         const hasProV4 = REG.versions.some(v => v.tag === "sakhiya_pro_v4");
         const hasV15 = REG.versions.some(v => v.tag === "v15_v1_chandas");
-        verA = hasProV4 ? "sakhiya_pro_v4" : (hasV15 ? "v15_v1_chandas" : REG.versions[0].tag);
-        verB = hasProV4Vedic ? "sakhiya_pro_v4_vedic" : REG.versions[REG.versions.length - 1].tag;
+        verA = hasProV3 ? "sakhiya_pro_v3" : (hasProV4 ? "sakhiya_pro_v4" : (hasV15 ? "v15_v1_chandas" : REG.versions[0].tag));
+        verB = hasOne ? "sakhiya_one" : (hasProV4Vedic ? "sakhiya_pro_v4_vedic" : REG.versions[REG.versions.length - 1].tag);
         renderAllComparators();
       }
       const rep = await (await fetch("ggml_proof/diff_gate_report.json?t=" + Date.now(), { cache: "no-cache" })).json();
