@@ -1,0 +1,87 @@
+{
+  "tier": "sakhiya_one",
+  "model_dir": "docs/models_sakhiya_one",
+  "int8_mb": 8.464,
+  "fp32_mb": 32.48,
+  "int8_weight_pct": 99.19,
+  "distinct_from_fp32_graph": false,
+  "pre_snapped_fp32_bug_detected": true,
+  "rtf_1thread": 0.0507,
+  "utmos_15": 3.873,
+  "ne_pcer": 0.059,
+  "anchor_pcer": 0.032,
+  "ne_pcer_gap_vs_anchor": 0.027,
+  "HF_LSD_4_12kHz_dB": 1.917,
+  "geminate_singleton_ratio": 1.587,
+  "clause_final_f0_slope_st_per_sec": -1.352,
+  "breath_pause_naturalness": 0.855,
+  "word_drop_count": 0,
+  "stutter_count": 0,
+  "f0_shutters": 0,
+  "clicks": 0,
+  "sv_cos_ne_sa": 0.8443,
+  "sim_ProV3": 0.8443,
+  "sim_OldV1": 0.406,
+  "margin_ProV3_OldV1": 0.4383,
+  "layers": {
+    "layer1_timbre": {
+      "sim_ProV3": 0.8443,
+      "sim_OldV1": 0.406,
+      "margin_ProV3_OldV1": 0.4383,
+      "voiced_ltas_mcd_db": 3.004,
+      "voiced_ltas_mcd_ratio": 0.4845
+    },
+    "layer2_physics": {
+      "HF_LSD_4_10kHz_dB": 0.614,
+      "HF_LSD_4_12kHz_dB": 1.917,
+      "upper_band_HNR_anomaly_dB": 1.087,
+      "mid_vowel_shutters": 0,
+      "intra_voiced_pitch_breaks": 0,
+      "hf_impulse_clicks": 0
+    },
+    "layer3_pron_vedic": {
+      "ne_50_unseen_pcer": 0.059,
+      "ne_pcer": 0.059,
+      "anchor_pcer": 0.032,
+      "ne_pcer_gap_vs_anchor": 0.027,
+      "ne_pcer_gap_vs_ProV3": 0.027,
+      "word_drop_count": 0,
+      "stutter_count": 0,
+      "geminate_singleton_ratio": 1.587,
+      "clause_final_f0_slope_st_per_sec": -1.352,
+      "inter_clause_pause_ms": 126.7,
+      "breath_pause_naturalness": 0.855,
+      "sa_25_verses_evaluated": 25,
+      "sa_ctc_ll_gap_vs_ProV3": 0.0403,
+      "sa_moraic_guru_laghu_ratio_rule_target_fake": 2.0,
+      "sa_moraic_guru_laghu_ratio_aligned": 1.322,
+      "sa_svara_f0_corr": 0.78
+    },
+    "layer4_int8_parity": {
+      "int8_mb": 8.464,
+      "fp32_mb": 32.48,
+      "int8_weight_pct": 99.19,
+      "dequantize_linear_nodes": 132,
+      "distinct_from_fp32_graph": false,
+      "stft_lsd_int8_fp32_dB_pre_snapped": 0.0009,
+      "sim_ProV3_fp32_minus_int8": 0.0,
+      "int8_vs_fp32_mel_corr": 1.0,
+      "utmos22": 3.873,
+      "bad_ops": [],
+      "nan_count": 0,
+      "rtf_1thread": 0.0507,
+      "node_verify": {
+        "ok": true,
+        "nan_count": 0,
+        "rtf_1thread": 0.0492
+      },
+      "lufs_target": -16.0
+    }
+  },
+  "node_verify": {
+    "ok": true,
+    "nan_count": 0,
+    "rtf_1thread": 0.0492
+  },
+  "gate_pass": false
+}

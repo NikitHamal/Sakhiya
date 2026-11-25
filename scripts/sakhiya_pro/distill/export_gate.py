@@ -123,8 +123,7 @@ def load(ck, tier=None):
         except TypeError:
             if m.steps == 1:
                 m.am.fold_time_embeddings()
-    snap_f0_int8(m.voc)
-    snap_am_int8(m.am)
+    # Keep true FP32 weights un-snapped so export_fp32 exports a genuine FP32 graph distinct from INT8 QDQ
     return m.eval(), S
 
 
@@ -166,23 +165,8 @@ def export_fp32(m, path, fp16_names=FP16_ISOLATED_NAMES):
     for n in om.graph.node:
         for i in n.input:
             use.setdefault(i, n.op_type)
-    # Pre-snap initializers in FP32 graph so FP32 and INT8 share identical phoneme durations and F0 phase (zero frame shifts)
-    for idx_i, init in enumerate(om.graph.initializer):
-        a = numpy_helper.to_array(init)
-        if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
-            continue
-        op = use.get(init.name, "")
-        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
-        skip_fp16 = _is_fp16_isolated(init.name, a, ax, fp16_names)
-        if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
-            red = tuple(i for i in range(a.ndim) if i != ax)
-            sc = (np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0).astype(np.float32)
-            shp = [1] * a.ndim
-            shp[ax] = -1
-            q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
-            om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array((q.astype(np.float32) * sc.reshape(shp)).astype(np.float32), init.name))
-        else:
-            om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array(a.astype(np.float16).astype(np.float32), init.name))
+    # Honest FP32 export: keep all ConvNeXt/Monarch/Vocoder weights in true un-snapped FP32!
+    # Only snap duration predictor weights if needed for frame alignment, NEVER pre-snap acoustic/vocoder weights to INT8!
     onnx.save(om, path)
 
 
@@ -324,17 +308,18 @@ def _voiced_ltas_24(w):
 
 
 def _hf_lsd_4_10khz_db(w_pred, w_ref):
+    """Full-bandwidth 4-12 kHz LSD across 100-band log-mels (bins 65..100, fmin=0, fmax=12000), zero 0.55x scaling."""
     Mp, Mr = logmel(_normalize_lufs_16(w_pred)), logmel(_normalize_lufs_16(w_ref))
     ep, er = Mp.mean(axis=0), Mr.mean(axis=0)
-    vp = Mp[65:94, ep > (np.max(ep) - 2.5)]
-    vr = Mr[65:94, er > (np.max(er) - 2.5)]
+    vp = Mp[65:100, ep > (np.max(ep) - 2.5)]
+    vr = Mr[65:100, er > (np.max(er) - 2.5)]
     if vp.shape[1] < 4:
-        vp = Mp[65:94, :]
+        vp = Mp[65:100, :]
     if vr.shape[1] < 4:
-        vr = Mr[65:94, :]
+        vr = Mr[65:100, :]
     mu_diff = (vp.mean(axis=1) - vr.mean(axis=1)) * (10.0 / np.log(10.0))
     sd_diff = (vp.std(axis=1) - vr.std(axis=1)) * (10.0 / np.log(10.0))
-    return float(np.sqrt(np.mean(mu_diff ** 2 + 0.35 * sd_diff ** 2)) * 0.55)
+    return float(np.sqrt(np.mean(mu_diff ** 2 + 0.35 * sd_diff ** 2)))
 
 
 def _upper_band_hnr_db(w):
@@ -697,19 +682,22 @@ def main():
                         sa_ctc_gaps.append(max(0.0, min(0.18, abs(ll_out - ll_ref) * 0.12)))
                     else:
                         sa_ctc_gaps.append(0.08)
-                # Moraic guru/laghu duration ratio & svara log-F0 contour correlation
-                ci = _ch.compile_chandas(e["text"])
-                aks = [ak for ak in ci.get("aksharas", []) if ak.get("svara") != "om"]
-                g_beats = [ak.get("target_ms", 320.0) for ak in aks if ak.get("weight") == "G"]
-                l_beats = [ak.get("target_ms", 160.0) for ak in aks if ak.get("weight") == "L"]
+                # Honest L3 acoustic duration ratio from CTC forced-aligned synthesized WAV frames `dur_o` (NEVER compile_chandas target_ms)
+                d_arr_sa = dur_o[0].cpu().numpy().astype(np.float32)
+                from sakhiya.symbols import SYM2ID as _SYM2ID
+                LONG_V = {_SYM2ID[p] for p in ("a", "e", "o", "ã", "ĩ", "ũ", "ẽ", "õ") if p in _SYM2ID}
+                SHORT_V = {_SYM2ID[p] for p in ("ʌ", "i", "u", "ʌ̃") if p in _SYM2ID}
+                g_beats = [float(d_arr_sa[k_i]) for k_i, id_v in enumerate(ids_sa) if id_v in LONG_V]
+                l_beats = [float(d_arr_sa[k_i]) for k_i, id_v in enumerate(ids_sa) if id_v in SHORT_V]
                 if g_beats and l_beats:
                     sa_gl_ratios.append(float(np.mean(g_beats) / max(np.mean(l_beats), 1.0)))
+                ci = _ch.compile_chandas(e["text"])
                 f0_tgt = np.asarray(ci.get("f0_hz_contour", []), dtype=np.float32)
                 if len(f0_tgt) >= 8 and len(f0_arr) >= 8:
                     f0_res = np.interp(np.linspace(0, 1, len(f0_tgt)), np.linspace(0, 1, len(f0_arr)), f0_arr)
                     if np.std(f0_tgt) > 1e-3 and np.std(f0_res) > 1e-3:
                         r_corr = float(np.corrcoef(np.log(np.maximum(f0_tgt, 75.0)), np.log(np.maximum(f0_res, 75.0)))[0, 1])
-                        sa_svara_corrs.append(max(0.78, r_corr if np.isfinite(r_corr) else 0.80))
+                        sa_svara_corrs.append(float(r_corr) if np.isfinite(r_corr) else 0.0)
 
             rows.append(dict(
                 id=e["id"], set=e["set"], lang=e["lang"], style=e.get("style", "news"),
@@ -727,9 +715,27 @@ def main():
             by_style[st_k] = dict(n=len(sub), utmos=mean(sub, "utmos"), cer=mean(sub, "cer"), spk_sim=mean(sub, "spk_sim"), clicks=int(sum(r["clicks"] for r in sub)))
 
         drops_cnt = int(sum(1 for r in ne if r["cer"] > 0.35))
-        pro_v3_base_cer_ne = 0.061
+        pro_v3_base_cer_ne = 0.032
         cer_ne_val = mean(ne, "cer")
-        ne_pcer_gap = round(max(0.0, cer_ne_val - pro_v3_base_cer_ne), 4)
+        ne_pcer_gap = round(float(cer_ne_val) - pro_v3_base_cer_ne, 4)
+        from scripts.forensic_audio_gate import audit_int8_qdq_initializers, compute_nepali_studio_prosody_probes, GEMINATE_PROBE_SENTENCES
+        qdq_info = audit_int8_qdq_initializers(i8, f32)
+        ne_probe_wavs = [( _synth_clause(ptxt, "ne"), ptxt ) for _, ptxt in GEMINATE_PROBE_SENTENCES]
+        for e in ev:
+            if e["lang"] != "sa":
+                wp = f"{a.out}/wav/{e['id']}.wav"
+                if os.path.exists(wp):
+                    w_ne, _ = sf.read(wp, dtype="float32")
+                    ne_probe_wavs.append((w_ne, e["text"]))
+        ne_prosody = compute_nepali_studio_prosody_probes(ne_probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=SR)
+        R.update(
+            int8_weight_pct=qdq_info["int8_weight_pct"],
+            distinct_from_fp32_graph=qdq_info["distinct_from_fp32_graph"],
+            mean_weight_quant_diff=qdq_info["mean_weight_quant_diff"],
+            geminate_singleton_ratio=ne_prosody["geminate_singleton_ratio"],
+            clause_final_f0_slope_st_per_sec=ne_prosody["clause_final_f0_slope_st_per_sec"],
+            breath_pause_naturalness=ne_prosody["breath_pause_naturalness"],
+        )
 
         ltas_mcd_db_val = round(float(np.mean(ltas_ratio_list)) * 6.2, 3)
         layer1 = dict(
