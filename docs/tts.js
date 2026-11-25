@@ -90,13 +90,16 @@ class SakhiyaWeb {
   async chunk(ph, o) {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
     if (this.sess.single) {
+      const phS = (ph.length && ph[0] === "|") ? ph : ["|", ...ph];
+      const idsS = BigInt64Array.from(SK.encode(phS).map(BigInt));
       const keep = ph.map(p => S.indexOf(p) >= 0), rate = o.rate || 1, basePitch = o.pitch_shift || 0, svDepth = o.svara ?? 1;
       const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 0.65 : 0.52) : 0.35) * svDepth;
-      const dmArr = o.lang === "sa" ? (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => (0.75 + 0.25 * Math.min(1.35, Math.max(0.85, v))) / rate) : [1.0];
-      if (o.lang === "sa" && dmArr.length >= 2 && ph[0] === "o" && ph[1] === "m") { dmArr[0] = Math.max(dmArr[0], 1.38 / rate); dmArr[1] = Math.max(dmArr[1], 1.32 / rate); }
-      const offArr = o.lang === "sa" ? (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => basePitch + v * svScale) : [basePitch];
+      const dmBase = o.lang === "sa" ? (o.dm || ph.map(() => 1)).filter((_, i) => keep[i]).map(v => (0.75 + 0.25 * Math.min(1.35, Math.max(0.85, v))) / rate) : [0.94 / rate];
+      const dmArr = (o.lang === "sa" && dmBase.length === ids.length) ? [0.88 / rate, ...dmBase] : dmBase;
+      const offBase = o.lang === "sa" ? (o.off || ph.map(() => 0)).filter((_, i) => keep[i]).map(v => basePitch + v * svScale) : [basePitch + 0.04];
+      const offArr = (o.lang === "sa" && offBase.length === ids.length) ? [basePitch, ...offBase] : offBase;
       const r = await this.sess.single.run({
-        ids: new ort.Tensor("int64", ids, [1, ids.length]),
+        ids: new ort.Tensor("int64", idsS, [1, idsS.length]),
         lang: new ort.Tensor("int64", BigInt64Array.of(o.lang === "sa" ? 1n : 0n), [1]),
         dur_scale: new ort.Tensor("float32", Float32Array.from(dmArr), [dmArr.length]),
         pitch_shift: new ort.Tensor("float32", Float32Array.from(offArr), [offArr.length]),
