@@ -25,17 +25,58 @@
     "fmax": 12000.0
   },
   "phase1_vocoder": {
-    "status": "IN_PROGRESS_HEALING_SVD_GATE",
+    "status": "COMPLETED_AND_PASSED_STUDIO_GATE",
     "checkpoint": "/work/tts/ck/voc_100mel_best.pt",
     "hf_path": "sakhiya_news_final/checkpoints/voc_100mel_best.pt",
-    "arch": "StudioVocoder100Mel (ConvNeXt-V2 GRN + Parallel Amp/AWP-iSTFT + MS-SB-CQT)"
+    "arch": "StudioVocoder100Mel (ConvNeXt-V2 GRN + Parallel Amp/AWP-iSTFT + MS-SB-CQT)",
+    "gate_metrics": {
+      "passed": true,
+      "n_clips": 20,
+      "voc_int8_mb": 5.075,
+      "int8_weight_pct": 98.33,
+      "distinct_from_fp32_graph": true,
+      "HF_LSD_4_12kHz_dB": 0.882,
+      "sim_Anchor": 0.93,
+      "sim_OldV1": 0.2657,
+      "margin_Anchor_OldV1": 0.6643,
+      "clicks": 0,
+      "shutters": 0
+    }
   },
   "phase2_am": {
-    "status": "IN_PROGRESS_CONVERGENCE",
+    "status": "LEG1_CHECKPOINT_SAVED_AND_SYNCED_TO_HF",
     "checkpoint_last": "/work/tts/ck/am_last.pt",
     "checkpoint_best": "/work/tts/ck/am_best.pt",
     "hf_path": "sakhiya_news_final/checkpoints/am_last.pt",
-    "arch": "SakhiyaNewsFlagship (Single-Style RoPE + 5D Clause Cues + Layer-3 Engram + 4-Step Stochastic Flow Duration/Prosody + 10-Block iMF)"
+    "arch": "SakhiyaNewsFlagship (Single-Style RoPE + 5D Clause Cues + Layer-3 Engram + 4-Step Stochastic Flow Duration/Prosody + 10-Block iMF)",
+    "leg1_preview_gate": {
+      "int8_mb": 9.914,
+      "fp32_mb": 37.042,
+      "int8_weight_pct": 97.03,
+      "distinct_from_fp32_graph": true,
+      "stft_lsd_int8_fp32_dB": 0.1045,
+      "int8_vs_fp32_mel_corr": 0.9999,
+      "utmos": 3.812,
+      "sim_Anchor": 0.8862,
+      "sim_OldV1": 0.373,
+      "margin_Anchor_OldV1": 0.5132,
+      "HF_LSD_4_12kHz_dB": 1.399,
+      "ne_pcer": 0.0542,
+      "anchor_pcer": 0.032,
+      "ne_pcer_gap_vs_anchor": 0.0222,
+      "geminate_singleton_ratio": 1.873,
+      "clause_final_f0_slope_st_per_sec": -0.984,
+      "inter_clause_pause_ms": 117.8,
+      "breath_pause_naturalness": 0.886,
+      "word_drop_count": 0,
+      "f0_shutters": 0,
+      "pitch_breaks": 0,
+      "clicks": 0,
+      "rtf_1thread": 0.0637,
+      "node_rtf_1thread": 0.0599,
+      "strictly_beats_sakhiya_one": false,
+      "leg2_relay_ready": true
+    }
   },
   "leg2_resume_script": "scripts/resume_sakhiya_news_leg2.sh"
 }

@@ -4594,16 +4594,16 @@
     },
     {
       "tag": "sakhiya_news_leg1_preview",
-      "label": "Sakhiya-News Leg-1 Preview (100-Mel 10-Blk iMF + MS-SB-CQT · 10.138 MB INT8)",
-      "commit_sha": "leg1_preview",
-      "timestamp_utc": "2026-11-25T18:26:00Z",
-      "notes": "Leg-1 Preview: 84.6% Native Kathmandu Female Human Prosody + 100-Band Full-Bandwidth Mel (0-12kHz) + ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT + Stochastic Flow Prosody + 10-Blk iMF",
+      "label": "Sakhiya-News Leg-1 Preview (100-Mel 10-Blk iMF + MS-SB-CQT · 9.914 MB INT8)",
+      "commit_sha": "05225d1",
+      "timestamp_utc": "2026-11-25T19:09:47Z",
+      "notes": "Leg-1 Preview: 84.6% Native Kathmandu Female Human Prosody + 100-Band Full-Bandwidth Mel (0-12kHz) + ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT + Stochastic Flow Prosody + 10-Blk iMF (97.03% INT8 W, HF_LSD_4_12kHz=1.399dB, sim_Anchor=0.8862, gem=1.873x, INT8_LSD=0.1045dB)",
       "metrics": {
-        "int8_mb": 10.138,
-        "ne_pcer": 0.0604,
-        "utmos": 3.429,
-        "rtf_1thread": 0.0619,
-        "sv_cos_sim": 0.8364
+        "int8_mb": 9.914,
+        "ne_pcer": 0.0542,
+        "utmos": 3.812,
+        "rtf_1thread": 0.0637,
+        "sv_cos_sim": 0.8862
       },
       "clips": [
         {

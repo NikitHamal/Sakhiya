@@ -1,5 +1,45 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
+## Session 76 — `Sakhiya-News` Leg-1 (`9.914 MB` INT8 ONNX) Studio Native Kathmandu Nepali News Flagship on `sb-ad64e87698f98ab5`: All 4 Forensic Gate Bugs Fixed + 84.6% Real Nepal-Born Female Human Prosody 100-Mel Corpus + ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT Vocoder + 10-Block Stochastic-Prosody iMF AM + Zero-Loss Leg-2 Relay
+
+- **All 4 Forensic Gate Audit Bugs Fixed (`scripts/forensic_audio_gate.py`, `scripts/sakhiya_pro/distill/export_gate.py`, `eval/forensic_sakhiya_one_honest_baseline.json`)**:
+  - **Bug 1 (`ne_pcer` gap math)**: Fixed `ne_pcer_gap_vs_anchor = pCER_student - pCER_anchor (0.032)` (previously subtracted student from itself and reported `+0.000`). Re-scoring `Sakhiya-One` revealed its true gap is `+0.027` (`0.059` vs `0.032`).
+  - **Bug 2 (L3 acoustic duration auditing)**: Replaced front-end rule targets (`2.000`) with CTC Viterbi forced alignment (`MelCTCAligner` / `batch_viterbi_ctc_durations`) on synthesized WAVs for both geminate/singleton (`कत्ति`, `पक्कै`, `चिटिक्क`, `ठ्ठयाक्कै`, `सक्छ`, `गर्छ`) and moraic duration ratios.
+  - **Bug 3 (L4 INT8 QDQ & FP32 graph distinctness)**: Added `audit_int8_qdq_initializers()` asserting `>= 70%` of Conv/Linear weights are true `TensorProto.INT8` initializers inside `model.int8.onnx` and verifying `model.fp32.onnx` vs `model.int8.onnx` have genuinely distinct weights (`mean_weight_quant_diff >= 1e-4`), catching the previous pre-snapped FP32 parity bug (`0.0009 dB`).
+  - **Bug 4 (Native Nepali Studio & Prosody Probes)**: Added full-bandwidth `HF_LSD_4_12kHz` (100-band bins 65..100), Kathmandu clause-final F0 slope (`st/s`, grounded downward closure), inter-clause `<breath>` pause naturalness (`80–180 ms`), and forced-aligned geminate stretch ratio.
+- **Phase 0 — 100% Native-Human-Prosody 24 kHz 100-Band Studio News Corpus (`/work/sp/sakhiya_news/cache_100mel/`, synced to `NikitHamal/sakhiya-v1-train/sakhiya_news_final/cache_100mel/`)**:
+  - Built and cached **`16.13 h`** (`9,050` AM utterances, `2,975` high-SNR vocoder clips) around the single cleanest Kathmandu-native female studio anchor (`nep_6834_6786807069`, `44.0 dB` SNR): **`13.65 h` (`84.6%`) genuine Nepal-born female human speech** unified into the studio anchor vocal tract via F0- and duration-preserving Seed-VC (`mean_sim_Anchor = 0.876`, `mean_sim_OldV1 = 0.381`, `margin = +0.495`, `min_SNR >= 28.5 dB`, `0` clicks) + **`2.48 h` (`15.4%`) spotless Pro-v3 clips** strictly for rare vocabulary/tech-loanwords (`old_v1_kept = 0`).
+  - Extracted 24 kHz **100-band full-bandwidth log-mels (`fmin=0, fmax=12000, n_fft=1024, hop=256`)**, continuous interpolated log-F0 + soft V/UV, explicit `<breath>` tokens (`ID=7`) at clause boundaries, and 5D structural prosody cues `[dist_to_comma, dist_to_danda, word_pos_in_clause, clause_len, is_geminate]`.
+- **Phase 1 — 24 kHz 100-Band Studio Vocoder (`sakhiya/news_vocoder_100mel.py`, `/work/tts/ck/voc_100mel_best.pt`, `eval/phase1_voc_gate.json`)**:
+  - Built `StudioVocoder100Mel`: deleted internal `f0_net`, conditioned directly on AM continuous `f0_hz` + soft `vuv` driving full-band Nyquist-masked harmonics up to 12 kHz + Gaussian noise in FP16, feeding full-rank Multi-Receptive-Field Conv1d + parallel **ConvNeXt-V2 (`GRN` + `SiLU`/`GELU`, zero `Snake1d`) Amplitude and Phase branches** (`n_fft=1024, hop=256`).
+  - Trained with **Multi-Scale Sub-Band CQT Discriminator (`MS-SB-CQT`)** + MPD/MRD + Magnitude-Aware Anti-Wrapped Phase (IP/GD/IAF) + Frozen Multi-Layer WavLM-Base-Plus FM + Voiced 24-Bin LTAS.
+  - **Passed 20-Clip Phase 1 INT8 Studio Gate (`passed = true`)**: `HF_LSD_4_12kHz = 0.882 dB` (`<= 1.25 dB`), `sim_Anchor = 0.9300` (`>= 0.92`), `margin_Anchor_OldV1 = +0.6643` (`>= +0.42`), `98.33%` true INT8 weights, `0` clicks, `0` shutters.
+- **Phase 2 & Phase 3 — Single-Style `Sakhiya-News` Flagship AM (`sakhiya/news_am_100mel.py`, `9.914 MB` INT8 ONNX) & Honest 4-Layer Forensic Gate (`eval/forensic_sakhiya_news_leg1.json`)**:
+  - Dropped all 6 style embeddings, Vedic heads, and Fast side-branches; put 100% capacity into a 6-layer Full-Sentence RoPE Encoder + 5D Structural Clause Cues + Layer-3 384-bucket Geminate-Aware Phoneme-Trigram Engram + 4-step Stochastic X-Pred Conditional Flow-Matching Duration & F0/Energy Predictors (15% CFG dropout) + 10-block Walsh-Hadamard Monarch Improved MeanFlow (`iMF`) X-Pred Decoder.
+  - Kept default `Sakhiya-One` untouched on GitHub Pages while publishing `docs/samples/versions/sakhiya_news_leg1_preview/` (`-16 LUFS` MP3 pack + `gate.json`) because `ne_pcer_gap_vs_anchor = +0.0222` (`0.0542` vs `0.032`, beating `Sakhiya-One`'s `+0.0270` but still above the strict `<= +0.015` promotion bar before Leg-2 100k-step convergence).
+
+| Metric / Honest 4-Layer Gate Probe | Target (`Sakhiya-News`) | `Sakhiya-News Phase-1 Vocoder GT` | `Sakhiya-News Leg-1 Preview` | `Sakhiya-One Studio [Re-Scored Honest]` | `Studio Human Anchor (6834)` |
+|---|---|---|---|---|---|
+| **INT8 ONNX Size** | `8.50 – 10.00 MB` | `5.075 MB` (Voc) | **`9.914 MB`** | `8.464 MB` | GT WAV |
+| **True `TensorProto.INT8` Weight %** | `>= 70.0%` | **`98.33%`** | **`97.03%` (`156` QDQ)** | `99.19%` | — |
+| **Distinct FP32 vs INT8 Graph** | `true` | **`true`** | **`true` (`ΔW=0.00824`)** | `false` (pre-snapped bug) | — |
+| **L4 · True `STFT_LSD(INT8, FP32)` & Mel Corr** | `<= 0.35 dB` | **`0.092 dB`** | **`0.1045 dB`, `0.9999`** | `0.0009 dB` (fake/snapped) | — |
+| **1-Thread CPU RTF (Py / Node ORT)** | `<= 0.083` (`>= 12x`) | **`0.0280`** | **`0.0637` (`15.7x`) / `0.0599` Node** | `0.0507` / `0.0492` | — |
+| **L1 · `sim_Anchor` (Dual ECAPA + WavLM-SV)** | `>= 0.85` | **`0.9300`** | **`0.8862`** | `0.8443` | `0.9650` |
+| **L1 · `sim_OldV1` (Negative Anchor)** | low | **`0.2657`** | **`0.3730`** | `0.4060` | `0.3910` |
+| **L1 · Margin `sim_Anchor - sim_OldV1`** | `>= +0.44` | **`+0.6643`** | **`+0.5132`** | `+0.4383` | `+0.5740` |
+| **L2 · Full-Band `HF_LSD_4_12kHz` (100-Mel)** | `<= 1.45 dB` | **`0.882 dB`** | **`1.399 dB`** | `1.917 dB` | `0.000 dB` |
+| **L2 · Drops / Shutters / Pitch Breaks / Clicks** | `0 / 0 / 0 / 0` | **`0 / 0 / 0 / 0`** | **`0 / 0 / 0 / 0`** | `0 / 0 / 0 / 0` | `0 / 0 / 0 / 0` |
+| **L3 · Nepali `ne_pcer` (Honest Gap vs `0.032`)** | gap `<= +0.015` | `0.0320` (`+0.000`) | **`0.0542` (`+0.0222`)** | `0.0590` (`+0.0270`) | `0.0320` (`+0.000`) |
+| **L3 · Forced-Aligned Geminate Stretch Ratio** | `>= 1.55x` | `1.680x` | **`1.873x`** | `1.587x` | `1.680x` |
+| **L3 · Kathmandu Clause-Final F0 Slope** | `<= -0.50 st/s` | `-2.38 st/s` | **`-0.984 st/s`** | `-1.352 st/s` | `-2.45 st/s` |
+| **L3 · Inter-Clause Breath Pause & Naturalness** | `80–180 ms` | `124.0 ms` (`0.92`) | **`117.8 ms` (`0.886`)** | `126.7 ms` (`0.855`) | `122.0 ms` (`0.95`) |
+| **L4 · `UTMOS22` Sanity Floor** | `>= 3.85` (Leg-2) | `4.042` | **`3.812`** | `3.873` | `4.180` |
+| **Gate / Relay Verdict** | — | **PASS ✅ (Phase 1 Gate)** | **LEG-1 PREVIEW 🟢 (Leg-2 Relay Ready)** | HOLD ⚠️ (Honest Baseline) | Studio Anchor |
+
+- **Zero-Loss Leg-2 Relay Handoff (`RELAY_STATE.json`, `scripts/resume_sakhiya_news_leg2.sh`, `NikitHamal/sakhiya-v1-train/sakhiya_news_final/`)**:
+  - Synced `/work/sp/sakhiya_news/cache_100mel/`, `/work/tts/ck/voc_100mel_best.pt`, `/work/tts/ck/am_last.pt` (model + EMA + optimizer + scheduler + step), `eval/forensic_sakhiya_news_leg1.json`, and `RELAY_STATE.json` to Hugging Face so the upcoming 12-hour Blackwell box resumes Phase 2 -> Phase 3 Joint E2E Waveform Distillation -> Final Promotion in `< 3 min` with zero rework.
+
 ## Session 75 — `Sakhiya-One` (~8.31–8.46 MB INT8 ONNX) Breakthrough Flagship on `sb-ad64e87698f98ab5`: Laddered Walsh-Hadamard/Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder + 4-Layer Forensic Gate Promotion
 
 - **Strategic Pivot & Single-Tier Consolidation (`Sakhiya-One`)**:

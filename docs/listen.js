@@ -45,7 +45,7 @@
     var revealed = false, curClipId = "ne_kathmandu";
     var baseClips = (by.sakhiya_one && by.sakhiya_one.clips) || (vs[0] && vs[0].clips) || [];
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF + MS-SB-CQT INT8]", metrics: "95.4% True INT8 W · HF_LSD_4_12kHz=1.478dB · sim_Anchor=0.8364 · ΔV1=+0.4543 · gem=1.953x · F0_slope=-1.30st/s · RTF=0.060", tag: "sakhiya_news_leg1_preview" },
+      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF + MS-SB-CQT · 9.914 MB INT8]", metrics: "97.03% True INT8 W · UTMOS=3.812 · HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ΔV1=+0.5132 · pCER=0.0542 (+0.0222 gap) · gem=1.873x · F0_slope=-0.98st/s · INT8_LSD=0.1045dB · RTF=0.060", tag: "sakhiya_news_leg1_preview" },
       { blind: "Sample B (-16 LUFS)", real: "Sakhiya-One Studio [80-Mel 8-blk · 8.464 MB INT8 ONNX Baseline]", metrics: "Re-scored Honest Gate: HF_LSD_4_12kHz=1.917dB · pCER=0.059 (+0.027 gap) · gem=1.587x · pre-snapped FP32 parity bug caught", tag: "sakhiya_one" },
       { blind: "Sample C (-16 LUFS)", real: "Sakhiya-Pro v3 Reference [2.4 GB bf16 Synthetic Anchor]", metrics: "sim_Anchor=0.9120 · ΔV1=+0.5280 · pCER=0.032 · GPU Reference", tag: "sakhiya_pro_v3" },
       { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_Anchor=0.3910 · ΔV1=-0.5210 · HF_LSD_4_12kHz=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
