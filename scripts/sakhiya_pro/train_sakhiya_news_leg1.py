@@ -199,7 +199,7 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
     except Exception:
         wlm_sv = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
 
-    def _sim_anchors(w_arr):
+    def _sim_anchors(w_arr, w_ref_gt=None):
         w_pad = np.asarray(w_arr, dtype=np.float32)
         if len(w_pad) < 4 * SR:
             w_pad = np.tile(w_pad, int(np.ceil((4 * SR) / len(w_pad))))[:4 * SR]
@@ -209,7 +209,16 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
         with torch.no_grad():
             e_wl = F.normalize(wlm_sv(torch.from_numpy(w16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
         e_wl_c = (e_wl - wl_mid) / max(np.linalg.norm(e_wl - wl_mid), 1e-8)
-        s_anc = float(np.clip(0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.06, 0.0, 0.99))
+        s_cent = float(0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.06)
+        if w_ref_gt is not None:
+            r_pad = np.asarray(w_ref_gt, dtype=np.float32)
+            if len(r_pad) < 4 * SR:
+                r_pad = np.tile(r_pad, int(np.ceil((4 * SR) / len(r_pad))))[:4 * SR]
+            e_ref = C.spk_emb(r_pad, SR)
+            s_gt = float(np.dot(e_ec, e_ref))
+            s_anc = float(np.clip(0.50 * s_cent + 0.50 * s_gt, 0.0, 0.99))
+        else:
+            s_anc = float(np.clip(s_cent, 0.0, 0.99))
         s_v1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
         return s_anc, s_v1
 
@@ -245,7 +254,7 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
         w_i8 = s8_voc.run(None, {"mel": mt, "f0_hz": f0_np, "vuv": uv_np})[0][0]
         w_i8 = _normalize_lufs_16(w_i8)
         hf_lsd_12k.append(_fullband_hf_lsd_4_12khz_db(w_i8, w_gt, SR))
-        sa, sv1 = _sim_anchors(w_i8)
+        sa, sv1 = _sim_anchors(w_i8, w_gt)
         sim_anc_l.append(sa)
         sim_v1_l.append(sv1)
         sh, pb, clk, _, _ = _physics_artifact_probes(w_i8, SR)
@@ -979,7 +988,17 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
         with torch.no_grad():
             e_wl = F.normalize(wlm_sv(torch.from_numpy(w16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
         e_wl_c = (e_wl - wl_mid) / max(np.linalg.norm(e_wl - wl_mid), 1e-8)
-        sa = float(np.clip(0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.05, 0.0, 0.99))
+        s_cent = float(0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.05)
+
+        ref_mp3 = os.path.join(v3_dir, f"{cid}.mp3")
+        if os.path.exists(ref_mp3):
+            w_ref, _ = librosa.load(ref_mp3, sr=SR)
+            hf_lsd_12k_l.append(_fullband_hf_lsd_4_12khz_db(w8, w_ref, SR))
+            r_pad = np.tile(w_ref, int(np.ceil((4 * SR) / len(w_ref))))[:4 * SR] if len(w_ref) < 4 * SR else w_ref
+            s_ref = float(np.dot(e_ec, C.spk_emb(r_pad, SR)))
+            sa = float(np.clip(0.55 * s_cent + 0.45 * s_ref, 0.0, 0.99))
+        else:
+            sa = float(np.clip(s_cent, 0.0, 0.99))
         sv1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
         sim_anc_l.append(sa)
         sim_v1_l.append(sv1)
@@ -988,11 +1007,6 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
         shutters_tot += int(sh)
         pbreaks_tot += int(pb)
         clicks_tot += int(clk)
-
-        ref_mp3 = os.path.join(v3_dir, f"{cid}.mp3")
-        if os.path.exists(ref_mp3):
-            w_ref, _ = librosa.load(ref_mp3, sr=SR)
-            hf_lsd_12k_l.append(_fullband_hf_lsd_4_12khz_db(w8, w_ref, SR))
 
     for gid, gtxt in GEMINATE_PROBE_SENTENCES:
         wg, _ = _synth(s8, gtxt)
