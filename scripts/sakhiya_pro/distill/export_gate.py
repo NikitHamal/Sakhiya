@@ -36,7 +36,8 @@ for p in (HERE, REPO, os.path.join(REPO, "scripts", "sakhiya_pro"), "/work/sp"):
 
 from student import Student, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
 BAD_OPS = {"ConvInteger", "MatMulInteger", "DynamicQuantizeLinear", "QLinearConv", "QLinearMatMul"}
-SIZE_CAPS_MB = {"t1": 1.45, "t10": 9.50, "t15": 14.50, "t30": 29.60}
+SIZE_CAPS_MB = {"sakhiya_one": 8.50, "sakhiya_one_fast": 8.50, "t1": 1.45, "t10": 9.50, "t15": 14.50, "t30": 29.60}
+SIZE_FLOORS_MB = {"sakhiya_one": 6.50, "sakhiya_one_fast": 5.00}
 
 STRESS_12_IDS = {
     "sa_om", "sa_rv", "sa_gayatri", "sa_gita",
@@ -701,10 +702,12 @@ def main():
         cer_ne_val = mean(ne, "cer")
         ne_pcer_gap = round(max(0.0, cer_ne_val - pro_v3_base_cer_ne), 4)
 
+        ltas_mcd_db_val = round(float(np.mean(ltas_ratio_list)) * 6.2, 3)
         layer1 = dict(
             sim_ProV3=round(float(np.mean(sim_pro_list)), 4),
             sim_OldV1=round(float(np.mean(sim_v1_list)), 4),
             margin_ProV3_OldV1=round(float(np.mean(sim_pro_list) - np.mean(sim_v1_list)), 4),
+            voiced_ltas_mcd_db=ltas_mcd_db_val,
             voiced_ltas_mcd_ratio=round(float(np.mean(ltas_ratio_list)), 4),
         )
         layer2 = dict(
@@ -760,24 +763,26 @@ def main():
         R["clips"] = rows
 
     sz_cap = SIZE_CAPS_MB.get(a.tier, 30.0)
+    sz_floor = SIZE_FLOORS_MB.get(a.tier, 0.0)
     s = R.get("summary", {})
-    req_sim = {"t30": 0.82, "t15": 0.82, "t10": 0.79, "t1": 0.74}.get(a.tier, 0.79)
-    req_margin = {"t30": 0.32, "t15": 0.32, "t10": 0.28, "t1": 0.22}.get(a.tier, 0.28)
-    req_ltas = {"t30": 0.55, "t15": 0.55, "t10": 0.60, "t1": 0.65}.get(a.tier, 0.60)
-    req_hf_lsd = {"t30": 2.2, "t15": 2.2, "t10": 2.8, "t1": 3.5}.get(a.tier, 2.8)
-    req_svara_r = {"t30": 0.75, "t15": 0.75, "t10": 0.65, "t1": 0.65}.get(a.tier, 0.65)
-    min_utmos_floor = 2.85 if a.tier == "t1" else 3.20
+    req_sim = {"sakhiya_one": 0.84, "sakhiya_one_fast": 0.80, "t30": 0.82, "t15": 0.82, "t10": 0.79, "t1": 0.74}.get(a.tier, 0.80)
+    req_margin = {"sakhiya_one": 0.35, "sakhiya_one_fast": 0.35, "t30": 0.32, "t15": 0.32, "t10": 0.28, "t1": 0.22}.get(a.tier, 0.35)
+    req_ltas = {"sakhiya_one": 0.52, "sakhiya_one_fast": 0.52, "t30": 0.55, "t15": 0.55, "t10": 0.60, "t1": 0.65}.get(a.tier, 0.52)
+    req_hf_lsd = {"sakhiya_one": 2.0, "sakhiya_one_fast": 2.6, "t30": 2.2, "t15": 2.2, "t10": 2.8, "t1": 3.5}.get(a.tier, 2.0)
+    req_svara_r = {"sakhiya_one": 0.75, "sakhiya_one_fast": 0.75, "t30": 0.75, "t15": 0.75, "t10": 0.65, "t1": 0.65}.get(a.tier, 0.75)
+    min_utmos_floor = 2.85 if a.tier == "t1" else (3.85 if a.tier.startswith("sakhiya_one") else 3.20)
 
     R["gate_pass"] = bool(
         R["nan_count"] == 0
         and not R["bad_ops"]
-        and R["int8_mb"] <= sz_cap
+        and (sz_floor <= R["int8_mb"] <= sz_cap)
         and R["stft_lsd_int8_fp32_db"] <= 0.35
         and R.get("sim_ProV3_fp32_minus_int8", 0.0) <= 0.02
         and s.get("utmos", 0.0) >= min_utmos_floor
         and s.get("sim_ProV3", 0.0) >= req_sim
         and s.get("margin_ProV3_OldV1", 0.0) >= req_margin
         and s.get("voiced_ltas_mcd_ratio", 1.0) <= req_ltas
+        and R.get("layers", {}).get("layer1_timbre", {}).get("voiced_ltas_mcd_db", 9.9) <= 3.5
         and s.get("HF_LSD_4_10kHz_dB", 9.9) <= req_hf_lsd
         and s.get("upper_band_HNR_anomaly_dB", 9.9) <= 2.5
         and s.get("mid_vowel_shutters", 99) == 0
