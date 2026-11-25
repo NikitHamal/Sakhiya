@@ -23,15 +23,15 @@
    "prec": "int8",
    "dir": "models_sakhiya_one_fast/",
    "variant": "tiny",
-   "mb": 8.04,
-   "rtf": 0.036,
-   "utmos": 3.75,
-   "ne_pcer": 0.052,
-   "sa_pcer": 0.092,
+   "mb": 8.313,
+   "rtf": 0.0492,
+   "utmos": 3.751,
+   "ne_pcer": 0.064,
+   "sa_pcer": 0.114,
    "ready": true,
    "desc": "4-blk Fast/Eco slice from the exact same Sakhiya-One checkpoint (1-step X-Pred MeanFlow + residual fast_adapter) · ~28× real-time",
-   "onnx_mb": 8.04,
-   "rtf_onnx": 0.036
+   "onnx_mb": 8.313,
+   "rtf_onnx": 0.0492
   },
   {
    "id": "v1",

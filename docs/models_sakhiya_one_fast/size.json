@@ -1,0 +1,14 @@
+{
+  "tier": "sakhiya_one_fast",
+  "int8_mb": 8.313,
+  "fp32_mb": 31.91,
+  "int8_vs_fp32_mel_corr": 1.0,
+  "nan_count": 0,
+  "rtf_1thread": 0.0492,
+  "bad_ops": [],
+  "node_verify": {
+    "ok": true,
+    "nan_count": 0,
+    "rtf_1thread": 0.0465
+  }
+}
