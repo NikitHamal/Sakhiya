@@ -148,10 +148,12 @@ def snap_am_int8(am):
             if len(am.f0_head.net) > 4:
                 am.f0_head.net[4].weight.copy_(am.f0_head.net[4].weight.half().float())
         for name, p in am.named_parameters():
-            if name.startswith(("enc.", "dur.")):
-                if any(k in name for k in ("emb", "svara_emb", "mora_emb", "engram", "f0_pred", "vuv_pred", "dur.o")):
+            if name.endswith("had_rot.weight"):
+                continue
+            if name.startswith(("enc.", "dur.", "vel.")):
+                if any(k in name for k in ("emb", "svara_emb", "mora_emb", "engram", "f0_pred", "vuv_pred", "dur.o", "prog_proj")):
                     p.copy_(p.half().float())
-                elif (p.ndim == 3 and p.shape[1] == 1) or (p.ndim >= 2 and p.shape[0] <= 8) or p.shape == (66, 1, 64) or (p.ndim == 2 and p.shape[0] == 100):
+                elif (p.ndim == 3 and p.shape[0] == 1 and p.shape[2] == 1) or (p.ndim >= 2 and p.shape[0] <= 8) or p.shape == (66, 1, 64) or (p.ndim == 2 and min(p.shape) == 1):
                     if p.numel() >= 256:
                         p.copy_(p.half().float())
                 elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
@@ -284,10 +286,22 @@ class Student(nn.Module):
         awp_p = os.path.join(ck_dir, "sakhiya_one_voc.pt")
         if os.path.exists(awp_p):
             vck = torch.load(awp_p, map_location=dev, weights_only=False)
-            vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
+            vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items() if not k.startswith("pre.")}
             self.voc.load_state_dict(vsd, strict=False)
+            if "voc.pre.weight" in ema_sd and "voc.pre.bias" in ema_sd:
+                with torch.no_grad():
+                    self.voc.pre.weight.copy_(ema_sd["voc.pre.weight"])
+                    self.voc.pre.bias.copy_(ema_sd["voc.pre.bias"])
+            elif os.path.exists("/work/sp/distill/runs/t15/ema_final.pt"):
+                t15_ema = torch.load("/work/sp/distill/runs/t15/ema_final.pt", map_location=dev, weights_only=False).get("ema", {})
+                if "voc.pre.weight" in t15_ema and "voc.pre.bias" in t15_ema:
+                    with torch.no_grad():
+                        self.voc.pre.weight.copy_(t15_ema["voc.pre.weight"].float())
+                        self.voc.pre.bias.copy_(t15_ema["voc.pre.bias"].float())
             if "f0_head" in vck:
                 self.am.f0_head.load_state_dict({k: v.float() for k, v in vck["f0_head"].items()}, strict=False)
+        if hasattr(self.am.vel, "init_fast_from_studio_blocks") and "am.vel.fast_blocks.0.dw.weight" not in ema_sd:
+            self.am.vel.init_fast_from_studio_blocks()
         elif os.path.exists(os.path.join(ck_dir, "v3_voc320_fused.pt")) and c["voc_ch"] == 320:
             self.voc.load_pro_v3_filterbank(os.path.join(ck_dir, "v3_voc320_fused.pt"))
             with torch.no_grad():

@@ -92,7 +92,7 @@ def install_lsq_qat_hooks(model):
     hooks = []
     fp16_skip = (
         "voc.src.proj4", "voc.src.proj16", "voc.amp_head", "voc.pha_head", "voc.post",
-        "am.vel.out", "am.vel.prog_proj", "am.enc.emb", "am.enc.svara_emb", "am.enc.mora_emb",
+        "am.vel.prog_proj", "am.enc.emb", "am.enc.svara_emb", "am.enc.mora_emb",
         "am.enc.f0_pred", "am.enc.vuv_pred", "am.f0_head.net.4", "am.dur.o",
     )
     for name, m in model.named_modules():
@@ -357,6 +357,11 @@ def train_and_gate_phase1_vocoder(cache_obj: dict, steps: int = 450, bs: int = 3
     G = AWPVocoder(ch=320).to(dev)
     G.load_pro_v3_filterbank("/work/tts/ck/v3_voc320_fused.pt")
     with torch.no_grad():
+        if os.path.exists("/work/sp/distill/runs/t15/ema_final.pt"):
+            t15_ema = torch.load("/work/sp/distill/runs/t15/ema_final.pt", map_location=dev, weights_only=False).get("ema", {})
+            if "voc.pre.weight" in t15_ema and "voc.pre.bias" in t15_ema:
+                G.pre.weight.copy_(t15_ema["voc.pre.weight"].float())
+                G.pre.bias.copy_(t15_ema["voc.pre.bias"].float())
         G.amp_branch.pw2.weight.zero_(); G.amp_branch.pw2.bias.zero_()
         G.pha_branch.pw2.weight.zero_(); G.pha_branch.pw2.bias.zero_()
         G.src.upper_proj4.weight.zero_(); G.src.upper_proj4.bias.zero_()
@@ -497,6 +502,8 @@ def train_phase2_laddered_meanflow_am(cache_obj: dict, rect_cache: list, steps: 
     os.makedirs(out, exist_ok=True)
 
     G = build("sakhiya_one").to(dev).warm_init("/work/tts/ck")
+    if hasattr(G.am.vel, "init_fast_from_studio_blocks"):
+        G.am.vel.init_fast_from_studio_blocks()
     for p in G.voc.parameters():
         p.requires_grad_(False)
     ema = copy.deepcopy(G).eval()
@@ -515,12 +522,12 @@ def train_phase2_laddered_meanflow_am(cache_obj: dict, rect_cache: list, steps: 
     c_v1_24 = cache_obj["c_v1_ltas24"].to(dev)
 
     enc_dur_p = [p for n, p in G.named_parameters() if n.startswith(("am.enc.", "am.dur.", "closure_slope", "dur_rate_bias")) and p.requires_grad]
-    vel_main_p = [p for n, p in G.named_parameters() if n.startswith("am.vel.") and not n.startswith("am.vel.fast_adapter.") and p.requires_grad]
-    fast_ad_p = [p for n, p in G.named_parameters() if n.startswith("am.vel.fast_adapter.") and p.requires_grad]
+    vel_main_p = [p for n, p in G.named_parameters() if n.startswith("am.vel.") and not n.startswith(("am.vel.fast_blocks.", "am.vel.fast_adapter.")) and p.requires_grad]
+    fast_ad_p = [p for n, p in G.named_parameters() if n.startswith(("am.vel.fast_blocks.", "am.vel.fast_adapter.")) and p.requires_grad]
 
     oG = torch.optim.AdamW([
-        {"params": enc_dur_p, "lr": 1.8e-4, "initial_lr": 1.8e-4, "weight_decay": 1e-3},
-        {"params": vel_main_p, "lr": 2.2e-4, "initial_lr": 2.2e-4, "weight_decay": 1e-4},
+        {"params": enc_dur_p, "lr": 4.0e-5, "initial_lr": 4.0e-5, "weight_decay": 1e-3},
+        {"params": vel_main_p, "lr": 5.0e-5, "initial_lr": 5.0e-5, "weight_decay": 1e-4},
         {"params": fast_ad_p, "lr": 8.0e-4, "initial_lr": 8.0e-4, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
@@ -697,7 +704,9 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
     # Detach waveform gradients from duration predictor so alignment stays rock-solid
     am_p, fast_ad_p = [], []
     for n, p in G.named_parameters():
-        if n.startswith("am.vel.fast_adapter."):
+        if n.endswith("had_rot.weight"):
+            p.requires_grad_(False)
+        elif n.startswith(("am.vel.fast_blocks.", "am.vel.fast_adapter.")):
             p.requires_grad_(True)
             fast_ad_p.append(p)
         elif n.startswith(("am.enc.", "am.vel.", "am.dur.", "closure_slope", "dur_rate_bias")):
@@ -707,8 +716,8 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
             p.requires_grad_(False)
 
     oG = torch.optim.AdamW([
-        {"params": am_p, "lr": 5.5e-5, "initial_lr": 5.5e-5, "weight_decay": 1e-4},
-        {"params": fast_ad_p, "lr": 2.5e-4, "initial_lr": 2.5e-4, "weight_decay": 1e-4},
+        {"params": am_p, "lr": 2.0e-5, "initial_lr": 2.0e-5, "weight_decay": 1e-4},
+        {"params": fast_ad_p, "lr": 3.5e-4, "initial_lr": 3.5e-4, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
     qat_start_step = int(steps * 0.45)  # Final ~55% (>= 40%) runs with LSQ per-channel INT8 QAT active
@@ -789,20 +798,23 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
 
             denom = (ymf.sum() * 100.0).clamp(min=1.0)
             l_mel8 = ((1.2 * (y_pred_8.float() - y_clean.float()).abs() + 0.8 * (y_pred_8.float() - y_clean.float()) ** 2) * ymf).sum() / denom
-            l_mel4 = ((1.2 * (y_pred_4.float() - y_clean.float()).abs() + 0.8 * (y_pred_4.float() - y_clean.float()) ** 2) * ymf).sum() / denom
+            l_mel4 = ((1.1 * (y_pred_4.float() - y_pred_8.detach().float()).abs() + 0.9 * (y_pred_4.float() - y_clean.float()).abs() + 0.5 * (y_pred_4.float() - y_clean.float()) ** 2) * ymf).sum() / denom
             l_bridge = F.l1_loss(h_4_b.float(), h_8.detach().float())
 
             df_p8 = y_pred_8[:, 1:, :].float() - y_pred_8[:, :-1, :].float()
+            df_p4 = y_pred_4[:, 1:, :].float() - y_pred_4[:, :-1, :].float()
             df_t = y_clean[:, 1:, :].float() - y_clean[:, :-1, :].float()
-            l_df = ((df_p8 - df_t).abs() * ymf).sum() / denom
+            l_df = (((df_p8 - df_t).abs() + 0.7 * (df_p4 - df_p8.detach()).abs()) * ymf).sum() / denom
 
             cep_p8 = torch.fft.rfft(y_pred_8.float(), dim=1).abs()[:, 4:48, :]
+            cep_p4 = torch.fft.rfft(y_pred_4.float(), dim=1).abs()[:, 4:48, :]
             cep_t = torch.fft.rfft(y_clean.float(), dim=1).abs()[:, 4:48, :]
-            l_cep = ((cep_p8 - cep_t).abs() * ymf).sum() / (ymf.sum() * 44.0).clamp(min=1.0)
+            l_cep = (((cep_p8 - cep_t).abs() + 0.6 * (cep_p4 - cep_t).abs()) * ymf).sum() / (ymf.sum() * 44.0).clamp(min=1.0)
 
             mp8_full = y_pred_8.float() * std + mean
+            mp4_full = y_pred_4.float() * std + mean
             mt_full = y_clean.float() * std + mean
-            l_ltas = contrastive_ltas_timbre_loss(mp8_full, mt_full, c_pro_24, c_v1_24)
+            l_ltas = contrastive_ltas_timbre_loss(mp8_full, mt_full, c_pro_24, c_v1_24) + 0.5 * contrastive_ltas_timbre_loss(mp4_full, mt_full, c_pro_24, c_v1_24)
 
             # Joint End-to-End Waveform Synthesis & Backprop through live AWPVocoder on random slice
             l_e2e_wav = torch.zeros((), device=dev)

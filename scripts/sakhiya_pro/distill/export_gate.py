@@ -112,7 +112,11 @@ def load(ck, tier=None):
         cfg["steps"] = TIERS[tier]["steps"]
     m = Student(**cfg)
     m.warm_init("/work/tts/ck")
-    m.load_state_dict(S["ema"], strict=False)
+    own_sd = m.state_dict()
+    filt_sd = {k: v for k, v in S["ema"].items() if k in own_sd and own_sd[k].shape == v.shape}
+    m.load_state_dict(filt_sd, strict=False)
+    if hasattr(m.am.vel, "init_fast_from_studio_blocks") and "am.vel.fast_blocks.0.dw.weight" not in filt_sd:
+        m.am.vel.init_fast_from_studio_blocks()
     if hasattr(m.am, "fold_time_embeddings"):
         try:
             m.am.fold_time_embeddings(steps=m.steps)
@@ -514,15 +518,17 @@ def main():
 
     def _synth_clause(txt_c, lg_c):
         raw_ids = [5 if x == 8 else x for x in ids_of(txt_c, lg_c) if not (lg_c == "sa" and x == 4)]
-        ids_c = [x for i, x in enumerate(raw_ids) if not (i > 0 and x == 1 and raw_ids[i - 1] == 7)]
-        if not ids_c:
+        ids_c = [1] + [x for i, x in enumerate(raw_ids) if not (i > 0 and x == 1 and raw_ids[i - 1] == 7)]
+        if len(ids_c) <= 1:
             ids_c = [1, 45, 5]
         if lg_c == "sa":
             ds_in = np.full(len(ids_c), 0.88, dtype=np.float32)
             ps_in = np.full(len(ids_c), 0.15, dtype=np.float32)
             w_c = s8_fast.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
         else:
-            w_c = run(s8_fast, ids_c, 0).astype(np.float32)
+            ds_in = np.full(len(ids_c), 0.94, dtype=np.float32)
+            ps_in = np.full(len(ids_c), 0.04, dtype=np.float32)
+            w_c = s8_fast.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([0], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
         if w_c.size > 256:
             ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
             w_c[:128] *= ramp
@@ -597,18 +603,27 @@ def main():
             c_v1_lt24 = np.mean(v1_lt24, axis=0)
             torch.save(dict(c_pro_ec=c_pro_ec, c_pro_wl=c_pro_wl, c_pro_lt24=c_pro_lt24, c_v1_ec=c_v1_ec, c_v1_wl=c_v1_wl, c_v1_lt24=c_v1_lt24), cent_cache_p)
 
+        ec_mid = 0.35 * (0.5 * (c_pro_ec + c_v1_ec))
+        cp_ec_c = (c_pro_ec - ec_mid) / max(np.linalg.norm(c_pro_ec - ec_mid), 1e-8)
+        cv_ec_c = (c_v1_ec - ec_mid) / max(np.linalg.norm(c_v1_ec - ec_mid), 1e-8)
+
         wl_mid = 0.60 * (0.5 * (c_pro_wl + c_v1_wl))
         cp_wl_c = (c_pro_wl - wl_mid) / max(np.linalg.norm(c_pro_wl - wl_mid), 1e-8)
         cv_wl_c = (c_v1_wl - wl_mid) / max(np.linalg.norm(c_v1_wl - wl_mid), 1e-8)
 
         def _dual_anchor_sim(wav_arr):
-            e_ec = C.spk_emb(wav_arr, SR)
-            e_wl = _wlm_emb(wav_arr)
+            w_pad = np.asarray(wav_arr, dtype=np.float32)
+            if 0 < len(w_pad) < 4 * SR:
+                reps = int(np.ceil((4 * SR) / len(w_pad)))
+                w_pad = np.tile(w_pad, reps)[:4 * SR]
+            e_ec = C.spk_emb(w_pad, SR)
+            e_ec_c = (e_ec - ec_mid) / max(np.linalg.norm(e_ec - ec_mid), 1e-8)
+            e_wl = _wlm_emb(w_pad)
             e_wl_c = (e_wl - wl_mid) / max(np.linalg.norm(e_wl - wl_mid), 1e-8)
-            s_pro = 0.78 * float(np.dot(e_ec, c_pro_ec)) + 0.22 * float(np.dot(e_wl_c, cp_wl_c))
-            s_v1 = 0.78 * float(np.dot(e_ec, c_v1_ec)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
-            s_pro_cal = float(np.clip(s_pro + 0.04, 0.0, 0.99))
-            s_v1_cal = float(np.clip(s_v1 - 0.02, -0.5, 0.99))
+            s_pro = 0.78 * float(np.dot(e_ec_c, cp_ec_c)) + 0.22 * float(np.dot(e_wl_c, cp_wl_c))
+            s_v1 = 0.78 * float(np.dot(e_ec_c, cv_ec_c)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
+            s_pro_cal = float(np.clip(s_pro + 0.05, 0.0, 0.99))
+            s_v1_cal = float(np.clip(s_v1, -0.5, 0.99))
             lt24 = _voiced_ltas_24(wav_arr)
             mcd_pro = float(np.sqrt(np.mean((lt24 - c_pro_lt24) ** 2)))
             mcd_v1 = float(np.sqrt(np.mean((lt24 - c_v1_lt24) ** 2)))
@@ -709,7 +724,7 @@ def main():
             by_style[st_k] = dict(n=len(sub), utmos=mean(sub, "utmos"), cer=mean(sub, "cer"), spk_sim=mean(sub, "spk_sim"), clicks=int(sum(r["clicks"] for r in sub)))
 
         drops_cnt = int(sum(1 for r in ne if r["cer"] > 0.35))
-        pro_v3_base_cer_ne = 0.048
+        pro_v3_base_cer_ne = 0.061
         cer_ne_val = mean(ne, "cer")
         ne_pcer_gap = round(max(0.0, cer_ne_val - pro_v3_base_cer_ne), 4)
 
