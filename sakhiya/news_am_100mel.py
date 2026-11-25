@@ -247,7 +247,7 @@ class StochasticFlowDurationHead(nn.Module):
                 x1 = x1_cond
             v = x1 - z0
             z = (z + dt * v) * m.float()
-        return (mu_base.float() + z.clamp(-0.18, 0.18)) * m.float()
+        return (mu_base.float() + 0.25 * z.clamp(-0.10, 0.10)) * m.float()
 
 
 class StochasticFlowVarianceHead(nn.Module):
@@ -328,7 +328,7 @@ class StochasticFlowVarianceHead(nn.Module):
                 x1 = x1_cond
             v = x1 - z0
             z = (z + dt * v) * m.float()
-        return (mu_base.float() + z.clamp(-0.25, 0.25)) * m.float()
+        return (mu_base.float() + 0.25 * z.clamp(-0.15, 0.15)) * m.float()
 
 
 class SakhiyaNewsEncoder(nn.Module):

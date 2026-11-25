@@ -605,8 +605,8 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
     ema = copy.deepcopy(G).eval()
 
     oG = torch.optim.AdamW([
-        {"params": base_p, "lr": 6.0e-6, "initial_lr": 6.0e-6, "weight_decay": 1e-4},
-        {"params": new_p, "lr": 3.0e-5, "initial_lr": 3.0e-5, "weight_decay": 1e-4},
+        {"params": base_p, "lr": 1.5e-6, "initial_lr": 1.5e-6, "weight_decay": 1e-4},
+        {"params": new_p, "lr": 1.2e-5, "initial_lr": 1.2e-5, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
     start_step = 1
