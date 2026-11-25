@@ -1,0 +1,75 @@
+{
+  "tier": "sakhiya_news_leg1_preview",
+  "model_dir": "/work/sp/sakhiya_news/leg1_preview",
+  "int8_mb": 10.138,
+  "fp32_mb": 37.349,
+  "int8_weight_pct": 95.38,
+  "dequantize_linear_nodes": 143,
+  "distinct_from_fp32_graph": true,
+  "mean_weight_quant_diff": 0.008083,
+  "stft_lsd_int8_fp32_dB": 1.2537,
+  "int8_vs_fp32_mel_corr": 0.9796,
+  "rtf_1thread": 0.0619,
+  "realtime_x_1thread": 16.2,
+  "utmos": 3.429,
+  "sim_Anchor": 0.8364,
+  "sim_OldV1": 0.3821,
+  "margin_Anchor_OldV1": 0.4543,
+  "HF_LSD_4_12kHz_dB": 1.478,
+  "ne_pcer": 0.0604,
+  "anchor_pcer": 0.032,
+  "ne_pcer_gap_vs_anchor": 0.0284,
+  "geminate_singleton_ratio": 1.953,
+  "clause_final_f0_slope_st_per_sec": -1.302,
+  "inter_clause_pause_ms": 116.0,
+  "breath_pause_naturalness": 0.887,
+  "word_drop_count": 0,
+  "f0_shutters": 0,
+  "pitch_breaks": 0,
+  "clicks": 0,
+  "node_verify": {
+    "model": "/work/sp/sakhiya_news/leg1_preview/model.int8.onnx",
+    "nan_count": 0,
+    "mean_rtf": 0.0601,
+    "clips": [
+      {
+        "lang": "ne",
+        "dur_s": 4.26,
+        "rtf_1thread": 0.062,
+        "max_abs": 0.88,
+        "rms": 0.211
+      },
+      {
+        "lang": "ne",
+        "dur_s": 5.98,
+        "rtf_1thread": 0.061,
+        "max_abs": 0.88,
+        "rms": 0.1532
+      },
+      {
+        "lang": "ne",
+        "dur_s": 8.25,
+        "rtf_1thread": 0.0607,
+        "max_abs": 0.88,
+        "rms": 0.1386
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.33,
+        "rtf_1thread": 0.0586,
+        "max_abs": 0.88,
+        "rms": 0.207
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.08,
+        "rtf_1thread": 0.0583,
+        "max_abs": 0.88,
+        "rms": 0.2145
+      }
+    ],
+    "ok": true
+  },
+  "strictly_beats_sakhiya_one": false,
+  "leg2_relay_ready": true
+}
