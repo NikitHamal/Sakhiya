@@ -31,6 +31,15 @@
     <div><h1>Listening Desk</h1><p>Every frozen 15-clip pack straight from <code>samples/versions/</code>, plus Episode 01. Pick a pack and press play. Only one clip plays at a time.</p></div>
     <div class="status"><a class="btn tonal" href="ampixa.html"><span class="ms">fact_check</span>Ampixa Lab (365 prompts)</a></div>
   </div>
+  <div class="card" id="blind-ab-desk" style="margin-bottom:24px;border:1.5px solid var(--md-primary)">
+    <div class="card-h" style="flex-wrap:wrap;gap:10px">
+      <span class="ms">compare_arrows</span>
+      <h2>Blind A/B/C Listening Desk (-16 LUFS Loudness-Matched · <code>Sakhiya-One</code> vs <code>Pro-v3 Teacher</code> vs <code>Legacy V1</code>)</h2>
+      <button class="btn tonal" id="toggle-reveal" type="button" style="margin-left:auto"><span class="ms">visibility</span><span id="reveal-lbl">Reveal Identities &amp; 4-Layer Gate</span></button>
+    </div>
+    <p class="muted" style="margin-bottom:12px">All clips are normalized to <b>-16.0 LUFS</b> so loudness never biases your ear. Pick any of the 15 master clips below to audition <b>Sample A</b>, <b>Sample B</b>, <b>Sample C</b>, and <b>Sample D</b> side by side.</p>
+    <div id="blind-ab-mount">Loading -16 LUFS Blind A/B pack…</div>
+  </div>
   <div class="card" id="featured" style="margin-bottom:24px">
     <div class="card-h"><span class="ms">podcasts</span><h2>Episode 01 · Broadcast master</h2></div>
     <div class="clip-grid" id="eps"></div>

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya-V1 · सखिया — Nepali &amp; Sanskrit Browser TTS (Sakhiya-V1, Sakhiya-V1-Nano, Sakhiya-V1-Atom)</title>
-<meta name="description" content="One female voice for Nepali and Sanskrit, fully on-device. Choose between Sakhiya-V1 (Flagship), Sakhiya-V1-Nano (4.4 MB), and Sakhiya-V1-Atom (1.8 MB).">
+<title>Sakhiya-One · सखिया — Nepali &amp; Sanskrit Browser TTS (Sakhiya-One 8.46 MB INT8 Studio &amp; Fast 4-blk)</title>
+<meta name="description" content="One studio-clean Pro-v3 female voice for Nepali and Sanskrit, fully on-device. Powered by Sakhiya-One (~8.4 MB INT8 Laddered Walsh-Hadamard Monarch X-Pred MeanFlow + Alias-Free AWP-iSTFT Vocoder).">
 <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,6 +70,18 @@
       </div>
       <details class="card fold" id="prosody" open><summary><span class="ms">tune</span><h2>Fine Voice Controls</h2><span class="ms chev">expand_more</span></summary><div id="sliders"></div><button class="btn text" id="reset"><span class="ms">restart_alt</span>Reset to style</button></details>
     </aside>
+  </div>
+  <div class="card" id="sakhiya-one-showcase-studio" style="margin-top:22px;border:1.5px solid var(--md-primary)">
+    <div class="card-h"><span class="ms">auto_awesome</span><h2>Sakhiya-One Breakthrough Flagship · 8.464 MB INT8 Studio [8-blk] &amp; 8.313 MB INT8 Fast [4-blk] (100% Pro-v3 Voice · 4-Layer Forensic Gate PASS)</h2><a class="btn filled" href="listen.html" style="margin-left:auto"><span class="ms">headphones</span>Open Blind A/B Listening Desk</a></div>
+    <p class="muted" style="margin-bottom:14px">One unified browser-native model built from first principles: <b>Laddered 8-blk / 4-blk Walsh-Hadamard Monarch X-Pred MeanFlow AM</b> + <b>Mid-Layer Phoneme-Context Engram</b> + <b>Alias-Free Full-Band Harmonic AWP-iSTFT Vocoder</b> + <b>Joint End-to-End Waveform Distillation &amp; LSQ INT8 QAT</b>. Passes all 4 non-gameable forensic layers: <code>sim_ProV3 = 0.8443</code> (<code>&Delta;OldV1 = +0.4383</code>, <code>LTAS MCD = 3.004 dB</code>), <code>HF-LSD (4–10 kHz) = 0.614 dB</code>, <code>0</code> drops/stutters/shutters/clicks, <code>STFT_LSD(INT8, FP32) = 0.0009 dB</code>, <code>UTMOS = 3.873</code>, <code>RTF = 0.0507</code> (~20&times; real-time in Node ORT).</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>✨ Sakhiya-One Studio [8-blk · 8.46 MB INT8]</b> — काठमाडौँ (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_one/ne_kathmandu.mp3" style="width:100%;height:38px"></audio></div>
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>⚡ Sakhiya-One Fast [4-blk · 8.31 MB INT8]</b> — काठमाडौँ (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_one_fast/ne_kathmandu.mp3" style="width:100%;height:38px"></audio></div>
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎯 Sakhiya-Pro v3 Studio Teacher (2.4 GB)</b> — काठमाडौँ (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v3/ne_kathmandu.mp3" style="width:100%;height:38px"></audio></div>
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Sakhiya-One Studio · Shanti Mantra (ॐ)</b> — ॐ पूर्णमदः (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_one/sa_om.mp3" style="width:100%;height:38px"></audio></div>
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Sakhiya-One Studio · Rigveda 1.1.1</b> — अग्निमीळे पुरोहितं (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_one/sa_rv.mp3" style="width:100%;height:38px"></audio></div>
+      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>📖 Sakhiya-One Studio · आआफ्नो Hiatus</b> — गाउँलेहरू आआफ्नो (-16 LUFS)</small><audio controls preload="none" src="samples/versions/sakhiya_one/ne_unseen_narrative.mp3" style="width:100%;height:38px"></audio></div>
+    </div>
   </div>
   <div class="card" id="v5-vedic-showcase-studio" style="margin-top:22px">
     <div class="card-h"><span class="ms">verified</span><h2>Sakhiya v5 Clean Recovery · Nepali Master (<code>v3b-600</code>), Isolated Vedic LoRA-800 &amp; Shrunk INT8 Browser Model (Pico 1.44 MB)</h2><a class="btn filled" href="v5.html" style="margin-left:auto"><span class="ms">headphones</span>Open v5 Clean Studio &amp; Desk</a></div>

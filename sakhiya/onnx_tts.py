@@ -171,16 +171,27 @@ class SakhiyaONNX:
             feeds_add["contour"] = c_arr
         if self.single is not None and self.dec is None:
             if "dur_scale" in self.enc_in:
+                raw_ids = [5 if x == 8 else x for x in ids[0].tolist() if not (lang == "sa" and x == 4)]
+                ids_s = ([1] + raw_ids) if (not raw_ids or raw_ids[0] != 1) else raw_ids
+                ids_in = np.array([ids_s], dtype=np.int64)
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
+                rate_val = max(float(k.get("rate", 1.0)), 0.5)
+                base_ps = float(k.get("pitch_shift", 0.0))
                 sv_sc = ((0.65 if has_vm else 0.52) if lang == "sa" else 0.35) * float(k.get("svara", 1.0))
                 if lang == "sa":
-                    ds_in = np.array([(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / max(float(k["rate"]), 0.5) for d in dm_arr], dtype=np.float32)
-                    ps_in = np.array([float(k["pitch_shift"]) + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0], dtype=np.float32)
+                    ds_base = [(0.75 + 0.25 * min(max(float(d), 0.85), 1.35)) / rate_val for d in dm_arr]
+                    ps_base = [base_ps + float(o) * sv_sc for o, i in zip(off, sid) if i >= 0]
+                    if len(ds_base) + 1 == len(ids_s):
+                        ds_in = np.array([0.88 / rate_val] + ds_base, dtype=np.float32)
+                        ps_in = np.array([base_ps] + ps_base, dtype=np.float32)
+                    else:
+                        ds_in = np.full(len(ids_s), 0.88 / rate_val, dtype=np.float32)
+                        ps_in = np.full(len(ids_s), base_ps + 0.15, dtype=np.float32)
                 else:
-                    ds_in = np.array([1.0], dtype=np.float32)
-                    ps_in = np.array([float(k.get("pitch_shift", 0.0))], dtype=np.float32)
+                    ds_in = np.full(len(ids_s), 0.94 / rate_val, dtype=np.float32)
+                    ps_in = np.full(len(ids_s), base_ps + 0.04, dtype=np.float32)
                 w = self.single.run(None, {
-                    "ids": ids,
+                    "ids": ids_in,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),
                     "dur_scale": ds_in,
                     "pitch_shift": ps_in,

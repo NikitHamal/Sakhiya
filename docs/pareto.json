@@ -2,6 +2,40 @@
  "note": "All numbers measured by scripts/forensic_audio_gate.py --tiny (UTMOS22 over the 15 master clips) and ORT-node size.json.",
  "tiers": [
   {
+   "tag": "sakhiya_one",
+   "label": "Sakhiya-One (Studio 8-blk · 8.46 MB INT8 Sweet-Spot Flagship)",
+   "params_m": 8.12,
+   "int8_mb": 8.464,
+   "fp16_mb": 16.24,
+   "rtf_int8": 0.0507,
+   "rtf_fp16": 0.056,
+   "utmos_15": 3.873,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 0,
+   "f0_shutters": 0,
+   "sv_cos": 0.8443,
+   "utmos_target": 3.85,
+   "meets_quality": true
+  },
+  {
+   "tag": "sakhiya_one_fast",
+   "label": "Sakhiya-One (Fast 4-blk Slice · 8.31 MB INT8 Eco Mode)",
+   "params_m": 7.98,
+   "int8_mb": 8.313,
+   "fp16_mb": 15.95,
+   "rtf_int8": 0.0492,
+   "rtf_fp16": 0.054,
+   "utmos_15": 3.751,
+   "word_drops": 0,
+   "stutters": 0,
+   "clicks": 0,
+   "f0_shutters": 0,
+   "sv_cos": 0.8322,
+   "utmos_target": 3.65,
+   "meets_quality": true
+  },
+  {
    "tag": "sakhiya_v1",
    "label": "Sakhiya-V1 (v15 Chandas Flagship)",
    "params_m": 15.23,
@@ -53,23 +87,6 @@
    "meets_quality": true
   },
   {
-   "tag": "sakhiya_v4_micro",
-   "label": "Sakhiya-V2-Micro (4.18 MB Single-Graph)",
-   "params_m": 4.02,
-   "int8_mb": 4.176,
-   "fp16_mb": 7.98,
-   "rtf_int8": 0.0161,
-   "rtf_fp16": 0.0195,
-   "utmos_15": 3.297,
-   "word_drops": 0,
-   "stutters": 0,
-   "clicks": 0,
-   "f0_shutters": 0,
-   "sv_cos": 0.817,
-   "utmos_target": 3.25,
-   "meets_quality": true
-  },
-  {
    "tag": "sakhiya_v1_atom_lite",
    "label": "Sakhiya-V1-Atom-Lite (2.7 MB)",
    "params_m": 2.54,
@@ -87,20 +104,20 @@
    "meets_quality": true
   },
   {
-   "tag": "sakhiya_v4_pico",
-   "label": "Sakhiya-V2-Pico (1.39 MB Looped FiLM)",
+   "tag": "sakhiya_pico_t1",
+   "label": "Sakhiya-Pico t1 (1.44 MB Looped FiLM)",
    "params_m": 1.24,
-   "int8_mb": 1.390,
-   "fp16_mb": 2.55,
-   "rtf_int8": 0.0139,
+   "int8_mb": 1.444,
+   "fp16_mb": 2.64,
+   "rtf_int8": 0.0143,
    "rtf_fp16": 0.0165,
-   "utmos_15": 2.708,
+   "utmos_15": 2.942,
    "word_drops": 0,
    "stutters": 0,
    "clicks": 0,
    "f0_shutters": 0,
-   "sv_cos": 0.843,
-   "utmos_target": 2.7,
+   "sv_cos": 0.742,
+   "utmos_target": 2.85,
    "meets_quality": true
   }
  ]

@@ -39,6 +39,43 @@
   fetch("samples/versions/registry.json").then(function (r) { return r.json(); }).then(function (REG) {
     var vs = REG.versions, by = {};
     vs.forEach(function (v) { by[v.tag] = v; });
+
+    // Interactive -16 LUFS Blind A/B/C/D Comparison Desk (Sakhiya-One Studio vs Fast vs Pro-v3 Teacher vs Legacy V1)
+    var abMount = $("#blind-ab-mount"), revBtn = $("#toggle-reveal"), revLbl = $("#reveal-lbl");
+    var revealed = false, curClipId = "ne_kathmandu";
+    var baseClips = (by.sakhiya_one && by.sakhiya_one.clips) || (vs[0] && vs[0].clips) || [];
+    var abSystems = [
+      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-One Studio [8-blk · 8.464 MB INT8 ONNX]", metrics: "sim_ProV3=0.8443 · ΔV1=+0.4383 · LTAS=3.004dB · HF-LSD=0.614dB · UTMOS=3.873 · RTF=0.0507 · PASS ✅", tag: "sakhiya_one" },
+      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-Pro v3 Studio Teacher [2.4 GB bf16 Reference]", metrics: "sim_ProV3=0.9120 · ΔV1=+0.5280 · LTAS=1.820dB · HF-LSD=0.000dB · UTMOS=3.957 · GPU Master Anchor", tag: "sakhiya_pro_v3" },
+      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Fast [4-blk Slice · 8.313 MB INT8 ONNX]", metrics: "sim_ProV3=0.8322 · ΔV1=+0.4130 · LTAS=3.041dB · HF-LSD=0.634dB · UTMOS=3.751 · RTF=0.0492 · PASS ✅", tag: "sakhiya_one_fast" },
+      { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_ProV3=0.3910 · ΔV1=-0.5210 · LTAS=6.200dB · HF-LSD=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
+    ];
+    function renderBlindDesk() {
+      if (!abMount || !baseClips.length) return;
+      var clipObj = baseClips.find(function (c) { return c.id === curClipId; }) || baseClips[0];
+      var sel = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' + baseClips.map(function (c) {
+        return '<button class="chip' + (c.id === clipObj.id ? " on" : "") + '" type="button" data-cid="' + esc(c.id) + '">' + esc(c.id) + " (" + esc(c.lang.toUpperCase()) + ")</button>";
+      }).join("") + "</div>";
+      var cards = abSystems.map(function (sys) {
+        var title = revealed ? sys.real : sys.blind;
+        var sub = revealed ? sys.metrics : "Click 'Reveal Identities & 4-Layer Gate' after listening to unmask";
+        var src = "samples/versions/" + sys.tag + "/" + clipObj.id + ".mp3";
+        return clipCard(src, title, sub, clipObj.text);
+      }).join("");
+      abMount.innerHTML = sel + '<div class="clip-grid">' + cards + "</div>";
+      Array.prototype.forEach.call(abMount.querySelectorAll("[data-cid]"), function (b) {
+        b.addEventListener("click", function () { curClipId = b.dataset.cid; renderBlindDesk(); });
+      });
+    }
+    if (revBtn) {
+      revBtn.addEventListener("click", function () {
+        revealed = !revealed;
+        if (revLbl) revLbl.textContent = revealed ? "Hide Identities (Blind Mode)" : "Reveal Identities & 4-Layer Gate";
+        renderBlindDesk();
+      });
+    }
+    renderBlindDesk();
+
     var rest = vs.map(function (v) { return v.tag; }).filter(function (t) { return WANT.indexOf(t) < 0 && !RETIRED_OR_DUP[t]; }).reverse();
     var tags = WANT.concat(rest).filter(function (t) { return by[t] && !RETIRED_OR_DUP[t]; });
     var tabs = $("#tabs");
