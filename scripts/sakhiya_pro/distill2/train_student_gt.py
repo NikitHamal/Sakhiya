@@ -34,10 +34,10 @@ from sakhiya.v2_vocoder import mel_spec_24k, HOP  # noqa: E402
 from sakhiya.ctc_aligner import MelCTCAligner, batch_viterbi_ctc_durations  # noqa: E402
 from sakhiya import g2p, symbols  # noqa: E402
 
-# Synchronized encoder + velocity learning rates for 1-step students (t10, t5, t1) so mu_y and vel(mu_y) adapt in lock-step
+# Synchronized encoder + velocity learning rates for 1-step students (t10, t1) so mu_y and vel(mu_y) adapt in lock-step
 # to Sakhiya-Pro v3 without harmonic mismatch; gentle polishing LR for 4-step OT-CFM students (t30, t15) initialized from v3_t30_am.pt.
-LR_ENC = dict(t30=4.0e-5, t15=4.5e-5, t10=3.5e-4, t5=3.5e-4, t1=9.0e-4)
-LR_VEL = dict(t30=3.5e-5, t15=4.0e-5, t10=3.5e-4, t5=3.5e-4, t1=9.0e-4)
+LR_ENC = dict(t30=4.0e-5, t15=4.5e-5, t10=3.5e-4, t1=9.0e-4)
+LR_VEL = dict(t30=3.5e-5, t15=4.0e-5, t10=3.5e-4, t1=9.0e-4)
 
 BAD_OLD_SRCS = {'vc_slr54', 'vc_v13', 'vc_slr43', 'anchor_6834_stitched'}
 

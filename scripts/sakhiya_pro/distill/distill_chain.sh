@@ -4,7 +4,7 @@
 L=/work/tts/logs; D=/work/sp/distill; R=/work/sp/repo/scripts/sakhiya_pro/distill; export PYTHONPATH=/work/sp/OmniVoice_src:/work/sp HF_TOKEN=$(cat /tmp/hf_token)
 mkdir -p $D/runs $D/corpus /work/sp/stage /work/sp/tiers /work/sp/listen
 st(){ echo "{\"label\":\"$2\",\"state\":\"$3\",\"note\":\"$4\"}" > /work/sp/stage/$1.json; }
-DEAD=$(date -u -d "$(cat /work/sp/deadline_utc.txt)Z" +%s); NW=${NW:-7}; CORPUS_MIN=${CORPUS_MIN:-60}; TIERS=${TIERS:-"t30 t15 t10 t5 t1"}
+DEAD=$(date -u -d "$(cat /work/sp/deadline_utc.txt)Z" +%s); NW=${NW:-7}; CORPUS_MIN=${CORPUS_MIN:-60}; TIERS=${TIERS:-"t30 t15 t10 t1"}
 until grep -q PRO_V2_DONE $L/pipeline_v2.log 2>/dev/null; do sleep 30; done
 [ -f $D/texts.jsonl ] || python3 $R/gen_corpus.py texts > $L/gen_texts.log 2>&1
 st 50_corpus_d "Distillation corpus from Pro v2 (strict filters)" run "$NW teacher workers, up to ${CORPUS_MIN} min"

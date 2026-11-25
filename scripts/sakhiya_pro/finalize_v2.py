@@ -9,7 +9,7 @@ usage:  setsid nohup python3 finalize_v2.py --final_utc 2026-11-24T04:00:00 > /w
 import os, sys, re, json, glob, time, shutil, subprocess, argparse, datetime, signal
 REPO = '/work/sp/repo'; L = '/work/tts/logs'; T = '/work/sp/tiers'
 ENV = dict(os.environ, GIT_ASKPASS='/tmp/gitenv.sh', GIT_TERMINAL_PROMPT='0', PYTHONPATH='/work/sp/OmniVoice_src:/work/sp')
-NAMES = {'t30': 'Sakhiya-T30', 't15': 'Sakhiya-T15', 't10': 'Sakhiya-T10', 't5': 'Sakhiya-Micro (t5)', 't1': 'Sakhiya-Pico (t1)'}
+NAMES = {'t30': 'Sakhiya-T30', 't15': 'Sakhiya-T15', 't10': 'Sakhiya-T10', 't1': 'Sakhiya-Pico (t1)'}
 
 
 def log(*a): print(f'[{time.strftime("%T")}]', *a, flush=True)

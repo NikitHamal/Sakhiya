@@ -30,9 +30,9 @@ wait $P1 $P2
 tail -n 2 $L/voc320.log $L/voc144.log
 st 58_voc "Pro-v3 vocoder GAN (320 + 144 ch)" done "$(tail -n 1 $L/voc320.log | cut -c1-80)"
 
-nohup python3 $Q/ladder_daemon.py --every 1200 --tiers t30,t15,t10,t5,t1 > $L/ladder_daemon.log 2>&1 < /dev/null &
-st 60_micro "Student ladder (ground-truth Pro-v3, GAN + WavLM + QAT)" run "t15 t5 t1 t10 concurrent, ${STU_MIN} min"
-for T in t15 t5 t1 t10; do
+nohup python3 $Q/ladder_daemon.py --every 1200 --tiers t30,t15,t10,t1 > $L/ladder_daemon.log 2>&1 < /dev/null &
+st 60_micro "Student ladder (ground-truth Pro-v3, GAN + WavLM + QAT)" run "t30 t15 t10 t1 concurrent, ${STU_MIN} min"
+for T in t30 t15 t10 t1; do
   BS=24; [ $T = t1 ] && BS=32
   nohup python3 $R/train_student_gt.py --tier $T --minutes $STU_MIN --bs $BS --resume > $L/stu_$T.log 2>&1 < /dev/null &
 done

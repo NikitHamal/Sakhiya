@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya v5 Clean · Nepali Master, Vedic LoRA-800 &amp; Micro/Pico INT8</title>
-<meta name="description" content="Dedicated Sakhiya v5 Clean Listening Desk &amp; On-Device Browser Studio (Nepali v3b-600, Episode 01 v5, Vedic LoRA-800, Micro 4.404 MB, Pico 1.195 MB).">
+<title>Sakhiya v5 Clean · Nepali Master, Vedic LoRA-800 &amp; Active 4-Tier INT8 Ladder</title>
+<meta name="description" content="Dedicated Sakhiya v5 Clean Listening Desk &amp; On-Device Browser Studio (Nepali v3b-600, Episode 01 v5, Vedic LoRA-800, T30, T15, T10, and Pico t1 1.44 MB).">
 <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +30,7 @@
   <div class="page-head">
     <div>
       <h1>Sakhiya v5 Clean · Listening Desk &amp; On-Device Browser Studio</h1>
-      <p>Side-by-side audition of <b>Nepali Master (<code>v3b-600</code>)</b>, <b>Episode 01 v5 Broadcast Master (<code>-14.0 LUFS</code>, 33/33)</b>, <b>Isolated Vedic LoRA-800 (<code>adapter-800</code>, 5/5 Gate Pass)</b>, <b>Sakhiya-v5-Micro (<code>4.404 MB</code> INT8 ONNX · corr <code>0.9952</code>)</b>, and <b>Sakhiya-v5-Pico (<code>1.195 MB</code> INT8 ONNX · corr <code>0.9922</code>)</b>, plus live in-browser synthesis with Chandas-Laya-Svara &amp; WebAudio Tanpura.</p>
+      <p>Side-by-side audition of <b>Nepali Master (<code>v3b-600</code>)</b>, <b>Episode 01 v5 Broadcast Master (<code>-14.0 LUFS</code>, 33/33)</b>, <b>Isolated Vedic LoRA-800 (<code>adapter-800</code>, 5/5 Gate Pass)</b>, and our active 4-tier single-graph INT8 ONNX ladder (<b>T30, T15, T10, and Pico t1 <code>1.44 MB</code></b>), plus live in-browser synthesis with Chandas-Laya-Svara &amp; WebAudio Tanpura.</p>
     </div>
     <div class="status">
       <span class="pill tone"><span class="ms">verified</span><i>27/27 Leak/Loop Gate Pass · 0 Clicks · 0 Drops</i></span>
@@ -84,8 +84,8 @@
   </div>
 
   <div class="card">
-    <div class="card-h"><span class="ms">compare_arrows</span><h2>4-Way Pack Comparison: Nepali Master vs Vedic LoRA-800 vs v5-Micro (4.404 MB) vs v5-Pico (1.195 MB)</h2></div>
-    <div id="v5-grid" class="stack">Loading 15 master clips across all 4 frozen v5 packs…</div>
+    <div class="card-h"><span class="ms">compare_arrows</span><h2>Active Pack Comparison: Nepali Master vs Vedic LoRA-800 vs T30 vs T15 vs T10 vs Pico (1.44 MB)</h2></div>
+    <div id="v5-grid" class="stack">Loading 15 master clips across active frozen packs…</div>
   </div>
 </main>
 
@@ -143,8 +143,10 @@
     var packs = [
       ["sakhiya_v5_nepali", "Nepali v5 Master (v3b-600)"],
       ["sakhiya_v5_vedic", "Vedic LoRA-800 (adapter-800)"],
-      ["sakhiya_v5_micro", "v5-Micro (4.404 MB INT8)"],
-      ["sakhiya_v5_pico", "v5-Pico (1.195 MB INT8)"]
+      ["sakhiya_v3_t30", "Pro-v3 T30 (Flagship INT8)"],
+      ["sakhiya_v3_t15", "Pro-v3 T15 (Compact INT8)"],
+      ["sakhiya_v3_t10", "Pro-v3 T10 (Reflow INT8)"],
+      ["sakhiya_v3_t1", "Pico t1 (1.44 MB INT8)"]
     ];
     $("#v5-grid").innerHTML = clips.map(function (c) {
       var cells = packs.map(function (pk) {
