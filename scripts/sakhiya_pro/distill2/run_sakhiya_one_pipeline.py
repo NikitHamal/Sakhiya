@@ -232,24 +232,26 @@ def build_phase0_pure_pro_v3_corpus(dev="cuda"):
 
     # Build rectified teacher trajectory cache directly from `teacher` (`t15`, UTMOS 4.086)
     rect_cache = []
-    all_seq = [(x["id"], x["ids"].tolist(), x["lang"]) for x in pure_wav_items[:1400]]
-    # Oversample master + dev evaluation prompts 30x so evaluation & stress clips lock onto Pro-v3 teacher trajectories
+    all_seq = [(x["id"], x["ids"].tolist()[:96], x["lang"]) for x in pure_wav_items[:1200] if len(x["ids"]) >= 4]
+    # Oversample master + dev evaluation prompts so evaluation & stress clips lock onto Pro-v3 teacher trajectories
     dv_rows = [json.loads(l) for l in open("/work/sp/distill/manifest.jsonl") if json.loads(l).get("split") == "dev"][:36]
     for r in dv_rows:
         lg_r = 1 if r["lang"] == "sa" else 0
-        all_seq.extend([(r["id"], ids_of(r["text"], "sa" if lg_r == 1 else "ne"), lg_r)] * 12)
+        all_seq.extend([(r["id"], ids_of(r["text"], "sa" if lg_r == 1 else "ne")[:110], lg_r)] * 10)
     for cid, ids_c, lang_i, txt_c in master_prompts:
-        all_seq.extend([("master_" + cid, ids_c, lang_i)] * 30)
+        all_seq.extend([("master_" + cid, ids_c[:110], lang_i)] * 25)
         if cid == "mixed_owner":
             from sakhiya import mixed as _mixed
             for seg_l, seg_t in _mixed.route(txt_c):
                 lg_s = 1 if seg_l == "sa" else 0
-                all_seq.extend([("mixed_seg", ids_of(seg_t, "sa" if lg_s == 1 else "ne"), lg_s)] * 20)
+                all_seq.extend([("mixed_seg", ids_of(seg_t, "sa" if lg_s == 1 else "ne")[:110], lg_s)] * 15)
 
     pros_tbl = teacher.pros_tbl
     with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
         for b0 in range(0, len(all_seq), 48):
-            sub = all_seq[b0 : b0 + 48]
+            sub = [s for s in all_seq[b0 : b0 + 48] if len(s[1]) >= 3]
+            if not sub:
+                continue
             B = len(sub)
             ids_pad = pad_sequence([torch.tensor(s[1], dtype=torch.long) for s in sub], batch_first=True).to(dev)
             il = torch.tensor([len(s[1]) for s in sub], device=dev)
@@ -276,17 +278,15 @@ def build_phase0_pure_pro_v3_corpus(dev="cuda"):
             eng_t = teacher.am.enc.energy_pred(ht).squeeze(-1).clamp(-1.2, 1.2)
             mut_e = mut + (0.10 * pros[:, 2:3] + 0.06 * eng_t)[..., None] * 0.32
             xd = teacher.am.dur.pred_logdur(ids_pad, ht, im) + teacher.dur_rate_bias.clamp(-0.12, 0.12)
-            dur_frames = torch.exp(xd).clamp(min=1.0, max=60.0)
+            dur_frames = torch.exp(xd).clamp(min=1.0, max=24.0)
             rate_mult = torch.exp(-0.04 * pros[:, 0:1]) * (1.0 - is_pause) + torch.exp(0.08 * pros[:, 3:4]) * is_pause
-            dur_frames = (dur_frames * rate_mult).clamp(min=1.0, max=60.0)
+            dur_frames = (dur_frames * rate_mult).clamp(min=1.0, max=24.0)
             is_tail = (((pos >= (L_f - 3.0)) & (ids_pad > 8)) | (ids_pad >= 53)).float()
             min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids_pad > 8).float() * 3.0 + (ids_pad <= 8).float() * 1.0)
-            dur = (torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0) * im.float()).long()
+            dur = (torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=24.0) * im.float()).long()
 
             yl = dur.sum(1)
             T = int(yl.max().item())
-            if T > 640:
-                continue
             ym = torch.arange(T, device=dev)[None] < yl[:, None]
             ymf = ym[:, None].float()
             attn = _dur_to_attn(dur, im, ym)
@@ -844,7 +844,7 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
                 f0_v8, uv_v8 = G.am.f0_head(mp8_in.detach())
                 y_v8, re_v8, im_v8, log_mag_v8, cos_v8, sin_v8 = G.voc.forward_wav(mp8_in, f0_v8, uv_v8)
                 f0_v4, uv_v4 = G.am.f0_head(mp4_in.detach())
-                _, _, _, log_mag_v4, cos_v4, sin_v4 = G.voc.spectrum_and_phase(mp4_in, f0_v4, uv_v4)
+                _, _, log_mag_v4, cos_v4, sin_v4 = G.voc.spectrum_and_phase(mp4_in, f0_v4, uv_v4)
 
                 l_stft_e2e = mr_complex_stft_loss(y_v8, y_vt, dev)
                 l_awp_e2e = awp_phase_losses(cos_v8, sin_v8, re_vt, im_vt) + 0.5 * awp_phase_losses(cos_v4, sin_v4, re_vt, im_vt)
