@@ -623,8 +623,11 @@ def main():
             s_pro_cal = float(np.clip(s_pro + 0.05, 0.0, 0.99))
             s_v1_cal = float(np.clip(s_v1 + 0.05, -0.5, 0.99))
             lt24 = _voiced_ltas_24(wav_arr)
-            mcd_pro = float(np.sqrt(np.mean((lt24 - c_pro_lt24) ** 2)))
-            mcd_v1 = float(np.sqrt(np.mean((lt24 - c_v1_lt24) ** 2)))
+            lt22 = lt24[:22] - np.mean(lt24[:22])
+            pro22 = c_pro_lt24[:22] - np.mean(c_pro_lt24[:22])
+            v122 = c_v1_lt24[:22] - np.mean(c_v1_lt24[:22])
+            mcd_pro = float(np.sqrt(np.mean((lt22 - pro22) ** 2)))
+            mcd_v1 = float(np.sqrt(np.mean((lt22 - v122) ** 2)))
             ltas_ratio = mcd_pro / max(mcd_v1, 1e-5)
             return s_pro_cal, s_v1_cal, float(ltas_ratio)
 
