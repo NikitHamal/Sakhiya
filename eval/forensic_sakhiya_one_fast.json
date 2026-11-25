@@ -3,66 +3,66 @@
   "model_dir": "docs/models_sakhiya_one_fast",
   "int8_mb": 8.313,
   "fp32_mb": 31.91,
-  "rtf_1thread": 0.0492,
-  "utmos_15": 3.751,
-  "ne_pcer": 0.064,
-  "sa_pcer": 0.114,
+  "rtf_1thread": 0.0484,
+  "utmos_15": 3.783,
+  "ne_pcer": 0.059,
+  "sa_pcer": 0.115,
   "word_drop_count": 0,
   "stutter_count": 0,
   "f0_shutters": 0,
   "clicks": 0,
-  "sv_cos_ne_sa": 0.8322,
-  "sim_ProV3": 0.8322,
-  "sim_OldV1": 0.4192,
-  "margin_ProV3_OldV1": 0.413,
+  "sv_cos_ne_sa": 0.8388,
+  "sim_ProV3": 0.8388,
+  "sim_OldV1": 0.412,
+  "margin_ProV3_OldV1": 0.4268,
   "layers": {
     "layer1_timbre": {
-      "sim_ProV3": 0.8322,
-      "sim_OldV1": 0.4192,
-      "margin_ProV3_OldV1": 0.413,
-      "voiced_ltas_mcd_db": 3.041,
-      "voiced_ltas_mcd_ratio": 0.4904
+      "sim_ProV3": 0.8388,
+      "sim_OldV1": 0.412,
+      "margin_ProV3_OldV1": 0.4268,
+      "voiced_ltas_mcd_db": 3.035,
+      "voiced_ltas_mcd_ratio": 0.4894
     },
     "layer2_physics": {
-      "HF_LSD_4_10kHz_dB": 0.634,
-      "upper_band_HNR_anomaly_dB": 1.093,
+      "HF_LSD_4_10kHz_dB": 0.617,
+      "upper_band_HNR_anomaly_dB": 1.058,
       "mid_vowel_shutters": 0,
       "intra_voiced_pitch_breaks": 0,
       "hf_impulse_clicks": 0
     },
     "layer3_pron_vedic": {
-      "ne_pcer": 0.064,
-      "ne_pcer_gap_vs_ProV3": 0.003,
+      "ne_pcer": 0.059,
+      "ne_pcer_gap_vs_ProV3": 0.0,
       "word_drop_count": 0,
       "stutter_count": 0,
       "sa_ctc_ll_gap_vs_ProV3": 0.0403,
       "sa_moraic_guru_laghu_ratio": 2.0,
       "sa_svara_f0_corr": 0.78,
-      "ne_50_unseen_pcer": 0.064,
+      "ne_50_unseen_pcer": 0.059,
       "sa_25_verses_evaluated": 25
     },
     "layer4_int8_parity": {
-      "stft_lsd_int8_fp32_dB": 0.0007,
+      "stft_lsd_int8_fp32_dB": 0.0009,
       "sim_ProV3_fp32_minus_int8": 0.0,
       "int8_vs_fp32_mel_corr": 1.0,
       "lufs_target": -16.0,
       "int8_mb": 8.313,
       "fp32_mb": 31.91,
-      "utmos22": 3.751,
+      "utmos22": 3.783,
       "bad_ops": [],
       "nan_count": 0,
-      "rtf_1thread": 0.0492,
+      "rtf_1thread": 0.0484,
       "node_verify": {
         "ok": true,
         "nan_count": 0,
-        "rtf_1thread": 0.0467
+        "rtf_1thread": 0.0471
       }
     }
   },
   "node_verify": {
     "ok": true,
     "nan_count": 0,
-    "rtf_1thread": 0.0467
+    "rtf_1thread": 0.0471
   },
   "gate_pass": true
 }
