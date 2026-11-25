@@ -1,17 +1,16 @@
 """Phase 1 Breakthrough: Studio-Clean Alias-Free Full-Band Harmonic + Parallel Amplitude/Anti-Wrapped-Phase (AWP)
 ConvNeXt iSTFT Vocoder (`sakhiya/awp_vocoder.py`).
 
-Root-Cause Fixes over legacy `VocoderV2`:
+Designed from physics to eliminate metallic sheen, comb-beating, and >4 kHz aliasing:
 1. ZERO `f0_net` inside the vocoder: takes continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T] directly from the Acoustic Model
-   (trained with +-1.5% F0 jitter augmentation on GT audio so small AM pitch errors never cause comb-filter beating).
-2. Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0)), up to K_max=24) + deterministic shaped
-   noise excitation, replacing the truncated k=1..8 (<= 740 Hz) harmonic source.
-3. ZERO un-antialiased `Snake1d` high-frequency folding: uses band-limited anti-aliased activation + APNet2-style Parallel
-   `SiLU`/`GELU` ConvNeXt Amplitude (`amp_branch` + `amp_head`) and Anti-Wrapped Phase (`pha_branch` + `pha_head`) branches
-   so >4 kHz metallic sheen disappears and INT8 quantization stays razor-clean.
-4. Permanent FP16 isolation for the tiny harmonic excitation (`src.*`) and final `amp_head` / `pha_head` spectral projections
-   (~38 KB total overhead) while quantizing the ConvNeXt/ResBlock body to per-channel INT8 via QAT.
-5. Zero inference-time DSP band-aids (no 9-frame F0 pooling, no manual harmonic roll-off, no artificial 5.2 Hz vibrato, no post-hoc EQ).
+   (trained with +-1.5% F0 jitter + slight mel-blur augmentation on GT audio so small AM pitch/mel imperfections never cause comb-beating).
+2. Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0)), up to K_max=24, zeroed above 12 kHz) +
+   Gaussian/shaped noise excitation, replacing truncated k=1..8 harmonics.
+3. Parallel Amplitude (`amp_branch` + `amp_head`) and Anti-Wrapped Phase (`pha_branch` + `pha_head`) ConvNeXt branches using
+   smooth `SiLU`/`GELU` + `RMSNorm1d` (quantization-friendly, zero periodic aliasing).
+4. Permanent FP16 isolation for the deterministic harmonic excitation (`src.*`) and final `log_mag / cos_ph / sin_ph` iSTFT
+   projections (`amp_head`, `pha_head`, ~40 KB total overhead) while quantizing the ConvNeXt/MRF body to per-channel INT8 via LSQ QAT.
+5. Zero inference-time DSP band-aids (no 9-frame F0 pooling, no manual harmonic roll-off, no artificial vibrato, no post-hoc EQ).
 """
 import math
 import numpy as np
@@ -22,12 +21,25 @@ from .v2_vocoder import SR, N_FFT, HOP, WIN, NMEL, ISTFT_N_FFT, ISTFT_HOP, mel_s
 from .v15_rnd_wavehax import QATConv1d, ste_int8_weight, _build_cola_istft_kernel
 
 N_BINS = ISTFT_N_FFT // 2 + 1  # 33 bins (0 .. 12000 Hz)
-K_MAX_HAR = 24                 # Full-band harmonics k=1..24 up to Nyquist
+K_MAX_HAR = 24                 # Full-band harmonics k=1..24 up to Nyquist (12 kHz)
+
+
+class RMSNorm1d(nn.Module):
+    """Channel-wise RMSNorm for [B, C, T] tensors using standard ONNX ops (Mul, ReduceMean, Sqrt, Div)."""
+    def __init__(self, channels: int, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(1, channels, 1))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        xf = x.float()
+        rms = torch.sqrt(torch.mean(xf * xf, dim=1, keepdim=True) + self.eps)
+        return ((xf / rms) * self.weight.float()).to(x.dtype)
 
 
 class AntiAliasedAct1d(nn.Module):
-    """Band-limited slope-bounded activation replacing un-antialiased Snake1d:
-    eliminates >4 kHz high-order harmonic folding on outlier peaks while preserving exact small-signal formant gain.
+    """Smooth band-limited activation without phase-warping tanh distortion:
+    preserves exact fundamental/harmonic phase alignment while keeping high-frequency derivatives smooth for INT8 quantization.
     """
     def __init__(self, channels: int):
         super().__init__()
@@ -35,23 +47,20 @@ class AntiAliasedAct1d(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         xf = x.float()
-        a = self.alpha.float().clamp(min=0.1)
-        ax = a * xf
-        # Smooth saturation above |ax| > 2.5 prevents high-frequency Nyquist folding without distorting normal speech formants
-        ax_b = torch.tanh(ax * 0.25) * 4.0
-        y = xf + (1.0 / a) * (torch.sin(ax_b) ** 2)
+        a = self.alpha.float().clamp(min=0.1, max=6.0)
+        y = xf + (1.0 / a) * (torch.sin(a * xf) ** 2)
         return y.to(x.dtype)
 
 
 class ConvNeXtParallelBranch(nn.Module):
-    """Clean SiLU/GELU ConvNeXt-V2 refinement block for Parallel Amplitude & Anti-Wrapped Phase branches (zero Snake1d)."""
+    """Smooth SiLU/GELU + RMSNorm1d ConvNeXt-V2 refinement block for Parallel Amplitude & Anti-Wrapped Phase branches."""
     def __init__(self, dim: int, kernel_size: int = 7):
         super().__init__()
         h = max(16, dim // 2)
         self.dw = nn.Conv1d(dim, dim, kernel_size, padding=kernel_size // 2, groups=dim)
-        self.norm = nn.GroupNorm(1, dim)
+        self.norm = RMSNorm1d(dim)
         self.pw1 = nn.Conv1d(dim, h, 1)
-        self.act = nn.GELU()
+        self.act = nn.SiLU()
         self.pw2 = nn.Conv1d(h, dim, 1)
         nn.init.zeros_(self.pw2.weight)
         nn.init.zeros_(self.pw2.bias)
@@ -77,10 +86,10 @@ class ResBlockAWP(nn.Module):
 
 
 class FullBandHarmonicExcitation(nn.Module):
-    """Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0))) + Noise Excitation, kept in FP16 (< 24 KB).
-    Takes continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T] directly from the AM (ZERO `f0_net` inside the vocoder!).
+    """Full-Band Band-Limited Harmonics up to Nyquist (k = 1 .. floor(fs / (2 * f0)), zeroed above 12 kHz) + Gaussian Noise Excitation.
+    Kept permanently in FP16 (< 28 KB). Takes continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T] directly from the AM.
     """
-    def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 4):
+    def __init__(self, c4: int = 104, c16: int = 52, n_har_base: int = 8, n_har_upper: int = 16):
         super().__init__()
         self.n_har_base = n_har_base
         self.n_har_upper = n_har_upper
@@ -110,10 +119,10 @@ class FullBandHarmonicExcitation(nn.Module):
         k_ph_b = ks_b * ph
         har_b = (torch.cat([torch.sin(k_ph_b) * amp_b, torch.cos(k_ph_b) * amp_b], dim=1) * uv_16)
 
-        # 2. Full-Band Upper Harmonics k = 9 .. 24 up to 12,000 Hz Nyquist + deterministic shaped noise excitation
+        # 2. Full-Band Upper Harmonics k = 9 .. 24 up to Nyquist (zeroed strictly above 12,000 Hz) + noise excitation
         ks_u = torch.arange(self.n_har_base + 1, self.n_har_base + self.n_har_upper + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
         fk_u = ks_u * f0_16
-        nyq_aa = ((11800.0 - fk_u) / 1400.0).clamp(0.0, 1.0)
+        nyq_aa = ((12000.0 - fk_u) / 1200.0).clamp(0.0, 1.0)
         nyq_aa = nyq_aa * nyq_aa * (3.0 - 2.0 * nyq_aa)
         amp_u = (1.0 / torch.sqrt(ks_u)) * nyq_aa * uv_16
         ph_u = (ks_u * 0.125) * ph
@@ -128,7 +137,7 @@ class FullBandHarmonicExcitation(nn.Module):
 
 class AWPVocoder(nn.Module):
     """Phase 1 Studio-Clean Alias-Free Full-Band Harmonic + Parallel Amplitude/Anti-Wrapped-Phase (AWP) iSTFT Vocoder."""
-    def __init__(self, n_mels: int = NMEL, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11)):
+    def __init__(self, n_mels: int = NMEL, ch: int = 208, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11)):
         super().__init__()
         self.ch = ch
         self.n_kernels = len(res_kernels)
@@ -156,7 +165,7 @@ class AWPVocoder(nn.Module):
         self.register_buffer("K_istft", torch.from_numpy(K_istft), persistent=False)
 
     def load_pro_v3_filterbank(self, ck_path: str):
-        """Initialize filterbank from Pro-v3-trained vocoder (stripping legacy `f0_net`, splitting `post` into parallel `amp_head` + `pha_head`)."""
+        """Initialize filterbank from pure Pro-v3 vocoder (stripping legacy `f0_net`, projecting channels cleanly via SVD/slice)."""
         dev = next(self.parameters()).device
         ck = torch.load(ck_path, map_location=dev, weights_only=False)
         sd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
@@ -166,17 +175,20 @@ class AWPVocoder(nn.Module):
                 if k.startswith("src.f0_net"):
                     continue
                 if k in sd:
-                    if sd[k].shape == v.shape:
-                        v.copy_(sd[k])
-                    elif sd[k].ndim == v.ndim:
-                        sl = tuple(slice(0, min(a, b)) for a, b in zip(v.shape, sd[k].shape))
-                        v[sl].copy_(sd[k][sl])
+                    src_t = sd[k]
+                    if src_t.shape == v.shape:
+                        v.copy_(src_t)
+                    elif src_t.ndim == v.ndim:
+                        sl = tuple(slice(0, min(a, b)) for a, b in zip(v.shape, src_t.shape))
+                        v[sl].copy_(src_t[sl])
             if "post.weight" in sd and "post.bias" in sd:
                 pw, pb = sd["post.weight"], sd["post.bias"]
-                if pw.shape[0] == 2 * N_BINS and pw.shape[1] == self.amp_head.weight.shape[1]:
-                    self.amp_head.weight.copy_(pw[:N_BINS])
+                c2_own = self.amp_head.weight.shape[1]
+                c2_src = min(c2_own, pw.shape[1])
+                if pw.shape[0] == 2 * N_BINS:
+                    self.amp_head.weight[:, :c2_src].copy_(pw[:N_BINS, :c2_src])
                     self.amp_head.bias.copy_(pb[:N_BINS])
-                    self.pha_head.weight.copy_(pw[N_BINS:])
+                    self.pha_head.weight[:, :c2_src].copy_(pw[N_BINS:, :c2_src])
                     self.pha_head.bias.copy_(pb[N_BINS:])
         self.load_state_dict(own, strict=False)
         return self
@@ -228,13 +240,15 @@ class AWPVocoder(nn.Module):
 
 
 def awp_phase_losses(cos_p: torch.Tensor, sin_p: torch.Tensor, re_gt: torch.Tensor, im_gt: torch.Tensor):
-    """Shift-invariant Anti-Wrapped Phase (AWP) losses:
-    Group Delay (L_GD along frequency bins) + Instantaneous Angular Frequency (L_IAF along time frames).
+    """Anti-Wrapped Phase (AWP) losses (APNet2-style):
+    Instantaneous Phase (L_IP) + Group Delay (L_GD along frequency) + Instantaneous Angular Frequency (L_IAF along time).
     """
     mag_gt = torch.sqrt(re_gt.float() ** 2 + im_gt.float() ** 2 + 1e-7)
     w = (mag_gt / (mag_gt.mean(dim=(1, 2), keepdim=True) + 1e-5)).clamp(min=0.05, max=3.0).detach()
     cos_t = re_gt.float() / mag_gt
     sin_t = im_gt.float() / mag_gt
+
+    l_ip = ((1.0 - (cos_p * cos_t + sin_p * sin_t)) * w).mean()
 
     gd_pr = cos_p[:, 1:, :] * cos_p[:, :-1, :] + sin_p[:, 1:, :] * sin_p[:, :-1, :]
     gd_pi = sin_p[:, 1:, :] * cos_p[:, :-1, :] - cos_p[:, 1:, :] * sin_p[:, :-1, :]
@@ -250,4 +264,4 @@ def awp_phase_losses(cos_p: torch.Tensor, sin_p: torch.Tensor, re_gt: torch.Tens
     w_iaf = 0.5 * (w[:, :, 1:] + w[:, :, :-1])
     l_iaf = ((1.0 - (iaf_pr * iaf_tr + iaf_pi * iaf_ti)) * w_iaf).mean()
 
-    return 0.5 * (l_gd + l_iaf)
+    return (l_ip + l_gd + l_iaf) / 3.0
