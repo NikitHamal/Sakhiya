@@ -174,11 +174,11 @@ def export_fp32(m, path, fp16_names=FP16_ISOLATED_NAMES):
         skip_fp16 = _is_fp16_isolated(init.name, a, ax, fp16_names)
         if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
             red = tuple(i for i in range(a.ndim) if i != ax)
-            sc = np.maximum(np.abs(a).max(axis=red), 1e-8).astype(np.float32) / 127.0
+            sc = (np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0).astype(np.float32)
             shp = [1] * a.ndim
             shp[ax] = -1
             q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
-            om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array(q.astype(np.float32) * sc.reshape(shp), init.name))
+            om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array((q.astype(np.float32) * sc.reshape(shp)).astype(np.float32), init.name))
         else:
             om.graph.initializer[idx_i].CopyFrom(numpy_helper.from_array(a.astype(np.float16).astype(np.float32), init.name))
     onnx.save(om, path)
@@ -205,11 +205,11 @@ def quantize(src, dst, fp16_names=FP16_ISOLATED_NAMES):
         skip_fp16 = _is_fp16_isolated(init.name, a, ax, fp16_names)
         if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:
             red = tuple(i for i in range(a.ndim) if i != ax)
-            sc = np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0
+            sc = (np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0).astype(np.float32)
             shp = [1] * a.ndim
             shp[ax] = -1
             q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
-            keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc.astype(np.float32), init.name + "_s")]
+            keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc, init.name + "_s")]
             new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
         else:
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
