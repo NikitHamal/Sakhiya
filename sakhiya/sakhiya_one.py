@@ -64,8 +64,8 @@ class WalshHadamardMonarchBlock(nn.Module):
         H_weight = H_mat.repeat(self.n_groups, 1)[:, :, None]         # [d, 16, 1]
         self.had_rot.weight = nn.Parameter(H_weight, requires_grad=False)
 
-        # Compact Hadamard-rotated FFN + Monarch block-structured residual pathway (replaces bloated 3x dense FFN)
-        h_ff = int(d * 1.25)
+        # Full-capacity FFN + Walsh-Hadamard rotated Monarch block-structured residual pathway
+        h_ff = int(d * ff_mult)
         self.p1 = nn.Conv1d(d, h_ff, 1)
         self.p2 = nn.Conv1d(h_ff, d, 1)
         self.monarch_g1 = nn.Conv1d(d, d, 1, groups=self.n_groups, bias=True)
@@ -186,6 +186,9 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         self.prog_proj = nn.Conv1d(4, d, 1)
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
         self.blocks = nn.ModuleList(WalshHadamardMonarchBlock(d=d, c=c) for _ in range(nb))
+        if nb >= 8:
+            nn.init.zeros_(self.blocks[-1].p2.weight)
+            nn.init.zeros_(self.blocks[-1].p2.bias)
         self.fast_adapter = nn.Conv1d(d, d, 1)
         nn.init.eye_(self.fast_adapter.weight[:, :, 0])
         nn.init.zeros_(self.fast_adapter.bias)
