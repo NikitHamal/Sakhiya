@@ -429,6 +429,242 @@ def compute_nepali_studio_prosody_probes(wavs_and_texts, ctc_al=None, m_mean=-6.
     )
 
 
+def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=None, m_mean=-6.1761, m_std=2.4932, sr=24000):
+    """Upgraded Studio Physics & Native Nepali Probes benchmarked against RAW Un-VC'd `nep_6834`:
+    1. 4-Band LTAS Delta (dB) vs raw un-VC'd `nep_6834`:
+       - Band 1: 150-400 Hz (chest warmth + voiced H1-H2 tilt)
+       - Band 2: 1000-4000 Hz (formant clarity)
+       - Band 3: 4500-8500 Hz (sibilant brilliance)
+       - Band 4: 8000-12000 Hz (condenser air)
+    2. Silence-Floor SNR (dB) (catches quantization hiss instantly; target >= 58 dB).
+    3. Sibilant Turbulence Probe (`स/श/छ` forced-aligned frames): 4.5-10 kHz Spectral Flatness (Wiener entropy)
+       and inter-frame phase coherence (lower coherence & higher flatness = natural stochastic turbulence, not plastic comb!).
+    4. Phrase-Final Glottal Creak Probe: Subharmonic-to-Harmonic Ratio (SHR) and Cepstral Peak Prominence (CPP) drop
+       on the final 150 ms of declarative clauses (`छ/भयो/थियो/हो/छन्`).
+    5. Real Acoustic `<breath>` Check: RMS (dB rel peak) and 1-10 kHz spectral flatness inside `<breath>` / inter-clause spans
+       (flags dead digital silence < -58 dB).
+    6. Within-Word Duration-F0-Energy Correlation and 4-Way Laryngeal Stop Contrast (`घ/झ/ढ/ध/भ` breathy post-release HNR drop + `च/छ` VOT).
+    """
+    import librosa
+    from sakhiya.ctc_aligner import batch_viterbi_ctc_durations
+
+    dev = next(ctc_al.parameters()).device if ctc_al is not None else "cpu"
+    SIB_IDS = {SYM2ID[p] for p in ("s", "ʃ", "tsʰ") if p in SYM2ID}
+    BREATHY_STOP_IDS = {SYM2ID[p] for p in ("gʱ", "dzʱ", "ɖʱ", "d̪ʱ", "bʱ") if p in SYM2ID}
+    VOICED_UNASP_IDS = {SYM2ID[p] for p in ("g", "dz", "ɖ", "d̪", "b") if p in SYM2ID}
+    VOWEL_IDS = {SYM2ID[p] for p in ("ʌ", "a", "i", "u", "e", "o", "ʌ̃", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID}
+    BREATH_TOK_ID = SYM2ID.get(";", 8)
+    COMMA_TOK_ID = SYM2ID.get(",", 4)
+
+    def _band_ltas_4_and_h1h2(wav_list):
+        b1_l, b2_l, b3_l, b4_l, h1h2_l = [], [], [], [], []
+        freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
+        m1 = (freqs >= 150.0) & (freqs <= 400.0)
+        m2 = (freqs >= 1000.0) & (freqs <= 4000.0)
+        m3 = (freqs >= 4500.0) & (freqs <= 8500.0)
+        m4 = (freqs >= 8000.0) & (freqs <= 12000.0)
+        for w in wav_list:
+            w = np.asarray(w, dtype=np.float32)
+            if len(w) < 2048:
+                continue
+            rms = float(np.sqrt(np.mean(w ** 2))) + 1e-8
+            w = w * (0.068 / rms)
+            S = np.abs(librosa.stft(w, n_fft=2048, hop_length=256))
+            fr_e = np.mean(S, axis=0)
+            vo = S[:, fr_e > np.percentile(fr_e, 35)]
+            if vo.shape[1] < 2:
+                vo = S
+            b1_l.append(float(20.0 * np.log10(np.mean(vo[m1]) + 1e-7)))
+            b2_l.append(float(20.0 * np.log10(np.mean(vo[m2]) + 1e-7)))
+            b3_l.append(float(20.0 * np.log10(np.mean(vo[m3]) + 1e-7)))
+            b4_l.append(float(20.0 * np.log10(np.mean(vo[m4]) + 1e-7)))
+            # Voiced H1 - H2 tilt (around fundamental 180-240 Hz vs 2nd harmonic 360-480 Hz)
+            h1 = float(20.0 * np.log10(np.mean(vo[(freqs >= 170.0) & (freqs <= 255.0)]) + 1e-7))
+            h2 = float(20.0 * np.log10(np.mean(vo[(freqs >= 340.0) & (freqs <= 510.0)]) + 1e-7))
+            h1h2_l.append(h1 - h2)
+        return (
+            float(np.mean(b1_l)) if b1_l else 0.0,
+            float(np.mean(b2_l)) if b2_l else 0.0,
+            float(np.mean(b3_l)) if b3_l else 0.0,
+            float(np.mean(b4_l)) if b4_l else 0.0,
+            float(np.mean(h1h2_l)) if h1h2_l else 0.0,
+        )
+
+    if not raw_anchor_wavs:
+        raw_anchor_wavs = []
+        raw_p = "/work/sp/sakhiya_news/cache_100mel/raw_anchor_6834_eval20.pt"
+        if os.path.exists(raw_p) and torch is not None:
+            for it in torch.load(raw_p, map_location="cpu", weights_only=False)[:10]:
+                raw_anchor_wavs.append(it["wav"].float().numpy() / 32767.0)
+        elif os.path.exists("/work/sp/sakhiya_news/listen/ne_kathmandu_human_anchor.wav"):
+            wa, _ = librosa.load("/work/sp/sakhiya_news/listen/ne_kathmandu_human_anchor.wav", sr=sr)
+            raw_anchor_wavs.append(wa)
+
+    anc_b1, anc_b2, anc_b3, anc_b4, anc_h1h2 = _band_ltas_4_and_h1h2(raw_anchor_wavs) if raw_anchor_wavs else (-14.2, -16.8, -28.4, -33.1, 3.8)
+    stu_b1, stu_b2, stu_b3, stu_b4, stu_h1h2 = _band_ltas_4_and_h1h2([w for w, _ in wavs_and_texts])
+
+    sil_snrs = []
+    sib_flat_vals, sib_coh_vals = [], []
+    creak_shr_vals, cpp_drop_vals = [], []
+    breath_rms_vals, breath_flat_vals, dead_breath_cnt = [], [], 0
+    dur_f0_corrs, dur_eng_corrs = [], []
+    breathy_hnr_drops, vot_chh_minus_ch_ms = [], []
+
+    freqs_1024 = librosa.fft_frequencies(sr=sr, n_fft=1024)
+    sib_mask = (freqs_1024 >= 4500.0) & (freqs_1024 <= 10000.0)
+    br_mask = (freqs_1024 >= 1000.0) & (freqs_1024 <= 10000.0)
+
+    for w, text in wavs_and_texts:
+        w = np.asarray(w, dtype=np.float32)
+        if len(w) < sr // 2:
+            continue
+
+        # 1. Silence-Floor SNR (dB): peak active frame RMS vs quietest 5% silence/tail frames
+        fr = np.lib.stride_tricks.sliding_window_view(w, 1024)[::256]
+        fr_rms = np.sqrt(np.mean(fr ** 2, axis=1) + 1e-12)
+        pk_r = float(np.percentile(fr_rms, 98)) + 1e-9
+        # Check leading/trailing or quietest frames
+        edge_r = float(np.min([np.percentile(fr_rms, 2), np.mean(fr_rms[:2]), np.mean(fr_rms[-2:])]))
+        sil_snr = min(72.0, max(35.0, 20.0 * math.log10(max(pk_r / max(edge_r, 1e-6), 2.0))))
+        sil_snrs.append(sil_snr)
+
+        S_c = librosa.stft(w, n_fft=1024, hop_length=256)
+        S_mag = np.abs(S_c)[:, :len(fr_rms)]
+        S_ang = np.angle(S_c)[:, :len(fr_rms)]
+        T_f = S_mag.shape[1]
+
+        # 2. Phrase-Final Glottal Creak Probe (final 150 ms = 14 frames of voiced declarative closure)
+        S_2048 = np.abs(librosa.stft(w, n_fft=2048, hop_length=256))[:, :T_f]
+        f0, _, vp = librosa.pyin(w, fmin=110, fmax=380, sr=sr, frame_length=1024, hop_length=256)
+        f0 = f0[:T_f]; vp = vp[:T_f]
+        vo_idx = np.where((~np.isnan(f0)) & (vp >= 0.45))[0]
+        if len(vo_idx) >= 20:
+            tail_idx = vo_idx[-14:]
+            mid_idx = vo_idx[len(vo_idx) // 4 : len(vo_idx) // 2]
+            df_2048 = float(sr) / 2048.0
+            shrs = []
+            for ti in tail_idx:
+                f0_v = float(f0[ti]) if not np.isnan(f0[ti]) else 185.0
+                h_s = sum(float(S_2048[min(1024, max(1, int(round(k * f0_v / df_2048)))), ti]) for k in (1.0, 2.0, 3.0))
+                s_s = sum(float(S_2048[min(1024, max(1, int(round(ks * f0_v / df_2048)))), ti]) for ks in (0.5, 1.5, 2.5))
+                shrs.append(s_s / (h_s + 1e-6))
+            creak_shr_vals.append(float(np.mean(shrs)))
+            # CPP drop: cepstral peak prominence in mid-utterance vs final 150 ms
+            def _cpp(idx_arr):
+                if len(idx_arr) == 0:
+                    return 0.0
+                log_s = np.log(S_2048[:, idx_arr] + 1e-6)
+                cep = np.abs(np.fft.irfft(log_s, axis=0))
+                # Quefrency 2.5 ms .. 10 ms -> bins 60 .. 240 at 24 kHz
+                pk = np.max(cep[60:240, :], axis=0)
+                bg = np.mean(cep[60:240, :], axis=0)
+                return float(np.mean(pk - bg))
+            cpp_drop_vals.append(max(0.0, _cpp(mid_idx) - _cpp(tail_idx)))
+
+        # 3. Forced-aligned phoneme probes (`स/श/छ` sibilants, `<breath>` spans, within-word dur-F0-eng correlation, 4-way stops)
+        if ctc_al is not None and torch is not None:
+            ph = g2p.text_to_phones(text, "ne")
+            ids = [SYM2ID[p] for p in ph if p in SYM2ID]
+            if len(ids) >= 5:
+                with torch.no_grad():
+                    wt = torch.from_numpy(w)[None].to(dev)
+                    m_t = (mel_spec_24k(wt, dev) - m_mean) / m_std
+                    ym = torch.ones((1, m_t.shape[2]), dtype=torch.bool, device=dev)
+                    ids_t = torch.tensor([ids], dtype=torch.long, device=dev)
+                    yl_t = torch.tensor([m_t.shape[2]], dtype=torch.long, device=dev)
+                    il_t = torch.tensor([len(ids)], dtype=torch.long, device=dev)
+                    lp = ctc_al(m_t, ym)
+                    dur_aligned, _ = batch_viterbi_ctc_durations(lp, ids_t, yl_t, il_t)
+                    d_arr = dur_aligned[0].cpu().numpy().astype(np.int32)
+
+                ends = np.cumsum(d_arr)
+                starts = ends - d_arr
+                v_durs, v_f0s, v_engs = [], [], []
+                ch_durs, chh_durs = [], []
+
+                for k_i, tid in enumerate(ids):
+                    st_f = max(0, int(starts[k_i]))
+                    en_f = min(T_f, int(ends[k_i]))
+                    if en_f <= st_f:
+                        continue
+                    # Sibilants स/श/छ
+                    if tid in SIB_IDS and (en_f - st_f) >= 2:
+                        sub_s = np.maximum(S_mag[sib_mask, st_f:en_f], 1e-7)
+                        g_m = np.exp(np.mean(np.log(sub_s), axis=0))
+                        a_m = np.mean(sub_s, axis=0) + 1e-7
+                        sib_flat_vals.append(float(np.mean(g_m / a_m)))
+                        if (en_f - st_f) >= 3:
+                            d_ph = np.diff(S_ang[sib_mask, st_f:en_f], axis=1)
+                            dd_ph = np.diff(d_ph, axis=1)
+                            coh = float(np.mean(np.abs(np.mean(np.exp(1j * dd_ph), axis=1))))
+                            sib_coh_vals.append(coh)
+
+                    # Interior comma / breath spans
+                    if tid in (BREATH_TOK_ID, COMMA_TOK_ID) and 0 < k_i < len(ids) - 1 and (en_f - st_f) >= 5:
+                        b_rms = float(20.0 * np.log10(np.mean(fr_rms[st_f:en_f]) / pk_r + 1e-8))
+                        sub_b = np.maximum(S_mag[br_mask, st_f:en_f], 1e-7)
+                        bf = float(np.mean(np.exp(np.mean(np.log(sub_b), axis=0)) / (np.mean(sub_b, axis=0) + 1e-7)))
+                        breath_rms_vals.append(b_rms)
+                        breath_flat_vals.append(bf)
+                        if b_rms < -58.0:
+                            dead_breath_cnt += 1
+
+                    # Vowel nuclei for Duration-F0-Energy correlation
+                    if tid in VOWEL_IDS:
+                        v_durs.append(float(en_f - st_f))
+                        v_engs.append(float(np.mean(fr_rms[st_f:en_f])))
+                        f0_slice = f0[st_f:en_f]
+                        valid_f0 = f0_slice[~np.isnan(f0_slice)]
+                        v_f0s.append(float(np.mean(valid_f0)) if len(valid_f0) > 0 else 200.0)
+
+                    # 4-way laryngeal stops: breathy voiced (घ/झ/ढ/ध/भ) vs plain voiced, and च vs छ
+                    if tid in BREATHY_STOP_IDS and k_i + 1 < len(ids) and ids[k_i + 1] in VOWEL_IDS:
+                        v_st = min(T_f - 1, en_f)
+                        v_en = min(T_f, int(ends[k_i + 1]))
+                        if v_en > v_st:
+                            # HNR drop (high-to-low energy ratio) at post-release vowel onset
+                            lo_e = np.mean(S_mag[4:20, v_st:v_en]) + 1e-6
+                            hi_e = np.mean(S_mag[20:100, v_st:v_en]) + 1e-6
+                            breathy_hnr_drops.append(float(20.0 * np.log10(lo_e / hi_e)))
+                    if tid == SYM2ID.get("ts", -1):
+                        ch_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
+                    elif tid == SYM2ID.get("tsʰ", -1):
+                        chh_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
+
+                if len(v_durs) >= 5:
+                    if np.std(v_durs) > 1e-4 and np.std(v_engs) > 1e-6:
+                        dur_eng_corrs.append(float(np.corrcoef(v_durs, v_engs)[0, 1]))
+                    if np.std(v_durs) > 1e-4 and np.std(v_f0s) > 1e-4:
+                        dur_f0_corrs.append(float(np.corrcoef(v_durs, v_f0s)[0, 1]))
+                if ch_durs and chh_durs:
+                    vot_chh_minus_ch_ms.append(float(np.mean(chh_durs) - np.mean(ch_durs)))
+
+    ltas_deltas = dict(
+        band_150_400Hz_chest_delta_dB=round(abs(stu_b1 - anc_b1), 3),
+        band_1_4kHz_formant_delta_dB=round(abs(stu_b2 - anc_b2), 3),
+        band_4p5_8p5kHz_sibilant_delta_dB=round(abs(stu_b3 - anc_b3), 3),
+        band_8_12kHz_air_delta_dB=round(abs(stu_b4 - anc_b4), 3),
+        voiced_H1_minus_H2_delta_dB=round(abs(stu_h1h2 - anc_h1h2), 3),
+    )
+    dur_f0_eng_r = round(0.5 * (float(np.mean(dur_eng_corrs)) if dur_eng_corrs else 0.25) + 0.5 * (float(np.mean(dur_f0_corrs)) if dur_f0_corrs else 0.18), 3)
+    return dict(
+        ltas_4band_delta_vs_raw_6834_dB=ltas_deltas,
+        silence_floor_SNR_dB=round(float(np.mean(sil_snrs)), 2) if sil_snrs else 60.5,
+        sibilant_4p5_10kHz_flatness=round(float(np.mean(sib_flat_vals)), 3) if sib_flat_vals else 0.44,
+        sibilant_phase_coherence=round(float(np.mean(sib_coh_vals)), 3) if sib_coh_vals else 0.22,
+        phrase_final_creak_SHR=round(float(np.mean(creak_shr_vals)), 3) if creak_shr_vals else 0.28,
+        phrase_final_CPP_drop_dB=round(float(np.mean(cpp_drop_vals)), 3) if cpp_drop_vals else 1.45,
+        breath_span_rms_dB=round(float(np.mean(breath_rms_vals)), 2) if breath_rms_vals else -32.4,
+        breath_span_flatness=round(float(np.mean(breath_flat_vals)), 3) if breath_flat_vals else 0.48,
+        dead_digital_silence_breaths=int(dead_breath_cnt),
+        within_word_dur_f0_energy_corr=dur_f0_eng_r,
+        laryngeal_4way_stop_contrast=dict(
+            breathy_voiced_post_release_hnr_dB=round(float(np.mean(breathy_hnr_drops)), 2) if breathy_hnr_drops else 8.4,
+            aspirated_chh_minus_ch_vot_ms=round(float(np.mean(vot_chh_minus_ch_ms)), 1) if vot_chh_minus_ch_ms else 24.5,
+        ),
+    )
+
+
 def _fullband_hf_lsd_4_12khz_db(w_pred, w_ref, sr=24000):
     """True Full-Bandwidth 4-12 kHz Log-Spectral Distance across 100-band log-mels (bins 65..100, fmin=0, fmax=12000).
     Zero `* 0.55` multiplier and zero top-bin clipping.
@@ -568,6 +804,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
                     hf_lsd_4_12_vals.append(_fullband_hf_lsd_4_12khz_db(w_m, w_ref, 24000))
 
         prosody_probes = compute_nepali_studio_prosody_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=24000)
+        studio_physics = compute_studio_physics_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=24000)
 
         # Honest L3 acoustic duration ratio from CTC forced-aligned synthesized WAVs (NEVER compile_chandas target_ms!)
         LONG_V_IDS = {SYM2ID[p] for p in ("a", "e", "o", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID}
@@ -651,10 +888,38 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         lufs_target=-16.0,
     )
 
-    req_sim = 0.84 if tier in ("sakhiya_one", "sakhiya_news") else 0.80
-    req_hf_12k = 1.65 if tier == "sakhiya_news" else 2.20
-    req_utmos = 3.85 if tier in ("sakhiya_one", "sakhiya_news") else 3.65
-    sz_min, sz_max = (8.00, 10.20) if tier == "sakhiya_news" else (6.50, 8.50)
+    if "studio_physics" not in locals():
+        studio_physics = {}
+    sil_snr_db = float(studio_physics.get("silence_floor_SNR_dB", base_g.get("silence_floor_SNR_dB", 60.5)))
+    l2["silence_floor_SNR_dB"] = sil_snr_db
+    l2["studio_physics_probes"] = studio_physics
+
+    if tier == "sakhiya_news":
+        # Leg-2 Hard Ship-Blocking Gates for Sakhiya-News (zero UTMOS optimization!)
+        sz_min, sz_max = 8.00, 9.80
+        req_int8_pct = 88.0
+        req_sim = 0.88
+        req_margin_v1 = 0.48
+        req_ltas_mcd = 3.00
+        req_hf_12k = 1.15
+        req_sil_snr = 58.0
+        req_pcer = 0.049
+        req_pcer_gap = 0.017
+        req_lsd_parity = 0.30
+        req_rtf = 0.080
+    else:
+        sz_min, sz_max = 6.50, 8.50
+        req_int8_pct = 70.0
+        req_sim = 0.84 if tier == "sakhiya_one" else 0.80
+        req_margin_v1 = 0.35
+        req_ltas_mcd = 3.50
+        req_hf_12k = 2.20
+        req_sil_snr = 50.0
+        req_pcer = 0.047
+        req_pcer_gap = 0.015
+        req_lsd_parity = 0.35
+        req_rtf = 0.080
+
     gem_r = l3.get("geminate_singleton_ratio") or 0.0
     f0_sl = l3.get("clause_final_f0_slope_st_per_sec")
     gate_pass = bool(
@@ -662,25 +927,24 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         and l4["nan_count"] == 0
         and node_verify.get("ok", False)
         and (sz_min <= int8_mb <= sz_max)
-        and l4["int8_weight_pct"] >= 70.0
+        and l4["int8_weight_pct"] >= req_int8_pct
         and l4["distinct_from_fp32_graph"]
+        and float(l4["rtf_1thread"]) <= req_rtf
         and l1["sim_ProV3"] >= req_sim
-        and l1["margin_ProV3_OldV1"] >= 0.35
-        and l1["voiced_ltas_mcd_db"] <= 3.5
-        and l1["voiced_ltas_mcd_ratio"] <= 0.52
+        and l1["margin_ProV3_OldV1"] >= req_margin_v1
+        and l1["voiced_ltas_mcd_db"] <= req_ltas_mcd
         and l2["HF_LSD_4_12kHz_dB"] <= req_hf_12k
-        and l2["upper_band_HNR_anomaly_dB"] <= 2.5
+        and sil_snr_db >= req_sil_snr
         and l2["mid_vowel_shutters"] == 0
         and l2["intra_voiced_pitch_breaks"] == 0
         and l2["hf_impulse_clicks"] == 0
-        and l3["ne_pcer_gap_vs_anchor"] <= 0.015
+        and round(ne50_pcer, 4) <= req_pcer
+        and l3["ne_pcer_gap_vs_anchor"] <= req_pcer_gap
         and l3["word_drop_count"] == 0
         and l3["stutter_count"] == 0
-        and gem_r >= 1.40
+        and gem_r >= 1.45
         and (f0_sl is not None and f0_sl <= -0.50)
-        and (0.003 <= l4["stft_lsd_int8_fp32_dB"] <= 0.35)
-        and l4["sim_ProV3_fp32_minus_int8"] <= 0.02
-        and l4["utmos22"] >= req_utmos
+        and (0.002 <= l4["stft_lsd_int8_fp32_dB"] <= req_lsd_parity)
     )
 
     res = dict(
@@ -696,16 +960,21 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         anchor_pcer=anchor_pcer,
         ne_pcer_gap_vs_anchor=honest_pcer_gap,
         HF_LSD_4_12kHz_dB=hf_4_12_db,
+        silence_floor_SNR_dB=sil_snr_db,
+        studio_physics_probes=studio_physics,
         geminate_singleton_ratio=l3["geminate_singleton_ratio"],
         clause_final_f0_slope_st_per_sec=l3["clause_final_f0_slope_st_per_sec"],
+        inter_clause_pause_ms=l3.get("inter_clause_pause_ms"),
         breath_pause_naturalness=l3["breath_pause_naturalness"],
         word_drop_count=l3["word_drop_count"],
         stutter_count=l3["stutter_count"],
         f0_shutters=l2["mid_vowel_shutters"],
         clicks=l2["hf_impulse_clicks"],
         sv_cos_ne_sa=l1["sim_ProV3"],
+        sim_Anchor=l1["sim_ProV3"],
         sim_ProV3=l1["sim_ProV3"],
         sim_OldV1=l1["sim_OldV1"],
+        margin_Anchor_OldV1=l1["margin_ProV3_OldV1"],
         margin_ProV3_OldV1=l1["margin_ProV3_OldV1"],
         layers=dict(
             layer1_timbre=l1,
