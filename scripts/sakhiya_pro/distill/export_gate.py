@@ -56,8 +56,11 @@ class Wrap(torch.nn.Module):
 
 
 def _dedup_initializers(m):
+    used = {inp for n in m.graph.node for inp in n.input}
     seen, alias, keep = {}, {}, []
     for init in m.graph.initializer:
+        if init.name not in used:
+            continue
         arr = numpy_helper.to_array(init)
         if arr.size >= 64:
             key = (init.data_type, tuple(init.dims), hashlib.sha1(arr.tobytes()).digest())

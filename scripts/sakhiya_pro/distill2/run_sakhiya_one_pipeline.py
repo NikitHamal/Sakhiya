@@ -86,9 +86,8 @@ def update_telem(idx: int, step: int, total_steps: int, its, losses: str, elapse
 
 
 def install_lsq_qat_hooks(model):
-    """Install Learnable Step-Size Quantization (LSQ) per-output-channel INT8 weight hooks on all INT8-targeted layers,
-    while permanently isolating continuous FP16 heads (`voc.src.proj*`, `voc.amp_head`, `voc.pha_head`, `am.vel.out`, `am.vel.prog_proj`,
-    `am.enc.emb`, `am.enc.svara_emb`, `am.enc.mora_emb`, `am.enc.f0_pred`, `am.enc.vuv_pred`, `am.f0_head.net.4`, `am.dur.o`).
+    """Install absmax-anchored LSQ/STE per-output-channel INT8 weight hooks on all INT8-targeted layers
+    (100% matched to `export_gate.py`'s per-channel `max(|w|)/127` quantizer), while permanently isolating continuous FP16 heads.
     """
     hooks = []
     fp16_skip = (
@@ -100,17 +99,10 @@ def install_lsq_qat_hooks(model):
         if name.endswith("had_rot") or any(name.startswith(s) or name.endswith(s) for s in fp16_skip):
             continue
         if isinstance(m, (nn.Conv1d, nn.Linear)) and m.weight.numel() >= 256 and m.weight.shape[0] >= 16:
-            if not hasattr(m, "lsq_step"):
-                w_init = m.weight.detach().float()
-                red = tuple(i for i in range(w_init.ndim) if i != 0)
-                s_init = w_init.abs().amax(dim=red, keepdim=True).clamp(min=1e-6) / 127.0
-                m.register_parameter("lsq_step", nn.Parameter(s_init.to(m.weight.device)))
-
             def _pre(mod, inp):
                 if mod.training and getattr(model, "_qat_flag", False):
                     mod._orig_w = mod.weight.data.clone()
-                    wq = apply_lsq_int8_weight(mod.weight, getattr(mod, "lsq_step", None))
-                    mod.weight.data.copy_(wq.data)
+                    mod.weight.data.copy_(ste_int8_weight(mod.weight, axis=0, enabled=True).data)
 
             def _post(mod, inp, out):
                 if hasattr(mod, "_orig_w"):
@@ -371,19 +363,16 @@ def train_and_gate_phase1_vocoder(cache_obj: dict, steps: int = 450, bs: int = 3
         G.src.upper_proj16.weight.zero_(); G.src.upper_proj16.bias.zero_()
     G_ema = copy.deepcopy(G).eval()
 
-    # Train the new parallel Amplitude/Phase ConvNeXt branches and upper-band Nyquist harmonics with gentle filterbank adaptation
-    fast_p, body_p = [], []
+    # Train the parallel Amplitude/Phase ConvNeXt residual branches and upper-band Nyquist harmonics while keeping amp_head/pha_head anchored
+    fast_p = []
     for n, p in G.named_parameters():
         if n.startswith(("amp_branch.", "pha_branch.", "src.upper_")):
             fast_p.append(p)
-        elif n.startswith(("amp_head.", "pha_head.", "post_act.")):
-            body_p.append(p)
         else:
             p.requires_grad_(False)
 
     oG = torch.optim.AdamW([
-        {"params": fast_p, "lr": 2.0e-5, "weight_decay": 1e-4},
-        {"params": body_p, "lr": 4.0e-6, "weight_decay": 1e-5},
+        {"params": fast_p, "lr": 1.5e-6, "weight_decay": 1e-2},
     ], betas=(0.8, 0.99))
 
     wavlm_fm = FrozenMultiLayerWavLM(dev=dev)
@@ -398,8 +387,7 @@ def train_and_gate_phase1_vocoder(cache_obj: dict, steps: int = 450, bs: int = 3
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
         mult = 0.15 + 0.85 * 0.5 * (1.0 + math.cos(math.pi * prog))
-        oG.param_groups[0]["lr"] = 2.0e-5 * mult
-        oG.param_groups[1]["lr"] = 4.0e-6 * mult
+        oG.param_groups[0]["lr"] = 1.5e-6 * mult
 
         xs = random.sample(tr, bs)
         wav_seg = torch.zeros((bs, seg_frames * HOP), device=dev)
@@ -705,26 +693,22 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
     c_pro_24 = cache_obj["c_pro_ltas24"].to(dev)
     c_v1_24 = cache_obj["c_v1_ltas24"].to(dev)
 
-    # Unfreeze AM encoder/decoder + AWPVocoder parallel amp/pha branches & upper harmonics + LSQ step sizes
+    # Keep AWPVocoder filterbank anchored as the differentiable waveform/phase renderer while backpropagating E2E waveform losses into AM
     # Detach waveform gradients from duration predictor so alignment stays rock-solid
-    am_p, voc_p, lsq_p = [], [], []
+    am_p, fast_ad_p = [], []
     for n, p in G.named_parameters():
-        if n.endswith("lsq_step"):
+        if n.startswith("am.vel.fast_adapter."):
             p.requires_grad_(True)
-            lsq_p.append(p)
+            fast_ad_p.append(p)
         elif n.startswith(("am.enc.", "am.vel.", "am.dur.", "closure_slope", "dur_rate_bias")):
             p.requires_grad_(True)
             am_p.append(p)
-        elif n.startswith(("voc.amp_branch.", "voc.pha_branch.", "voc.src.upper_", "voc.amp_head.", "voc.pha_head.")):
-            p.requires_grad_(True)
-            voc_p.append(p)
         else:
             p.requires_grad_(False)
 
     oG = torch.optim.AdamW([
-        {"params": am_p, "lr": 4.5e-5, "initial_lr": 4.5e-5, "weight_decay": 1e-4},
-        {"params": voc_p, "lr": 1.5e-5, "initial_lr": 1.5e-5, "weight_decay": 1e-5},
-        {"params": lsq_p, "lr": 1.0e-4, "initial_lr": 1.0e-4, "weight_decay": 0.0},
+        {"params": am_p, "lr": 5.5e-5, "initial_lr": 5.5e-5, "weight_decay": 1e-4},
+        {"params": fast_ad_p, "lr": 2.5e-4, "initial_lr": 2.5e-4, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
     qat_start_step = int(steps * 0.45)  # Final ~55% (>= 40%) runs with LSQ per-channel INT8 QAT active
@@ -888,11 +872,8 @@ def train_phase3_joint_e2e_lsq_qat(ema_phase2: Student, cache_obj: dict, rect_ca
     for h in hooks:
         h.remove()
 
-    # Bake LSQ quantized weights cleanly into ema state_dict for exact INT8 parity
+    # Pre-snap AM weights cleanly for exact INT8 parity
     with torch.no_grad():
-        for name, m_mod in ema.named_modules():
-            if hasattr(m_mod, "lsq_step") and hasattr(m_mod, "weight"):
-                m_mod.weight.data.copy_(apply_lsq_int8_weight(m_mod.weight.data, m_mod.lsq_step.data))
         snap_am_int8(ema.am)
 
     ema_clean = {k: v.float().cpu() for k, v in ema.state_dict().items() if not k.endswith("lsq_step")}
