@@ -1,0 +1,19 @@
+{
+  "raw_unvc_nep_6834_hours": 1.223,
+  "raw_unvc_slr43_other_female_hours": 0.137,
+  "raw_unvc_v13_24k_female_hours": 0.551,
+  "raw_unvc_24k_studio_total_hours": 1.911,
+  "exceeds_2h_threshold": false,
+  "voc_total_utts": 3141,
+  "voc_unvc_24k_utts": 945,
+  "am_total_utts": 4322,
+  "am_unvc_24k_utts": 1190,
+  "verified_studio_breath_spans": 1970,
+  "mean_breath_rms_db": -32.64,
+  "mean_breath_flatness": 0.637,
+  "mean_breath_dur_ms": 113.3,
+  "crossfaded_vc_breath_spans": 1071,
+  "clause_final_shr_creak_mean": 0.271,
+  "llm_labeled_utts": 4322,
+  "heldout_raw_6834_clips": 20
+}

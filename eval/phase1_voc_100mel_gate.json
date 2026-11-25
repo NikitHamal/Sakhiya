@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "n_clips": 20,
+  "benchmark": "20_heldout_RAW_unVC_nep_6834_studio_clips",
+  "voc_int8_mb": 5.137,
+  "int8_weight_pct": 97.93,
+  "distinct_from_fp32_graph": true,
+  "HF_LSD_4_12kHz_dB": 0.578,
+  "sim_Anchor": 0.9405,
+  "sim_OldV1": 0.254,
+  "margin_Anchor_OldV1": 0.6865,
+  "silence_floor_SNR_dB": 71.14,
+  "sibilant_4p5_10kHz_flatness": 0.698,
+  "phrase_final_creak_SHR": 0.271,
+  "clicks": 0,
+  "shutters": 0
+}
