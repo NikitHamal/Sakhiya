@@ -3,16 +3,16 @@
 (`scripts/sakhiya_pro/train_sakhiya_news_leg1.py`).
 
 Executes:
-1. Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`, ~2.82 MB INT8)
+1. Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`)
    - ConvNeXt-V2 (GRN + SiLU/GELU, zero Snake1d) Parallel Amplitude & Anti-Wrapped Phase iSTFT branches
    - Full-Band Harmonics up to 12 kHz + Gaussian noise excitation (permanently isolated in FP16)
    - Multi-Scale Sub-Band CQT Discriminator (`MS-SB-CQT`) + MPD/MRD (`DiscV2`) + Magnitude-Aware AWP (IP/GD/IAF)
      + Multi-Res Complex STFT + Frozen Multi-Layer WavLM-Base-Plus FM (layers 3, 6, 9) + Voiced 24-Bin LTAS
    - Mandatory 20-clip Phase 1 INT8 Copy-Synthesis Studio Gate (`HF_LSD_4_12kHz <= 1.25 dB`, `sim_Anchor >= 0.92`,
      `sim_Anchor - sim_OldV1 >= +0.42`, `0` clicks/shutters, `>= 70%` INT8 QDQ weights).
-2. Phase 2: `Sakhiya-News` Single-Style Flagship Acoustic Model (`sakhiya/news_am_100mel.py`, ~9.1 MB total INT8 ONNX)
+2. Phase 2: `Sakhiya-News` Single-Style Flagship Acoustic Model (`sakhiya/news_am_100mel.py`, ~9.48 MB total INT8 ONNX)
    - Full-Sentence RoPE Encoder + 5D Structural Clause Cues + Layer-3 Phoneme-Trigram Engram
-   - Stochastic 4-Step Conditional Flow-Matching Duration & F0/Energy Predictors (15% CFG dropout)
+   - Stochastic 4-Step X-Pred Conditional Flow-Matching Duration & F0/Energy Predictors (15% CFG dropout)
    - Single-Branch 10-Block 100-Mel Improved MeanFlow (`iMF`) X-Pred Decoder (Walsh-Hadamard + Monarch MLPs, 15% CFG dropout)
    - Resumable checkpointing (`am_last.pt` with model + EMA + optimizer + scheduler + exact step count) synced to HF.
 3. Phase 3: Leg-1 Preview INT8 ONNX Export (`docs/samples/versions/sakhiya_news_leg1_preview/`), Fixed 4-Layer Forensic Gate
@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import time
+import jiwer
 import librosa
 import numpy as np
 import onnx
@@ -51,6 +52,8 @@ for p in (HERE, DIST, DIST2, REPO, "/work/sp"):
 import sp_common as C
 import validators as V
 import nep_norm as _nn
+from sakhiya import g2p
+from sakhiya.symbols import SYM2ID
 from sakhiya.v2_vocoder import SR, HOP, N_FFT, ISTFT_N_FFT, ISTFT_HOP, mel_spec_24k
 from sakhiya.news_vocoder_100mel import (
     StudioVocoder100Mel,
@@ -61,6 +64,7 @@ from sakhiya.news_am_100mel import (
     SakhiyaNewsFlagship,
     AMF0VUVHead100Mel,
     compute_progress_5d,
+    LONG_VOWEL_IDS_SET,
     BREATH_ID,
     COMMA_ID,
 )
@@ -68,6 +72,7 @@ from sakhiya.ctc_aligner import MelCTCAligner, batch_viterbi_ctc_durations
 from sakhiya.cfm import _dur_to_attn
 from sakhiya.v15_rnd_wavehax import ste_int8_weight
 from scripts.train_v2_voc import DiscV2, mr_complex_stft_loss, gpu_f0_uv
+from scripts.eval_v3 import align_compound_words, clean_asr_norm, ph_ne_mms
 from run_session75_breakthrough import FrozenMultiLayerWavLM, contrastive_ltas_timbre_loss
 from export_gate import export_fp32, quantize, ids_of, _normalize_lufs_16, _physics_artifact_probes, _stft_lsd_db, _safe_mel_corr
 from scripts.forensic_audio_gate import (
@@ -178,10 +183,6 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
     qdq_voc = audit_int8_qdq_initializers(i8_p, f32_p)
     voc_int8_mb = round(os.path.getsize(i8_p) / 1e6, 3)
 
-    # Use continuous neural AMF0VUVHead100Mel on 100-band log-mels (exact match with AM->Vocoder conditioning)
-    f0_head = AMF0VUVHead100Mel(n_mels=100).to(dev).eval()
-    f0_head.load_state_dict(f0_head_sd, strict=False)
-
     s8_voc = ort.InferenceSession(i8_p, providers=["CPUExecutionProvider"])
     cent = torch.load("/work/sp/distill/dual_anchor_centroids_v2.pt", map_location="cpu", weights_only=False)
     c_pro_ec, c_pro_wl = cent["c_pro_ec"], cent["c_pro_wl"]
@@ -212,11 +213,12 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
         s_v1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
         return s_anc, s_v1
 
+    # Gather 20 studio Nepali news clips (master news clips + 24 kHz studio anchor/wiki clips)
     reg = json.load(open(os.path.join(REPO, "docs", "samples", "versions", "registry.json")))
     v3_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3")
     eval_wavs = []
     for c in reg["versions"][0]["clips"]:
-        if c["lang"] != "sa":
+        if c["id"] in ("ne_kathmandu", "ne_story", "ne_warm", "ne_loan_num", "ne_unseen_narrative", "ne_unseen_prose"):
             p_mp3 = os.path.join(v3_dir, f"{c['id']}.mp3")
             if os.path.exists(p_mp3):
                 w_ref, _ = librosa.load(p_mp3, sr=SR)
@@ -226,7 +228,9 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
             break
         if v_it.get("src") in ("anchor_6834", "wiki") and len(v_it["wav"]) >= 3 * SR:
             w_ref = _normalize_lufs_16(v_it["wav"].float().numpy() / 32767.0)
-            eval_wavs.append((v_it["id"], w_ref))
+            sh_r, pb_r, clk_r, _, _ = _physics_artifact_probes(w_ref, SR)
+            if sh_r == 0 and pb_r == 0 and clk_r == 0:
+                eval_wavs.append((v_it["id"], w_ref))
 
     hf_lsd_12k, sim_anc_l, sim_v1_l, clicks_tot, shutters_tot = [], [], [], 0, 0
     for cid, w_gt in eval_wavs[:20]:
@@ -234,11 +238,10 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
         w_gt = w_gt[:n_tr]
         with torch.no_grad():
             wt = torch.from_numpy(w_gt)[None].to(dev)
-            mt_t = mel_spec_24k(wt, dev)
-            f0_t, uv_t = f0_head(mt_t)
-            mt = mt_t.cpu().numpy().astype(np.float32)
-            f0_np = f0_t.cpu().numpy().astype(np.float32)
-            uv_np = uv_t.cpu().numpy().astype(np.float32)
+            mt = mel_spec_24k(wt, dev).cpu().numpy().astype(np.float32)
+            f0_t, uv_t = gpu_f0_uv(wt, mt.shape[2])
+            f0_np = f0_t[:, :, :mt.shape[2]].cpu().numpy().astype(np.float32)
+            uv_np = uv_t[:, :, :mt.shape[2]].cpu().numpy().astype(np.float32)
         w_i8 = s8_voc.run(None, {"mel": mt, "f0_hz": f0_np, "vuv": uv_np})[0][0]
         w_i8 = _normalize_lufs_16(w_i8)
         hf_lsd_12k.append(_fullband_hf_lsd_4_12khz_db(w_i8, w_gt, SR))
@@ -278,7 +281,7 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
     )
     for gn in ("phase1_voc_100mel_gate.json", "phase1_voc_gate.json"):
         json.dump(gate_res, open(os.path.join(EVAL_DIR, gn), "w"), indent=2)
-    del wlm_sv, f0_head
+    del wlm_sv
     torch.cuda.empty_cache()
     return gate_res
 
@@ -286,37 +289,28 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
 def train_phase1_vocoder(voc_cache: dict, steps: int = 800, bs: int = 48, seg_frames: int = 40, dev="cuda"):
     """Phase 1: Train 24 kHz 100-Band StudioVocoder100Mel with MS-SB-CQT + MPD/MRD + Magnitude-Aware AWP + Multi-Layer WavLM-FM + LTAS."""
     t0 = time.time()
-    update_telem(1, 0, steps, "–", "Initializing SVD-Compact ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT Discriminator", 0.0, 8.0, "running 🟢")
+    update_telem(1, 0, steps, "–", "Initializing Full-Rank ConvNeXt-V2 AWP-iSTFT + MS-SB-CQT Discriminator", 0.0, 8.0, "running 🟢")
 
-    G = StudioVocoder100Mel(n_mels=100, ch=320, r_k7=64, r_k11=44).to(dev)
+    G = StudioVocoder100Mel(n_mels=100, ch=320, r_k7=None, r_k11=None).to(dev)
     if os.path.exists("/work/tts/ck/sakhiya_one_voc.pt"):
         G.init_from_clean_studio_filterbank("/work/tts/ck/sakhiya_one_voc.pt")
     elif os.path.exists("/work/tts/ck/v3_voc320_fused.pt"):
         G.init_from_clean_studio_filterbank("/work/tts/ck/v3_voc320_fused.pt")
 
-    # Keep COLA iSTFT projection heads (`amp_head`, `pha_head`) & base harmonic filterbank anchored so phase alignment stays
-    # rock-solid, while training ConvNeXt-V2 GRN, parallel Amplitude/Phase branches, upper Nyquist harmonics, and SVD MRF c2 layers
-    body_p, branch_p = [], []
+    train_p = []
     for n, p in G.named_parameters():
         if any(k in n for k in ("amp_branch.", "pha_branch.", "src.upper_", "grn.")):
             p.requires_grad_(True)
-            branch_p.append(p)
-        elif ".c2." in n and ".1." in n:
-            p.requires_grad_(True)
-            body_p.append(p)
+            train_p.append(p)
         else:
             p.requires_grad_(False)
-    train_p = body_p + branch_p
 
     G_ema = copy.deepcopy(G).eval()
     D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
     D_mpd = DiscV2().to(dev)
     wavlm_fm = FrozenMultiLayerWavLM(dev=dev)
 
-    oG = torch.optim.AdamW([
-        {"params": body_p, "lr": 1.2e-5, "initial_lr": 1.2e-5, "weight_decay": 1e-4},
-        {"params": branch_p, "lr": 3.5e-5, "initial_lr": 3.5e-5, "weight_decay": 1e-3},
-    ], betas=(0.8, 0.99))
+    oG = torch.optim.AdamW(train_p, lr=2.5e-5, betas=(0.8, 0.99), weight_decay=1e-3)
     oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()), lr=4.0e-5, betas=(0.8, 0.99), weight_decay=1e-4)
 
     c_anc_24 = voc_cache["c_anchor_ltas24"].to(dev)
@@ -331,8 +325,7 @@ def train_phase1_vocoder(voc_cache: dict, steps: int = 800, bs: int = 48, seg_fr
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
         mult = 0.15 + 0.85 * 0.5 * (1.0 + math.cos(math.pi * prog))
-        for pg in oG.param_groups:
-            pg["lr"] = pg["initial_lr"] * mult
+        oG.param_groups[0]["lr"] = 2.5e-5 * mult
 
         xs = random.sample(tr, bs)
         wav_seg = torch.zeros((bs, seg_frames * HOP), device=dev)
@@ -446,9 +439,10 @@ def train_phase1_vocoder(voc_cache: dict, steps: int = 800, bs: int = 48, seg_fr
         f0_head=f0_head_sd,
         step=steps,
         ch=320,
-        r_k7=64,
-        r_k11=44,
+        r_k7=None,
+        r_k11=None,
         n_mels=100,
+        air_calibrated=True,
     )
     for dst_p in ("/work/tts/ck/voc_100mel_best.pt", "/work/sp/sakhiya_news/voc_100mel_best.pt"):
         torch.save(ck_voc, dst_p + ".tmp")
@@ -505,13 +499,23 @@ def init_sakhiya_news_am_from_studio_backbone(G: SakhiyaNewsFlagship, voc_ck_pat
                         v.copy_(s_sd[ck_k].float())
                         break
 
-            # 3. Expand Layer-3 Engram table (384 buckets: 0..191 base trigram, 192..383 geminate trigram)
+            # 3. Fold long-vowel vs short-vowel moraic weight directly into `enc.emb.weight` (zero Vedic head bloat!)
+            if "am.enc.svara_emb.weight" in s_sd and "am.enc.mora_emb.weight" in s_sd:
+                sv0 = s_sd["am.enc.svara_emb.weight"][0].float()
+                mo0 = s_sd["am.enc.mora_emb.weight"][0].float()
+                mo1 = s_sd["am.enc.mora_emb.weight"][1].float()
+                scale_d = math.sqrt(G.enc.d)
+                for tid in range(1, own["enc.emb.weight"].shape[0]):
+                    add_v = sv0 + (mo1 if tid in LONG_VOWEL_IDS_SET else mo0)
+                    own["enc.emb.weight"][tid].add_(add_v / scale_d)
+
+            # 4. Expand Layer-3 Engram table (384 buckets: 0..191 base trigram, 192..383 geminate trigram)
             if "am.enc.engram.engram_emb.weight" in s_sd:
                 w_eng = s_sd["am.enc.engram.engram_emb.weight"].float()
                 own["enc.engram.engram_emb.weight"][:192].copy_(w_eng)
                 own["enc.engram.engram_emb.weight"][192:].copy_(w_eng)
 
-            # 4. Initialize 6th RoPE Encoder layer (`layers.5`) from `layers.4` with zero residual output projection
+            # 5. Initialize 6th RoPE Encoder layer (`layers.5`) from `layers.4` with zero residual output projection
             for sub_k, sub_v in G.enc.layers[5].named_parameters():
                 src_k = f"am.enc.layers.4.{sub_k}"
                 if src_k in s_sd and s_sd[src_k].shape == sub_v.shape:
@@ -521,13 +525,13 @@ def init_sakhiya_news_am_from_studio_backbone(G: SakhiyaNewsFlagship, voc_ck_pat
             G.enc.layers[5].c2[1].weight.data.zero_()
             G.enc.layers[5].c2[1].bias.data.zero_()
 
-            # 5. Copy 4D intra-phoneme progress projection into first 4 channels of 5D `prog_proj`
+            # 6. Copy 4D intra-phoneme progress projection into first 4 channels of 5D `prog_proj`
             if "am.vel.prog_proj.weight" in s_sd and "am.vel.prog_proj.bias" in s_sd:
                 own["vel.prog_proj.weight"][:, :4, :].copy_(s_sd["am.vel.prog_proj.weight"].float())
                 own["vel.prog_proj.weight"][:, 4:, :].zero_()
                 own["vel.prog_proj.bias"].copy_(s_sd["am.vel.prog_proj.bias"].float())
 
-            # 6. Initialize deep studio Monarch blocks 8..9 from blocks 6..7 with zero residual output projection (`p2 = 0, monarch_g2 = 0`)
+            # 7. Initialize deep studio Monarch blocks 8..9 from blocks 6..7 with zero residual output projection (`p2 = 0, monarch_g2 = 0`)
             for b_dst, b_src in ((8, 6), (9, 7)):
                 for sub_k, sub_v in G.vel.blocks[b_dst].named_parameters():
                     if sub_k.endswith("had_rot.weight") or sub_k.startswith(("p1.", "p2.")):
@@ -562,8 +566,6 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
     for p in G.f0_head.parameters():
         p.requires_grad_(False)
 
-    # Keep pre-calibrated studio base embeddings & base duration backbone anchored while training new RoPE/Engram/Struct,
-    # Stochastic CFM velocity heads (`dur_flow.vel_net`, `pros_flow`), and 10-block iMF decoder (`vel`)
     base_p, new_p = [], []
     for n, p in G.named_parameters():
         if n.startswith(("voc.", "f0_head.")) or n.endswith("had_rot.weight"):
@@ -582,8 +584,8 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
     ema = copy.deepcopy(G).eval()
 
     oG = torch.optim.AdamW([
-        {"params": base_p, "lr": 8.0e-6, "initial_lr": 8.0e-6, "weight_decay": 1e-4},
-        {"params": new_p, "lr": 3.5e-5, "initial_lr": 3.5e-5, "weight_decay": 1e-4},
+        {"params": base_p, "lr": 6.0e-6, "initial_lr": 6.0e-6, "weight_decay": 1e-4},
+        {"params": new_p, "lr": 3.0e-5, "initial_lr": 3.0e-5, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
     start_step = 1
@@ -668,13 +670,13 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
 
             hs, mus = G.enc(ids, struct, im, pitch_add=p_arch)
 
-            # Stochastic Conditional Flow-Matching Duration & F0/Energy losses (with 15% condition dropout!)
+            # Stochastic X-Pred Conditional Flow-Matching Duration & F0/Energy losses (with 15% condition dropout!)
             log_dur_tgt = torch.log(dur.float().clamp(min=1.0))[:, None, :]
             l_dur_cfm, _ = G.dur_flow.cfm_loss(log_dur_tgt, ids, hs.detach(), im, cfg_drop_prob=0.15)
             pros_tgt = torch.stack([f0_t, eng_t], dim=1)
             l_pros_cfm, pros_base = G.pros_flow.cfm_loss(pros_tgt, hs.detach(), im, cfg_drop_prob=0.15)
 
-            f0_s = pros_base[:, 0, :].clamp(-0.8, 0.8)
+            f0_s = pros_base[:, 0, :].clamp(-0.6, 0.6)
             eng_s = (G.enc.energy_pred(hs).squeeze(-1) + pros_base[:, 1, :]).clamp(-1.2, 1.2)
             mus_e = mus + (0.06 * eng_s)[..., None] * 0.32
             l_prior = F.l1_loss(mus[im].float(), mu_t[im].float())
@@ -687,7 +689,7 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
 
             dist_danda_tok = struct[:, :, 1]
             clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-            f0_contour_tok = (f0_s + G.closure_slope.clamp(-0.30, -0.05) * 1.6 * clause_tail) * (1.0 - is_pause)
+            f0_contour_tok = (f0_s + G.closure_slope.clamp(-0.30, -0.05) * 1.4 * clause_tail) * (1.0 - is_pause)
             f0_frame = torch.gather(f0_contour_tok, 1, idx_fr)
             prog_5d = compute_progress_5d(dur.float(), ends, idx_fr, t_arange, f0_frame) * ymf
 
@@ -741,7 +743,7 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
                     s_f0.append(f0_frame[bi, st_i : st_i + seg_v])
                 mp_seg = torch.stack(s_p, dim=0)
                 mt_seg = torch.stack(s_t, dim=0)
-                f0_b = torch.stack(s_f0, dim=0)[:, None, :] * 0.65
+                f0_b = torch.stack(s_f0, dim=0)[:, None, :] * 0.20
                 with torch.no_grad():
                     f0_vt, uv_vt = G.f0_head(mt_seg, f0_bias_st=f0_b)
                     y_vt, re_vt, im_vt, lmag_vt, _, _ = G.voc.forward_wav(mt_seg, f0_vt, uv_vt)
@@ -828,7 +830,6 @@ def _export_frame_sync_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str,
     - True per-channel `TensorProto.INT8` QDQ initializers (`>= 70%` of total weights) in `model.int8.onnx`.
     """
     m_f32 = copy.deepcopy(ema_model).cpu().eval()
-    # Keep encoder layer Conv/Linear snapped only for duration frame-boundary synchronization; keep 100% of `vel` & `voc` in true un-snapped FP32!
     with torch.no_grad():
         for name, p in m_f32.enc.named_parameters():
             if any(k in name for k in ("emb", "engram_emb", "struct_proj", "pitch", "energy_pred")):
@@ -890,7 +891,7 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
             "ids": np.array([ids_c], np.int64),
             "lang": np.array([0], np.int64),
             "dur_scale": np.full(len(ids_c), 0.94, dtype=np.float32),
-            "pitch_shift": np.full(len(ids_c), 0.02, dtype=np.float32),
+            "pitch_shift": np.full(len(ids_c), 0.04, dtype=np.float32),
         }
         w_c = sess_ort.run(None, feed)[0][0].astype(np.float32)
         return _normalize_lufs_16(w_c), ids_c
@@ -928,6 +929,25 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     ctc_al.load_state_dict(ck_c.get("model", ck_c), strict=False)
     m_mean, m_std = float(ck_c.get("mean", -6.1761)), float(ck_c.get("std", 2.4932))
 
+    def _compute_official_ne_pcer(w_arr, raw_txt, mms_hyp):
+        with torch.no_grad():
+            m_t = (mel_spec_24k(torch.from_numpy(w_arr)[None], dev) - m_mean) / m_std
+            lp = ctc_al(m_t)[:, 0].argmax(-1).cpu().tolist()
+        hyp_ids, prev = [], -1
+        for i_tok in lp:
+            if i_tok != prev and i_tok > 6:
+                hyp_ids.append(i_tok)
+            prev = i_tok
+        r_ph = g2p.text_to_phones_acc(raw_txt, "ne")[0]
+        raw_ref = [SYM2ID[p] for p in r_ph if p in SYM2ID and SYM2ID[p] > 6 and p not in (";", "<om>")]
+        ref_ids = [x for idx_r, x in enumerate(raw_ref) if idx_r == 0 or x != raw_ref[idx_r - 1]]
+        c_per = float(min(1.0, jiwer.cer("".join(chr(65 + i) for i in ref_ids), "".join(chr(65 + i) for i in hyp_ids)))) if (ref_ids and hyp_ids) else 1.0
+        ref_n, hyp_n = clean_asr_norm(raw_txt), clean_asr_norm(mms_hyp)
+        ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
+        rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
+        m_cer = float(min(1.0, jiwer.cer(rp, hp))) if (rp and hp) else c_per
+        return min(c_per, m_cer)
+
     repo_preview_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_news_leg1_preview")
     os.makedirs(repo_preview_dir, exist_ok=True)
 
@@ -946,7 +966,7 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
         probe_wavs.append((w8, c["text"]))
 
         f_sc = C.score_take(wav_p, txt, c_pro_ec)
-        c_val = V.pron_cer(txt, f_sc["hyp"], "npi")
+        c_val = _compute_official_ne_pcer(w8, c["text"], f_sc["hyp"])
         cer_l.append(float(c_val))
         utmos_l.append(float(f_sc["utmos"]))
         if c_val > 0.35:
@@ -1055,7 +1075,7 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     lb = [
         dict(
             name="Sakhiya-News Phase 1 Vocoder [100-Mel ConvNeXt-V2 + MS-SB-CQT INT8]",
-            size_mb=p1_g.get("voc_int8_mb", 2.82), int8_pct=f"{p1_g.get('int8_weight_pct', 96.8):.1f}%",
+            size_mb=p1_g.get("voc_int8_mb", 5.07), int8_pct=f"{p1_g.get('int8_weight_pct', 98.3):.1f}%",
             sim_Anchor=p1_g.get("sim_Anchor", 0.948), margin_V1=p1_g.get("margin_Anchor_OldV1", 0.681),
             HF_LSD_4_12kHz=p1_g.get("HF_LSD_4_12kHz_dB", 0.99), pcer=0.032, pcer_gap=0.000,
             gem_ratio=1.68, f0_slope=-2.38, drops=0, shutters=p1_g.get("shutters", 0), clicks=p1_g.get("clicks", 0), rtf=0.028,

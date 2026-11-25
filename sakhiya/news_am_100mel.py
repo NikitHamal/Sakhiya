@@ -37,6 +37,7 @@ CONSONANT_IDS_TUPLE = tuple(
         "p", "pʰ", "b", "bʱ", "m", "j", "r", "l", "w", "ʃ", "s", "h", "ɽ", "ɽʱ", "z", "f"
     ) if p in SYM2ID
 )
+LONG_VOWEL_IDS_SET = {SYM2ID[p] for p in ("a", "e", "o", "ã", "ĩ", "ũ", "ẽ", "õ") if p in SYM2ID}
 BREATH_ID = SYM2ID[";"]
 COMMA_ID = SYM2ID[","]
 DANDA_ID = SYM2ID["."]
@@ -98,6 +99,7 @@ class RoPEEncoderLayer(nn.Module):
     def __init__(self, d: int = 144, h: int = 4, ff: int = 224, k: int = 5, r_enc: int = 104):
         super().__init__()
         self.h = h
+        self.scale = 1.0 / math.sqrt(d // h)
         self.n1 = nn.LayerNorm(d)
         self.qkv = nn.Linear(d, 3 * d)
         self.o = nn.Linear(d, d)
@@ -119,8 +121,7 @@ class RoPEEncoderLayer(nn.Module):
         B, T, d = x.shape
         qkv = self.qkv(self.n1(x)).view(B, T, 3, self.h, d // self.h).permute(2, 0, 3, 1, 4)
         q, k, v = _rope_split_half(qkv[0]), _rope_split_half(qkv[1]), qkv[2]
-        scale = 1.0 / math.sqrt(d // self.h)
-        scores = torch.matmul(q, k.transpose(-2, -1)) * scale
+        scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
         mask_bias = (1.0 - m[:, None, None, :].to(x.dtype)) * (-1e4)
         attn = torch.softmax((scores + mask_bias).float(), dim=-1).to(x.dtype)
         a = torch.matmul(attn, v).transpose(1, 2).reshape(B, T, d)
@@ -149,7 +150,6 @@ class NewsMidLayerEngram(nn.Module):
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         gem_l = (is_gem > 0.5).to(torch.long)
-        # First 192 buckets match the studio phoneme-trigram hash when gem_l == 0; upper 192 buckets specialize for geminates
         base_hash = torch.remainder(prev_ids * 73 + ids * 19 + next_ids * 3, 192)
         h_idx = base_hash + gem_l * 192
         e = self.engram_emb(h_idx.clamp(0, self.n_buckets - 1))
@@ -158,9 +158,9 @@ class NewsMidLayerEngram(nn.Module):
 
 
 class StochasticFlowDurationHead(nn.Module):
-    """Stochastic 4-Step Conditional Flow-Matching (CFM) Duration Predictor (~95 KB FP16).
-    Combines the 4-step unrolled studio flow backbone (`i, t_steps, cv.0..3, o`) with a conditional flow-matching
-    velocity field `vel_net` trained with 15% condition dropout (`cfg_drop_prob = 0.15`) for CFG / temperature control.
+    """Stochastic 4-Step X-Pred Conditional Flow-Matching (CFM) Duration Predictor (~95 KB FP16).
+    Combines the 4-step unrolled studio flow backbone (`i, t_steps, cv.0..3, o`) with an X-prediction conditional flow-matching
+    velocity field `v(z_t, t | h_cond) = res_hat(z_t, t, h_cond) - z_0` trained with 15% condition dropout (`cfg_drop_prob = 0.15`).
     """
     def __init__(self, d_in: int = 144, h_dim: int = 96):
         super().__init__()
@@ -171,7 +171,7 @@ class StochasticFlowDurationHead(nn.Module):
         self.cv = nn.ModuleList([nn.Conv1d(h_dim, h_dim, 3, padding=1) for _ in range(4)])
         self.o = nn.Conv1d(h_dim, 1, 1)
 
-        # Stochastic CFM residual velocity field v(z_t, t | h_cond)
+        # Stochastic CFM X-Prediction residual field res_hat(z_t, t | h_cond)
         self.cond_proj = nn.Conv1d(d_in, h_dim, 1)
         self.z_proj = nn.Conv1d(1, h_dim, 3, padding=1)
         self.t_proj = nn.Linear(32, h_dim)
@@ -200,7 +200,7 @@ class StochasticFlowDurationHead(nn.Module):
             x = x + self._base_step(x, hs, m, idx_s) * 0.25
         return (x * m.to(x.dtype)).float()
 
-    def forward_vel(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+    def forward_x1(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
         te = self.t_proj(sinusoidal_temb(t, 32).to(z_t.dtype))[:, :, None]
         hid = self.z_proj(z_t * m) + self.cond_proj(h_cond * m) + te
         return self.vel_net(hid * m) * m
@@ -211,7 +211,7 @@ class StochasticFlowDurationHead(nn.Module):
         mu_base = self.pred_base_logdur(ids, h, im)[:, None, :]  # [B, 1, L]
         l_base = F.smooth_l1_loss(mu_base.float() * m.float(), target_logdur.float() * m.float(), reduction="sum") / (m.sum() + 1.0)
 
-        res_tgt = (target_logdur.float() - mu_base.detach().float()).clamp(-0.6, 0.6) * m.float()
+        res_tgt = (target_logdur.float() - mu_base.detach().float()).clamp(-0.4, 0.4) * m.float()
         z0 = torch.randn_like(res_tgt) * 0.15 * m.float()
         t = torch.rand((B,), device=h.device, dtype=torch.float32)
         t_view = t[:, None, None]
@@ -221,8 +221,9 @@ class StochasticFlowDurationHead(nn.Module):
         h_t = h.transpose(1, 2) * m
         drop_mask = (torch.rand((B, 1, 1), device=h.device) >= cfg_drop_prob).to(h_t.dtype)
         h_cond = h_t * drop_mask
-        v_pred = self.forward_vel(z_t.to(h_t.dtype), t, h_cond, m)
-        l_flow = F.mse_loss(v_pred.float() * m.float(), v_target * m.float(), reduction="sum") / (m.sum() + 1.0)
+        x1_pred = self.forward_x1(z_t.to(h_t.dtype), t, h_cond, m).float()
+        v_pred = (x1_pred - z0) * m.float()
+        l_flow = F.mse_loss(v_pred, v_target * m.float(), reduction="sum") / (m.sum() + 1.0)
         return l_base + 0.5 * l_flow, mu_base
 
     def sample(self, ids: torch.Tensor, h: torch.Tensor, im: torch.Tensor, steps: int = 4, cfg_scale: float = 1.20, temp: float = 0.08) -> torch.Tensor:
@@ -232,23 +233,25 @@ class StochasticFlowDurationHead(nn.Module):
         mu_base = self.pred_base_logdur(ids, h, im)[:, None, :]
 
         l_idx = torch.arange(L, device=h.device, dtype=torch.float32)[None, None, :]
-        z = torch.sin(l_idx * 12.9898 + 78.233) * torch.cos(l_idx * 39.346 - 17.13) * temp * m.float()
+        z0 = torch.sin(l_idx * 12.9898 + 78.233) * torch.cos(l_idx * 39.346 - 17.13) * temp * m.float()
+        z = z0.clone()
         dt = 1.0 / float(max(1, steps))
         h_zero = torch.zeros_like(h_t)
         for s in range(steps):
             t_s = torch.full((B,), s * dt, device=h.device, dtype=torch.float32)
-            v_cond = self.forward_vel(z.to(h_t.dtype), t_s, h_t, m).float()
+            x1_cond = self.forward_x1(z.to(h_t.dtype), t_s, h_t, m).float()
             if cfg_scale != 1.0:
-                v_uncond = self.forward_vel(z.to(h_t.dtype), t_s, h_zero, m).float()
-                v = v_uncond + cfg_scale * (v_cond - v_uncond)
+                x1_uncond = self.forward_x1(z.to(h_t.dtype), t_s, h_zero, m).float()
+                x1 = x1_uncond + cfg_scale * (x1_cond - x1_uncond)
             else:
-                v = v_cond
+                x1 = x1_cond
+            v = x1 - z0
             z = (z + dt * v) * m.float()
-        return (mu_base.float() + z.clamp(-0.25, 0.25)) * m.float()
+        return (mu_base.float() + z.clamp(-0.18, 0.18)) * m.float()
 
 
 class StochasticFlowVarianceHead(nn.Module):
-    """Stochastic 4-Step Conditional Flow-Matching (CFM) Predictor for F0 & Energy (~85 KB FP16).
+    """Stochastic 4-Step X-Pred Conditional Flow-Matching (CFM) Predictor for F0 & Energy (~85 KB FP16).
     Trained with 15% condition dropout (`cfg_drop_prob = 0.15`) so inference-time CFG / temperature scaling produces
     expressive, natural Kathmandu pitch arcs and broadcast energy dynamics instead of flat L1 regression.
     """
@@ -277,7 +280,7 @@ class StochasticFlowVarianceHead(nn.Module):
         nn.init.zeros_(self.vel_net[-1].weight)
         nn.init.zeros_(self.vel_net[-1].bias)
 
-    def forward_vel(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+    def forward_x1(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
         te = self.t_proj(sinusoidal_temb(t, 32).to(z_t.dtype))[:, :, None]
         hid = self.z_proj(z_t * m) + self.cond_proj(h_cond * m) + te
         return self.vel_net(hid * m) * m
@@ -289,7 +292,7 @@ class StochasticFlowVarianceHead(nn.Module):
         mu_base = self.base_proj(h_t) * m
         l_base = F.smooth_l1_loss(mu_base.float() * m.float(), target.float() * m.float(), reduction="sum") / (m.sum() * self.out_dim + 1.0)
 
-        res_tgt = (target.float() - mu_base.detach().float()).clamp(-0.8, 0.8) * m.float()
+        res_tgt = (target.float() - mu_base.detach().float()).clamp(-0.6, 0.6) * m.float()
         z0 = torch.randn_like(res_tgt) * 0.15 * m.float()
         t = torch.rand((B,), device=h.device, dtype=torch.float32)
         t_view = t[:, None, None]
@@ -298,8 +301,9 @@ class StochasticFlowVarianceHead(nn.Module):
 
         drop_mask = (torch.rand((B, 1, 1), device=h.device) >= cfg_drop_prob).to(h_t.dtype)
         h_cond = h_t * drop_mask
-        v_pred = self.forward_vel(z_t.to(h_t.dtype), t, h_cond, m)
-        l_flow = F.mse_loss(v_pred.float() * m.float(), v_target * m.float(), reduction="sum") / (m.sum() * self.out_dim + 1.0)
+        x1_pred = self.forward_x1(z_t.to(h_t.dtype), t, h_cond, m).float()
+        v_pred = (x1_pred - z0) * m.float()
+        l_flow = F.mse_loss(v_pred, v_target * m.float(), reduction="sum") / (m.sum() * self.out_dim + 1.0)
         return l_base + 0.5 * l_flow, mu_base
 
     def sample(self, h: torch.Tensor, im: torch.Tensor, steps: int = 4, cfg_scale: float = 1.20, temp: float = 0.08) -> torch.Tensor:
@@ -310,19 +314,21 @@ class StochasticFlowVarianceHead(nn.Module):
 
         l_idx = torch.arange(L, device=h.device, dtype=torch.float32)[None, None, :]
         c_idx = torch.arange(1, self.out_dim + 1, device=h.device, dtype=torch.float32)[None, :, None]
-        z = torch.sin(l_idx * 12.9898 + c_idx * 78.233) * torch.cos(l_idx * 39.346 - c_idx * 17.13) * temp * m.float()
+        z0 = torch.sin(l_idx * 12.9898 + c_idx * 78.233) * torch.cos(l_idx * 39.346 - c_idx * 17.13) * temp * m.float()
+        z = z0.clone()
         dt = 1.0 / float(max(1, steps))
         h_zero = torch.zeros_like(h_t)
         for s in range(steps):
             t_s = torch.full((B,), s * dt, device=h.device, dtype=torch.float32)
-            v_cond = self.forward_vel(z.to(h_t.dtype), t_s, h_t, m).float()
+            x1_cond = self.forward_x1(z.to(h_t.dtype), t_s, h_t, m).float()
             if cfg_scale != 1.0:
-                v_uncond = self.forward_vel(z.to(h_t.dtype), t_s, h_zero, m).float()
-                v = v_uncond + cfg_scale * (v_cond - v_uncond)
+                x1_uncond = self.forward_x1(z.to(h_t.dtype), t_s, h_zero, m).float()
+                x1 = x1_uncond + cfg_scale * (x1_cond - x1_uncond)
             else:
-                v = v_cond
+                x1 = x1_cond
+            v = x1 - z0
             z = (z + dt * v) * m.float()
-        return (mu_base.float() + z.clamp(-0.35, 0.35)) * m.float()
+        return (mu_base.float() + z.clamp(-0.25, 0.25)) * m.float()
 
 
 class SakhiyaNewsEncoder(nn.Module):
@@ -384,10 +390,10 @@ class SakhiyaNewsIMFDecoder(nn.Module):
         self.prog_proj = nn.Conv1d(5, d, 1)  # 4D intra-phoneme progress + 1D frame F0/energy conditioning
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
 
-        # Blocks 0..6 match studio ff_mult=3.0; blocks 7..9 use wide ff_mult=5.5 (replacing deleted fast_blocks bloat!)
+        # Blocks 0..6 match studio ff_mult=3.0; blocks 7..9 use ff_mult=3.5 (~9.48 MB total INT8 ONNX with full-rank vocoder!)
         blocks = []
         for i in range(nb):
-            ff_m = 3.0 if i < 7 else 5.5
+            ff_m = 3.0 if i < 7 else 3.5
             blk = WalshHadamardMonarchBlock(d=d, c=c, k=7, ff_mult=ff_m, had_size=16)
             blk.film = nn.Identity()
             blk.film_const.requires_grad_(True)
@@ -399,9 +405,9 @@ class SakhiyaNewsIMFDecoder(nn.Module):
             blocks.append(blk)
         self.blocks = nn.ModuleList(blocks)
         self.step2_gate = nn.Parameter(torch.tensor(0.08))
-        self.step3_gate = nn.Parameter(torch.tensor(0.02))
-        self.step4_gate = nn.Parameter(torch.tensor(0.02))
-        self.cfg_gate = nn.Parameter(torch.tensor(0.04))
+        self.step3_gate = nn.Parameter(torch.tensor(0.01))
+        self.step4_gate = nn.Parameter(torch.tensor(0.01))
+        self.cfg_gate = nn.Parameter(torch.tensor(0.02))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
 
@@ -456,7 +462,7 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 
 class SakhiyaNewsFlagship(nn.Module):
-    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.1 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
+    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.48 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
     def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, steps: int = 4, cfg_scale: float = 1.20):
         super().__init__()
         self.steps = steps
@@ -470,24 +476,27 @@ class SakhiyaNewsFlagship(nn.Module):
         self.pros_flow = StochasticFlowVarianceHead(d_in=d_enc, out_dim=2, h_dim=80)  # [f0_offset, energy_offset]
         self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc)
         self.f0_head = AMF0VUVHead100Mel(n_mels=100)
-        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch).apply_svd_compression()
+        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch, r_k7=None, r_k11=None)
 
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
-        self.closure_slope = nn.Parameter(torch.tensor(-0.14))   # Grounded downward Kathmandu clause-final F0 closure
+        self.closure_slope = nn.Parameter(torch.tensor(-0.10))   # Grounded downward Kathmandu clause-final F0 closure
         self.dur_rate_bias = nn.Parameter(torch.tensor(0.0))
-        self.geminate_stretch = nn.Parameter(torch.tensor(1.12))  # Emphatic Nepali geminate stretching multiplier
+        self.geminate_stretch = nn.Parameter(torch.tensor(1.06))  # Emphatic Nepali geminate stretching multiplier
 
     def load_phase1_vocoder(self, voc_ck_path: str):
         dev = next(self.parameters()).device
         ck = torch.load(voc_ck_path, map_location=dev, weights_only=False)
         vsd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
         has_svd = any(".c1.0.0.weight" in k for k in vsd)
-        if not has_svd:
-            voc_raw = StudioVocoder100Mel(n_mels=100, ch=self.cfg["voc_ch"]).to(dev)
-            voc_raw.init_from_clean_studio_filterbank(voc_ck_path)
-            self.voc.load_state_dict(voc_raw.state_dict(), strict=False)
+        if has_svd and os.path.exists("/work/tts/ck/sakhiya_one_voc.pt"):
+            self.voc.init_from_clean_studio_filterbank("/work/tts/ck/sakhiya_one_voc.pt")
+            own_v = self.voc.state_dict()
+            for k, v in vsd.items():
+                if k in own_v and own_v[k].shape == v.shape and not k.startswith("amp_head"):
+                    own_v[k].copy_(v)
+            self.voc.load_state_dict(own_v, strict=False)
         else:
-            self.voc.load_state_dict(vsd, strict=False)
+            self.voc.init_from_clean_studio_filterbank(voc_ck_path)
         if "f0_head" in ck:
             self.f0_head.load_state_dict({k: v.float() for k, v in ck["f0_head"].items()}, strict=False)
         return self
@@ -515,9 +524,9 @@ class SakhiyaNewsFlagship(nn.Module):
 
         h, mu = self.enc(ids, struct_5d, im, pitch_add=p_enc)
 
-        # Stochastic 4-step CFM prosody (F0 & energy) + duration prediction
+        # Stochastic 4-step X-Pred CFM prosody (F0 & energy) + duration prediction
         pros_2d = self.pros_flow.sample(h, im, steps=4, cfg_scale=self.cfg_scale, temp=0.06)  # [B, 2, L]
-        f0_ph = pros_2d[:, 0, :].clamp(-0.8, 0.8)
+        f0_ph = pros_2d[:, 0, :].clamp(-0.6, 0.6)
         eng_ph = (self.enc.energy_pred(h).squeeze(-1) + pros_2d[:, 1, :]).clamp(-1.2, 1.2)
         mu = mu + (0.06 * eng_ph)[..., None] * 0.32
 
@@ -526,7 +535,7 @@ class SakhiyaNewsFlagship(nn.Module):
 
         # Emphatic Nepali geminate stretching & natural 80-180ms inter-clause <breath> preservation
         is_gem = struct_5d[:, :, 4]
-        dur_frames = dur_frames * (1.0 + (self.geminate_stretch.clamp(1.05, 1.35) - 1.0) * is_gem)
+        dur_frames = dur_frames * (1.0 + (self.geminate_stretch.clamp(1.03, 1.25) - 1.0) * is_gem)
         is_breath = (ids == BREATH_ID).float()
         dur_frames = torch.where(is_breath > 0.5, torch.clamp(dur_frames, min=8.0, max=15.0), dur_frames)
 
@@ -572,7 +581,7 @@ class SakhiyaNewsFlagship(nn.Module):
         # Grounded Kathmandu downward clause-final F0 contour
         dist_danda_tok = struct_5d[:, :, 1]
         clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        f0_contour_tok = (f0_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.6 * clause_tail) * (1.0 - is_pause)
+        f0_contour_tok = (f0_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.4 * clause_tail) * (1.0 - is_pause)
         f0_frame = torch.gather(f0_contour_tok, 1, idx)
         prog_5d = compute_progress_5d(dur, ends, idx, t_arange, f0_frame)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=dev)
@@ -583,7 +592,7 @@ class SakhiyaNewsFlagship(nn.Module):
         v0 = self.vel(mu_y, t0, mu_y, m_t, prog_5d=prog_5d, r=r_one)
         mu_zero = torch.zeros_like(mu_y)
         v0_uncond = self.vel(mu_y, t0, mu_zero, m_t, prog_5d=prog_5d, r=r_one)
-        w_cfg = self.vel.cfg_gate.clamp(0.0, 0.25)
+        w_cfg = self.vel.cfg_gate.clamp(0.0, 0.20)
         v0_cfg = v0 + w_cfg * (v0 - v0_uncond)
 
         x_25 = mu_y + 0.25 * v0_cfg
@@ -599,14 +608,14 @@ class SakhiyaNewsFlagship(nn.Module):
         v_75 = self.vel(x_75, t_75, mu_y, m_t, prog_5d=prog_5d, r=r_one)
 
         w2 = self.vel.step2_gate.clamp(0.0, 0.25)
-        w3 = self.vel.step3_gate.clamp(0.0, 0.15)
-        w4 = self.vel.step4_gate.clamp(0.0, 0.15)
-        w1 = (1.0 - w2 - w3 - w4).clamp(min=0.45)
+        w3 = self.vel.step3_gate.clamp(0.0, 0.12)
+        w4 = self.vel.step4_gate.clamp(0.0, 0.12)
+        w1 = (1.0 - w2 - w3 - w4).clamp(min=0.51)
         xt = mu_y + w1 * v0_cfg + w2 * v_50 + w3 * v_25 + w4 * v_75
 
         # Full 100-band log-mel (fmin=0, fmax=12000)
         mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
-        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.65)
+        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.20)
         y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)

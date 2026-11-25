@@ -1,4 +1,4 @@
-"""Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`, ~2.82 MB INT8)
+"""Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`)
 with ConvNeXt-V2 (GRN + SiLU/GELU, zero Snake1d), Parallel Amplitude & Anti-Wrapped Phase (AWP) iSTFT branches,
 Full-Band Harmonics up to 12 kHz, and Multi-Scale Sub-Band CQT Discriminator (`MS-SB-CQT`).
 
@@ -9,7 +9,7 @@ Key architectural guarantees:
    throughout the multi-receptive-field upsampling body and parallel Amplitude / Phase branches.
 3. 100 full-bandwidth mel bins (`fmin=0, fmax=12000, n_fft=1024, hop=256`, 24 kHz) with zero top-bin clipping.
 4. Permanent FP16 isolation for harmonic excitation (`src.*`) and final iSTFT projection heads (`amp_head`, `pha_head`, < 55 KB),
-   while quantizing the ConvNeXt-V2 body to per-channel INT8 QDQ (~2.82 MB INT8, > 95% INT8 weights).
+   while quantizing the ConvNeXt-V2 body to per-channel INT8 QDQ (> 95% INT8 weights).
 """
 import math
 import os
@@ -21,6 +21,12 @@ from .v2_vocoder import SR, N_FFT, HOP, WIN, NMEL, ISTFT_N_FFT, ISTFT_HOP, mel_s
 from .v15_rnd_wavehax import _build_cola_istft_kernel, ste_int8_weight
 
 N_BINS = ISTFT_N_FFT // 2 + 1  # 33 sub-frame STFT bins covering 0 .. 12,000 Hz at 16x upsampled rate
+
+# Calibrated 4.5..12.0 kHz condenser-air STFT sub-frame log-magnitude bias profile (bins 12..32)
+STUDIO_AIR_BIAS_21 = (
+    -0.12, -0.15, -0.14, -0.22, -0.30, -0.38, -0.36, -0.28, -0.20, -0.16,
+    -0.16, -0.22, -0.26, -0.34, -0.31, -0.36, -0.38, -0.35, -0.75, -1.45, -1.98,
+)
 
 
 class RMSNorm1d(nn.Module):
@@ -178,8 +184,8 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
 
 
 class StudioVocoder100Mel(nn.Module):
-    """24 kHz 100-Band Full-Bandwidth Studio Vocoder (ConvNeXt-V2 GRN + SiLU/GELU, zero Snake1d, SVD-compact ~2.82 MB INT8)."""
-    def __init__(self, n_mels: int = 100, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11), r_k7: int = 64, r_k11: int = 44):
+    """24 kHz 100-Band Full-Bandwidth Studio Vocoder (ConvNeXt-V2 GRN + SiLU/GELU, zero Snake1d, full-rank MRF filterbank)."""
+    def __init__(self, n_mels: int = 100, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11), r_k7: int = None, r_k11: int = None):
         super().__init__()
         self.n_mels = n_mels
         self.ch = ch
@@ -210,7 +216,7 @@ class StudioVocoder100Mel(nn.Module):
         self._svd_applied = False
 
     def apply_svd_compression(self):
-        if self._svd_applied:
+        if self._svd_applied or (self.r_k7 is None and self.r_k11 is None):
             return self
         for b_idx, r_k in ((1, self.r_k7), (2, self.r_k11)):
             if r_k is not None:
@@ -231,7 +237,7 @@ class StudioVocoder100Mel(nn.Module):
         return self
 
     def init_from_clean_studio_filterbank(self, ck_path: str):
-        """Initialize filterbank cleanly from `sakhiya_one_voc.pt` / `v3_voc320_fused.pt` (zero Old-V1), then apply SVD compression."""
+        """Initialize filterbank cleanly from `sakhiya_one_voc.pt` / `v3_voc320_fused.pt` (zero Old-V1)."""
         dev = next(self.parameters()).device
         ck = torch.load(ck_path, map_location=dev, weights_only=False)
         sd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
@@ -241,7 +247,7 @@ class StudioVocoder100Mel(nn.Module):
                 if ("voc." + kp) in s1_ema:
                     sd[kp] = s1_ema["voc." + kp].float()
         has_svd_in_sd = any(".c1.0.0.weight" in k for k in sd)
-        if has_svd_in_sd and not self._svd_applied:
+        if has_svd_in_sd and not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
             self.apply_svd_compression()
             self.to(dev)
         own = self.state_dict()
@@ -258,8 +264,11 @@ class StudioVocoder100Mel(nn.Module):
                     self.amp_head.bias.copy_(pb[:N_BINS])
                     self.pha_head.weight.copy_(pw[N_BINS:])
                     self.pha_head.bias.copy_(pb[N_BINS:])
+            # Calibrate 4.5..12.0 kHz condenser-air roll-off on amp_head.bias[12:33] if initializing from raw filterbank
+            if not ck.get("air_calibrated", False):
+                own["amp_head.bias"][12:33].add_(torch.tensor(STUDIO_AIR_BIAS_21, device=dev, dtype=own["amp_head.bias"].dtype))
         self.load_state_dict(own, strict=False)
-        if not self._svd_applied:
+        if not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
             self.apply_svd_compression()
             self.to(dev)
         return self
