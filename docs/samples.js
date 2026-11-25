@@ -6,10 +6,11 @@
   let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "v5_final", verB = "v8_nano";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  const RETIRED_OR_DUP_TAGS = new Set(["sakhiya_v3_t5", "sakhiya_v4_micro", "sakhiya_v5_micro", "sakhiya_v4_pico", "sakhiya_v5_pico"]);
   function renderComparatorInto(mountId) {
     const mount = document.getElementById(mountId);
     if (!mount || !REG || !REG.versions || !REG.versions.length) return;
-    const vers = REG.versions;
+    const vers = REG.versions.filter(v => !RETIRED_OR_DUP_TAGS.has(v.tag));
     if (!vers.some(v => v.tag === verA)) verA = vers[0].tag;
     if (!vers.some(v => v.tag === verB)) verB = vers[vers.length - 1].tag;
     const vA = vers.find(v => v.tag === verA) || vers[0];

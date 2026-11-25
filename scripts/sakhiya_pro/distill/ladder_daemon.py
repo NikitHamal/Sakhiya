@@ -82,12 +82,10 @@ def promote_repo_and_hf(tier, g, best_dir):
     alias_map = {
         't1': ('sakhiya_v4_pico',  'sakhiya_v5_pico',  'pico',  'models_pico'),
     }
-    st_list = [x for x in st_list if x.get('tier') != tier] + [entry_t]
-    if tier in alias_map:
-        v4_tag, v5_tag, _, _ = alias_map[tier]
-        for a_tag in (v4_tag, v5_tag):
-            entry_a = dict(entry_t, tier=a_tag, label=TIER_LABELS.get(tier, a_tag))
-            st_list = [x for x in st_list if x.get('tier') != a_tag] + [entry_a]
+    # Keep only active 4-tier ladder (t30, t15, t10, t1) in student_tiers.json — no duplicate alias rows or retired t5
+    active_order = {'t30': 0, 't15': 1, 't10': 2, 't1': 3}
+    st_list = [x for x in st_list if x.get('tier') in active_order and x.get('tier') != tier] + [entry_t]
+    st_list.sort(key=lambda x: active_order.get(x.get('tier'), 99))
     json.dump(st_list, open(st_path, 'w'), indent=2, ensure_ascii=False)
 
     # 2. Freeze 15-clip master pack into docs/samples/versions/sakhiya_v3_<tier>/ (and sakhiya_v4/v5_micro/pico + live models_micro/pico)
@@ -191,7 +189,7 @@ def leaderboard():
     for tier in ('t30', 't15', 't10', 't1'):
         bp = f'{OUT}/{tier}/best/gate.json'
         if not os.path.exists(bp):
-            cands = sorted(glob.glob(f'{OUT}/{tier}/c_*/gate.json'))
+            cands = sorted(glob.glob(f'{OUT}/{tier}/c_*/gate.json'), key=os.path.getmtime)
             bp = cands[-1] if cands else bp
         if os.path.exists(bp):
             g = json.load(open(bp)); s = g.get('summary', {})
@@ -250,7 +248,7 @@ def evaluate(tier, ck, tag):
         print(f'[{time.strftime("%T")}] {tier} step {g["step"]} not promoted (pass={g["gate_pass"]} score={g.get("score")} best={cur and cur.get("score")})', flush=True)
     if not (g['gate_pass'] and cur is None):
         shutil.rmtree(d + '/wav', ignore_errors=True)
-    for old in sorted(glob.glob(f'{OUT}/{tier}/c_*'))[:-2]:
+    for old in sorted(glob.glob(f'{OUT}/{tier}/c_*'), key=os.path.getmtime)[:-2]:
         shutil.rmtree(old, ignore_errors=True)
 
 

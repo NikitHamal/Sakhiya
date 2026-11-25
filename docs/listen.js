@@ -3,7 +3,8 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_v5_micro", "sakhiya_v5_pico", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t5", "sakhiya_v3_t1", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4", "sakhiya_v4_micro", "sakhiya_v4_pico"];
+  var WANT = ["sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v3", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
     ["sakhiya_pro/ep01_v4/voiceover_ep01.mp3", "Episode 01 · v4", "previous master"]
@@ -38,8 +39,8 @@
   fetch("samples/versions/registry.json").then(function (r) { return r.json(); }).then(function (REG) {
     var vs = REG.versions, by = {};
     vs.forEach(function (v) { by[v.tag] = v; });
-    var rest = vs.map(function (v) { return v.tag; }).filter(function (t) { return WANT.indexOf(t) < 0; }).reverse();
-    var tags = WANT.concat(rest).filter(function (t) { return by[t]; });
+    var rest = vs.map(function (v) { return v.tag; }).filter(function (t) { return WANT.indexOf(t) < 0 && !RETIRED_OR_DUP[t]; }).reverse();
+    var tags = WANT.concat(rest).filter(function (t) { return by[t] && !RETIRED_OR_DUP[t]; });
     var tabs = $("#tabs");
     tabs.innerHTML = tags.map(function (t) { return '<button class="chip" role="tab" data-t="' + esc(t) + '">' + esc(t.replace(/^sakhiya_/, "")) + "</button>"; }).join("");
     function show(t) {
