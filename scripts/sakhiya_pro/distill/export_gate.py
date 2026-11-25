@@ -34,7 +34,7 @@ for p in (HERE, REPO, os.path.join(REPO, "scripts", "sakhiya_pro"), "/work/sp"):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from student import Student, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
+from student import Student, TIERS, SR, HOP, N_FFT, snap_f0_int8, snap_am_int8
 BAD_OPS = {"ConvInteger", "MatMulInteger", "DynamicQuantizeLinear", "QLinearConv", "QLinearMatMul"}
 SIZE_CAPS_MB = {"sakhiya_one": 8.50, "sakhiya_one_fast": 8.50, "t1": 1.45, "t10": 9.50, "t15": 14.50, "t30": 29.60}
 SIZE_FLOORS_MB = {"sakhiya_one": 6.50, "sakhiya_one_fast": 5.00}
@@ -100,9 +100,13 @@ def _strip_meta(m):
             n.output[i] = rn(n.output[i])
 
 
-def load(ck):
+def load(ck, tier=None):
     S = torch.load(ck, map_location="cpu", weights_only=False)
-    cfg = S.get("cfg", {})
+    cfg = dict(S.get("cfg", {}))
+    if tier and tier in TIERS:
+        cfg["tier"] = tier
+        cfg["nb_vel"] = TIERS[tier]["nb_vel"]
+        cfg["steps"] = TIERS[tier]["steps"]
     m = Student(**cfg)
     m.warm_init("/work/tts/ck")
     m.load_state_dict(S["ema"], strict=False)
@@ -441,7 +445,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     R = dict(tier=a.tier)
-    m, S = load(a.ckpt)
+    m, S = load(a.ckpt, tier=a.tier)
     R["step"] = S.get("step", 0)
     R["qat"] = bool(S.get("qat"))
     f32, i8 = a.out + "/model.fp32.onnx", a.out + "/model.int8.onnx"

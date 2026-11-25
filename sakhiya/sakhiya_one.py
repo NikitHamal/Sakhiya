@@ -65,9 +65,14 @@ class WalshHadamardMonarchBlock(nn.Module):
         self.had_rot.weight = nn.Parameter(H_weight, requires_grad=False)
 
         # Full-capacity FFN + Walsh-Hadamard rotated Monarch block-structured residual pathway
-        h_ff = int(d * ff_mult)
-        self.p1 = nn.Conv1d(d, h_ff, 1)
-        self.p2 = nn.Conv1d(h_ff, d, 1)
+        self.ff_mult = ff_mult
+        if ff_mult > 0:
+            h_ff = int(d * ff_mult)
+            self.p1 = nn.Conv1d(d, h_ff, 1)
+            self.p2 = nn.Conv1d(h_ff, d, 1)
+        else:
+            self.p1 = None
+            self.p2 = None
         self.monarch_g1 = nn.Conv1d(d, d, 1, groups=self.n_groups, bias=True)
         self.monarch_g2 = nn.Conv1d(d, d, 1, groups=had_size, bias=True)
         self.monarch_scale = nn.Parameter(torch.full((1, d, 1), 0.15))
@@ -89,7 +94,7 @@ class WalshHadamardMonarchBlock(nn.Module):
         y = self.n(self.dw(x * m)) * (1.0 + sc) + sh
         # Apply orthogonal Walsh-Hadamard rotation to spread channel activation outliers evenly before Monarch/FFN
         y_rot = self.had_rot(y)
-        ff_out = self.p2(F.gelu(self.p1(y))) + self._monarch_forward(y_rot)
+        ff_out = self._monarch_forward(y_rot) if self.p1 is None else (self.p2(F.gelu(self.p1(y))) + self._monarch_forward(y_rot))
         return x + ff_out * m
 
 
@@ -186,15 +191,17 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         self.prog_proj = nn.Conv1d(4, d, 1)
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
         self.blocks = nn.ModuleList(
-            WalshHadamardMonarchBlock(d=d, c=c, ff_mult=(1 if i >= 7 else 3))
+            WalshHadamardMonarchBlock(d=d, c=c, ff_mult=(0 if i >= 7 else 3))
             for i in range(nb)
         )
-        if nb >= 8:
-            nn.init.zeros_(self.blocks[-1].p2.weight)
-            nn.init.zeros_(self.blocks[-1].p2.bias)
-        self.fast_adapter = nn.Conv1d(d, d, 1)
-        nn.init.eye_(self.fast_adapter.weight[:, :, 0])
-        nn.init.zeros_(self.fast_adapter.bias)
+        self.fast_adapter = nn.Sequential(
+            nn.Conv1d(d, d, 5, padding=2, groups=d),
+            nn.GroupNorm(1, d),
+            nn.GELU(),
+            nn.Conv1d(d, d, 1),
+        )
+        nn.init.zeros_(self.fast_adapter[3].weight)
+        nn.init.zeros_(self.fast_adapter[3].bias)
         self.step2_gate = nn.Parameter(torch.tensor(0.08))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
@@ -214,25 +221,31 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         for i in range(nb_run):
             h = self.blocks[i](h, c, m)
         if nb_run <= 4:
-            h = self.fast_adapter(h) * m
+            h = (h + self.fast_adapter(h * m)) * m
         return self.out(h) * m
 
     def forward_laddered(self, x: torch.Tensor, t: torch.Tensor, mu: torch.Tensor, g: torch.Tensor, m: torch.Tensor, prog: torch.Tensor = None, r: torch.Tensor = None):
         """Simultaneously compute both the 4-block Fast exit AND the 8-block Studio exit in a single forward pass."""
-        c = self.tm(temb(t, self.c).to(x.dtype)) + g
-        if r is not None:
-            c = c + self.rm(temb(t - r, self.c).to(x.dtype))
+        if isinstance(self.tm, nn.Identity):
+            c = g
+        else:
+            c = self.tm(temb(t, self.c).to(x.dtype)) + g
+            if r is not None and not isinstance(self.rm, nn.Identity):
+                c = c + self.rm(temb(t - r, self.c).to(x.dtype))
         h = self.inp(torch.cat([x, mu], 1))
         if prog is not None:
             h = h + self.prog_proj(prog.to(x.dtype))
         h = h * m
         for i in range(min(4, len(self.blocks))):
             h = self.blocks[i](h, c, m)
-        out_4 = self.out(self.fast_adapter(h) * m) * m
+        h_4 = h
+        h_4_bridged = (h_4 + self.fast_adapter(h_4 * m)) * m
+        out_4 = self.out(h_4_bridged) * m
         for i in range(4, len(self.blocks)):
             h = self.blocks[i](h, c, m)
-        out_8 = self.out(h) * m
-        return out_8, out_4
+        h_8 = h
+        out_8 = self.out(h_8) * m
+        return out_8, out_4, h_8, h_4_bridged
 
     def xpred_from_vel(self, x_t: torch.Tensor, t: torch.Tensor, v_pred: torch.Tensor) -> torch.Tensor:
         """Convert velocity parameterization into clean-mel X-prediction x_hat = x_t + (1 - t) * v_pred."""
