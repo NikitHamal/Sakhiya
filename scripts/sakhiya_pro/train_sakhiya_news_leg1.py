@@ -1170,11 +1170,138 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     return leg1_gate
 
 
+def train_phase3_joint_e2e_distill(am_cache_obj: dict, voc_cache_obj: list, resume_path: str, e2e_steps: int = 20000, bs: int = 16, dev="cuda"):
+    """Leg-2 Phase 3: Joint End-to-End Waveform Distillation (unfreezing AM + 100-Mel MS-SB-CQT Vocoder together
+    on 0.8-1.2 s waveform slices with detached duration gradients + MS-SB-CQT + MPD/MRD + Magnitude-Aware AWP
+    + Multi-Layer WavLM-FM + LSQ Per-Channel QAT).
+    """
+    log(f"[Phase 3 Joint E2E] Unfreezing Sakhiya-News AM + 100-Mel MS-SB-CQT Vocoder for {e2e_steps} steps (0.8-1.2s slices, detached durations, LSQ QAT)...")
+    G = SakhiyaNewsFlagship().to(dev)
+    rck = torch.load(resume_path, map_location=dev, weights_only=False)
+    G.load_state_dict(rck["ema"], strict=True)
+    ema = copy.deepcopy(G).eval()
+
+    # Unfreeze AM encoder/decoder + 100-Mel Vocoder together while keeping duration predictor detached from waveform gradients
+    e2e_params = []
+    for n, p in G.named_parameters():
+        if n.endswith("had_rot.weight") or n.startswith(("dur_flow.", "enc.emb", "enc.spk_anchor_bias", "enc.post_anchor_bias")):
+            p.requires_grad_(False)
+        else:
+            p.requires_grad_(True)
+            e2e_params.append(p)
+
+    G._qat_flag = True
+    hooks = install_news_lsq_qat_hooks(G)
+    D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
+    D_mpd = DiscV2().to(dev)
+    wavlm_fm = FrozenMultiLayerWavLM(dev=dev)
+    oG = torch.optim.AdamW(e2e_params, lr=1.0e-5, betas=(0.8, 0.99), weight_decay=1e-4)
+    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()), lr=1.5e-5, betas=(0.8, 0.99))
+
+    all_items = am_cache_obj["cache"]
+    mean, std = float(am_cache_obj["mean"]), float(am_cache_obj["std"])
+    seg_frames = 96  # ~1.024 seconds at 24 kHz (hop=256) inside 0.8-1.2 s window
+
+    for st in range(1, e2e_steps + 1):
+        xs = random.sample(all_items, min(bs, len(all_items)))
+        B = len(xs)
+        ids = pad_sequence([x["ids"].to(dev) for x in xs], batch_first=True)
+        dur = pad_sequence([x["dur"].to(dev) for x in xs], batch_first=True)
+        struct = pad_sequence([x["struct"].to(dev).float() for x in xs], batch_first=True)
+        y_clean = pad_sequence([x["y_clean"].to(dev).float() for x in xs], batch_first=True).transpose(1, 2).contiguous()
+        il = torch.tensor([len(x["ids"]) for x in xs], device=dev)
+        yl = torch.tensor([x["y_clean"].shape[0] for x in xs], device=dev)
+        L, T = ids.shape[1], y_clean.shape[2]
+        im = torch.arange(L, device=dev)[None] < il[:, None]
+        ym = torch.arange(T, device=dev)[None] < yl[:, None]
+        ymf = ym[:, None].float()
+
+        with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            hs, mus = G.enc(ids, struct, im)
+            # Detached duration gradients during waveform distillation
+            with torch.no_grad():
+                attn = _dur_to_attn(dur, im, ym)
+                ends = torch.cumsum(dur.float(), dim=1)
+                t_arange = torch.arange(0, T, device=dev, dtype=torch.float32)
+                idx_fr = (t_arange[None, :, None] >= ends[:, None, :]).to(torch.float32).sum(-1).to(torch.int64).clamp(max=L - 1)
+                f0_frame = torch.zeros((B, T), device=dev, dtype=torch.float32)
+                prog_5d = compute_progress_5d(dur.float(), ends, idx_fr, t_arange, f0_frame) * ymf
+
+            mu_y = torch.einsum("blt,bld->bdt", attn.to(mus.dtype), mus) * ymf
+            t0_v = torch.zeros((B,), device=dev, dtype=torch.float32)
+            r_one = torch.ones((B,), device=dev, dtype=torch.float32)
+            v0 = G.vel(mu_y, t0_v, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+            x_mid = mu_y + 0.5 * v0
+            t_mid = torch.full((B,), 0.5, device=dev, dtype=torch.float32)
+            v_mid = G.vel(x_mid, t_mid, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+            w2 = G.vel.step2_gate.clamp(0.0, 0.25)
+            y_pred = (mu_y + (1.0 - w2) * v0 + w2 * v_mid) * ymf
+
+            mp_full = y_pred.float() * std + mean
+            mt_full = y_clean.float() * std + mean
+            s_p, s_t = [], []
+            seg_use = min(seg_frames, T)
+            for bi in range(B):
+                vt = max(int(yl[bi].item()), seg_use + 1)
+                st_i = random.randint(0, max(0, vt - seg_use)) if vt > seg_use else 0
+                s_p.append(mp_full[bi, :, st_i : st_i + seg_use])
+                s_t.append(mt_full[bi, :, st_i : st_i + seg_use])
+            mp_seg = torch.stack(s_p, dim=0)
+            mt_seg = torch.stack(s_t, dim=0)
+
+            with torch.no_grad():
+                f0_vt, uv_vt = G.f0_head(mt_seg)
+                y_vt, re_vt, im_vt, lmag_vt, _, _ = G.voc.forward_wav(mt_seg, f0_vt, uv_vt)
+            f0_vp, uv_vp = G.f0_head(mp_seg)
+            y_vp, _, _, lmag_vp, cos_vp, sin_vp = G.voc.forward_wav(mp_seg, f0_vp, uv_vp)
+
+            # Discriminator step (MS-SB-CQT + MPD/MRD)
+            r_cqt, _ = D_cqt(y_vt.detach())
+            f_cqt, _ = D_cqt(y_vp.detach())
+            r_mpd, _ = D_mpd(y_vt.detach())
+            f_mpd, _ = D_mpd(y_vp.detach())
+            loss_D = sum(torch.mean((dr - 1.0) ** 2) + torch.mean(df ** 2) for dr, df in zip(r_cqt + r_mpd, f_cqt + f_mpd))
+        oD.zero_grad(set_to_none=True)
+        loss_D.backward()
+        oD.step()
+
+        with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            _, fmap_r_cqt = D_cqt(y_vt.detach())
+            f_cqt_g, fmap_f_cqt = D_cqt(y_vp)
+            _, fmap_r_mpd = D_mpd(y_vt.detach())
+            f_mpd_g, fmap_f_mpd = D_mpd(y_vp)
+            l_adv = sum(torch.mean((df - 1.0) ** 2) for df in (f_cqt_g + f_mpd_g))
+            l_fm = sum(F.l1_loss(ff, fr.detach()) for fr, ff in zip(fmap_r_cqt + fmap_r_mpd, fmap_f_cqt + fmap_f_mpd))
+            l_stft = mr_complex_stft_loss(y_vp, y_vt, dev)
+            l_awp = magnitude_aware_awp_losses(cos_vp, sin_vp, re_vt, im_vt)
+            l_wlm = wavlm_fm(y_vp[:6], y_vt[:6])
+            l_mel = F.l1_loss(mp_seg, mt_seg)
+            loss_G = 2.0 * l_mel + 0.5 * l_stft + 0.5 * l_awp + 0.8 * l_wlm + 0.15 * l_adv + 0.30 * l_fm
+
+        oG.zero_grad(set_to_none=True)
+        loss_G.backward()
+        if torch.isfinite(torch.nn.utils.clip_grad_norm_(e2e_params, 1.0)):
+            oG.step()
+        with torch.no_grad():
+            for pe, pg in zip(ema.parameters(), G.parameters()):
+                pe.lerp_(pg, 1.0 - 0.997)
+        if st % 100 == 0 or st == e2e_steps:
+            log(f"[Phase 3 Joint E2E] step {st}/{e2e_steps} mel={l_mel.item():.3f} stft={l_stft.item():.3f} awp={l_awp.item():.3f} wlm={l_wlm.item():.3f} cqt_adv={l_adv.item():.3f}")
+            ck_e2e = dict(model={k: v.float().cpu() for k, v in G.state_dict().items()}, ema={k: v.float().cpu() for k, v in ema.state_dict().items()}, step=st, total_steps=e2e_steps)
+            torch.save(ck_e2e, "/work/tts/ck/am_last.pt")
+
+    for h in hooks:
+        h.remove()
+    return ema
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--voc_steps", type=int, default=800)
     ap.add_argument("--am_steps", type=int, default=2000)
+    ap.add_argument("--e2e_steps", type=int, default=0)
     ap.add_argument("--skip_phase1", action="store_true")
+    ap.add_argument("--joint_e2e", action="store_true")
     ap.add_argument("--resume_am", default=None)
     a = ap.parse_args()
 
@@ -1192,7 +1319,10 @@ def main():
     else:
         train_phase1_vocoder(voc_cache, steps=a.voc_steps, dev="cuda")
 
-    ema_am = train_phase2_sakhiya_news_am(am_cache, voc_ck_p, steps=a.am_steps, resume_path=a.resume_am, dev="cuda")
+    if a.joint_e2e and a.resume_am and os.path.exists(a.resume_am):
+        ema_am = train_phase3_joint_e2e_distill(am_cache, voc_cache, resume_path=a.resume_am, e2e_steps=max(1, a.e2e_steps or 20000), dev="cuda")
+    else:
+        ema_am = train_phase2_sakhiya_news_am(am_cache, voc_ck_p, steps=a.am_steps, resume_path=a.resume_am, dev="cuda")
     evaluate_leg1_preview_and_render_desk(ema_am, dev="cuda")
     log("SAKHIYA_NEWS_LEG1_ALL_DONE")
 

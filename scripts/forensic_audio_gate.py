@@ -499,9 +499,17 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
             node_verify = {"ok": bool(nv.get("ok", False)), "nan_count": int(nv.get("nan_count", 0)), "rtf_1thread": nv.get("mean_rtf", 0.0495)}
 
     base_g = {}
-    if os.path.exists(best_gate_p):
-        base_g = json.load(open(best_gate_p))
-    else:
+    cand_gates = [
+        best_gate_p,
+        os.path.join(model_dir, "gate.json"),
+        "/work/sp/sakhiya_news/eval/forensic_sakhiya_news_leg1.json",
+        os.path.join(root, "eval", "forensic_sakhiya_news_leg1.json"),
+    ]
+    for cg_p in cand_gates:
+        if os.path.exists(cg_p):
+            base_g = json.load(open(cg_p))
+            break
+    if not base_g:
         st_p = os.path.join(root, "docs", "student_tiers.json")
         if os.path.exists(st_p):
             for row in json.load(open(st_p)):
@@ -723,8 +731,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="eval/forensic_v5.json")
     ap.add_argument("--tiny", action="store_true", help="score the int8 graphs the website actually serves")
     a = ap.parse_args()
-    if a.tier in ("sakhiya_one", "sakhiya_one_fast") or "sakhiya_one" in str(a.model):
-        t_eff = a.tier or ("sakhiya_one_fast" if "fast" in str(a.model) else "sakhiya_one")
+    if a.tier in ("sakhiya_one", "sakhiya_one_fast", "sakhiya_news") or any(k in str(a.model) for k in ("sakhiya_one", "sakhiya_news")):
+        t_eff = a.tier or ("sakhiya_news" if "sakhiya_news" in str(a.model) else ("sakhiya_one_fast" if "fast" in str(a.model) else "sakhiya_one"))
         m_eff = a.model if os.path.exists(os.path.join(a.model, "model.int8.onnx")) else f"docs/models_{t_eff}"
         run_4layer_sakhiya_one_gate(m_eff, tier=t_eff, out_json=a.out)
     else:

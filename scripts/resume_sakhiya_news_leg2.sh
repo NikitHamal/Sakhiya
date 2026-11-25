@@ -69,14 +69,26 @@ python3 "$REPO_ROOT/scripts/sakhiya_pro/train_sakhiya_news_leg1.py" \
 echo "[Leg-2 Relay 4/5] Running Phase 3 Joint End-to-End Waveform Distillation (AM + 100-Mel MS-SB-CQT Vocoder + LSQ QAT) for ${E2E_STEPS} steps..."
 python3 "$REPO_ROOT/scripts/sakhiya_pro/train_sakhiya_news_leg1.py" \
     --skip_phase1 \
+    --joint_e2e \
     --resume_am /work/tts/ck/am_last.pt \
-    --am_steps "$((AM_TOTAL_STEPS + E2E_STEPS))"
+    --e2e_steps "${E2E_STEPS}"
 
 echo "[Leg-2 Relay 5/5] Running Fixed Honest 4-Layer INT8 Forensic Gate & Final Flagship Promotion..."
 python3 "$REPO_ROOT/scripts/forensic_audio_gate.py" \
     --model /work/sp/sakhiya_news/leg1_preview \
     --tier sakhiya_news \
     --out "$REPO_ROOT/eval/forensic_sakhiya_news_final.json"
+
+python3 - <<'PY'
+import json, os, shutil
+rep = json.load(open("eval/forensic_sakhiya_news_final.json"))
+if rep.get("gate_pass"):
+    os.makedirs("docs/models_sakhiya_news", exist_ok=True)
+    shutil.copy2("/work/sp/sakhiya_news/leg1_preview/model.int8.onnx", "docs/models_sakhiya_news/model.int8.onnx")
+    print("[Leg-2 Relay] Gate PASSED ✅ -> Promoted docs/models_sakhiya_news/model.int8.onnx as definitive flagship!")
+else:
+    print("[Leg-2 Relay] Gate report written to eval/forensic_sakhiya_news_final.json (gate_pass=False; holding promotion).")
+PY
 
 python3 "$REPO_ROOT/scripts/sakhiya_pro/backup_news_daemon.py" --once
 echo "[Leg-2 Relay] ALL LEG-2 MILESTONES COMPLETE!"
