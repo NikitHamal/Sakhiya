@@ -195,13 +195,14 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
             for i in range(nb)
         )
         self.fast_adapter = nn.Sequential(
-            nn.Conv1d(d, d, 5, padding=2, groups=d),
+            nn.Conv1d(d, d, 7, padding=3, groups=d),
             nn.GroupNorm(1, d),
+            nn.Conv1d(d, d * 2, 1),
             nn.GELU(),
-            nn.Conv1d(d, d, 1),
+            nn.Conv1d(d * 2, d, 1),
         )
-        nn.init.zeros_(self.fast_adapter[3].weight)
-        nn.init.zeros_(self.fast_adapter[3].bias)
+        nn.init.zeros_(self.fast_adapter[4].weight)
+        nn.init.zeros_(self.fast_adapter[4].bias)
         self.step2_gate = nn.Parameter(torch.tensor(0.08))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
@@ -239,12 +240,13 @@ class SakhiyaOneMeanFlowDecoder(nn.Module):
         for i in range(min(4, len(self.blocks))):
             h = self.blocks[i](h, c, m)
         h_4 = h
-        h_4_bridged = (h_4 + self.fast_adapter(h_4 * m)) * m
-        out_4 = self.out(h_4_bridged) * m
         for i in range(4, len(self.blocks)):
             h = self.blocks[i](h, c, m)
         h_8 = h
         out_8 = self.out(h_8) * m
+        # Detach h_4 into fast_adapter and out.weight into out_4 so 4-block training never perturbs the 8-block Studio backbone
+        h_4_bridged = (h_4.detach() + self.fast_adapter(h_4.detach() * m)) * m
+        out_4 = F.conv1d(h_4_bridged, self.out.weight.detach(), self.out.bias.detach()) * m
         return out_8, out_4, h_8, h_4_bridged
 
     def xpred_from_vel(self, x_t: torch.Tensor, t: torch.Tensor, v_pred: torch.Tensor) -> torch.Tensor:

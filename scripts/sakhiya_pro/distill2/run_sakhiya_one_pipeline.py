@@ -48,7 +48,7 @@ from student import (
     compute_svara_mora_ids, compute_intra_phoneme_progress, ste_int8_weight, snap_am_int8,
 )
 from run_session75_breakthrough import FrozenMultiLayerWavLM, voiced_24bin_ltas, contrastive_ltas_timbre_loss
-from export_gate import ids_of, _normalize_lufs_16, _dual_anchor_sim_standalone if hasattr(__import__("export_gate"), "_dual_anchor_sim_standalone") else _normalize_lufs_16
+from export_gate import ids_of, _normalize_lufs_16
 
 LOG_FILE = "/work/tts/logs/sakhiya_one.log"
 TELEM_FILE = "/work/sp/distill/sakhiya_one_telemetry.json"
@@ -594,13 +594,7 @@ def train_phase2_laddered_meanflow_am(cache_obj: dict, rect_cache: list, steps: 
 
             t0_v = torch.zeros((B,), device=dev, dtype=torch.float32)
             # Laddered forward: computes both 8-block Studio (`v0_8`) and 4-block Fast (`v0_4`) simultaneously
-            # Note: detach h_4 into fast_adapter for the first 350 steps so fast_adapter bridges to h_8 without pulling blocks 0..3
-            if st <= 350:
-                v0_8 = G.am.vel(mu_y_s, t0_v, mu_y_s, gs, ymf, prog=prog_4d, n_blocks=8)
-                # Compute h_4 and h_8 for fast_adapter bridge
-                _, v0_4, h_8, h_4_b = G.am.vel.forward_laddered(mu_y_s.detach(), t0_v, mu_y_s.detach(), gs.detach(), ymf, prog=prog_4d)
-            else:
-                v0_8, v0_4, h_8, h_4_b = G.am.vel.forward_laddered(mu_y_s, t0_v, mu_y_s, gs, ymf, prog=prog_4d)
+            v0_8, v0_4, h_8, h_4_b = G.am.vel.forward_laddered(mu_y_s, t0_v, mu_y_s, gs, ymf, prog=prog_4d)
 
             # 2nd MeanFlow refinement step for 8-block Studio exit over interval (t=0.5, r=1.0)
             x_mid = mu_y_s + 0.5 * v0_8
