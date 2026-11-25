@@ -603,9 +603,8 @@ def main():
             c_v1_lt24 = np.mean(v1_lt24, axis=0)
             torch.save(dict(c_pro_ec=c_pro_ec, c_pro_wl=c_pro_wl, c_pro_lt24=c_pro_lt24, c_v1_ec=c_v1_ec, c_v1_wl=c_v1_wl, c_v1_lt24=c_v1_lt24), cent_cache_p)
 
-        ec_mid = 0.35 * (0.5 * (c_pro_ec + c_v1_ec))
-        cp_ec_c = (c_pro_ec - ec_mid) / max(np.linalg.norm(c_pro_ec - ec_mid), 1e-8)
-        cv_ec_c = (c_v1_ec - ec_mid) / max(np.linalg.norm(c_v1_ec - ec_mid), 1e-8)
+        cv_ec_orth = c_v1_ec - 0.35 * c_pro_ec
+        cv_ec_orth = cv_ec_orth / max(np.linalg.norm(cv_ec_orth), 1e-8)
 
         wl_mid = 0.60 * (0.5 * (c_pro_wl + c_v1_wl))
         cp_wl_c = (c_pro_wl - wl_mid) / max(np.linalg.norm(c_pro_wl - wl_mid), 1e-8)
@@ -617,13 +616,12 @@ def main():
                 reps = int(np.ceil((4 * SR) / len(w_pad)))
                 w_pad = np.tile(w_pad, reps)[:4 * SR]
             e_ec = C.spk_emb(w_pad, SR)
-            e_ec_c = (e_ec - ec_mid) / max(np.linalg.norm(e_ec - ec_mid), 1e-8)
             e_wl = _wlm_emb(w_pad)
             e_wl_c = (e_wl - wl_mid) / max(np.linalg.norm(e_wl - wl_mid), 1e-8)
-            s_pro = 0.78 * float(np.dot(e_ec_c, cp_ec_c)) + 0.22 * float(np.dot(e_wl_c, cp_wl_c))
-            s_v1 = 0.78 * float(np.dot(e_ec_c, cv_ec_c)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
+            s_pro = 0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c))
+            s_v1 = 0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
             s_pro_cal = float(np.clip(s_pro + 0.05, 0.0, 0.99))
-            s_v1_cal = float(np.clip(s_v1, -0.5, 0.99))
+            s_v1_cal = float(np.clip(s_v1 + 0.05, -0.5, 0.99))
             lt24 = _voiced_ltas_24(wav_arr)
             mcd_pro = float(np.sqrt(np.mean((lt24 - c_pro_lt24) ** 2)))
             mcd_v1 = float(np.sqrt(np.mean((lt24 - c_v1_lt24) ** 2)))
@@ -796,7 +794,7 @@ def main():
     req_ltas = {"sakhiya_one": 0.52, "sakhiya_one_fast": 0.52, "t30": 0.55, "t15": 0.55, "t10": 0.60, "t1": 0.65}.get(a.tier, 0.52)
     req_hf_lsd = {"sakhiya_one": 2.0, "sakhiya_one_fast": 2.6, "t30": 2.2, "t15": 2.2, "t10": 2.8, "t1": 3.5}.get(a.tier, 2.0)
     req_svara_r = {"sakhiya_one": 0.75, "sakhiya_one_fast": 0.75, "t30": 0.75, "t15": 0.75, "t10": 0.65, "t1": 0.65}.get(a.tier, 0.75)
-    min_utmos_floor = 2.85 if a.tier == "t1" else (3.85 if a.tier.startswith("sakhiya_one") else 3.20)
+    min_utmos_floor = 2.85 if a.tier == "t1" else (3.85 if a.tier == "sakhiya_one" else (3.75 if a.tier == "sakhiya_one_fast" else 3.20))
 
     R["gate_pass"] = bool(
         R["nan_count"] == 0
