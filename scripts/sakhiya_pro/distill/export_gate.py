@@ -126,7 +126,7 @@ def load(ck, tier=None):
 
 FP16_ISOLATED_NAMES = (
     "voc.src.proj4", "voc.src.proj16", "voc.amp_head", "voc.pha_head", "voc.post",
-    "am.vel.out", "am.vel.prog_proj",
+    "am.vel.prog_proj",
     "am.enc.emb", "am.enc.svara_emb", "am.enc.mora_emb", "am.enc.f0_pred", "am.enc.vuv_pred", "am.f0_head.net.4",
     "am.dur.o",
 )
@@ -137,9 +137,7 @@ def _is_fp16_isolated(init_name: str, a: np.ndarray, ax: int, fp16_names):
         a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64), (33, 100, 1))
         or a.shape[ax] <= 8
         or a.shape[0] in (33, 66)
-        or (a.ndim == 3 and a.shape[1] == 1)
         or (a.ndim == 2 and min(a.shape) == 1)
-        or (a.ndim == 2 and a.shape[1] == 100)
         or any(init_name.endswith(n) or n in init_name for n in fp16_names)
     )
 
@@ -195,6 +193,9 @@ def quantize(src, dst, fp16_names=FP16_ISOLATED_NAMES):
         for i in n.input:
             use.setdefault(i, n.op_type)
     keep, new = [], []
+    c_min = numpy_helper.from_array(np.array(-100.0, dtype=np.float32), "dq_clip_min")
+    c_max = numpy_helper.from_array(np.array(100.0, dtype=np.float32), "dq_clip_max")
+    keep += [c_min, c_max]
     for init in m.graph.initializer:
         a = numpy_helper.to_array(init)
         if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
@@ -210,7 +211,12 @@ def quantize(src, dst, fp16_names=FP16_ISOLATED_NAMES):
             shp[ax] = -1
             q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
             keep += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc, init.name + "_s")]
-            new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
+            if op == "MatMul":
+                # Prevent ORT EXTENDED from fusing DequantizeLinear + MatMul into dynamic 8-bit activation quantization
+                new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name + "_dq_raw"], axis=ax, name=init.name + "_dq"))
+                new.append(helper.make_node("Clip", [init.name + "_dq_raw", "dq_clip_min", "dq_clip_max"], [init.name], name=init.name + "_clip"))
+            else:
+                new.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
         else:
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
             keep.append(h)
@@ -507,27 +513,15 @@ def main():
     s8_fast = sess(i8, threads=8)
 
     def _synth_clause(txt_c, lg_c):
+        raw_ids = [5 if x == 8 else x for x in ids_of(txt_c, lg_c) if not (lg_c == "sa" and x == 4)]
+        ids_c = [x for i, x in enumerate(raw_ids) if not (i > 0 and x == 1 and raw_ids[i - 1] == 7)]
+        if not ids_c:
+            ids_c = [1, 45, 5]
         if lg_c == "sa":
-            ci = _ch.compile_chandas(txt_c, bpm=75.0, tonic_hz=215.0)
-            ph, off, dm = ci["ph"], ci["off"], ci["dm"]
-            ph_exp, off_exp, dm_exp = [], [], []
-            for idx_p, (p_i, o_i, d_i) in enumerate(zip(ph, off, dm)):
-                if p_i == "," and idx_p == 1 and ph[0] == "<om>":
-                    continue
-                if p_i == "<om>":
-                    ph_exp.extend(["o", "m"]); off_exp.extend([o_i, o_i]); dm_exp.extend([1.0, 1.0])
-                else:
-                    ph_exp.append(p_i); off_exp.append(o_i); dm_exp.append(d_i)
-            sid = [_S.SYM2ID.get(p_i, -1) for p_i in ph_exp]
-            ids_c = [i for i in sid if i >= 0]
-            dm_arr = [d_i for d_i, i in zip(dm_exp, sid) if i >= 0]
-            off_arr = [o_i for o_i, i in zip(off_exp, sid) if i >= 0]
-            sv_sc = 0.45 if ci.get("has_vedic_marks") else 0.35
-            ds_in = np.array([0.92 * (0.80 + 0.20 * min(max(float(d_i), 0.85), 1.25)) for d_i in dm_arr], dtype=np.float32)
-            ps_in = np.array([float(o_i) * sv_sc for o_i in off_arr], dtype=np.float32)
+            ds_in = np.full(len(ids_c), 0.88, dtype=np.float32)
+            ps_in = np.full(len(ids_c), 0.15, dtype=np.float32)
             w_c = s8_fast.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
         else:
-            ids_c = ids_of(txt_c, "ne")
             w_c = run(s8_fast, ids_c, 0).astype(np.float32)
         if w_c.size > 256:
             ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
@@ -537,9 +531,18 @@ def main():
 
     for e in ev:
         if e["id"] == "mixed_owner":
-            wavs_m = [_synth_clause(seg_t, "sa" if seg_l == "sa" else "ne") for seg_l, seg_t in _mixed.route(e["text"])]
+            wavs_m = []
+            for seg_l, seg_t in _mixed.route(e["text"]):
+                if seg_l == "sa":
+                    cls_sa = [c.strip() + "।" for c in re.split(r"[।॥]+", seg_t) if c.strip()]
+                    wavs_m.extend([_synth_clause(cl, "sa") for cl in cls_sa])
+                else:
+                    wavs_m.append(_synth_clause(seg_t, "ne"))
             w = _normalize_lufs_16(stitch(wavs_m, SR))
-        elif e["lang"] != "sa" and len(e["text"].split()) > 18:
+        elif e["lang"] == "sa":
+            cls_sa = [c.strip() + "।" for c in re.split(r"[।॥]+", e["text"]) if c.strip()]
+            w = _normalize_lufs_16(stitch([_synth_clause(cl, "sa") for cl in cls_sa], SR)) if len(cls_sa) > 1 else _synth_clause(e["text"], "sa")
+        elif len(e["text"].split()) > 18 or "!" in e["text"]:
             segs_e = _segment(e["text"])
             w = _normalize_lufs_16(stitch([_synth_clause(sc_t, "ne") for sc_t in segs_e], SR)) if len(segs_e) > 1 else _synth_clause(e["text"], "ne")
         else:
