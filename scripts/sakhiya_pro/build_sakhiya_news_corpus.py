@@ -396,14 +396,12 @@ def main():
             ))
     del ctc_al
 
-    # Sort `mined_24k.pt` Nepali items prioritizing news + clean storytelling/conversational with high UTMOS & CTC confidence
+    # Sort pre-gated `mined_24k.pt` Nepali items prioritizing news + highest UTMOS & CTC confidence first
     ne_mined = [
         x for x in m_data["items"]
         if x.get("lang") == "ne"
-        and x.get("utmos", 0.0) >= 2.82
-        and x.get("conf", -9.0) >= -6.98
-        and 28 <= x["mel"].shape[1] <= 750
-        and len(x["ids"]) >= 5
+        and 20 <= x["mel"].shape[1] <= 900
+        and len(x["ids"]) >= 4
         and len(x["ids"]) == len(x["dur_ctc"])
     ]
     ne_mined.sort(key=lambda x: (1 if x.get("style") == "news" else 0, float(x.get("utmos", 0.0)) + 0.5 * float(x.get("conf", -1.0))), reverse=True)
