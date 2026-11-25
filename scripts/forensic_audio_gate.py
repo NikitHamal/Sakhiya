@@ -776,7 +776,10 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
             ph = _ch.compile_chandas(txt)["ph"] if lg_str == "sa" else g2p.text_to_phones(txt, "ne")
             ph = [q for p in ph for q in (["o", "m"] if p == "<om>" else [p])]
             raw_ids = [SYM2ID[p] for p in ph if p in SYM2ID]
-            ids_c = [1] + [5 if x == 8 else x for x in raw_ids if not (lg_str == "sa" and x == 4)]
+            if tier == "sakhiya_news" and lg_str != "sa":
+                ids_c = [1] + [(8 if (x in (4, 8) and 0 < i_x < len(raw_ids) - 1) else x) for i_x, x in enumerate(raw_ids)]
+            else:
+                ids_c = [1] + [5 if x == 8 else x for x in raw_ids if not (lg_str == "sa" and x == 4)]
             lg_i = 1 if lg_str == "sa" else 0
             in_names = {x.name for x in s8.get_inputs()}
             feed = {"ids": np.array([ids_c], np.int64)}

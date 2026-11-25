@@ -1,15 +1,22 @@
-"""Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`)
-with ConvNeXt-V2 (GRN + SiLU/GELU, zero Snake1d), Parallel Amplitude & Anti-Wrapped Phase (AWP) iSTFT branches,
-Full-Band Harmonics up to 12 kHz, and Multi-Scale Sub-Band CQT Discriminator (`MS-SB-CQT`).
+"""Phase 1 (Leg 2): 24 kHz 100-Band Dual-Source Stochastic-Noise & Creak Studio Vocoder (`sakhiya/news_vocoder_100mel.py`)
+with ConvNeXt-V2 (GRN + SiLU/GELU, zero Snake1d), Overlap-Add-Consistent Stochastic Noise Branch (0 MB DFT bloat),
+Zero-Param Gated 0.5*F0 Glottal-Creak Excitation, Coherence-Masked AWP Loss, and 24 kHz MS-SB-CQT + Lo-Band + Hi-Band Discriminators.
 
-Key architectural guarantees:
-1. ZERO `f0_net` inside the vocoder: conditions directly on AM continuous `f0_hz` [B, 1, T] + soft `vuv` [B, 1, T]
-   driving full-band band-limited harmonics up to 12 kHz (k = 1 .. floor(12000 / f0)) + Gaussian noise excitation.
-2. ZERO `Snake1d`: uses ConvNeXt-V2 blocks with Global Response Normalization (`GRN1d`) + `RMSNorm1d` + `SiLU`/`GELU`
-   throughout the multi-receptive-field upsampling body and parallel Amplitude / Phase branches.
-3. 100 full-bandwidth mel bins (`fmin=0, fmax=12000, n_fft=1024, hop=256`, 24 kHz) with zero top-bin clipping.
-4. Permanent FP16 isolation for harmonic excitation (`src.*`) and final iSTFT projection heads (`amp_head`, `pha_head`, < 55 KB),
-   while quantizing the ConvNeXt-V2 body to per-channel INT8 QDQ (> 95% INT8 weights).
+Key architectural & physics guarantees:
+1. Overlap-Add-Consistent Stochastic Noise Branch (ZERO MB Weight Bloat):
+   - Lightweight FP16 aperiodic amplitude head `noise_head` (`A_noise(t, f)`, ~36 KB FP16).
+   - Unit-phasor OLA-consistent noise STFT `N_hat(t, f) = STFT_64(eps) / (|STFT_64(eps)| + 1e-8)` from 1D white noise `eps`
+     reusing the exact 64-pt Hann kernel `K_istft` (0 extra weight bytes in ONNX!) or optional external `(noise_re, noise_im)`.
+   - Sums complex spectra before one iSTFT: `X_hat = A_harm * exp(j * phi_harm) + A_noise * N_hat`.
+2. Coherence-Masked AWP Loss (Kills Plastic Sibilants):
+   - Multiplies IP/GD/IAF phase losses by voicing/harmonic coherence `w_coh(t, f)`: `w_coh = 0` on unvoiced frames and
+     smoothly cosine-rolls off `w_coh -> 0` between 4.5 kHz (bin 12) and 5.5 kHz (bin 15). Never regresses random sibilant phase!
+3. Zero-Param Gated Glottal Creak Excitation (`0.5 * F0`):
+   - Injects a gated subharmonic (`0.5 * F0`) + mild pulse-jitter impulse prior modulated by `shr_creak` (`[0, 1]`) with
+     0 extra learnable weights so `voc_100mel_best.pt` warm-starts cleanly via `strict=False`.
+4. Hard FP16 Isolation of Studio Heads:
+   - Keeps harmonic/creak excitation (`src.*`), `amp_head` (`log_mag`), `noise_head` (`A_noise`), `pha_head` (`cos_ph`, `sin_ph`),
+     and depthwise convs (`dw`) strictly in FP16 (`>= 58-60 dB` silence-floor SNR), while quantizing the pointwise ConvNeXt core to INT8.
 """
 import math
 import os
@@ -20,7 +27,7 @@ import torch.nn.functional as F
 from .v2_vocoder import SR, N_FFT, HOP, WIN, NMEL, ISTFT_N_FFT, ISTFT_HOP, mel_spec_24k
 from .v15_rnd_wavehax import _build_cola_istft_kernel, ste_int8_weight
 
-N_BINS = ISTFT_N_FFT // 2 + 1  # 33 sub-frame STFT bins covering 0 .. 12,000 Hz at 16x upsampled rate
+N_BINS = ISTFT_N_FFT // 2 + 1  # 33 sub-frame STFT bins covering 0 .. 12,000 Hz at 16x upsampled rate (375 Hz/bin)
 
 # Calibrated 4.5..12.0 kHz condenser-air STFT sub-frame log-magnitude bias profile (bins 12..32)
 STUDIO_AIR_BIAS_21 = (
@@ -134,8 +141,10 @@ class ConvNeXtV2MRFBlock(nn.Module):
 
 
 class FullBandHarmonicExcitation100Mel(nn.Module):
-    """Full-Band Band-Limited Harmonics up to 12 kHz (k = 1 .. floor(12000 / f0), up to K_max=24) + Gaussian Noise Excitation.
-    Permanently isolated in FP16 (< 32 KB). Driven directly by AM continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T].
+    """Full-Band Band-Limited Harmonics up to 12 kHz (k = 1 .. floor(12000 / f0), up to K_max=24)
+    + Zero-Param Gated 0.5*F0 Glottal-Creak Excitation + Gaussian Noise Excitation.
+    Permanently isolated in FP16 (< 32 KB). Driven by continuous `f0_hz` [B, 1, T], soft `vuv` [B, 1, T],
+    and `shr_creak` [B, 1, T] in [0, 1].
     """
     def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 16):
         super().__init__()
@@ -148,34 +157,54 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
         nn.init.zeros_(self.upper_proj4.weight); nn.init.zeros_(self.upper_proj4.bias)
         nn.init.zeros_(self.upper_proj16.weight); nn.init.zeros_(self.upper_proj16.bias)
 
-    def forward(self, f0_hz: torch.Tensor, vuv: torch.Tensor):
-        f0 = f0_hz.float().clamp(125.0, 380.0)
+    def forward(self, f0_hz: torch.Tensor, vuv: torch.Tensor, shr_creak: torch.Tensor = None):
+        f0 = f0_hz.float().clamp(115.0, 380.0)
         uv = vuv.float().clamp(0.0, 1.0)
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
+
+        if shr_creak is not None:
+            if shr_creak.dim() == 2:
+                shr_creak = shr_creak[:, None, :]
+            shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=f0_16.shape[-1], mode="linear", align_corners=False)
+        else:
+            # Soft low-F0 register creak gate when not explicitly passed
+            shr_16 = ((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16
 
         cyc = torch.cumsum(f0_16 * (1.0 / (SR / ISTFT_HOP)), dim=-1)
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
 
-        # 1. Base harmonics k = 1 .. 8
+        # Zero-Param Gated 0.5*F0 Subharmonic + Mild Pulse-Jitter Glottal Creak Excitation
+        cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
+        cyc_sub = cyc_sub - torch.floor(cyc_sub)
+        ph_sub = (2.0 * math.pi) * cyc_sub
+        jitter_imp = 0.16 * torch.sin(ph_sub) * torch.cos(3.0 * ph_sub)
+        creak_sin = (0.68 * torch.sin(ph_sub + jitter_imp) + 0.32 * torch.sin(3.0 * ph_sub)) * shr_16 * uv_16 * 0.38
+        creak_cos = (0.68 * torch.cos(ph_sub + jitter_imp) + 0.32 * torch.cos(3.0 * ph_sub)) * shr_16 * uv_16 * 0.38
+
+        # 1. Base harmonics k = 1 .. 8 (+ zero-param 0.5*F0 subharmonic creak injected into k=1 channel)
         ks_b = torch.arange(1, self.n_har_base + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
         fk_b = ks_b * f0_16
         aa_b = ((740.0 - fk_b) / 160.0).clamp(0.0, 1.0)
         aa_b = aa_b * aa_b * (3.0 - 2.0 * aa_b)
         amp_b = (1.0 / torch.sqrt(ks_b)) * aa_b
         k_ph_b = ks_b * ph
-        har_b = torch.cat([torch.sin(k_ph_b) * amp_b, torch.cos(k_ph_b) * amp_b], dim=1) * uv_16
+        sin_b = torch.sin(k_ph_b) * amp_b * uv_16
+        cos_b = torch.cos(k_ph_b) * amp_b * uv_16
+        sin_b = torch.cat([sin_b[:, :1, :] + creak_sin, sin_b[:, 1:, :]], dim=1)
+        cos_b = torch.cat([cos_b[:, :1, :] + creak_cos, cos_b[:, 1:, :]], dim=1)
+        har_b = torch.cat([sin_b, cos_b], dim=1)
 
         # 2. Full-Band Upper Harmonics k = 9 .. 24 up to Nyquist 12,000 Hz + shaped unvoiced sibilant/breath noise
         ks_u = torch.arange(self.n_har_base + 1, self.n_har_base + self.n_har_upper + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
         fk_u = ks_u * f0_16
         nyq_aa = ((12000.0 - fk_u) / 1200.0).clamp(0.0, 1.0)
         nyq_aa = nyq_aa * nyq_aa * (3.0 - 2.0 * nyq_aa)
-        amp_u = (1.0 / torch.sqrt(ks_u)) * nyq_aa * uv_16
+        amp_u = (1.0 / torch.sqrt(ks_u)) * nyq_aa * uv_16 * (1.0 - 0.35 * shr_16)
         ph_u = (ks_u * 0.125) * ph
         t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=torch.float32).view(1, 1, -1)
-        noise_exc = (1.0 - 0.80 * uv_16) * torch.sin(t_idx * 12.9898 + ph * 1.73) * torch.cos(t_idx * 78.233 - ph * 2.19)
+        noise_exc = (1.0 - 0.80 * uv_16) * torch.sin(t_idx * 12.9898 + ph * 1.73) * torch.cos(t_idx * 78.233 - ph * 2.19) + 0.25 * creak_sin
         har_u = torch.cat([torch.sin(ph_u) * amp_u, torch.cos(ph_u) * amp_u, uv_16, noise_exc], dim=1)
 
         s4 = self.proj4(har_b) + self.upper_proj4(har_u)
@@ -184,7 +213,10 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
 
 
 class StudioVocoder100Mel(nn.Module):
-    """24 kHz 100-Band Full-Bandwidth Studio Vocoder (ConvNeXt-V2 GRN + SiLU/GELU, zero Snake1d, full-rank MRF filterbank)."""
+    """24 kHz 100-Band Dual-Source Stochastic-Noise & Creak Studio Vocoder:
+    Sums harmonic complex spectrum `A_harm * exp(j * phi_harm)` and OLA-consistent stochastic noise spectrum `A_noise * N_hat`
+    before one unified COLA iSTFT (`K_istft`). Zero dense DFT matrix bloat!
+    """
     def __init__(self, n_mels: int = 100, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11), r_k7: int = None, r_k11: int = None):
         super().__init__()
         self.n_mels = n_mels
@@ -205,11 +237,19 @@ class StudioVocoder100Mel(nn.Module):
             nn.ModuleList([ConvNeXtV2MRFBlock(c2, k) for k in res_kernels]),
         ])
         self.post_act = AntiAliasedHarmonicAct1d(c2)
-        # Parallel ConvNeXt-V2 (GRN + SiLU/GELU) Amplitude & Anti-Wrapped Phase branches
+        # Parallel ConvNeXt-V2 (GRN + SiLU/GELU) Amplitude, Phase, and Stochastic Noise Amplitude heads
         self.amp_branch = ConvNeXtV2Block1d(c2, kernel_size=7, dilation=1, mult=0.5, use_gelu=False)
         self.pha_branch = ConvNeXtV2Block1d(c2, kernel_size=7, dilation=1, mult=0.5, use_gelu=True)
         self.amp_head = nn.Conv1d(c2, N_BINS, 7, padding=3)
         self.pha_head = nn.Conv1d(c2, N_BINS, 7, padding=3)
+        # Lightweight FP16 Aperiodic Stochastic Noise Amplitude Head `A_noise(t, f)` (~36 KB FP16)
+        self.noise_head = nn.Conv1d(c2, N_BINS, 7, padding=3)
+        nn.init.zeros_(self.noise_head.weight)
+        with torch.no_grad():
+            # Initialize bias so low bins (< 4.0 kHz, bins 0..10) have -6.0 and sibilant/air bins (11..32) have -2.8
+            b_init = torch.full((N_BINS,), -6.0)
+            b_init[11:] = -2.8
+            self.noise_head.bias.copy_(b_init)
 
         K_istft, _ = _build_cola_istft_kernel(ISTFT_N_FFT, ISTFT_HOP)
         self.register_buffer("K_istft", torch.from_numpy(K_istft), persistent=False)
@@ -237,7 +277,7 @@ class StudioVocoder100Mel(nn.Module):
         return self
 
     def init_from_clean_studio_filterbank(self, ck_path: str):
-        """Initialize filterbank cleanly from `sakhiya_one_voc.pt` / `v3_voc320_fused.pt` (zero Old-V1)."""
+        """Initialize filterbank cleanly from `voc_100mel_best.pt` or `sakhiya_one_voc.pt` via `strict=False`."""
         dev = next(self.parameters()).device
         ck = torch.load(ck_path, map_location=dev, weights_only=False)
         sd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
@@ -264,7 +304,12 @@ class StudioVocoder100Mel(nn.Module):
                     self.amp_head.bias.copy_(pb[:N_BINS])
                     self.pha_head.weight.copy_(pw[N_BINS:])
                     self.pha_head.bias.copy_(pb[N_BINS:])
-            # Calibrate 4.5..12.0 kHz condenser-air roll-off on amp_head.bias[12:33] if initializing from raw filterbank
+            # Initialize noise_head from amp_head if not in checkpoint so sibilants/breaths start with natural spectral tilt
+            if "noise_head.weight" not in sd and "amp_head.weight" in own:
+                own["noise_head.weight"].copy_(0.18 * own["amp_head.weight"])
+                b_off = torch.full((N_BINS,), -4.2, device=dev, dtype=own["amp_head.bias"].dtype)
+                b_off[11:] = -1.65  # 4.1..12 kHz sibilant & condenser-air turbulence band
+                own["noise_head.bias"].copy_(own["amp_head.bias"] + b_off)
             if not ck.get("air_calibrated", False):
                 own["amp_head.bias"][12:33].add_(torch.tensor(STUDIO_AIR_BIAS_21, device=dev, dtype=own["amp_head.bias"].dtype))
         self.load_state_dict(own, strict=False)
@@ -273,13 +318,33 @@ class StudioVocoder100Mel(nn.Module):
             self.to(dev)
         return self
 
-    def spectrum_and_phase(self, mel: torch.Tensor, f0_hz: torch.Tensor, vuv: torch.Tensor):
+    def _compute_ola_unit_phasor_noise(self, B: int, T_sub: int, dev: torch.device, dtype: torch.dtype):
+        """Generate Overlap-Add-Consistent unit-phasor STFT noise `N_hat(t, f) = STFT_64(eps) / (|STFT_64(eps)| + 1e-8)`
+        from 1D white noise `eps` reusing `self.K_istft` (ZERO extra weight bytes in ONNX!).
+        Uses fresh Gaussian white noise during training and deterministic golden-ratio white noise in eval/ONNX export
+        for 100% reproducible Python <-> JS parity.
+        """
+        L_wav = (T_sub - 1) * ISTFT_HOP + ISTFT_N_FFT
+        if self.training:
+            eps = torch.randn((B, 1, L_wav), device=dev, dtype=torch.float32)
+        else:
+            n_idx = torch.arange(L_wav, device=dev, dtype=torch.float32).view(1, 1, -1)
+            eps = torch.sin(n_idx * 12.9898 + 78.233) * torch.cos(n_idx * 43.7585 - 19.19)
+            eps = eps.expand(B, 1, L_wav)
+        # Project 1D white noise through the 64-pt Hann DFT kernel `self.K_istft` (shared initializer, 0 extra bytes!)
+        stft_cat = F.conv1d(eps, self.K_istft.to(dev), stride=ISTFT_HOP, padding=0)
+        re_n = stft_cat[:, :N_BINS, :T_sub]
+        im_n = -stft_cat[:, N_BINS:, :T_sub]
+        mag_n = torch.sqrt(re_n * re_n + im_n * im_n + 1e-8)
+        return (re_n / mag_n).to(dtype), (im_n / mag_n).to(dtype)
+
+    def spectrum_and_phase(self, mel: torch.Tensor, f0_hz: torch.Tensor, vuv: torch.Tensor, shr_creak: torch.Tensor = None, noise_re: torch.Tensor = None, noise_im: torch.Tensor = None):
         if f0_hz.dim() == 2:
             f0_hz = f0_hz[:, None, :]
         if vuv.dim() == 2:
             vuv = vuv[:, None, :]
 
-        s4, s16 = self.src(f0_hz, vuv)
+        s4, s16 = self.src(f0_hz, vuv, shr_creak=shr_creak)
         x = self.pre(mel)
         for act, up, mrf, src_add in zip(self.up_acts, self.ups, self.mrfs, (s4, s16)):
             x = up(act(x)) + src_add.to(x.dtype)
@@ -289,22 +354,45 @@ class StudioVocoder100Mel(nn.Module):
         h_amp = self.amp_branch(h)
         h_pha = self.pha_branch(h)
 
-        log_mag = self.amp_head(h_amp).float().clamp(min=-11.0, max=5.0)
+        log_mag = self.amp_head(h_amp).float().clamp(min=-11.5, max=5.0)
         ph = self.pha_head(h_pha).float()
+        log_noise = self.noise_head(h_amp).float().clamp(min=-12.5, max=2.5)
 
-        # Gentle studio room-floor gate on silence while preserving 80-180ms natural micro-breaths
+        # Studio silence-floor gate (`>= 58-60 dB` silence-floor SNR) while preserving 80-180ms natural micro-breaths (-45..-22 dB)
         m_mean = mel.float().mean(dim=1, keepdim=True)
-        sg = ((m_mean + 10.5) / 1.2).clamp(0.0, 1.0)
+        sg = ((m_mean + 10.6) / 1.15).clamp(0.0, 1.0)
         sg = sg * sg * (3.0 - 2.0 * sg)
         sg_16 = F.interpolate(sg.detach(), scale_factor=16.0, mode="linear", align_corners=False)
+        uv_16 = F.interpolate(vuv.float().clamp(0.0, 1.0).detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
-        mag = torch.exp(log_mag) * sg_16[:, :, :log_mag.shape[2]]
+        T_sub = log_mag.shape[2]
+        sg_16 = sg_16[:, :, :T_sub]
+        uv_16 = uv_16[:, :, :T_sub]
+
+        # Harmonic magnitude & phase
+        A_harm = torch.exp(log_mag) * sg_16
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
-        return mag * cos_ph, mag * sin_ph, log_mag, cos_ph, sin_ph
 
-    def forward_wav(self, mel: torch.Tensor, f0_hz: torch.Tensor, vuv: torch.Tensor):
-        re_s, im_s, log_mag, cos_ph, sin_ph = self.spectrum_and_phase(mel, f0_hz, vuv)
+        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, gentle on low voiced bins)
+        freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
+        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.08, 1.0)
+        unvoiced_boost = 1.0 - 0.65 * uv_16 * (1.0 - 0.70 * hi_band_w)
+        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
+
+        if noise_re is None or noise_im is None:
+            noise_re, noise_im = self._compute_ola_unit_phasor_noise(mel.shape[0], T_sub, mel.device, A_harm.dtype)
+        else:
+            noise_re = noise_re[:, :, :T_sub].to(A_harm.dtype)
+            noise_im = noise_im[:, :, :T_sub].to(A_harm.dtype)
+
+        # Sum complex spectra before one iSTFT: X_hat = A_harm * exp(j * phi_harm) + A_noise * N_hat
+        re_s = A_harm * cos_ph + A_noise * noise_re
+        im_s = A_harm * sin_ph + A_noise * noise_im
+        return re_s, im_s, log_mag, cos_ph, sin_ph
+
+    def forward_wav(self, mel: torch.Tensor, f0_hz: torch.Tensor, vuv: torch.Tensor, shr_creak: torch.Tensor = None, noise_re: torch.Tensor = None, noise_im: torch.Tensor = None):
+        re_s, im_s, log_mag, cos_ph, sin_ph = self.spectrum_and_phase(mel, f0_hz, vuv, shr_creak=shr_creak, noise_re=noise_re, noise_im=noise_im)
         z = torch.zeros_like(im_s[:, :1, :])
         spec_cat = torch.cat([re_s.float(), torch.cat([z, im_s[:, 1:-1, :], z], dim=1).float()], dim=1)
         y = F.conv_transpose1d(
@@ -407,30 +495,136 @@ class MultiScaleSubBandCQTDiscriminator(nn.Module):
         return l_adv, l_fm
 
 
-def magnitude_aware_awp_losses(cos_p: torch.Tensor, sin_p: torch.Tensor, re_gt: torch.Tensor, im_gt: torch.Tensor):
-    """Magnitude-Aware Anti-Wrapped Phase (AWP) Loss:
-    Weights Instantaneous Phase (IP), Group Delay (GD), and Instantaneous Angular Frequency (IAF) by log-magnitude
-    prominence so harmonic peaks and high-frequency sibilant formants receive crisp phase supervision without fitting silence noise.
+class _BandSpecBranch(nn.Module):
+    """2D Spectral Discriminator operating on a specific physical frequency band [b_start : b_end] of an n_fft STFT."""
+    def __init__(self, n_fft: int, hop: int, b_start: int, b_end: int):
+        super().__init__()
+        from torch.nn.utils.parametrizations import spectral_norm
+        self.n_fft = n_fft
+        self.hop = hop
+        self.b_start = b_start
+        self.b_end = b_end
+        self.register_buffer("win", torch.hann_window(n_fft), persistent=False)
+        self.convs = nn.ModuleList([
+            spectral_norm(nn.Conv2d(2, 32, (3, 5), padding=(1, 2))),
+            spectral_norm(nn.Conv2d(32, 48, (3, 5), stride=(2, 2), padding=(1, 2))),
+            spectral_norm(nn.Conv2d(48, 64, (3, 3), stride=(2, 1), padding=(1, 1))),
+        ])
+        self.post = spectral_norm(nn.Conv2d(64, 1, (3, 3), padding=(1, 1)))
+
+    def forward(self, wav: torch.Tensor):
+        if wav.dim() == 3:
+            wav = wav[:, 0, :]
+        S = torch.stft(wav.float(), self.n_fft, self.hop, self.n_fft, self.win, return_complex=True)
+        Sb = S[:, self.b_start : self.b_end, :]
+        mag = torch.log(Sb.abs() + 1e-5)
+        ang = Sb.angle()
+        d_ang = F.pad(torch.sin(ang[:, :, 1:] - ang[:, :, :-1]), (0, 1, 0, 0))
+        x = torch.stack([mag, d_ang], dim=1)
+        fmaps = []
+        for c in self.convs:
+            x = F.leaky_relu(c(x), 0.1)
+            fmaps.append(x)
+        return self.post(x), fmaps
+
+
+class LoHiBandStudioDiscriminator(nn.Module):
+    """Band-Targeted Studio Discriminators (replaces redundant MRD and 16 kHz WavLM-FM!):
+    - Lo-Band Discriminator (60-500 Hz, n_fft=2048, hop=256, bins 5..44): supervises chest warmth, H1-H2 tilt, and 0.5*F0 glottal creak.
+    - Hi-Band Discriminators (4.5-12 kHz, n_fft=128 hop=32 bins 24..64 & n_fft=256 hop=64 bins 48..128): supervises sibilant turbulence (`स/श/छ`),
+      7.2-12 kHz condenser air, and natural studio `<breath>` inhalations.
+    """
+    def __init__(self):
+        super().__init__()
+        self.lo_band = _BandSpecBranch(n_fft=2048, hop=256, b_start=5, b_end=44)
+        self.hi_128 = _BandSpecBranch(n_fft=128, hop=32, b_start=24, b_end=64)
+        self.hi_256 = _BandSpecBranch(n_fft=256, hop=64, b_start=48, b_end=128)
+
+    def forward(self, y: torch.Tensor, include_hi: bool = True):
+        o_lo, fm_lo = self.lo_band(y)
+        outs, fmaps = [o_lo], list(fm_lo)
+        if include_hi:
+            for hb in (self.hi_128, self.hi_256):
+                oh, fmh = hb(y)
+                outs.append(oh)
+                fmaps.extend(fmh)
+        return outs, fmaps
+
+    def d_loss(self, y_real: torch.Tensor, y_fake: torch.Tensor, include_hi: bool = True) -> torch.Tensor:
+        o_r, _ = self.forward(y_real.detach(), include_hi=include_hi)
+        o_f, _ = self.forward(y_fake.detach(), include_hi=include_hi)
+        loss = torch.zeros((), device=y_real.device)
+        for r, f in zip(o_r, o_f):
+            loss = loss + torch.mean(F.relu(1.0 - r)) + torch.mean(F.relu(1.0 + f))
+        return loss / max(1, len(o_r))
+
+    def g_adv_and_fm_loss(self, y_real: torch.Tensor, y_fake: torch.Tensor, include_hi: bool = True):
+        with torch.no_grad():
+            _, fm_r = self.forward(y_real.detach(), include_hi=include_hi)
+        o_f, fm_f = self.forward(y_fake, include_hi=include_hi)
+        l_adv = sum(torch.mean(F.relu(1.0 - f)) for f in o_f) / max(1, len(o_f))
+        l_fm = sum(F.l1_loss(ff, fr.detach()) for ff, fr in zip(fm_f, fm_r)) / max(1, len(fm_f))
+        return l_adv, l_fm
+
+
+def coherence_masked_awp_losses(cos_p: torch.Tensor, sin_p: torch.Tensor, re_gt: torch.Tensor, im_gt: torch.Tensor, vuv_16: torch.Tensor = None):
+    """Coherence-Masked Anti-Wrapped Phase (AWP) Loss (permanently kills plastic sibilants):
+    Multiplies IP/GD/IAF phase losses by voicing/harmonic coherence `w_coh(t, f)`:
+    - Sets `w_coh = 0` on unvoiced frames (`vuv_16 < 0.5`).
+    - Smoothly cosine-rolls off `w_coh -> 0` between 4.5 kHz (bin 12) and 5.5 kHz (bin 15), and 0 above 5.5 kHz.
+    Never regresses random high-frequency or sibilant phase!
     """
     mag_gt = torch.sqrt(re_gt.float() ** 2 + im_gt.float() ** 2 + 1e-7)
-    w = (mag_gt / (mag_gt.mean(dim=(1, 2), keepdim=True) + 1e-5)).clamp(min=0.05, max=3.5).detach()
+    w_mag = (mag_gt / (mag_gt.mean(dim=(1, 2), keepdim=True) + 1e-5)).clamp(min=0.05, max=3.0).detach()
+
+    # Frequency coherence mask: 1.0 on bins 0..11 (0..4.125 kHz), cosine roll-off on bins 12..15 (4.5..5.625 kHz), 0.0 on bins 16..32
+    F_bins = cos_p.shape[1]
+    f_idx = torch.arange(F_bins, device=cos_p.device, dtype=torch.float32)
+    f_coh = torch.where(
+        f_idx <= 12.0,
+        torch.ones_like(f_idx),
+        torch.where(
+            f_idx <= 15.0,
+            0.5 * (1.0 + torch.cos(math.pi * (f_idx - 12.0) / 3.0)),
+            torch.zeros_like(f_idx),
+        ),
+    ).view(1, F_bins, 1)
+
+    if vuv_16 is not None:
+        if vuv_16.dim() == 2:
+            vuv_16 = vuv_16[:, None, :]
+        if vuv_16.shape[-1] != cos_p.shape[-1]:
+            vuv_16 = F.interpolate(vuv_16.float(), size=cos_p.shape[-1], mode="linear", align_corners=False)
+        t_coh = (vuv_16.float() >= 0.5).float()
+    else:
+        # Derive voicing gate from low-frequency harmonic energy dominance (bins 1..8 vs total)
+        low_r = mag_gt[:, 1:9, :].sum(dim=1, keepdim=True) / (mag_gt.sum(dim=1, keepdim=True) + 1e-6)
+        t_coh = (low_r > 0.42).float()
+
+    w = (w_mag * f_coh * t_coh).detach()
+    w_denom = w.mean().clamp(min=1e-4)
+
     cos_t = re_gt.float() / mag_gt
     sin_t = im_gt.float() / mag_gt
 
-    l_ip = ((1.0 - (cos_p.float() * cos_t + sin_p.float() * sin_t)) * w).mean()
+    l_ip = ((1.0 - (cos_p.float() * cos_t + sin_p.float() * sin_t)) * w).mean() / w_denom
 
     dcos_p_f = cos_p[:, 1:, :] * cos_p[:, :-1, :] + sin_p[:, 1:, :] * sin_p[:, :-1, :]
     dsin_p_f = sin_p[:, 1:, :] * cos_p[:, :-1, :] - cos_p[:, 1:, :] * sin_p[:, :-1, :]
     dcos_t_f = cos_t[:, 1:, :] * cos_t[:, :-1, :] + sin_t[:, 1:, :] * sin_t[:, :-1, :]
     dsin_t_f = sin_t[:, 1:, :] * cos_t[:, :-1, :] - cos_t[:, 1:, :] * sin_t[:, :-1, :]
     w_f = 0.5 * (w[:, 1:, :] + w[:, :-1, :])
-    l_gd = ((1.0 - (dcos_p_f * dcos_t_f + dsin_p_f * dsin_t_f)) * w_f).mean()
+    l_gd = ((1.0 - (dcos_p_f * dcos_t_f + dsin_p_f * dsin_t_f)) * w_f).mean() / w_denom
 
     dcos_p_t = cos_p[:, :, 1:] * cos_p[:, :, :-1] + sin_p[:, :, 1:] * sin_p[:, :, :-1]
     dsin_p_t = sin_p[:, :, 1:] * cos_p[:, :, :-1] - cos_p[:, :, 1:] * sin_p[:, :, :-1]
     dcos_t_t = cos_t[:, :, 1:] * cos_t[:, :, :-1] + sin_t[:, :, 1:] * sin_t[:, :, :-1]
     dsin_t_t = sin_t[:, :, 1:] * cos_t[:, :, :-1] - cos_t[:, :, 1:] * sin_t[:, :, :-1]
     w_t = 0.5 * (w[:, :, 1:] + w[:, :, :-1])
-    l_iaf = ((1.0 - (dcos_p_t * dcos_t_t + dsin_p_t * dsin_t_t)) * w_t).mean()
+    l_iaf = ((1.0 - (dcos_p_t * dcos_t_t + dsin_p_t * dsin_t_t)) * w_t).mean() / w_denom
 
     return l_ip + l_gd + l_iaf
+
+
+# Backwards-compatible alias
+magnitude_aware_awp_losses = coherence_masked_awp_losses

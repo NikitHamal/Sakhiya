@@ -171,7 +171,13 @@ class SakhiyaONNX:
             feeds_add["contour"] = c_arr
         if self.single is not None and self.dec is None:
             if "dur_scale" in self.enc_in:
-                raw_ids = [5 if x == 8 else x for x in ids[0].tolist() if not (lang == "sa" and x == 4)]
+                is_news = "news" in str(self.cfg.get("arch", "")) or "news" in str(self.cfg.get("tier", ""))
+                raw_list = ids[0].tolist()
+                if is_news and lang != "sa":
+                    # Sakhiya-News: preserve explicit <breath> token (ID 8) and map interior clause commas (ID 4) to <breath> (ID 8)
+                    raw_ids = [(8 if (x in (4, 8) and 0 < idx_x < len(raw_list) - 1) else x) for idx_x, x in enumerate(raw_list)]
+                else:
+                    raw_ids = [5 if x == 8 else x for x in raw_list if not (lang == "sa" and x == 4)]
                 ids_s = ([1] + raw_ids) if (not raw_ids or raw_ids[0] != 1) else raw_ids
                 ids_in = np.array([ids_s], dtype=np.int64)
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))

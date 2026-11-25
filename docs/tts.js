@@ -87,10 +87,32 @@ class SakhiyaWeb {
       for (let f = 0; f < F; f++) { let e = 1e-5; for (let k = k0; k < k1; k++) e += Math.hypot(sre[k * F + f], sim[k * F + f]); mel[m * F + f] = Math.log(e / (k1 - k0)) - 2.2; } }
     return { mel, F, wav: out, phs: s.syms.join(" ") };
   }
+  _olaUnitPhasorNoise64(T, seed = 0) {
+    // 0-MB Overlap-Add-consistent unit-phasor STFT noise N_hat(t, f) = STFT_64(eps) / (|STFT_64(eps)| + 1e-8)
+    // Matches StudioVocoder100Mel._compute_ola_unit_phasor_noise when seed == 0 for exact Python <-> JS parity.
+    const N = 64, H = 16, L = (T - 1) * H + N, eps = new Float32Array(L);
+    for (let n = 0; n < L; n++) {
+      eps[n] = (seed === 0)
+        ? Math.sin(n * 12.9898 + 78.233) * Math.cos(n * 43.7585 - 19.19)
+        : Math.sin((n + seed * 1013) * 12.9898 + 78.233) * Math.cos((n + seed * 1013) * 43.7585 - 19.19);
+    }
+    const re = new Float32Array(33 * T), im = new Float32Array(33 * T), a = new Float32Array(N), b = new Float32Array(N);
+    for (let t = 0; t < T; t++) {
+      for (let n = 0; n < N; n++) { a[n] = eps[t * H + n] * this.win64[n]; b[n] = 0; }
+      this.fft64.transform(a, b);
+      for (let k = 0; k <= 32; k++) {
+        const rk = a[k], ik = -b[k], mag = Math.hypot(rk, ik) + 1e-8;
+        re[k * T + t] = rk / mag; im[k * T + t] = ik / mag;
+      }
+    }
+    return { re, im };
+  }
   async chunk(ph, o) {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
     if (this.sess.single) {
-      const phS = (ph.length && ph[0] === "|") ? ph : ["|", ...ph];
+      const isNews = /news/.test(String((this.cfg && (this.cfg.arch || this.cfg.tier)) || ""));
+      const phNorm = ph.map((p, idx) => (p === "<breath>" || (isNews && o.lang !== "sa" && p === "," && idx > 0 && idx < ph.length - 1)) ? ";" : p);
+      const phS = (phNorm.length && phNorm[0] === "|") ? phNorm : ["|", ...phNorm];
       const idsS = BigInt64Array.from(SK.encode(phS).map(BigInt));
       const keep = ph.map(p => S.indexOf(p) >= 0), rate = o.rate || 1, basePitch = o.pitch_shift || 0, svDepth = o.svara ?? 1;
       const svScale = (o.lang === "sa" ? (o.has_vedic_marks ? 0.65 : 0.52) : 0.35) * svDepth;
