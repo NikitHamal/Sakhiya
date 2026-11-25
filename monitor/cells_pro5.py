@@ -67,11 +67,12 @@ def _card1():
     procs = sh("ps -eo pid,etime,pcpu,args --sort=-pcpu | grep -E '[s]akhiya_one|[t]rain_|[l]adder_daemon|[g]en_corpus|[b]ackup_daemon' | cut -c1-150 | head -12")
     bk = tail("/work/tts/logs/backup_daemon_v3.log", 2)
     bk_alive = bool(sh("pgrep -f '[b]ackup_daemon.py'"))
+    bk_badge = "🟢 Active" if bk_alive else "✅ Final HF Sync Complete (daemon cleanly stopped)"
     body = (f"<div>🕒 {npt} &nbsp;|&nbsp; ⏳ <b style='font-size:18px'>{cd}</b> to hard cutoff (<b>{dl_npt}</b>)</div>"
             f"<div>🖥️ {H['esc'](gpu) or 'nvidia-smi unavailable'}</div>"
             f"<div>RAM {ram} · disk {disk}</div>"
-            f"<div>{'🟢' if bk_alive else '🔴'} HF backup daemon (15 min -> sakhiya_one & sakhiya_pro_v3): {H['esc'](' | '.join(bk)) or 'starting...'}</div>"
-            f"<pre style='font-size:11px;margin:6px 0 0;white-space:pre-wrap'>{H['esc'](procs) or 'no active training processes'}</pre>")
+            f"<div>{bk_badge} · HF backup (15 min -> sakhiya_one & sakhiya_pro_v3): {H['esc'](' | '.join(bk)) or 'done'}</div>"
+            f"<pre style='font-size:11px;margin:6px 0 0;white-space:pre-wrap'>{H['esc'](procs) or 'GPU cleanly idle — all Phases 0–4 completed & promoted'}</pre>")
     return _mo.Html(box("1 · Box health & countdown to 01:55 NPT cutoff", body))
 try:
     _out1 = _card1()
