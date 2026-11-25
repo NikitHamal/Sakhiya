@@ -88,12 +88,12 @@ def compute_structural_features_and_breaths(ids: torch.Tensor, dur: torch.Tensor
     dur_l = dur.tolist()
     L = len(ids_l)
 
-    # Convert interior comma/pause tokens with natural 80-180ms pause into explicit <breath> token (BREATH_ID=8)
-    # while keeping natural 9-16 frame (96-170 ms) breath duration intact (never stripping inter-clause breaths!)
+    # Convert interior comma/pause tokens into explicit <breath> token (BREATH_ID=8)
+    # while keeping exact frame-aligned duration `dur_l[i]` intact (zero frame-shift relative to spectrogram!)
     for i in range(1, L - 1):
         if ids_l[i] in (COMMA_ID, BREATH_ID):
             ids_l[i] = BREATH_ID
-            dur_l[i] = max(8, min(17, int(dur_l[i]) if dur_l[i] >= 6 else 11))
+            dur_l[i] = max(1, int(dur_l[i]))
 
     # Locate comma/breath and danda positions
     comma_positions = [i for i, x in enumerate(ids_l) if x in (COMMA_ID, BREATH_ID)]

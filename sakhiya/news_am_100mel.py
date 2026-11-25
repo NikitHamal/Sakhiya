@@ -390,10 +390,10 @@ class SakhiyaNewsIMFDecoder(nn.Module):
         self.prog_proj = nn.Conv1d(5, d, 1)  # 4D intra-phoneme progress + 1D frame F0/energy conditioning
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
 
-        # Blocks 0..6 match studio ff_mult=3.0; blocks 7..9 use ff_mult=3.5 (~9.48 MB total INT8 ONNX with full-rank vocoder!)
+        # Blocks 0..7 match studio ff_mult=3.0; blocks 8..9 use ff_mult=3.0 (~9.42 MB total INT8 ONNX with full-rank vocoder!)
         blocks = []
         for i in range(nb):
-            ff_m = 3.0 if i < 7 else 3.5
+            ff_m = 3.0
             blk = WalshHadamardMonarchBlock(d=d, c=c, k=7, ff_mult=ff_m, had_size=16)
             blk.film = nn.Identity()
             blk.film_const.requires_grad_(True)

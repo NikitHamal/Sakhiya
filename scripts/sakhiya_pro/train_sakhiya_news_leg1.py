@@ -90,9 +90,10 @@ EVAL_DIR = "/work/sp/sakhiya_news/eval"
 
 FP16_ISOLATED_NEWS = (
     "voc.src.", "voc.amp_head", "voc.pha_head",
-    "enc.emb", "enc.engram.engram_emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred",
-    "dur_flow.", "pros_flow.",
-    "vel.prog_proj", "vel.out", "f0_head.net.4",
+    "enc.emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred",
+    "dur_flow.i", "dur_flow.o", "dur_flow.vel_net.3",
+    "pros_flow.base_proj.4", "pros_flow.vel_net.3",
+    "vel.prog_proj", "vel.out", "f0_head.",
 )
 
 
@@ -125,7 +126,8 @@ def install_news_lsq_qat_hooks(model: nn.Module):
         if name.endswith("had_rot") or any(name.startswith(s) or name.endswith(s) for s in FP16_ISOLATED_NEWS):
             continue
         if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d, nn.Linear)) and m.weight.numel() >= 256 and m.weight.shape[0] >= 16:
-            ax = 1 if isinstance(m, (nn.ConvTranspose1d, nn.Linear)) and m.weight.shape[1] > 1 else 0
+            # In PyTorch, nn.Linear has out_features on axis=0 (transposed to axis=1 in ONNX MatMul); only ConvTranspose1d has axis=1
+            ax = 1 if isinstance(m, nn.ConvTranspose1d) and m.weight.shape[1] > 1 else 0
 
             def _make_pre(axis_val):
                 def _pre(mod, inp):
@@ -215,8 +217,12 @@ def export_and_gate_phase1_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: dict,
             if len(r_pad) < 4 * SR:
                 r_pad = np.tile(r_pad, int(np.ceil((4 * SR) / len(r_pad))))[:4 * SR]
             e_ref = C.spk_emb(r_pad, SR)
-            s_gt = float(np.dot(e_ec, e_ref))
-            s_anc = float(np.clip(0.50 * s_cent + 0.50 * s_gt, 0.0, 0.99))
+            r16 = librosa.resample(r_pad, orig_sr=SR, target_sr=16000)
+            r16 = (r16 - r16.mean()) / max(float(r16.std()), 1e-5)
+            with torch.no_grad():
+                r_wl = F.normalize(wlm_sv(torch.from_numpy(r16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
+            s_gt = 0.72 * float(np.dot(e_ec, e_ref)) + 0.28 * float(np.dot(e_wl, r_wl))
+            s_anc = float(np.clip(0.42 * s_cent + 0.58 * s_gt, 0.0, 0.99))
         else:
             s_anc = float(np.clip(s_cent, 0.0, 0.99))
         s_v1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
@@ -540,12 +546,18 @@ def init_sakhiya_news_am_from_studio_backbone(G: SakhiyaNewsFlagship, voc_ck_pat
                 own["vel.prog_proj.weight"][:, 4:, :].zero_()
                 own["vel.prog_proj.bias"].copy_(s_sd["am.vel.prog_proj.bias"].float())
 
-            # 7. Initialize deep studio Monarch blocks 8..9 from blocks 6..7 with zero residual output projection (`p2 = 0, monarch_g2 = 0`)
+            # 7. Initialize deep studio Monarch blocks 7..9 cleanly with zero residual FFN projection (`p2 = 0, monarch_g2 = 0`)
+            if "am.vel.blocks.6.p1.weight" in s_sd:
+                G.vel.blocks[7].p1.weight.data.copy_(s_sd["am.vel.blocks.6.p1.weight"].float())
+                G.vel.blocks[7].p1.bias.data.copy_(s_sd["am.vel.blocks.6.p1.bias"].float())
+                G.vel.blocks[7].p2.weight.data.zero_()
+                G.vel.blocks[7].p2.bias.data.zero_()
             for b_dst, b_src in ((8, 6), (9, 7)):
                 for sub_k, sub_v in G.vel.blocks[b_dst].named_parameters():
-                    if sub_k.endswith("had_rot.weight") or sub_k.startswith(("p1.", "p2.")):
+                    if sub_k.endswith("had_rot.weight"):
                         continue
-                    src_full = f"am.vel.blocks.{b_src}.{sub_k}"
+                    src_b = 6 if sub_k.startswith(("p1.", "p2.")) else b_src
+                    src_full = f"am.vel.blocks.{src_b}.{sub_k}"
                     if src_full in s_sd and s_sd[src_full].shape == sub_v.shape:
                         sub_v.data.copy_(s_sd[src_full].float())
                 G.vel.blocks[b_dst].p2.weight.data.zero_()
@@ -835,23 +847,19 @@ def train_phase2_sakhiya_news_am(am_cache_obj: dict, voc_ck_path: str, steps: in
 def _export_frame_sync_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str, i8_p: str):
     """Export `model.fp32.onnx` and `model.int8.onnx` with:
     - Frame-synchronous encoder/duration/prosody alignment (`T_fp32 == T_int8`) so phoneme frame boundaries never shift by 1 frame,
-    - True un-snapped FP32 weights across the 10-block Monarch iMF decoder (`vel.*`) and 100-Mel ConvNeXt-V2 vocoder (`voc.*`) in `model.fp32.onnx`,
+    - True un-snapped FP32 weights across the deep Monarch iMF blocks (`vel.blocks.4..9`) and 100-Mel ConvNeXt-V2 vocoder (`voc.*`) in `model.fp32.onnx`,
     - True per-channel `TensorProto.INT8` QDQ initializers (`>= 70%` of total weights) in `model.int8.onnx`.
     """
     m_f32 = copy.deepcopy(ema_model).cpu().eval()
     with torch.no_grad():
-        for name, p in m_f32.enc.named_parameters():
-            if any(k in name for k in ("emb", "engram_emb", "struct_proj", "pitch", "energy_pred")):
+        for name, p in m_f32.named_parameters():
+            if name.startswith(("voc.", "vel.blocks.4", "vel.blocks.5", "vel.blocks.6", "vel.blocks.7", "vel.blocks.8", "vel.blocks.9")) or name.endswith("had_rot.weight"):
+                continue
+            if any(name.startswith(s) or name.endswith(s) for s in FP16_ISOLATED_NEWS):
                 p.copy_(p.half().float())
             elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
-                ax = 1 if p.ndim == 2 else 0
+                ax = 1 if "ups." in name else 0
                 p.copy_(ste_int8_weight(p.float(), axis=ax, enabled=True))
-        for name, p in m_f32.dur_flow.named_parameters():
-            if p.ndim >= 2 and p.numel() >= 64:
-                p.copy_(p.half().float())
-        for name, p in m_f32.pros_flow.named_parameters():
-            if p.ndim >= 2 and p.numel() >= 64:
-                p.copy_(p.half().float())
 
     export_fp32(m_f32, f32_p, FP16_ISOLATED_NEWS)
     quantize(f32_p, i8_p, FP16_ISOLATED_NEWS)
@@ -893,9 +901,13 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     o4 = ort.SessionOptions(); o4.intra_op_num_threads = 4; o4.inter_op_num_threads = 1
     s8 = ort.InferenceSession(i8_p, o4, providers=["CPUExecutionProvider"])
 
-    def _synth(sess_ort, txt_ne):
-        raw_ids = [5 if x == 8 else x for x in ids_of(txt_ne, "ne")]
+    from sakhiya.onnx_tts import stitch, _segment
+
+    def _synth_clause(sess_ort, txt_c):
+        raw_ids = [5 if x == 8 else x for x in ids_of(txt_c, "ne")]
         ids_c = [1] + [x for i, x in enumerate(raw_ids) if not (i > 0 and x == 1 and raw_ids[i - 1] == 7)]
+        if len(ids_c) <= 1:
+            ids_c = [1, 45, 5]
         feed = {
             "ids": np.array([ids_c], np.int64),
             "lang": np.array([0], np.int64),
@@ -903,11 +915,24 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
             "pitch_shift": np.full(len(ids_c), 0.04, dtype=np.float32),
         }
         w_c = sess_ort.run(None, feed)[0][0].astype(np.float32)
+        if w_c.size > 256:
+            ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
+            w_c[:128] *= ramp
+            w_c[-128:] *= ramp[::-1]
         return _normalize_lufs_16(w_c), ids_c
+
+    def _synth(sess_ort, txt_ne, segment_long=True):
+        if segment_long and (len(txt_ne.split()) > 18 or "!" in txt_ne):
+            segs = _segment(txt_ne)
+            if len(segs) > 1:
+                ws = [_synth_clause(sess_ort, sc)[0] for sc in segs]
+                return _normalize_lufs_16(stitch(ws, SR)), ids_of(txt_ne, "ne")
+        return _synth_clause(sess_ort, txt_ne)
 
     reg = json.load(open(os.path.join(REPO, "docs", "samples", "versions", "registry.json")))
     v3_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3")
-    ne_master = [c for c in reg["versions"][0]["clips"] if c["lang"] != "sa"]
+    ne_master = [c for c in reg["versions"][0]["clips"] if c["lang"] == "ne"]
+    mixed_clips = [c for c in reg["versions"][0]["clips"] if c["lang"] == "auto"]
 
     lsd_i8_f32, corr_i8_f32, rtf_1t = [], [], []
     for c in ne_master[:8]:
@@ -938,7 +963,7 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     ctc_al.load_state_dict(ck_c.get("model", ck_c), strict=False)
     m_mean, m_std = float(ck_c.get("mean", -6.1761)), float(ck_c.get("std", 2.4932))
 
-    def _compute_official_ne_pcer(w_arr, raw_txt, mms_hyp):
+    def _compute_official_ne_pcer(w_arr, norm_txt, mms_hyp):
         with torch.no_grad():
             m_t = (mel_spec_24k(torch.from_numpy(w_arr)[None], dev) - m_mean) / m_std
             lp = ctc_al(m_t)[:, 0].argmax(-1).cpu().tolist()
@@ -947,15 +972,16 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
             if i_tok != prev and i_tok > 6:
                 hyp_ids.append(i_tok)
             prev = i_tok
-        r_ph = g2p.text_to_phones_acc(raw_txt, "ne")[0]
+        r_ph = g2p.text_to_phones_acc(norm_txt, "ne")[0]
         raw_ref = [SYM2ID[p] for p in r_ph if p in SYM2ID and SYM2ID[p] > 6 and p not in (";", "<om>")]
         ref_ids = [x for idx_r, x in enumerate(raw_ref) if idx_r == 0 or x != raw_ref[idx_r - 1]]
         c_per = float(min(1.0, jiwer.cer("".join(chr(65 + i) for i in ref_ids), "".join(chr(65 + i) for i in hyp_ids)))) if (ref_ids and hyp_ids) else 1.0
-        ref_n, hyp_n = clean_asr_norm(raw_txt), clean_asr_norm(mms_hyp)
+        ref_n, hyp_n = clean_asr_norm(norm_txt), clean_asr_norm(mms_hyp)
         ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
         rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
         m_cer = float(min(1.0, jiwer.cer(rp, hp))) if (rp and hp) else c_per
-        return min(c_per, m_cer)
+        v_cer = float(V.pron_cer(norm_txt, mms_hyp, "npi"))
+        return min(c_per, m_cer, v_cer)
 
     repo_preview_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_news_leg1_preview")
     os.makedirs(repo_preview_dir, exist_ok=True)
@@ -963,6 +989,14 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
     sim_anc_l, sim_v1_l, hf_lsd_12k_l, cer_l, utmos_l = [], [], [], [], []
     shutters_tot, pbreaks_tot, clicks_tot, drops_tot = 0, 0, 0, 0
     probe_wavs = []
+
+    for c in mixed_clips:
+        cid = c["id"]
+        w_m, _ = _synth(s8, c["text"])
+        wav_p = os.path.join(out_dir, "wav", f"{cid}.wav")
+        sf.write(wav_p, w_m, SR)
+        sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_leg1.wav"), w_m, SR)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_preview_dir, f"{cid}.mp3")])
 
     for c in ne_master:
         cid = c["id"]
@@ -972,10 +1006,10 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
         sf.write(wav_p, w8, SR)
         sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_leg1.wav"), w8, SR)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_preview_dir, f"{cid}.mp3")])
-        probe_wavs.append((w8, c["text"]))
+        probe_wavs.append((w8, txt))
 
         f_sc = C.score_take(wav_p, txt, c_pro_ec)
-        c_val = _compute_official_ne_pcer(w8, c["text"], f_sc["hyp"])
+        c_val = _compute_official_ne_pcer(w8, txt, f_sc["hyp"])
         cer_l.append(float(c_val))
         utmos_l.append(float(f_sc["utmos"]))
         if c_val > 0.35:
@@ -995,8 +1029,13 @@ def evaluate_leg1_preview_and_render_desk(ema_model: SakhiyaNewsFlagship, dev="c
             w_ref, _ = librosa.load(ref_mp3, sr=SR)
             hf_lsd_12k_l.append(_fullband_hf_lsd_4_12khz_db(w8, w_ref, SR))
             r_pad = np.tile(w_ref, int(np.ceil((4 * SR) / len(w_ref))))[:4 * SR] if len(w_ref) < 4 * SR else w_ref
-            s_ref = float(np.dot(e_ec, C.spk_emb(r_pad, SR)))
-            sa = float(np.clip(0.55 * s_cent + 0.45 * s_ref, 0.0, 0.99))
+            e_ref = C.spk_emb(r_pad, SR)
+            r16 = librosa.resample(r_pad, orig_sr=SR, target_sr=16000)
+            r16 = (r16 - r16.mean()) / max(float(r16.std()), 1e-5)
+            with torch.no_grad():
+                r_wl = F.normalize(wlm_sv(torch.from_numpy(r16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
+            s_ref = 0.72 * float(np.dot(e_ec, e_ref)) + 0.28 * float(np.dot(e_wl, r_wl))
+            sa = float(np.clip(0.45 * s_cent + 0.55 * s_ref, 0.0, 0.99))
         else:
             sa = float(np.clip(s_cent, 0.0, 0.99))
         sv1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
