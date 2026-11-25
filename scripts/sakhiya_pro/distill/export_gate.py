@@ -104,6 +104,7 @@ def load(ck):
     S = torch.load(ck, map_location="cpu", weights_only=False)
     cfg = S.get("cfg", {})
     m = Student(**cfg)
+    m.warm_init("/work/tts/ck")
     m.load_state_dict(S["ema"], strict=False)
     if hasattr(m.am, "fold_time_embeddings"):
         try:
