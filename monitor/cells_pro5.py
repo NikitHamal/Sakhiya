@@ -210,15 +210,33 @@ sp5_pick
 
 C5_PLAY = r"""
 def _play():
-    import marimo as _mo, base64, os, time
+    import marimo as _mo, base64, os, time, re
     p = sp5_pick.value
     if not p or not os.path.isfile(p):
         return _mo.md("_No audio selected yet — click Rescan to load the latest -16 LUFS matched WAV/MP3 renders._")
-    mime = "audio/mpeg" if p.lower().endswith(".mp3") else "audio/wav"
-    b = base64.b64encode(open(p, "rb").read()).decode()
-    st = os.stat(p)
-    return _mo.Html(f"<div style='font-family:system-ui;font-size:13px'><b>{os.path.basename(p)}</b> · {st.st_size/1024:.0f} KB · modified {time.strftime('%H:%M:%S', time.gmtime(st.st_mtime))} UTC"
-                    f"<br><audio controls preload='auto' style='width:100%;margin-top:6px' src='data:{mime};base64,{b}'></audio></div>")
+    def _tag_audio(fp, label):
+        if not fp or not os.path.isfile(fp):
+            return ""
+        mime = "audio/mpeg" if fp.lower().endswith(".mp3") else "audio/wav"
+        b = base64.b64encode(open(fp, "rb").read()).decode()
+        st = os.stat(fp)
+        return (f"<div style='border:1px solid #e1e4e8;border-radius:8px;padding:8px 10px;margin-top:6px'>"
+                f"<div><b>{label}</b> · <code>{os.path.basename(fp)}</code> · {st.st_size/1024:.0f} KB · {time.strftime('%H:%M:%S', time.gmtime(st.st_mtime))} UTC</div>"
+                f"<audio controls preload='auto' style='width:100%;margin-top:4px;height:36px' src='data:{mime};base64,{b}'></audio></div>")
+    bn = os.path.basename(p)
+    cid = re.sub(r"(_candidate_sakhiya_one_fast|_candidate_sakhiya_one|_anchor_ProV3)\.(mp3|wav)$", "", bn)
+    cid = re.sub(r"\.(mp3|wav)$", "", cid)
+    ab_cards = [_tag_audio(p, "🎧 Selected Render (-16 LUFS)")]
+    cand_peers = [
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_one/{cid}.mp3", "Blind Sample A · Sakhiya-One Studio [8-blk / 8.464 MB INT8] (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_one_fast/{cid}.mp3", "Blind Sample B · Sakhiya-One Fast [4-blk Slice / 8.313 MB INT8] (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_pro_v3/{cid}.mp3", "Anchor Reference C · Sakhiya-Pro v3 Studio Teacher (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/v5_final/{cid}.mp3", "Negative Reference D · Legacy Sakhiya-V1 (Old-V1 Timbre)"),
+    ]
+    for fp_c, lbl_c in cand_peers:
+        if os.path.abspath(fp_c) != os.path.abspath(p) and os.path.isfile(fp_c):
+            ab_cards.append(_tag_audio(fp_c, lbl_c))
+    return _mo.Html("<div style='font-family:system-ui;font-size:13px'>" + "".join(ab_cards) + "</div>")
 try:
     _out5 = _play()
 except Exception as _e:

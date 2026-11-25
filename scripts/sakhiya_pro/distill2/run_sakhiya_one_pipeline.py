@@ -76,6 +76,15 @@ TELEM_STATE = {
 
 
 def update_telem(idx: int, step: int, total_steps: int, its, losses: str, elapsed_min: float, eta_min: float, status: str):
+    if os.path.exists(TELEM_FILE):
+        try:
+            disk_st = json.load(open(TELEM_FILE))
+            if isinstance(disk_st.get("stages"), list) and len(disk_st["stages"]) == len(TELEM_STATE["stages"]):
+                for i_s, prev_s in enumerate(disk_st["stages"]):
+                    if i_s != idx and prev_s.get("status") not in ("queued", None):
+                        TELEM_STATE["stages"][i_s] = prev_s
+        except Exception:
+            pass
     TELEM_STATE["updated_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     st = TELEM_STATE["stages"][idx]
     st.update(step=int(step), total_steps=int(total_steps), its=its, losses=losses, elapsed_min=round(float(elapsed_min), 2), eta_min=round(float(eta_min), 2), status=status)
