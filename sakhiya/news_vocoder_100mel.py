@@ -1,4 +1,4 @@
-"""Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`, ~256 ch, ~2.68 MB INT8)
+"""Phase 1: 24 kHz 100-Band Full-Bandwidth Studio Vocoder (`sakhiya/news_vocoder_100mel.py`, ~2.82 MB INT8)
 with ConvNeXt-V2 (GRN + SiLU/GELU, zero Snake1d), Parallel Amplitude & Anti-Wrapped Phase (AWP) iSTFT branches,
 Full-Band Harmonics up to 12 kHz, and Multi-Scale Sub-Band CQT Discriminator (`MS-SB-CQT`).
 
@@ -9,9 +9,10 @@ Key architectural guarantees:
    throughout the multi-receptive-field upsampling body and parallel Amplitude / Phase branches.
 3. 100 full-bandwidth mel bins (`fmin=0, fmax=12000, n_fft=1024, hop=256`, 24 kHz) with zero top-bin clipping.
 4. Permanent FP16 isolation for harmonic excitation (`src.*`) and final iSTFT projection heads (`amp_head`, `pha_head`, < 55 KB),
-   while quantizing the ConvNeXt-V2 body to per-channel INT8 QDQ (~2.68 MB INT8, > 95% INT8 weights).
+   while quantizing the ConvNeXt-V2 body to per-channel INT8 QDQ (~2.82 MB INT8, > 95% INT8 weights).
 """
 import math
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -69,7 +70,7 @@ class ConvNeXtV2Block1d(nn.Module):
     """ConvNeXt-V2 1D Block (Depthwise Conv -> RMSNorm1d -> Pointwise Expand -> GELU/SiLU -> GRN1d -> Pointwise Project).
     Zero Snake1d! Initialized with zero output projection (`pw2 = 0`) for clean residual refinement.
     """
-    def __init__(self, dim: int, kernel_size: int = 7, dilation: int = 1, mult: float = 1.0, use_gelu: bool = False):
+    def __init__(self, dim: int, kernel_size: int = 7, dilation: int = 1, mult: float = 0.5, use_gelu: bool = False):
         super().__init__()
         pad = (kernel_size * dilation - dilation) // 2
         h = max(16, int(round(dim * mult)))
@@ -177,8 +178,8 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
 
 
 class StudioVocoder100Mel(nn.Module):
-    """24 kHz 100-Band Full-Bandwidth Studio Vocoder (ConvNeXt-V2 GRN + SiLU/GELU, zero Snake1d, SVD-compact ~2.68 MB INT8)."""
-    def __init__(self, n_mels: int = 100, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11), r_k7: int = 56, r_k11: int = 38):
+    """24 kHz 100-Band Full-Bandwidth Studio Vocoder (ConvNeXt-V2 GRN + SiLU/GELU, zero Snake1d, SVD-compact ~2.82 MB INT8)."""
+    def __init__(self, n_mels: int = 100, ch: int = 320, up_rates=(4, 4), up_kernels=(8, 8), res_kernels=(3, 7, 11), r_k7: int = 64, r_k11: int = 44):
         super().__init__()
         self.n_mels = n_mels
         self.ch = ch
@@ -220,7 +221,7 @@ class StudioVocoder100Mel(nn.Module):
                     if isinstance(blk.c2[i], nn.Conv1d):
                         blk.c2[i] = _make_svd_conv1d(blk.c2[i], r_k)
                 blk2 = self.mrfs[1][b_idx]
-                r_k2 = max(24, int(round(r_k * 0.65)))
+                r_k2 = max(28, int(round(r_k * 0.70)))
                 for i in range(len(blk2.c1)):
                     if isinstance(blk2.c1[i], nn.Conv1d):
                         blk2.c1[i] = _make_svd_conv1d(blk2.c1[i], r_k2)
@@ -312,7 +313,7 @@ class StudioVocoder100Mel(nn.Module):
 
 class SubBandCQTScale(nn.Module):
     """Single-Scale Differentiable Constant-Q Transform (CQT) + Sub-Band 2D Octave-Equivariant Discriminator.
-    Computes log-spaced Morlet CQT filterbank responses across 9 octaves up to 12 kHz (condenser air & sibilance band).
+    Computes log-spaced Morlet CQT filterbank responses across 7 octaves up to 12 kHz (condenser air & sibilance band).
     """
     def __init__(self, bins_per_octave: int = 12, n_octaves: int = 7, fmin: float = 65.0, hop_length: int = 256):
         super().__init__()

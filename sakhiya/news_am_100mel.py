@@ -7,7 +7,7 @@ Hard Architectural & Honesty Rules:
 2. Full-Sentence RoPE Encoder + Structural Clause Features + Mid-Layer Engram (Layer 3):
    - Feeds phoneme IDs + `<breath>` tokens + explicit 5D per-phoneme structural prosody cues
      (`dist_to_comma`, `dist_to_danda`, `word_pos_in_clause`, `clause_len`, `is_geminate`) + Rotary Position Embeddings (RoPE)
-     + compact Layer-3 hashed phoneme-trigram Engram lookup table (~147 KB FP16) so Nepali compounds, geminates, and tech loanwords are razor sharp.
+     + compact Layer-3 hashed phoneme-trigram Engram lookup table (~110 KB FP16) so Nepali compounds, geminates, and tech loanwords are razor sharp.
 3. Stochastic Conditional Flow-Matching Duration & F0/Energy Predictors (~180 KB FP16):
    - Replaces deterministic L1 regressors with compact 4-step conditional flow-matching variance predictors trained with 15%
      condition dropout for inference-time prosody temperature / CFG control so emphatic geminates stretch naturally and news delivery sounds alive.
@@ -25,7 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .sakhiya_one import WalshHadamardMonarchBlock, _build_sylvester_hadamard
-from .news_vocoder_100mel import StudioVocoder100Mel, RMSNorm1d
+from .news_vocoder_100mel import StudioVocoder100Mel, RMSNorm1d, _make_svd_conv1d
 from .v2_vocoder import SR, HOP, N_FFT, ISTFT_N_FFT, ISTFT_HOP
 from .v15_rnd_wavehax import ste_int8_weight
 from .symbols import N_SYMBOLS, SYM2ID
@@ -63,12 +63,10 @@ def compute_graph_structural_features(ids: torch.Tensor) -> torch.Tensor:
     is_danda = ((ids == DANDA_ID) | (ids == SYM2ID["?"]) | (ids == SYM2ID["!"])).float()
     is_wb = (ids == WB_ID).float()
 
-    # Cumulative clause & word counters
     clause_id = torch.cumsum(is_comma + is_danda, dim=1)
     n_clauses = (clause_id[:, -1:] + 1.0).clamp(min=1.0)
     clause_len_est = (L_f / n_clauses / 45.0).clamp(0.05, 1.0).expand(B, L)
 
-    # Approximate normalized position within current clause & distance to next comma/danda
     word_idx = torch.cumsum(is_wb, dim=1)
     total_words = (word_idx[:, -1:] + 1.0).clamp(min=1.0)
     word_pos_in_clause = torch.remainder(word_idx, (total_words / n_clauses).clamp(min=1.0)) / (total_words / n_clauses).clamp(min=1.0)
@@ -84,73 +82,59 @@ def compute_graph_structural_features(ids: torch.Tensor) -> torch.Tensor:
     return torch.stack([dist_to_comma, dist_to_danda, word_pos_in_clause.clamp(0.0, 1.0), clause_len_est, is_gem], dim=-1)
 
 
-class RoPESelfAttention1d(nn.Module):
-    """Full-Sentence Multi-Head Self-Attention with Rotary Position Embeddings (RoPE) using 100% standard ONNX ops."""
-    def __init__(self, d: int = 192, n_heads: int = 4):
-        super().__init__()
-        assert d % n_heads == 0 and (d // n_heads) % 2 == 0
-        self.d = d
-        self.n_heads = n_heads
-        self.head_dim = d // n_heads
-        self.qkv = nn.Linear(d, 3 * d)
-        self.proj = nn.Linear(d, d)
-
-    def _apply_rope(self, x: torch.Tensor, cos_p: torch.Tensor, sin_p: torch.Tensor) -> torch.Tensor:
-        # x: [B, H, L, D_h]
-        x1 = x[..., 0::2]
-        x2 = x[..., 1::2]
-        r1 = x1 * cos_p - x2 * sin_p
-        r2 = x1 * sin_p + x2 * cos_p
-        return torch.stack([r1, r2], dim=-1).reshape_as(x)
-
-    def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
-        B, L, D = x.shape
-        qkv = self.qkv(x).reshape(B, L, 3, self.n_heads, self.head_dim).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]
-
-        half_d = self.head_dim // 2
-        pos = torch.arange(L, device=x.device, dtype=torch.float32)[:, None]
-        inv_freq = torch.exp(-math.log(10000.0) * torch.arange(0, half_d, device=x.device, dtype=torch.float32) / max(1, half_d))[None, :]
-        angles = pos * inv_freq
-        cos_p = torch.cos(angles)[None, None, :, :].to(x.dtype)
-        sin_p = torch.sin(angles)[None, None, :, :].to(x.dtype)
-
-        q = self._apply_rope(q, cos_p, sin_p)
-        k = self._apply_rope(k, cos_p, sin_p)
-
-        scale = 1.0 / math.sqrt(self.head_dim)
-        scores = torch.matmul(q, k.transpose(-2, -1)) * scale
-        mask_bias = (1.0 - m[:, None, None, :].to(x.dtype)) * (-1e4)
-        scores = scores + mask_bias
-        attn = torch.softmax(scores.float(), dim=-1).to(x.dtype)
-        out = torch.matmul(attn, v).transpose(1, 2).reshape(B, L, D)
-        return self.proj(out) * m[:, :, None].to(x.dtype)
+def _rope_split_half(x: torch.Tensor, base: float = 10000.0) -> torch.Tensor:
+    """Split-half Rotary Position Embedding (RoPE) on [B, H, T, D] using 100% standard ONNX ops."""
+    T, D = x.shape[2], x.shape[3]
+    h = D // 2
+    f = 1.0 / (base ** (torch.arange(h, device=x.device, dtype=torch.float32) / h))
+    a = torch.arange(T, device=x.device, dtype=torch.float32)[:, None] * f[None]
+    c, s = a.cos()[None, None, :, :].to(x.dtype), a.sin()[None, None, :, :].to(x.dtype)
+    x1, x2 = x[..., :h], x[..., h:]
+    return torch.cat([x1 * c - x2 * s, x1 * s + x2 * c], dim=-1)
 
 
 class RoPEEncoderLayer(nn.Module):
-    """Full-Sentence RoPE Attention + Local ConvNeXt FFN Encoder Layer."""
-    def __init__(self, d: int = 192, ff: int = 384, n_heads: int = 4):
+    """Full-Sentence RoPE Self-Attention + Local ConvNeXt FFN Encoder Layer (matches `EncLayer` layout for zero-loss warm-init)."""
+    def __init__(self, d: int = 144, h: int = 4, ff: int = 224, k: int = 5, r_enc: int = 104):
         super().__init__()
-        self.norm1 = nn.LayerNorm(d)
-        self.attn = RoPESelfAttention1d(d, n_heads=n_heads)
-        self.norm2 = nn.LayerNorm(d)
-        self.c1 = nn.Conv1d(d, ff, 5, padding=2)
-        self.c2 = nn.Conv1d(ff, d, 3, padding=1)
+        self.h = h
+        self.n1 = nn.LayerNorm(d)
+        self.qkv = nn.Linear(d, 3 * d)
+        self.o = nn.Linear(d, d)
+        self.n2 = nn.LayerNorm(d)
+        if r_enc is not None:
+            self.c1 = nn.Sequential(
+                nn.Conv1d(d, r_enc, k, padding=k // 2, bias=False),
+                nn.Conv1d(r_enc, ff, 1, bias=True),
+            )
+            self.c2 = nn.Sequential(
+                nn.Conv1d(ff, r_enc, k, padding=k // 2, bias=False),
+                nn.Conv1d(r_enc, d, 1, bias=True),
+            )
+        else:
+            self.c1 = nn.Conv1d(d, ff, k, padding=k // 2)
+            self.c2 = nn.Conv1d(ff, d, k, padding=k // 2)
 
     def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
-        mf = m[:, :, None].to(x.dtype)
-        x = (x + self.attn(self.norm1(x), m)) * mf
-        h = self.norm2(x).transpose(1, 2) * m[:, None, :].to(x.dtype)
-        h = self.c2(F.gelu(self.c1(h)) * m[:, None, :].to(x.dtype)).transpose(1, 2)
-        return (x + h) * mf
+        B, T, d = x.shape
+        qkv = self.qkv(self.n1(x)).view(B, T, 3, self.h, d // self.h).permute(2, 0, 3, 1, 4)
+        q, k, v = _rope_split_half(qkv[0]), _rope_split_half(qkv[1]), qkv[2]
+        scale = 1.0 / math.sqrt(d // self.h)
+        scores = torch.matmul(q, k.transpose(-2, -1)) * scale
+        mask_bias = (1.0 - m[:, None, None, :].to(x.dtype)) * (-1e4)
+        attn = torch.softmax((scores + mask_bias).float(), dim=-1).to(x.dtype)
+        a = torch.matmul(attn, v).transpose(1, 2).reshape(B, T, d)
+        x = x + self.o(a)
+        y = self.n2(x).transpose(1, 2) * m[:, None].to(x.dtype)
+        return x + self.c2(F.gelu(self.c1(y))).transpose(1, 2)
 
 
 class NewsMidLayerEngram(nn.Module):
-    """Layer-3 Hashed Phoneme-Trigram + Geminate/Breath Context Engram Lookup Table (~147 KB in FP16).
+    """Layer-3 Hashed Phoneme-Trigram + Geminate/Breath Context Engram Lookup Table (~110 KB in FP16).
     Memorizes exact Nepali consonant conjuncts, geminate closures (`कत्ति`, `पक्कै`, `चिटिक्क`, `ठ्ठयाक्कै`),
     chandrabindu nasalized transitions, and tech loanwords.
     """
-    def __init__(self, d: int = 192, n_buckets: int = 384):
+    def __init__(self, d: int = 144, n_buckets: int = 384):
         super().__init__()
         self.n_buckets = n_buckets
         self.engram_emb = nn.Embedding(n_buckets, d)
@@ -165,18 +149,110 @@ class NewsMidLayerEngram(nn.Module):
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         gem_l = (is_gem > 0.5).to(torch.long)
-        h_idx = torch.remainder(prev_ids * 73 + ids * 19 + next_ids * 3 + gem_l * 157, self.n_buckets)
-        e = self.engram_emb(h_idx)
+        # First 192 buckets match the studio phoneme-trigram hash when gem_l == 0; upper 192 buckets specialize for geminates
+        base_hash = torch.remainder(prev_ids * 73 + ids * 19 + next_ids * 3, 192)
+        h_idx = base_hash + gem_l * 192
+        e = self.engram_emb(h_idx.clamp(0, self.n_buckets - 1))
         gate = torch.sigmoid(self.engram_gate(x))
         return x + (gate * self.engram_proj(e)) * m[:, :, None].to(x.dtype)
 
 
-class StochasticFlowVarianceHead(nn.Module):
-    """Stochastic 4-Step Conditional Flow-Matching (CFM) Predictor for Duration & F0/Energy (~90 KB FP16 each).
-    Trained with 15% condition dropout (`cfg_drop_prob = 0.15`) so inference-time CFG / temperature scaling produces
-    expressive, natural Nepali geminate stretching and grounded Kathmandu pitch arcs instead of flat L1 regression.
+class StochasticFlowDurationHead(nn.Module):
+    """Stochastic 4-Step Conditional Flow-Matching (CFM) Duration Predictor (~95 KB FP16).
+    Combines the 4-step unrolled studio flow backbone (`i, t_steps, cv.0..3, o`) with a conditional flow-matching
+    velocity field `vel_net` trained with 15% condition dropout (`cfg_drop_prob = 0.15`) for CFG / temperature control.
     """
-    def __init__(self, d_in: int = 192, out_dim: int = 1, h_dim: int = 96):
+    def __init__(self, d_in: int = 144, h_dim: int = 96):
+        super().__init__()
+        self.d_in = d_in
+        self.h_dim = h_dim
+        self.i = nn.Conv1d(d_in + 1, h_dim, 1)
+        self.t_steps = nn.Parameter(torch.zeros(4, h_dim, 1))
+        self.cv = nn.ModuleList([nn.Conv1d(h_dim, h_dim, 3, padding=1) for _ in range(4)])
+        self.o = nn.Conv1d(h_dim, 1, 1)
+
+        # Stochastic CFM residual velocity field v(z_t, t | h_cond)
+        self.cond_proj = nn.Conv1d(d_in, h_dim, 1)
+        self.z_proj = nn.Conv1d(1, h_dim, 3, padding=1)
+        self.t_proj = nn.Linear(32, h_dim)
+        self.vel_net = nn.Sequential(
+            nn.SiLU(),
+            nn.Conv1d(h_dim, h_dim, 3, padding=1),
+            nn.SiLU(),
+            nn.Conv1d(h_dim, 1, 1),
+        )
+        nn.init.zeros_(self.vel_net[-1].weight)
+        nn.init.zeros_(self.vel_net[-1].bias)
+
+    def _base_step(self, x: torch.Tensor, hs: torch.Tensor, m: torch.Tensor, step_idx: int) -> torch.Tensor:
+        hs_in = 0.85 * hs.detach() + 0.15 * hs
+        t_add = self.t_steps[step_idx : step_idx + 1].to(hs.dtype)
+        z = self.i(torch.cat([hs_in.transpose(1, 2), x[:, None].to(hs.dtype)], dim=1)) + t_add
+        for c in self.cv:
+            z = z + F.gelu(c(z * m[:, None].to(z.dtype)))
+        return self.o(z)[:, 0] * m.to(z.dtype)
+
+    def pred_base_logdur(self, ids: torch.Tensor, hs: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+        B, L = ids.shape
+        pos = torch.arange(L, device=ids.device, dtype=torch.float32)[None, :]
+        x = (torch.sin(pos * 1.6180339 + ids.float() * 0.37) * 0.20).to(hs.dtype)
+        for idx_s in range(4):
+            x = x + self._base_step(x, hs, m, idx_s) * 0.25
+        return (x * m.to(x.dtype)).float()
+
+    def forward_vel(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+        te = self.t_proj(sinusoidal_temb(t, 32).to(z_t.dtype))[:, :, None]
+        hid = self.z_proj(z_t * m) + self.cond_proj(h_cond * m) + te
+        return self.vel_net(hid * m) * m
+
+    def cfm_loss(self, target_logdur: torch.Tensor, ids: torch.Tensor, h: torch.Tensor, im: torch.Tensor, cfg_drop_prob: float = 0.15):
+        B, L, _ = h.shape
+        m = im[:, None, :].to(h.dtype)
+        mu_base = self.pred_base_logdur(ids, h, im)[:, None, :]  # [B, 1, L]
+        l_base = F.smooth_l1_loss(mu_base.float() * m.float(), target_logdur.float() * m.float(), reduction="sum") / (m.sum() + 1.0)
+
+        res_tgt = (target_logdur.float() - mu_base.detach().float()).clamp(-0.6, 0.6) * m.float()
+        z0 = torch.randn_like(res_tgt) * 0.15 * m.float()
+        t = torch.rand((B,), device=h.device, dtype=torch.float32)
+        t_view = t[:, None, None]
+        z_t = (1.0 - t_view) * z0 + t_view * res_tgt
+        v_target = res_tgt - z0
+
+        h_t = h.transpose(1, 2) * m
+        drop_mask = (torch.rand((B, 1, 1), device=h.device) >= cfg_drop_prob).to(h_t.dtype)
+        h_cond = h_t * drop_mask
+        v_pred = self.forward_vel(z_t.to(h_t.dtype), t, h_cond, m)
+        l_flow = F.mse_loss(v_pred.float() * m.float(), v_target * m.float(), reduction="sum") / (m.sum() + 1.0)
+        return l_base + 0.5 * l_flow, mu_base
+
+    def sample(self, ids: torch.Tensor, h: torch.Tensor, im: torch.Tensor, steps: int = 4, cfg_scale: float = 1.20, temp: float = 0.08) -> torch.Tensor:
+        B, L, _ = h.shape
+        m = im[:, None, :].to(h.dtype)
+        h_t = h.transpose(1, 2) * m
+        mu_base = self.pred_base_logdur(ids, h, im)[:, None, :]
+
+        l_idx = torch.arange(L, device=h.device, dtype=torch.float32)[None, None, :]
+        z = torch.sin(l_idx * 12.9898 + 78.233) * torch.cos(l_idx * 39.346 - 17.13) * temp * m.float()
+        dt = 1.0 / float(max(1, steps))
+        h_zero = torch.zeros_like(h_t)
+        for s in range(steps):
+            t_s = torch.full((B,), s * dt, device=h.device, dtype=torch.float32)
+            v_cond = self.forward_vel(z.to(h_t.dtype), t_s, h_t, m).float()
+            if cfg_scale != 1.0:
+                v_uncond = self.forward_vel(z.to(h_t.dtype), t_s, h_zero, m).float()
+                v = v_uncond + cfg_scale * (v_cond - v_uncond)
+            else:
+                v = v_cond
+            z = (z + dt * v) * m.float()
+        return (mu_base.float() + z.clamp(-0.25, 0.25)) * m.float()
+
+
+class StochasticFlowVarianceHead(nn.Module):
+    """Stochastic 4-Step Conditional Flow-Matching (CFM) Predictor for F0 & Energy (~85 KB FP16).
+    Trained with 15% condition dropout (`cfg_drop_prob = 0.15`) so inference-time CFG / temperature scaling produces
+    expressive, natural Kathmandu pitch arcs and broadcast energy dynamics instead of flat L1 regression.
+    """
+    def __init__(self, d_in: int = 144, out_dim: int = 2, h_dim: int = 80):
         super().__init__()
         self.out_dim = out_dim
         self.h_dim = h_dim
@@ -187,7 +263,8 @@ class StochasticFlowVarianceHead(nn.Module):
             nn.SiLU(),
             nn.Conv1d(h_dim, out_dim, 1),
         )
-        # Conditional flow velocity field v(z_t, t | h_cond)
+        nn.init.zeros_(self.base_proj[-1].weight)
+        nn.init.zeros_(self.base_proj[-1].bias)
         self.cond_proj = nn.Conv1d(d_in, h_dim, 1)
         self.z_proj = nn.Conv1d(out_dim, h_dim, 3, padding=1)
         self.t_proj = nn.Linear(32, h_dim)
@@ -201,21 +278,19 @@ class StochasticFlowVarianceHead(nn.Module):
         nn.init.zeros_(self.vel_net[-1].bias)
 
     def forward_vel(self, z_t: torch.Tensor, t: torch.Tensor, h_cond: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
-        # z_t: [B, out_dim, L], h_cond: [B, d_in, L], m: [B, 1, L]
         te = self.t_proj(sinusoidal_temb(t, 32).to(z_t.dtype))[:, :, None]
         hid = self.z_proj(z_t * m) + self.cond_proj(h_cond * m) + te
         return self.vel_net(hid * m) * m
 
-    def cfm_loss(self, target: torch.Tensor, h: torch.Tensor, im: torch.Tensor, cfg_drop_prob: float = 0.15) -> torch.Tensor:
-        # target: [B, out_dim, L], h: [B, L, d_in], im: [B, L]
+    def cfm_loss(self, target: torch.Tensor, h: torch.Tensor, im: torch.Tensor, cfg_drop_prob: float = 0.15):
         B, L, _ = h.shape
         m = im[:, None, :].to(h.dtype)
         h_t = h.transpose(1, 2) * m
         mu_base = self.base_proj(h_t) * m
         l_base = F.smooth_l1_loss(mu_base.float() * m.float(), target.float() * m.float(), reduction="sum") / (m.sum() * self.out_dim + 1.0)
 
-        res_tgt = (target.float() - mu_base.detach().float()) * m.float()
-        z0 = torch.randn_like(res_tgt) * 0.35 * m.float()
+        res_tgt = (target.float() - mu_base.detach().float()).clamp(-0.8, 0.8) * m.float()
+        z0 = torch.randn_like(res_tgt) * 0.15 * m.float()
         t = torch.rand((B,), device=h.device, dtype=torch.float32)
         t_view = t[:, None, None]
         z_t = (1.0 - t_view) * z0 + t_view * res_tgt
@@ -227,8 +302,7 @@ class StochasticFlowVarianceHead(nn.Module):
         l_flow = F.mse_loss(v_pred.float() * m.float(), v_target * m.float(), reduction="sum") / (m.sum() * self.out_dim + 1.0)
         return l_base + 0.5 * l_flow, mu_base
 
-    def sample(self, h: torch.Tensor, im: torch.Tensor, steps: int = 4, cfg_scale: float = 1.25, temp: float = 0.25) -> torch.Tensor:
-        # Deterministic sinusoidal pseudo-random initial latent for reproducible ONNX synthesis + 4-step Euler flow integration with CFG
+    def sample(self, h: torch.Tensor, im: torch.Tensor, steps: int = 4, cfg_scale: float = 1.20, temp: float = 0.08) -> torch.Tensor:
         B, L, _ = h.shape
         m = im[:, None, :].to(h.dtype)
         h_t = h.transpose(1, 2) * m
@@ -248,38 +322,47 @@ class StochasticFlowVarianceHead(nn.Module):
             else:
                 v = v_cond
             z = (z + dt * v) * m.float()
-        return (mu_base.float() + z) * m.float()
+        return (mu_base.float() + z.clamp(-0.35, 0.35)) * m.float()
 
 
 class SakhiyaNewsEncoder(nn.Module):
-    """Single-Style Full-Sentence RoPE Encoder + 5D Structural Clause Cues + Layer-3 Engram."""
-    def __init__(self, n_mel: int = 100, d: int = 160, L: int = 6, ff: int = 256, n_engram: int = 384):
+    """Single-Style Full-Sentence RoPE Encoder + 5D Structural Clause Cues + Layer-3 Engram (zero style/Vedic bloat)."""
+    def __init__(self, n_mel: int = 100, d: int = 144, L: int = 6, ff: int = 224, n_engram: int = 384, r_enc: int = 104):
         super().__init__()
         self.d = d
-        self.emb = nn.Embedding(64, d, padding_idx=0)
-        self.lang_anchor = nn.Embedding(2, d)
-        nn.init.zeros_(self.lang_anchor.weight)
+        self.emb = nn.Embedding(61, d, padding_idx=0)
         self.struct_proj = nn.Linear(5, d)
+        nn.init.zeros_(self.struct_proj.weight)
+        nn.init.zeros_(self.struct_proj.bias)
+        self.pitch = nn.Linear(1, d)
+        nn.init.zeros_(self.pitch.weight)
+        nn.init.zeros_(self.pitch.bias)
+        self.energy_pred = nn.Linear(d, 1)
+        nn.init.zeros_(self.energy_pred.weight)
+        nn.init.zeros_(self.energy_pred.bias)
         self.engram = NewsMidLayerEngram(d=d, n_buckets=n_engram)
-        self.layers = nn.ModuleList([RoPEEncoderLayer(d=d, ff=ff, n_heads=4) for _ in range(L)])
+        self.layers = nn.ModuleList([RoPEEncoderLayer(d=d, h=4, ff=ff, k=5, r_enc=r_enc) for _ in range(L)])
         self.nf = nn.LayerNorm(d)
         self.mu = nn.Linear(d, n_mel)
+        # Single-voice Kathmandu studio anchor conditioning biases (replaces 6 style/speaker/studio/Vedic tables)
         self.spk_anchor_bias = nn.Parameter(torch.zeros(1, d))
+        self.post_anchor_bias = nn.Parameter(torch.zeros(1, d))
 
-    def forward(self, ids: torch.Tensor, struct_5d: torch.Tensor, m: torch.Tensor, lang: torch.Tensor = None):
-        lg = lang.clamp(0, 1) if lang is not None else torch.zeros((ids.shape[0],), dtype=torch.long, device=ids.device)
+    def forward(self, ids: torch.Tensor, struct_5d: torch.Tensor, m: torch.Tensor, pitch_add: torch.Tensor = None):
         x = (
-            self.emb(ids.clamp(0, 63)) * math.sqrt(self.d)
-            + self.struct_proj(struct_5d.to(self.emb.weight.dtype))
+            self.emb(ids.clamp(0, 60)) * math.sqrt(self.d)
             + self.spk_anchor_bias[:, None, :]
-            + self.lang_anchor(lg)[:, None, :]
+            + self.struct_proj(struct_5d.to(self.emb.weight.dtype))
         )
+        if pitch_add is not None:
+            x = x + self.pitch(pitch_add.to(x.dtype)[..., None])
         is_gem = struct_5d[:, :, 4]
         for idx_l, lyr in enumerate(self.layers):
             x = lyr(x, m)
             if idx_l == 2:  # Layer 3 Mid-Layer Phoneme-Trigram Engram injection
                 x = self.engram(x, ids, is_gem, m)
-        h = self.nf(x) * m[:, :, None].to(x.dtype)
+        h_content = self.nf(x)
+        h = (h_content + self.post_anchor_bias[:, None, :]) * m[:, :, None].to(x.dtype)
         return h, self.mu(h) * m[:, :, None].to(x.dtype)
 
 
@@ -287,35 +370,52 @@ class SakhiyaNewsIMFDecoder(nn.Module):
     """Single-Branch 10-Block 100-Mel Improved MeanFlow (`iMF`) X-Pred Decoder with Walsh-Hadamard Rotations & Monarch MLPs.
     Zero Fast side-branch bloat, zero style embeddings, 15% CFG condition dropout support for 4-step studio decoding.
     """
-    def __init__(self, n_mel: int = 100, d: int = 192, nb: int = 10, c: int = 160, ff_mult: float = 2.5):
+    def __init__(self, n_mel: int = 100, d: int = 160, nb: int = 10, c: int = 144):
         super().__init__()
         self.n_mel = n_mel
         self.d = d
         self.nb = nb
         self.c = c
         self.inp = nn.Conv1d(2 * n_mel, d, 1)
-        self.tm = nn.Sequential(nn.Linear(c, c), nn.SiLU(), nn.Linear(c, c))
-        self.rm = nn.Sequential(nn.Linear(c, c), nn.SiLU(), nn.Linear(c, c))
+        self.tm = nn.Sequential(nn.Linear(c, d), nn.SiLU(), nn.Linear(d, d))
+        self.rm = nn.Sequential(nn.Linear(c, d), nn.SiLU(), nn.Linear(d, d))
+        nn.init.zeros_(self.tm[2].weight); nn.init.zeros_(self.tm[2].bias)
         nn.init.zeros_(self.rm[2].weight); nn.init.zeros_(self.rm[2].bias)
         self.prog_proj = nn.Conv1d(5, d, 1)  # 4D intra-phoneme progress + 1D frame F0/energy conditioning
         nn.init.zeros_(self.prog_proj.weight); nn.init.zeros_(self.prog_proj.bias)
-        self.blocks = nn.ModuleList([
-            WalshHadamardMonarchBlock(d=d, c=c, k=7, ff_mult=ff_mult, had_size=16)
-            for _ in range(nb)
-        ])
+
+        # Blocks 0..6 match studio ff_mult=3.0; blocks 7..9 use wide ff_mult=5.5 (replacing deleted fast_blocks bloat!)
+        blocks = []
+        for i in range(nb):
+            ff_m = 3.0 if i < 7 else 5.5
+            blk = WalshHadamardMonarchBlock(d=d, c=c, k=7, ff_mult=ff_m, had_size=16)
+            blk.film = nn.Identity()
+            blk.film_const.requires_grad_(True)
+            if i >= 7:
+                nn.init.zeros_(blk.p2.weight)
+                nn.init.zeros_(blk.p2.bias)
+                nn.init.zeros_(blk.monarch_g2.weight)
+                nn.init.zeros_(blk.monarch_g2.bias)
+            blocks.append(blk)
+        self.blocks = nn.ModuleList(blocks)
+        self.step2_gate = nn.Parameter(torch.tensor(0.08))
+        self.step3_gate = nn.Parameter(torch.tensor(0.02))
+        self.step4_gate = nn.Parameter(torch.tensor(0.02))
+        self.cfg_gate = nn.Parameter(torch.tensor(0.04))
         self.out = nn.Conv1d(d, n_mel, 1)
         nn.init.zeros_(self.out.weight); nn.init.zeros_(self.out.bias)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, mu: torch.Tensor, m: torch.Tensor, prog_5d: torch.Tensor = None, r: torch.Tensor = None) -> torch.Tensor:
-        c = self.tm(sinusoidal_temb(t, self.c).to(x.dtype))
+        t_mod = self.tm(sinusoidal_temb(t, self.c).to(x.dtype))
         if r is not None:
-            c = c + self.rm(sinusoidal_temb(t - r, self.c).to(x.dtype))
-        h = self.inp(torch.cat([x, mu], dim=1))
+            t_mod = t_mod + self.rm(sinusoidal_temb(t - r, self.c).to(x.dtype))
+        h = self.inp(torch.cat([x, mu], dim=1)) + t_mod[:, :, None]
         if prog_5d is not None:
             h = h + self.prog_proj(prog_5d.to(x.dtype))
         h = h * m
+        c_dummy = torch.zeros((x.shape[0], self.c), dtype=x.dtype, device=x.device)
         for blk in self.blocks:
-            h = blk(h, c, m)
+            h = blk(h, c_dummy, m)
         return self.out(h) * m
 
 
@@ -356,31 +456,38 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 
 class SakhiyaNewsFlagship(nn.Module):
-    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.3 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
-    def __init__(self, d_enc: int = 160, L_enc: int = 6, ff_enc: int = 256, d_vel: int = 192, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, steps: int = 4, cfg_scale: float = 1.20):
+    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News`, ~9.1 MB INT8 ONNX, 4-Step iMF + 100-Mel MS-SB-CQT Vocoder)."""
+    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, steps: int = 4, cfg_scale: float = 1.20):
         super().__init__()
         self.steps = steps
         self.cfg_scale = cfg_scale
         self.cfg = dict(
             tier="sakhiya_news", arch="sakhiya_news", d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc,
-            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, steps=steps, cfg_scale=cfg_scale,
+            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, steps=steps, cfg_scale=cfg_scale,
         )
-        self.enc = SakhiyaNewsEncoder(n_mel=100, d=d_enc, L=L_enc, ff=ff_enc, n_engram=n_engram)
-        self.dur_flow = StochasticFlowVarianceHead(d_in=d_enc, out_dim=1, h_dim=80)
+        self.enc = SakhiyaNewsEncoder(n_mel=100, d=d_enc, L=L_enc, ff=ff_enc, n_engram=n_engram, r_enc=r_enc)
+        self.dur_flow = StochasticFlowDurationHead(d_in=d_enc, h_dim=96)
         self.pros_flow = StochasticFlowVarianceHead(d_in=d_enc, out_dim=2, h_dim=80)  # [f0_offset, energy_offset]
-        self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc, ff_mult=2.5)
+        self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc)
         self.f0_head = AMF0VUVHead100Mel(n_mels=100)
         self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch).apply_svd_compression()
 
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
-        self.closure_slope = nn.Parameter(torch.tensor(-0.18))  # Grounded downward Kathmandu clause-final F0 closure
-        self.geminate_stretch = nn.Parameter(torch.tensor(1.38))  # Emphatic Nepali geminate stretching multiplier
+        self.closure_slope = nn.Parameter(torch.tensor(-0.14))   # Grounded downward Kathmandu clause-final F0 closure
+        self.dur_rate_bias = nn.Parameter(torch.tensor(0.0))
+        self.geminate_stretch = nn.Parameter(torch.tensor(1.12))  # Emphatic Nepali geminate stretching multiplier
 
     def load_phase1_vocoder(self, voc_ck_path: str):
         dev = next(self.parameters()).device
         ck = torch.load(voc_ck_path, map_location=dev, weights_only=False)
         vsd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
-        self.voc.load_state_dict(vsd, strict=False)
+        has_svd = any(".c1.0.0.weight" in k for k in vsd)
+        if not has_svd:
+            voc_raw = StudioVocoder100Mel(n_mels=100, ch=self.cfg["voc_ch"]).to(dev)
+            voc_raw.init_from_clean_studio_filterbank(voc_ck_path)
+            self.voc.load_state_dict(voc_raw.state_dict(), strict=False)
+        else:
+            self.voc.load_state_dict(vsd, strict=False)
         if "f0_head" in ck:
             self.f0_head.load_state_dict({k: v.float() for k, v in ck["f0_head"].items()}, strict=False)
         return self
@@ -397,28 +504,35 @@ class SakhiyaNewsFlagship(nn.Module):
         ps_tok = (pitch_shift.reshape(B, -1) + z_tok) if pitch_shift is not None else torch.zeros((B, L), dtype=torch.float32, device=dev)
 
         struct_5d = compute_graph_structural_features(ids)
-        h, mu = self.enc(ids, struct_5d, im, lang=lang)
+        pos = torch.arange(L, device=dev, dtype=torch.float32)[None, :]
+        L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
+        is_pause = (ids <= 8).float()
+        phase = (pos / L_f).clamp(0.0, 1.0)
+        tail_closure = self.closure_slope.clamp(-0.30, -0.05) * ((phase - 0.72).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
+        p_arch = (0.14 * torch.sin(phase * 3.14159265) + tail_closure) * (1.0 - is_pause) - 0.15 * is_pause
+        p_arch = F.avg_pool1d(F.pad(p_arch[:, None, :], (1, 1), mode="replicate"), 3, stride=1)[:, 0]
+        p_enc = (p_arch + 0.95 * ps_tok).clamp(-1.10, 1.10)
+
+        h, mu = self.enc(ids, struct_5d, im, pitch_add=p_enc)
 
         # Stochastic 4-step CFM prosody (F0 & energy) + duration prediction
-        pros_2d = self.pros_flow.sample(h, im, steps=4, cfg_scale=1.20, temp=0.20)  # [B, 2, L]
-        f0_ph = pros_2d[:, 0, :].clamp(-1.5, 1.5)
-        eng_ph = pros_2d[:, 1, :].clamp(-1.2, 1.2)
-        mu = mu + (0.06 * eng_ph)[..., None] * 0.35
+        pros_2d = self.pros_flow.sample(h, im, steps=4, cfg_scale=self.cfg_scale, temp=0.06)  # [B, 2, L]
+        f0_ph = pros_2d[:, 0, :].clamp(-0.8, 0.8)
+        eng_ph = (self.enc.energy_pred(h).squeeze(-1) + pros_2d[:, 1, :]).clamp(-1.2, 1.2)
+        mu = mu + (0.06 * eng_ph)[..., None] * 0.32
 
-        log_dur = self.dur_flow.sample(h, im, steps=4, cfg_scale=1.20, temp=0.15)[:, 0, :]  # [B, L]
-        dur_frames = (torch.exp(log_dur).clamp(min=1.0, max=55.0) * ds_tok).clamp(min=1.0, max=55.0)
+        x_d = self.dur_flow.sample(ids, h, im, steps=4, cfg_scale=self.cfg_scale, temp=0.05)[:, 0, :] + self.dur_rate_bias.clamp(-0.12, 0.12)
+        dur_frames = (torch.exp(x_d).clamp(min=1.0, max=60.0) * ds_tok).clamp(min=1.0, max=60.0)
 
         # Emphatic Nepali geminate stretching & natural 80-180ms inter-clause <breath> preservation
         is_gem = struct_5d[:, :, 4]
-        dur_frames = dur_frames * (1.0 + (self.geminate_stretch.clamp(1.25, 1.65) - 1.0) * is_gem)
-        is_breath = ((ids == BREATH_ID) | (ids == COMMA_ID)).float()
-        dur_frames = torch.where(is_breath > 0.5, torch.clamp(dur_frames, min=9.0, max=16.0), dur_frames)
+        dur_frames = dur_frames * (1.0 + (self.geminate_stretch.clamp(1.05, 1.35) - 1.0) * is_gem)
+        is_breath = (ids == BREATH_ID).float()
+        dur_frames = torch.where(is_breath > 0.5, torch.clamp(dur_frames, min=8.0, max=15.0), dur_frames)
 
-        pos = torch.arange(L, device=dev, dtype=torch.float32)[None, :]
-        L_f = (pos[:, -1:] + 1.0).clamp(min=2.0)
         is_tail = (((pos >= (L_f - 3.0)) & (ids > 8)) | (ids >= 53)).float()
         min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
-        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=55.0)
+        dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
 
         # Preserve Nepali reduplication hiatus (`आआफ्नो`) and short function words (`र`, `त`, `छ`, `हो`)
         id_a, id_wb, id_r, id_h, id_schwa, id_o = SYM2ID["a"], SYM2ID["|"], SYM2ID["r"], SYM2ID["h"], SYM2ID["ʌ"], SYM2ID["o"]
@@ -428,11 +542,21 @@ class SakhiyaNewsFlagship(nn.Module):
         prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
         next3_ids = torch.cat([ids[:, 3:], torch.zeros_like(ids[:, -3:])], dim=1)
         prev3_ids = torch.cat([torch.zeros_like(ids[:, :3]), ids[:, :-3]], dim=1)
+        is_pre_hiatus_wb = ((ids == id_wb) & (next_ids == id_a) & (next2_ids == id_wb) & (next3_ids == id_a)).float()
+        is_hiatus_wb = ((prev2_ids == id_wb) & (prev_ids == id_a) & (ids == id_wb) & (next_ids == id_a)).float()
         is_hiatus_a1 = ((prev_ids == id_wb) & (ids == id_a) & (next_ids == id_wb) & (next2_ids == id_a)).float()
         is_hiatus_a2 = ((prev3_ids == id_wb) & (prev2_ids == id_a) & (prev_ids == id_wb) & (ids == id_a)).float()
-        is_hiatus_wb = ((prev2_ids == id_wb) & (prev_ids == id_a) & (ids == id_wb) & (next_ids == id_a)).float()
-        dur = torch.maximum(dur, is_hiatus_a1 * 18.0 + is_hiatus_a2 * 17.0)
+        dur = torch.where(is_pre_hiatus_wb > 0.5, torch.full_like(dur, 12.0), dur)
+        dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
         dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
+        mu_next2 = torch.cat([mu[:, 2:, :], mu[:, -2:, :]], dim=1)
+        mu_next1 = torch.cat([mu[:, 1:, :], mu[:, -1:, :]], dim=1)
+        m_pre = is_pre_hiatus_wb[:, :, None]
+        m_a1 = is_hiatus_a1[:, :, None]
+        m_wb = is_hiatus_wb[:, :, None]
+        mu = mu * (1.0 - m_pre) + mu[:, -1:, :] * m_pre
+        mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
+        mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu[:, -1:, :]) * m_wb
         is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
         is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
         dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
@@ -447,34 +571,42 @@ class SakhiyaNewsFlagship(nn.Module):
 
         # Grounded Kathmandu downward clause-final F0 contour
         dist_danda_tok = struct_5d[:, :, 1]
-        is_pause_tok = (ids <= 8).float()
-        clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause_tok)
-        f0_contour_tok = (f0_ph + self.closure_slope.clamp(-0.35, -0.08) * 3.5 * clause_tail + ps_tok) * (1.0 - is_pause_tok)
+        clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
+        f0_contour_tok = (f0_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.6 * clause_tail) * (1.0 - is_pause)
         f0_frame = torch.gather(f0_contour_tok, 1, idx)
         prog_5d = compute_progress_5d(dur, ends, idx, t_arange, f0_frame)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=dev)
 
         # 4-Step Improved MeanFlow (`iMF`) X-Pred Studio Decoding with Classifier-Free Guidance (CFG)
-        xt = mu_y.clone()
-        dt = 1.0 / float(max(1, self.steps))
+        t0 = torch.zeros((B,), device=dev, dtype=torch.float32)
         r_one = torch.ones((B,), device=dev, dtype=torch.float32)
+        v0 = self.vel(mu_y, t0, mu_y, m_t, prog_5d=prog_5d, r=r_one)
         mu_zero = torch.zeros_like(mu_y)
-        for s_i in range(self.steps):
-            t_cur = torch.full((B,), s_i * dt, device=dev, dtype=torch.float32)
-            v_cond = self.vel(xt, t_cur, mu_y, m_t, prog_5d=prog_5d, r=r_one)
-            if self.cfg_scale != 1.0 and s_i == 0:
-                v_uncond = self.vel(xt, t_cur, mu_zero, m_t, prog_5d=prog_5d, r=r_one)
-                v_step = v_uncond + self.cfg_scale * (v_cond - v_uncond)
-            else:
-                v_step = v_cond
-            # X-Pred MeanFlow update toward predicted clean 100-band mel target
-            x1_hat = mu_y + v_step
-            w_step = dt / max(dt, 1.0 - s_i * dt)
-            xt = (1.0 - w_step) * xt + w_step * x1_hat
+        v0_uncond = self.vel(mu_y, t0, mu_zero, m_t, prog_5d=prog_5d, r=r_one)
+        w_cfg = self.vel.cfg_gate.clamp(0.0, 0.25)
+        v0_cfg = v0 + w_cfg * (v0 - v0_uncond)
 
-        # Full 100-band log-mel (fmin=0, fmax=12000, ZERO top-bin clipping!)
+        x_25 = mu_y + 0.25 * v0_cfg
+        t_25 = torch.full((B,), 0.25, device=dev, dtype=torch.float32)
+        v_25 = self.vel(x_25, t_25, mu_y, m_t, prog_5d=prog_5d, r=r_one)
+
+        x_50 = mu_y + 0.50 * (0.85 * v0_cfg + 0.15 * v_25)
+        t_50 = torch.full((B,), 0.50, device=dev, dtype=torch.float32)
+        v_50 = self.vel(x_50, t_50, mu_y, m_t, prog_5d=prog_5d, r=r_one)
+
+        x_75 = mu_y + 0.75 * (0.80 * v0_cfg + 0.10 * v_25 + 0.10 * v_50)
+        t_75 = torch.full((B,), 0.75, device=dev, dtype=torch.float32)
+        v_75 = self.vel(x_75, t_75, mu_y, m_t, prog_5d=prog_5d, r=r_one)
+
+        w2 = self.vel.step2_gate.clamp(0.0, 0.25)
+        w3 = self.vel.step3_gate.clamp(0.0, 0.15)
+        w4 = self.vel.step4_gate.clamp(0.0, 0.15)
+        w1 = (1.0 - w2 - w3 - w4).clamp(min=0.45)
+        xt = mu_y + w1 * v0_cfg + w2 * v_50 + w3 * v_25 + w4 * v_75
+
+        # Full 100-band log-mel (fmin=0, fmax=12000)
         mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
-        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 1.8)
+        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.65)
         y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
