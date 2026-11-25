@@ -29,8 +29,8 @@ N_SYM = 64
 N_LANG = 2
 
 TIERS = {
-    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=8,  h_dur=128, voc_ch=208, steps=4, n_engram=352, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
-    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=4,  h_dur=128, voc_ch=208, steps=1, n_engram=352, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
+    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=8,  h_dur=128, voc_ch=320, steps=4, n_engram=352, r_enc=84,   r_voc_k7=40,   r_voc_k11=28),
+    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=4,  h_dur=128, voc_ch=320, steps=1, n_engram=352, r_enc=84,   r_voc_k7=40,   r_voc_k11=28),
     "t30": dict(tier="t30", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
     "t15": dict(tier="t15", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am",   voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
@@ -237,25 +237,35 @@ class Student(nn.Module):
                         blk.c1[i] = _make_svd_seq(blk.c1[i], r_k, use_qat=False)
                     if isinstance(blk.c2[i], nn.Conv1d):
                         blk.c2[i] = _make_svd_seq(blk.c2[i], r_k, use_qat=False)
+                if self.tier.startswith("sakhiya_one"):
+                    blk2 = self.voc.mrfs[1][b_idx]
+                    r_k2 = max(20, int(r_k * 0.70))
+                    for i in range(len(blk2.c1)):
+                        if isinstance(blk2.c1[i], nn.Conv1d):
+                            blk2.c1[i] = _make_svd_seq(blk2.c1[i], r_k2, use_qat=False)
+                        if isinstance(blk2.c2[i], nn.Conv1d):
+                            blk2.c2[i] = _make_svd_seq(blk2.c2[i], r_k2, use_qat=False)
 
     def warm_init(self, ck_dir="/work/tts/ck"):
         """Initialize Student AM and Phase 1 AWPVocoder from pure Pro-v3 checkpoints ONLY (zero V1/v5/v9 weights)."""
         dev = next(self.parameters()).device
         c = self.cfg
-        self._init_raw_submodules(c["d_enc"], c["L_enc"], c["ff_enc"], c["d_vel"], c["nb_vel"], c["h_dur"], c["voc_ch"], c.get("n_engram", 352))
-        self._apply_svd_structure()
-        self.to(dev)
-
-        # 1. Load Sakhiya-One or Pro-v3 teacher checkpoint
         cand_cks = [
             f"/work/sp/distill/runs/{self.tier}/ema_final.pt",
             "/work/sp/distill/runs/sakhiya_one/ema_final.pt",
             "/work/sp/distill/runs/t30/ema_final.pt",
         ]
         run_ck_p = next((p for p in cand_cks if os.path.exists(p)), None)
-        if run_ck_p:
-            ck = torch.load(run_ck_p, map_location=dev, weights_only=False)
-            ema_sd = {k: v.float() for k, v in ck.get("ema", ck).items()}
+        ck = torch.load(run_ck_p, map_location=dev, weights_only=False) if run_ck_p else {}
+        ema_sd = {k: v.float() for k, v in ck.get("ema", ck).items()} if ck else {}
+        has_svd_enc = any(".c1.0.weight" in k for k in ema_sd)
+
+        self._init_raw_submodules(c["d_enc"], c["L_enc"], c["ff_enc"], c["d_vel"], c["nb_vel"], c["h_dur"], c["voc_ch"], c.get("n_engram", 352))
+        if has_svd_enc:
+            self._apply_svd_structure()
+        self.to(dev)
+
+        if ema_sd:
             own_sd = self.state_dict()
             with torch.no_grad():
                 for k, v in own_sd.items():
@@ -265,24 +275,35 @@ class Student(nn.Module):
                         src_t = ema_sd[k]
                         if src_t.shape == v.shape:
                             v.copy_(src_t)
-                        elif src_t.ndim == v.ndim:
+                        elif src_t.ndim == v.ndim and not (".vel.blocks." in k and (".p1." in k or ".p2." in k)):
                             sl = tuple(slice(0, min(a, b)) for a, b in zip(v.shape, src_t.shape))
                             v[sl].copy_(src_t[sl])
                     elif k.startswith("am.f0_head.net."):
                         legacy_k = k.replace("am.f0_head.net.", "voc.src.f0_net.")
                         if legacy_k in ema_sd and ema_sd[legacy_k].shape == v.shape:
                             v.copy_(ema_sd[legacy_k])
+                # Importance-ranked neuron projection for velocity FFN p1/p2 when initializing from 768-hidden Pro-v3 teacher
+                for bi in range(c["nb_vel"]):
+                    k_p1w = f"am.vel.blocks.{bi}.p1.weight"
+                    k_p1b = f"am.vel.blocks.{bi}.p1.bias"
+                    k_p2w = f"am.vel.blocks.{bi}.p2.weight"
+                    k_p2b = f"am.vel.blocks.{bi}.p2.bias"
+                    if k_p1w in ema_sd and k_p2w in ema_sd and ema_sd[k_p1w].shape[0] != own_sd[k_p1w].shape[0]:
+                        w1, b1 = ema_sd[k_p1w], ema_sd[k_p1b]
+                        w2, b2 = ema_sd[k_p2w], ema_sd[k_p2b]
+                        h_keep = own_sd[k_p1w].shape[0]
+                        imp = w1[:, :, 0].norm(dim=1) * w2[:, :, 0].norm(dim=0)
+                        top_idx = torch.topk(imp, k=h_keep, largest=True).indices.sort().values
+                        scale_comp = float(imp.sum().item() / imp[top_idx].sum().clamp(min=1e-6).item())
+                        own_sd[k_p1w].copy_(w1[top_idx])
+                        own_sd[k_p1b].copy_(b1[top_idx])
+                        own_sd[k_p2w].copy_(w2[:, top_idx] * min(1.25, scale_comp))
+                        own_sd[k_p2b].copy_(b2)
             self.load_state_dict(own_sd, strict=False)
 
-        # 2. Load Phase 1 Studio-Clean AWPVocoder checkpoint if available, else Pro-v3 filterbank
+        # 2. Load Phase 1 Studio-Clean AWPVocoder checkpoint if available, else Pro-v3 filterbank before SVD
         awp_p = os.path.join(ck_dir, "sakhiya_one_voc.pt")
-        if os.path.exists(awp_p):
-            vck = torch.load(awp_p, map_location=dev, weights_only=False)
-            vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
-            self.voc.load_state_dict(vsd, strict=False)
-            if "f0_head" in vck:
-                self.am.f0_head.load_state_dict({k: v.float() for k, v in vck["f0_head"].items()}, strict=False)
-        elif os.path.exists(os.path.join(ck_dir, "v3_voc320_fused.pt")):
+        if not has_svd_enc and not os.path.exists(awp_p) and os.path.exists(os.path.join(ck_dir, "v3_voc320_fused.pt")):
             self.voc.load_pro_v3_filterbank(os.path.join(ck_dir, "v3_voc320_fused.pt"))
             vck = torch.load(os.path.join(ck_dir, "v3_voc320_fused.pt"), map_location=dev, weights_only=False)
             vsd = vck.get("G_ema", vck.get("G", vck))
@@ -290,6 +311,17 @@ class Student(nn.Module):
                 for k, v in self.am.f0_head.net.state_dict().items():
                     if ("src.f0_net." + k) in vsd:
                         v.copy_(vsd["src.f0_net." + k].float())
+
+        if not has_svd_enc:
+            self._apply_svd_structure()
+            self.to(dev)
+
+        if os.path.exists(awp_p):
+            vck = torch.load(awp_p, map_location=dev, weights_only=False)
+            vsd = {k: v.float() for k, v in vck.get("G_ema", vck.get("G", vck)).items()}
+            self.voc.load_state_dict(vsd, strict=False)
+            if "f0_head" in vck:
+                self.am.f0_head.load_state_dict({k: v.float() for k, v in vck["f0_head"].items()}, strict=False)
 
         self.to(dev)
         snap_am_int8(self.am)
