@@ -378,11 +378,18 @@ def _physics_artifact_probes(w, sr=SR):
         f0_t, uv_t = gpu_f0_uv(wt, N)
         f0_arr = f0_t[0, 0, :N].cpu().numpy()
         uv_arr = uv_t[0, 0, :N].cpu().numpy()
-    lf0_st = 12.0 * np.log2(np.maximum(f0_arr, 65.0))
-    lf0_sm = scipy.signal.medfilt(lf0_st, kernel_size=5)
-    v_interior = is_steady_vowel[2:-2] & is_steady_vowel[1:-3] & is_steady_vowel[3:-1] & (uv_arr[2:-2] > 0.85)
-    df0 = np.abs(np.diff(lf0_sm))[2:-1]
-    pitch_breaks = int(np.sum(v_interior & (df0 > 2.0) & (df0 < 8.0)))
+    L_f0 = min(len(is_steady_vowel), len(f0_arr), len(uv_arr))
+    if L_f0 >= 6:
+        sv_c = is_steady_vowel[:L_f0]
+        uv_c = uv_arr[:L_f0]
+        lf0_st = 12.0 * np.log2(np.maximum(f0_arr[:L_f0], 65.0))
+        lf0_sm = scipy.signal.medfilt(lf0_st, kernel_size=5)
+        v_interior = sv_c[2:-2] & sv_c[1:-3] & sv_c[3:-1] & (uv_c[2:-2] > 0.85)
+        df0 = np.abs(np.diff(lf0_sm))[2:-1]
+        m_len = min(len(v_interior), len(df0))
+        pitch_breaks = int(np.sum(v_interior[:m_len] & (df0[:m_len] > 2.0) & (df0[:m_len] < 8.0)))
+    else:
+        pitch_breaks = 0
 
     # High-pass (> 6 kHz) impulse click probe
     sos = scipy.signal.butter(4, 6000.0 / (sr / 2.0), btype="highpass", output="sos")
