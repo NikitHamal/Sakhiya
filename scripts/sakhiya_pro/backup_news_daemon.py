@@ -62,6 +62,9 @@ def stage_files():
     if os.path.isdir("/work/sp/sakhiya_news/leg1_preview"):
         os.makedirs(STAGE_DIR + "/leg1_preview", exist_ok=True)
         os.system(f"cp -ru /work/sp/sakhiya_news/leg1_preview/. {STAGE_DIR}/leg1_preview/ 2>/dev/null")
+    if os.path.isdir("/work/sp/sakhiya_news/leg2_final"):
+        os.makedirs(STAGE_DIR + "/leg2_final", exist_ok=True)
+        os.system(f"cp -ru /work/sp/sakhiya_news/leg2_final/. {STAGE_DIR}/leg2_final/ 2>/dev/null")
 
 
 def sync_once():

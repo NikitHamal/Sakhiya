@@ -60,18 +60,12 @@ fi
 AM_TOTAL_STEPS="${AM_TOTAL_STEPS:-100000}"
 E2E_STEPS="${E2E_STEPS:-20000}"
 
-echo "[Leg-2 Relay 3/5] Resuming Phase 2 Sakhiya-News Single-Style Flagship AM to step ${AM_TOTAL_STEPS}..."
-python3 "$REPO_ROOT/scripts/sakhiya_pro/train_sakhiya_news_leg1.py" \
-    --skip_phase1 \
-    --resume_am /work/tts/ck/am_last.pt \
-    --am_steps "${AM_TOTAL_STEPS}"
-
-echo "[Leg-2 Relay 4/5] Running Phase 3 Joint End-to-End Waveform Distillation (AM + 100-Mel MS-SB-CQT Vocoder + LSQ QAT) for ${E2E_STEPS} steps..."
-python3 "$REPO_ROOT/scripts/sakhiya_pro/train_sakhiya_news_leg1.py" \
-    --skip_phase1 \
-    --joint_e2e \
-    --resume_am /work/tts/ck/am_last.pt \
-    --e2e_steps "${E2E_STEPS}"
+echo "[Leg-2 Relay 3/5] Running Leg-2 Studio Physics Pipeline (Phase 1 Dual-Source Vocoder -> Phase 2 Coupled Prosody AM -> Phase 3 Unrolled 2-Step E2E -> Phase 4 LSQ-QAT)..."
+python3 "$REPO_ROOT/scripts/sakhiya_pro/train_sakhiya_news_leg2.py" \
+    --voc_steps 1200 \
+    --am_steps "${AM_TOTAL_STEPS}" \
+    --e2e_steps "${E2E_STEPS}" \
+    --resume_am /work/tts/ck/am_last.pt
 
 echo "[Leg-2 Relay 5/5] Running Fixed Honest 4-Layer INT8 Forensic Gate & Final Flagship Promotion..."
 python3 "$REPO_ROOT/scripts/forensic_audio_gate.py" \
