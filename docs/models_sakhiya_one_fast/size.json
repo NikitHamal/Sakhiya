@@ -4,11 +4,11 @@
   "fp32_mb": 31.91,
   "int8_vs_fp32_mel_corr": 1.0,
   "nan_count": 0,
-  "rtf_1thread": 0.0492,
+  "rtf_1thread": 0.0484,
   "bad_ops": [],
   "node_verify": {
     "ok": true,
     "nan_count": 0,
-    "rtf_1thread": 0.0465
+    "rtf_1thread": 0.0467
   }
 }

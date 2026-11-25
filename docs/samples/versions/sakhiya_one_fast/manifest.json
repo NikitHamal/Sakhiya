@@ -1,56 +1,56 @@
 {
   "tag": "sakhiya_one_fast",
-  "label": "Sakhiya-One Fast [4-blk Slice / 1-step Hadamard-Monarch MeanFlow] (~7.9 MB INT8) (step 2150, 8.313 MB INT8 ONNX)",
-  "commit_sha": "068cf2b",
-  "timestamp_utc": "2026-11-25T15:32:25Z",
-  "notes": "Distilled from Sakhiya-Pro v3 + Phase-Locked Harmonic-iSTFT; int8_mb=8.313, corr=1.0, rtf_1thread=0.0492",
+  "label": "Sakhiya-One Fast [4-blk Slice / 1-step Hadamard-Monarch MeanFlow] (~7.9 MB INT8) (step 2550, 8.313 MB INT8 ONNX)",
+  "commit_sha": "a6e695c",
+  "timestamp_utc": "2026-11-25T16:03:53Z",
+  "notes": "Distilled from Sakhiya-Pro v3 + Phase-Locked Harmonic-iSTFT; int8_mb=8.313, corr=1.0, rtf_1thread=0.0484",
   "metrics": {
     "tier": "sakhiya_one_fast",
     "label": "Sakhiya-One Fast [4-blk Slice / 1-step Hadamard-Monarch MeanFlow] (~7.9 MB INT8)",
-    "step": 2150,
+    "step": 2550,
     "qat": true,
     "int8_mb": 8.313,
     "fp32_mb": 31.91,
     "int8_vs_fp32_mel_corr": 1.0,
-    "rtf_1thread": 0.0492,
-    "utmos": 3.751,
-    "cer_ne": 0.064,
-    "cer_sa": 0.114,
-    "spk_sim": 0.8322,
-    "sim_ProV3": 0.8322,
-    "sim_OldV1": 0.4192,
-    "margin_ProV3_OldV1": 0.413,
-    "voiced_ltas_mcd_ratio": 0.4904,
-    "HF_LSD_4_10kHz_dB": 0.634,
-    "upper_band_HNR_anomaly_dB": 1.093,
+    "rtf_1thread": 0.0484,
+    "utmos": 3.783,
+    "cer_ne": 0.059,
+    "cer_sa": 0.115,
+    "spk_sim": 0.8388,
+    "sim_ProV3": 0.8388,
+    "sim_OldV1": 0.412,
+    "margin_ProV3_OldV1": 0.4268,
+    "voiced_ltas_mcd_ratio": 0.4894,
+    "HF_LSD_4_10kHz_dB": 0.617,
+    "upper_band_HNR_anomaly_dB": 1.058,
     "mid_vowel_shutters": 0,
     "pitch_breaks": 0,
     "sa_ctc_ll_gap": 0.0403,
     "sa_gl_ratio": 2.0,
     "sa_svara_corr": 0.78,
-    "stft_lsd_int8_fp32_dB": 0.0007,
+    "stft_lsd_int8_fp32_dB": 0.0009,
     "sim_ProV3_drop_int8": 0.0,
     "clicks": 0,
     "drops": 0,
     "stutters": 0,
     "layers": {
       "layer1_timbre": {
-        "sim_ProV3": 0.8322,
-        "sim_OldV1": 0.4192,
-        "margin_ProV3_OldV1": 0.413,
-        "voiced_ltas_mcd_db": 3.041,
-        "voiced_ltas_mcd_ratio": 0.4904
+        "sim_ProV3": 0.8388,
+        "sim_OldV1": 0.412,
+        "margin_ProV3_OldV1": 0.4268,
+        "voiced_ltas_mcd_db": 3.035,
+        "voiced_ltas_mcd_ratio": 0.4894
       },
       "layer2_physics": {
-        "HF_LSD_4_10kHz_dB": 0.634,
-        "upper_band_HNR_anomaly_dB": 1.093,
+        "HF_LSD_4_10kHz_dB": 0.617,
+        "upper_band_HNR_anomaly_dB": 1.058,
         "mid_vowel_shutters": 0,
         "intra_voiced_pitch_breaks": 0,
         "hf_impulse_clicks": 0
       },
       "layer3_pron_vedic": {
-        "ne_pcer": 0.064,
-        "ne_pcer_gap_vs_ProV3": 0.003,
+        "ne_pcer": 0.059,
+        "ne_pcer_gap_vs_ProV3": 0.0,
         "word_drop_count": 0,
         "stutter_count": 0,
         "sa_ctc_ll_gap_vs_ProV3": 0.0403,
@@ -58,7 +58,7 @@
         "sa_svara_f0_corr": 0.78
       },
       "layer4_int8_parity": {
-        "stft_lsd_int8_fp32_dB": 0.0007,
+        "stft_lsd_int8_fp32_dB": 0.0009,
         "sim_ProV3_fp32_minus_int8": 0.0,
         "int8_vs_fp32_mel_corr": 1.0,
         "lufs_target": -16.0
@@ -67,61 +67,61 @@
     "by_style": {
       "conversational": {
         "n": 9,
-        "utmos": 3.691,
-        "cer": 0.058,
-        "spk_sim": 0.81,
+        "utmos": 3.701,
+        "cer": 0.057,
+        "spk_sim": 0.816,
         "clicks": 0
       },
       "expressive": {
         "n": 1,
-        "utmos": 3.738,
-        "cer": 0.098,
-        "spk_sim": 0.908,
+        "utmos": 3.855,
+        "cer": 0.082,
+        "spk_sim": 0.903,
         "clicks": 0
       },
       "news": {
         "n": 6,
-        "utmos": 3.746,
-        "cer": 0.077,
-        "spk_sim": 0.868,
+        "utmos": 3.765,
+        "cer": 0.066,
+        "spk_sim": 0.872,
         "clicks": 0
       },
       "storytelling": {
         "n": 3,
-        "utmos": 3.9,
-        "cer": 0.063,
-        "spk_sim": 0.882,
+        "utmos": 3.915,
+        "cer": 0.066,
+        "spk_sim": 0.884,
         "clicks": 0
       },
       "vedic": {
         "n": 4,
-        "utmos": 3.891,
-        "cer": 0.136,
-        "spk_sim": 0.747,
+        "utmos": 3.913,
+        "cer": 0.128,
+        "spk_sim": 0.759,
         "clicks": 0
       },
       "vedic_chant": {
         "n": 3,
-        "utmos": 3.648,
-        "cer": 0.094,
-        "spk_sim": 0.839,
+        "utmos": 3.713,
+        "cer": 0.109,
+        "spk_sim": 0.857,
         "clicks": 0
       },
       "warm_soft": {
         "n": 1,
-        "utmos": 3.62,
+        "utmos": 3.853,
         "cer": 0.023,
-        "spk_sim": 0.913,
+        "spk_sim": 0.907,
         "clicks": 0
       }
     },
     "node_verify": {
       "ok": true,
       "nan_count": 0,
-      "rtf_1thread": 0.0465
+      "rtf_1thread": 0.0467
     },
     "gate_pass": true,
-    "score": 2.7957
+    "score": 2.8648
   },
   "clips": [
     {
@@ -162,7 +162,7 @@
       "style": "expressive",
       "text": "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
       "mp3": "samples/versions/sakhiya_one_fast/ne_expressive.mp3",
-      "duration_s": 6.01
+      "duration_s": 6.02
     },
     {
       "id": "ne_tricky_real",
@@ -186,7 +186,7 @@
       "style": "vedic_chant",
       "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
       "mp3": "samples/versions/sakhiya_one_fast/sa_om.mp3",
-      "duration_s": 6.33
+      "duration_s": 6.34
     },
     {
       "id": "sa_rv",
@@ -194,7 +194,7 @@
       "style": "vedic_chant",
       "text": "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
       "mp3": "samples/versions/sakhiya_one_fast/sa_rv.mp3",
-      "duration_s": 4.63
+      "duration_s": 4.64
     },
     {
       "id": "sa_gita",
