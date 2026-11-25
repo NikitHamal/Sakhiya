@@ -853,7 +853,7 @@ def _export_frame_sync_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str,
     m_f32 = copy.deepcopy(ema_model).cpu().eval()
     with torch.no_grad():
         for name, p in m_f32.named_parameters():
-            if name.startswith("voc.") or name.endswith("had_rot.weight"):
+            if name.startswith(("voc.ups.", "voc.mrfs.", "voc.amp_branch.", "voc.pha_branch.")) or name.endswith("had_rot.weight"):
                 continue
             if any(name.startswith(s) or name.endswith(s) for s in FP16_ISOLATED_NEWS):
                 p.copy_(p.half().float())
