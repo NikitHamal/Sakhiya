@@ -100,13 +100,15 @@ CACHE_DIR = "/work/sp/sakhiya_news/cache_100mel"
 LISTEN_DIR = "/work/sp/sakhiya_news/listen"
 EVAL_DIR = "/work/sp/sakhiya_news/eval"
 
-# Hard FP16 isolation for sensitive studio modules (gives ~96% INT8 Conv/Linear weights & ~9.45 MB total ONNX size <= 9.80 MB!)
+# Hard FP16 isolation for sensitive studio modules (gives ~97.3% INT8 Conv/Linear weights & ~9.54 MB total ONNX size <= 9.80 MB!)
 FP16_ISOLATED_NEWS_LEG2 = (
     "voc.src.", "voc.amp_head", "voc.noise_head", "voc.pha_head",
     "voc.amp_branch.dw", "voc.pha_branch.dw",
     "enc.emb", "enc.engram.engram_emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred",
-    "coupled_pros_flow.",
-    "vel.prog_proj", "vel.out", "f0_head.",
+    "coupled_pros_flow.i", "coupled_pros_flow.o",
+    "coupled_pros_flow.z_proj", "coupled_pros_flow.t_proj", "coupled_pros_flow.cond_proj",
+    "coupled_pros_flow.base_pros_proj.4", "coupled_pros_flow.vel_net.5",
+    "vel.prog_proj", "vel.out", "f0_head.net.4",
 )
 
 
