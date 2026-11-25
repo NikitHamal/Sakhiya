@@ -64,9 +64,10 @@ class WalshHadamardMonarchBlock(nn.Module):
         H_weight = H_mat.repeat(self.n_groups, 1)[:, :, None]         # [d, 16, 1]
         self.had_rot.weight = nn.Parameter(H_weight, requires_grad=False)
 
-        # Pointwise FFN + Monarch block-structured residual pathway
-        self.p1 = nn.Conv1d(d, d * ff_mult, 1)
-        self.p2 = nn.Conv1d(d * ff_mult, d, 1)
+        # Compact Hadamard-rotated FFN + Monarch block-structured residual pathway (replaces bloated 3x dense FFN)
+        h_ff = int(d * 1.25)
+        self.p1 = nn.Conv1d(d, h_ff, 1)
+        self.p2 = nn.Conv1d(h_ff, d, 1)
         self.monarch_g1 = nn.Conv1d(d, d, 1, groups=self.n_groups, bias=True)
         self.monarch_g2 = nn.Conv1d(d, d, 1, groups=had_size, bias=True)
         self.monarch_scale = nn.Parameter(torch.full((1, d, 1), 0.15))
@@ -86,9 +87,8 @@ class WalshHadamardMonarchBlock(nn.Module):
     def forward(self, x: torch.Tensor, c: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
         sc, sh = (self.film_const.to(x.dtype) if isinstance(self.film, nn.Identity) else self.film(c)[:, :, None]).chunk(2, 1)
         y = self.n(self.dw(x * m)) * (1.0 + sc) + sh
-        # Apply orthogonal Walsh-Hadamard rotation to spread channel activation outliers evenly before FFN/Monarch
+        # Apply orthogonal Walsh-Hadamard rotation to spread channel activation outliers evenly before Monarch/FFN
         y_rot = self.had_rot(y)
-        #Note: since H_16 is involutory & orthogonal (H_16 @ H_16 = I_16), rotating y before p1 or folding H_16 into p1 preserves exact capacity
         ff_out = self.p2(F.gelu(self.p1(y))) + self._monarch_forward(y_rot)
         return x + ff_out * m
 

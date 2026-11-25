@@ -29,8 +29,8 @@ N_SYM = 64
 N_LANG = 2
 
 TIERS = {
-    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=240, nb_vel=8,  h_dur=128, voc_ch=208, steps=4, n_engram=352, r_enc=None, r_voc_k7=None, r_voc_k11=None),
-    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=240, nb_vel=4,  h_dur=128, voc_ch=208, steps=1, n_engram=352, r_enc=None, r_voc_k7=None, r_voc_k11=None),
+    "sakhiya_one":      dict(tier="sakhiya_one",      arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=8,  h_dur=128, voc_ch=208, steps=4, n_engram=352, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
+    "sakhiya_one_fast": dict(tier="sakhiya_one_fast", arch="sakhiya_one", voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=4,  h_dur=128, voc_ch=208, steps=1, n_engram=352, r_enc=88,   r_voc_k7=None, r_voc_k11=None),
     "t30": dict(tier="t30", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=None, r_voc_k7=None, r_voc_k11=None),
     "t15": dict(tier="t15", arch="sakhiya_am",   voc_arch="awp", d_enc=192, L_enc=6, ff_enc=256, d_vel=256, nb_vel=12, h_dur=128, voc_ch=320, steps=4, r_enc=72,   r_voc_k7=None, r_voc_k11=None),
     "t10": dict(tier="t10", arch="sakhiya_am",   voc_arch="awp", d_enc=144, L_enc=5, ff_enc=224, d_vel=160, nb_vel=7,  h_dur=96,  voc_ch=320, steps=1, r_enc=104,  r_voc_k7=None, r_voc_k11=None),
