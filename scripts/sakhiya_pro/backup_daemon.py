@@ -24,10 +24,18 @@ def stage():
             open(t + '/STEP', 'w').write(c.rsplit('-', 1)[1])
     for d in glob.glob('/work/sp/final/*/'):
         n = os.path.basename(d.rstrip('/')); os.system(f'mkdir -p {O}/final/{n} && cp -ru {d}. {O}/final/{n}/')
+    os.makedirs('/work/sp/out_one', exist_ok=True)
+    os.system('cp -u /work/tts/logs/*.log /work/sp/out_one/ 2>/dev/null')
+    for f in ('sakhiya_one_voc.pt', 'sakhiya_one_am.pt', 'sakhiya_one_e2e.pt'):
+        if os.path.exists('/work/tts/ck/' + f):
+            shutil.copy('/work/tts/ck/' + f, '/work/sp/out_one/' + f)
+    if os.path.isdir('/work/sp/tiers/sakhiya_one/best'):
+        os.system('mkdir -p /work/sp/out_one/best && cp -ru /work/sp/tiers/sakhiya_one/best/. /work/sp/out_one/best/ 2>/dev/null')
 while True:
     try:
         stage()
         a.upload_folder(folder_path=O, repo_id=R, path_in_repo='sakhiya_pro_v3', commit_message='sakhiya_pro_v3 auto-backup ' + time.strftime('%H:%M:%S'), ignore_patterns=['*.tmp', '**/__pycache__/**'])
-        print(time.strftime('%H:%M:%S'), 'backup ok', flush=True)
+        a.upload_folder(folder_path='/work/sp/out_one', repo_id=R, path_in_repo='sakhiya_one', commit_message='sakhiya_one auto-backup ' + time.strftime('%H:%M:%S'), ignore_patterns=['*.tmp', '**/__pycache__/**'])
+        print(time.strftime('%H:%M:%S'), 'backup ok (sakhiya_pro_v3 + sakhiya_one)', flush=True)
     except Exception as e: print(time.strftime('%H:%M:%S'), 'backup ERR', str(e)[:200], flush=True)
     time.sleep(900)
