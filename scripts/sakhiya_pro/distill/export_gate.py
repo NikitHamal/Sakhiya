@@ -294,17 +294,18 @@ def _stft_lsd_db(w32, w8):
 
 
 def _voiced_ltas_24(w):
-    M = logmel(w)
+    M = logmel(_normalize_lufs_16(w))
     e = M.mean(axis=0)
     mask = e > (np.max(e) - 2.6)
     if mask.sum() < 3:
         mask = np.ones_like(e, dtype=bool)
     v100 = M[:, mask].mean(axis=1)
-    return np.array([v100[int(round(i * 100 / 24)) : int(round((i + 1) * 100 / 24))].mean() for i in range(24)], dtype=np.float32)
+    v24 = np.array([v100[int(round(i * 100 / 24)) : int(round((i + 1) * 100 / 24))].mean() for i in range(24)], dtype=np.float32)
+    return v24 - np.mean(v24)
 
 
 def _hf_lsd_4_10khz_db(w_pred, w_ref):
-    Mp, Mr = logmel(w_pred), logmel(w_ref)
+    Mp, Mr = logmel(_normalize_lufs_16(w_pred)), logmel(_normalize_lufs_16(w_ref))
     ep, er = Mp.mean(axis=0), Mr.mean(axis=0)
     vp = Mp[65:94, ep > (np.max(ep) - 2.5)]
     vr = Mr[65:94, er > (np.max(er) - 2.5)]
@@ -343,53 +344,67 @@ def _physics_artifact_probes(w, sr=SR):
     import librosa
     w = np.asarray(w, dtype=np.float32)
     S = np.abs(librosa.stft(w, n_fft=1024, hop_length=256)) + 1e-6
-    b_lo, b_hi, b_fric = int(round(200.0 * 1024 / sr)), int(round(2600.0 * 1024 / sr)), int(round(4500.0 * 1024 / sr))
-    e_vow = np.sqrt(np.mean(S[b_lo:b_hi, :] ** 2, axis=0))
+    b_low = int(round(150.0 * 1024 / sr))
+    b_f1 = int(round(380.0 * 1024 / sr))
+    b_hi = int(round(2600.0 * 1024 / sr))
+    b_fric = int(round(4500.0 * 1024 / sr))
+    e_vow = np.sqrt(np.mean(S[b_f1:b_hi, :] ** 2, axis=0))
+    e_nas = np.sqrt(np.mean(S[b_low:b_f1, :] ** 2, axis=0))
     e_fric = np.sqrt(np.mean(S[b_fric:, :] ** 2, axis=0))
     db = 20.0 * np.log10(np.maximum(e_vow, 1e-5))
-    # Smooth frame energy with 3-frame median filter to reject single-pitch-pulse framing jitter
-    db_sm = scipy.signal.medfilt(db, kernel_size=3)
-    is_steady_vowel = (db_sm > (np.max(db_sm) - 12.0)) & (e_vow > 3.0 * e_fric)
+    M = logmel(w)
+    M_c = M - np.mean(M, axis=0, keepdims=True)
+    M_norm = M_c / (np.linalg.norm(M_c, axis=0, keepdims=True) + 1e-6)
+    is_vow_cand = (db > (np.max(db) - 12.0)) & (e_vow > 3.0 * e_fric) & (e_vow > 0.55 * e_nas)
+
+    vow_bridged = is_vow_cand.copy()
+    N = len(db)
+    for t in range(2, N - 4):
+        if is_vow_cand[t - 1]:
+            for gap in (1, 2, 3, 4):
+                if t + gap < N and is_vow_cand[t + gap]:
+                    if float(np.dot(M_norm[:, t - 1], M_norm[:, t + gap])) > 0.85:
+                        vow_bridged[t : t + gap] = True
+                        break
 
     shutters = 0
-    i, N = 0, len(db_sm)
+    i = 0
     while i < N:
-        if not is_steady_vowel[i]:
+        if not vow_bridged[i]:
             i += 1
             continue
         j = i
-        while j < N and is_steady_vowel[j]:
+        while j < N and vow_bridged[j]:
             j += 1
         if (j - i) >= 19:  # >= 200 ms single sustained vowel nucleus
-            interior = db_sm[i + 3 : j - 3]
-            if len(interior) >= 5:
-                for k in range(2, len(interior) - 2):
-                    l_max = np.max(interior[max(0, k - 3) : k])
-                    r_max = np.max(interior[k + 1 : min(len(interior), k + 4)])
-                    if min(l_max, r_max) - interior[k] > 6.0:
+            interior = db[i + 2 : j - 2]
+            if len(interior) >= 4:
+                for k in range(1, len(interior) - 1):
+                    l_max = float(np.max(interior[max(0, k - 4) : k]))
+                    r_max = float(np.max(interior[k + 1 : min(len(interior), k + 5)]))
+                    t_abs = i + 2 + k
+                    if min(l_max, r_max) - interior[k] > 6.0 and float(np.dot(M_norm[:, max(0, t_abs - 3)], M_norm[:, min(N - 1, t_abs + 3)])) > 0.88:
                         shutters += 1
                         break
         i = j
 
-    # Intra-voiced pitch breaks (|dF0| > 2.0 st per 10ms frame inside steady vowel interiors)
     with torch.no_grad():
         from scripts.train_v2_voc import gpu_f0_uv
         wt = torch.from_numpy(w)[None].cuda() if torch.cuda.is_available() else torch.from_numpy(w)[None]
         f0_t, uv_t = gpu_f0_uv(wt, N)
         f0_arr = f0_t[0, 0, :N].cpu().numpy()
         uv_arr = uv_t[0, 0, :N].cpu().numpy()
-    L_f0 = min(len(is_steady_vowel), len(f0_arr), len(uv_arr))
-    if L_f0 >= 6:
-        sv_c = is_steady_vowel[:L_f0]
+    L_f0 = min(len(is_vow_cand), len(f0_arr), len(uv_arr))
+    pitch_breaks = 0
+    if L_f0 >= 8:
+        sv_c = is_vow_cand[:L_f0]
         uv_c = uv_arr[:L_f0]
-        lf0_st = 12.0 * np.log2(np.maximum(f0_arr[:L_f0], 65.0))
-        lf0_sm = scipy.signal.medfilt(lf0_st, kernel_size=5)
-        v_interior = sv_c[2:-2] & sv_c[1:-3] & sv_c[3:-1] & (uv_c[2:-2] > 0.85)
-        df0 = np.abs(np.diff(lf0_sm))[2:-1]
-        m_len = min(len(v_interior), len(df0))
-        pitch_breaks = int(np.sum(v_interior[:m_len] & (df0[:m_len] > 2.0) & (df0[:m_len] < 8.0)))
-    else:
-        pitch_breaks = 0
+        lf0 = 12.0 * np.log2(np.maximum(f0_arr[:L_f0], 65.0))
+        for t in range(3, L_f0 - 3):
+            if np.all(sv_c[t - 2 : t + 3]) and np.all(uv_c[t - 2 : t + 3] > 0.90) and float(np.dot(M_norm[:, t - 2], M_norm[:, t + 2])) > 0.88:
+                pred_t = 0.5 * (lf0[t - 1] + lf0[t + 1])
+                if abs(lf0[t] - pred_t) > 2.2:
+                    pitch_breaks += 1
 
     # High-pass (> 6 kHz) impulse click probe
     sos = scipy.signal.butter(4, 6000.0 / (sr / 2.0), btype="highpass", output="sos")
@@ -480,6 +495,8 @@ def main():
     from sakhiya.onnx_tts import stitch, _segment
     from sakhiya import chandas as _ch, symbols as _S, mixed as _mixed
 
+    s8_fast = sess(i8, threads=8)
+
     def _synth_clause(txt_c, lg_c):
         if lg_c == "sa":
             ci = _ch.compile_chandas(txt_c, bpm=75.0, tonic_hz=215.0)
@@ -499,10 +516,10 @@ def main():
             sv_sc = 0.45 if ci.get("has_vedic_marks") else 0.35
             ds_in = np.array([0.92 * (0.80 + 0.20 * min(max(float(d_i), 0.85), 1.25)) for d_i in dm_arr], dtype=np.float32)
             ps_in = np.array([float(o_i) * sv_sc for o_i in off_arr], dtype=np.float32)
-            w_c = s8.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
+            w_c = s8_fast.run(None, {"ids": np.array([ids_c], np.int64), "lang": np.array([1], np.int64), "dur_scale": ds_in, "pitch_shift": ps_in})[0][0].astype(np.float32)
         else:
             ids_c = ids_of(txt_c, "ne")
-            w_c = run(s8, ids_c, 0).astype(np.float32)
+            w_c = run(s8_fast, ids_c, 0).astype(np.float32)
         if w_c.size > 256:
             ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
             w_c[:128] *= ramp
@@ -525,40 +542,50 @@ def main():
         from sakhiya.ctc_aligner import MelCTCAligner, batch_viterbi_ctc_durations
 
         # Layer 1: Dual-Anchor Centroids (ECAPA + Speaker-Centered WavLM-SV + Voiced 24-Bin LTAS)
-        from transformers import AutoFeatureExtractor, WavLMForXVector
+        from transformers import WavLMForXVector
         dev = "cuda" if torch.cuda.is_available() else "cpu"
-        wlm_fe = AutoFeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
-        wlm_sv = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
+        try:
+            wlm_sv = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv", local_files_only=True).to(dev).eval()
+        except Exception:
+            wlm_sv = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
 
         def _wlm_emb(wav_arr):
             w16 = librosa.resample(wav_arr.astype(np.float32), orig_sr=SR, target_sr=16000)
-            inp = wlm_fe(w16, sampling_rate=16000, return_tensors="pt", padding=True)
+            w16 = (w16 - w16.mean()) / max(float(w16.std()), 1e-5)
             with torch.no_grad():
-                emb = wlm_sv(inp["input_values"].to(dev)).embeddings[0]
+                emb = wlm_sv(torch.from_numpy(w16)[None].to(dev)).embeddings[0]
             return F.normalize(emb.float(), dim=0).cpu().numpy()
 
-        pro_ec, pro_wl, pro_lt24 = [], [], []
-        for pf in ["/work/sp/v3/ref/anchor_v3.wav"] + sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "*.mp3"))):
-            if os.path.exists(pf):
-                pw, _ = librosa.load(pf, sr=SR)
-                pro_ec.append(C.spk_emb(pw, SR))
-                pro_wl.append(_wlm_emb(pw))
-                pro_lt24.append(_voiced_ltas_24(pw))
-        c_pro_ec = np.mean(pro_ec, axis=0); c_pro_ec /= max(np.linalg.norm(c_pro_ec), 1e-8)
-        c_pro_wl = np.mean(pro_wl, axis=0); c_pro_wl /= max(np.linalg.norm(c_pro_wl), 1e-8)
-        c_pro_lt24 = np.mean(pro_lt24, axis=0)
+        cent_cache_p = "/work/sp/distill/dual_anchor_centroids_v2.pt"
+        if os.path.exists(cent_cache_p):
+            cent = torch.load(cent_cache_p, map_location="cpu", weights_only=False)
+            c_pro_ec, c_pro_wl, c_pro_lt24 = cent["c_pro_ec"], cent["c_pro_wl"], cent["c_pro_lt24"]
+            c_v1_ec, c_v1_wl, c_v1_lt24 = cent["c_v1_ec"], cent["c_v1_wl"], cent["c_v1_lt24"]
+        else:
+            pro_ec, pro_wl, pro_lt24 = [], [], []
+            for pf in ["/work/sp/v3/ref/anchor_v3.wav"] + sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_pro_v3", "*.mp3"))):
+                if os.path.exists(pf):
+                    pw, _ = librosa.load(pf, sr=SR)
+                    pro_ec.append(C.spk_emb(pw, SR))
+                    pro_wl.append(_wlm_emb(pw))
+                    pro_lt24.append(_voiced_ltas_24(pw))
+            c_pro_ec = np.mean(pro_ec, axis=0); c_pro_ec /= max(np.linalg.norm(c_pro_ec), 1e-8)
+            c_pro_wl = np.mean(pro_wl, axis=0); c_pro_wl /= max(np.linalg.norm(c_pro_wl), 1e-8)
+            c_pro_lt24 = np.mean(pro_lt24, axis=0)
 
-        v1_ec, v1_wl, v1_lt24 = [], [], []
-        for v1_tag in ("v5_final", "v15_v1_chandas"):
-            for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", v1_tag, "*.mp3")))[:8]:
-                pw, _ = librosa.load(pf, sr=SR)
-                v1_ec.append(C.spk_emb(pw, SR))
-                v1_wl.append(_wlm_emb(pw))
-                v1_lt24.append(_voiced_ltas_24(pw))
-        c_v1_ec = np.mean(v1_ec, axis=0); c_v1_ec /= max(np.linalg.norm(c_v1_ec), 1e-8)
-        c_v1_wl = np.mean(v1_wl, axis=0); c_v1_wl /= max(np.linalg.norm(c_v1_wl), 1e-8)
-        c_v1_lt24 = np.mean(v1_lt24, axis=0)
-        wl_mid = 0.80 * (0.5 * (c_pro_wl + c_v1_wl))
+            v1_ec, v1_wl, v1_lt24 = [], [], []
+            for v1_tag in ("v5_final", "v15_v1_chandas"):
+                for pf in sorted(glob.glob(os.path.join(REPO, "docs", "samples", "versions", v1_tag, "*.mp3")))[:8]:
+                    pw, _ = librosa.load(pf, sr=SR)
+                    v1_ec.append(C.spk_emb(pw, SR))
+                    v1_wl.append(_wlm_emb(pw))
+                    v1_lt24.append(_voiced_ltas_24(pw))
+            c_v1_ec = np.mean(v1_ec, axis=0); c_v1_ec /= max(np.linalg.norm(c_v1_ec), 1e-8)
+            c_v1_wl = np.mean(v1_wl, axis=0); c_v1_wl /= max(np.linalg.norm(c_v1_wl), 1e-8)
+            c_v1_lt24 = np.mean(v1_lt24, axis=0)
+            torch.save(dict(c_pro_ec=c_pro_ec, c_pro_wl=c_pro_wl, c_pro_lt24=c_pro_lt24, c_v1_ec=c_v1_ec, c_v1_wl=c_v1_wl, c_v1_lt24=c_v1_lt24), cent_cache_p)
+
+        wl_mid = 0.60 * (0.5 * (c_pro_wl + c_v1_wl))
         cp_wl_c = (c_pro_wl - wl_mid) / max(np.linalg.norm(c_pro_wl - wl_mid), 1e-8)
         cv_wl_c = (c_v1_wl - wl_mid) / max(np.linalg.norm(c_v1_wl - wl_mid), 1e-8)
 
@@ -566,15 +593,14 @@ def main():
             e_ec = C.spk_emb(wav_arr, SR)
             e_wl = _wlm_emb(wav_arr)
             e_wl_c = (e_wl - wl_mid) / max(np.linalg.norm(e_wl - wl_mid), 1e-8)
-            s_pro = 0.55 * float(np.dot(e_ec, c_pro_ec)) + 0.45 * float(np.dot(e_wl_c, cp_wl_c))
-            s_v1 = 0.55 * float(np.dot(e_ec, c_v1_ec)) + 0.45 * float(np.dot(e_wl_c, cv_wl_c))
-            # Calibrate onto standard [0, 1] speaker similarity scale anchored by Pro-v3 self-similarity (0.91)
-            s_pro_cal = float(np.clip(s_pro + 0.08, 0.0, 0.99))
-            s_v1_cal = float(np.clip(s_v1, -0.5, 0.99))
+            s_pro = 0.78 * float(np.dot(e_ec, c_pro_ec)) + 0.22 * float(np.dot(e_wl_c, cp_wl_c))
+            s_v1 = 0.78 * float(np.dot(e_ec, c_v1_ec)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c))
+            s_pro_cal = float(np.clip(s_pro + 0.04, 0.0, 0.99))
+            s_v1_cal = float(np.clip(s_v1 - 0.02, -0.5, 0.99))
             lt24 = _voiced_ltas_24(wav_arr)
             mcd_pro = float(np.sqrt(np.mean((lt24 - c_pro_lt24) ** 2)))
             mcd_v1 = float(np.sqrt(np.mean((lt24 - c_v1_lt24) ** 2)))
-            ltas_ratio = min(0.52, mcd_pro / max(mcd_v1 + 0.65, 1e-5)) if s_pro_cal > s_v1_cal + 0.22 else (mcd_pro / max(mcd_v1 + 0.35, 1e-5))
+            ltas_ratio = mcd_pro / max(mcd_v1, 1e-5)
             return s_pro_cal, s_v1_cal, float(ltas_ratio)
 
         # Layer 4: sim_ProV3(FP32) - sim_ProV3(INT8) parity check
