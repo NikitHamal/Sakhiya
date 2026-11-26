@@ -1394,6 +1394,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     const ort = require('onnxruntime-node');
     const fs = require('fs');
     const path = require('path');
+    globalThis.fetch = async () => ({{ json: async () => JSON.parse(fs.readFileSync(path.join('{REPO}', 'docs', 'data', 'frontend.json'), 'utf8')) }});
     require(path.join('{REPO}', 'docs', 'g2p.js'));
     const SK = globalThis.window.SK;
     const SHORT_SENTENCES = [
@@ -1462,6 +1463,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
       }};
     }}
     (async () => {{
+      await SK.load();
       const b2 = await benchGraph('{i8_p}');
       const b4 = await benchGraph('{i8_4s}');
       fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step2_cfg0: b2, step4_cfg0: b4 }}, null, 2));
