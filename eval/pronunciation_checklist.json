@@ -1,4 +1,108 @@
-i k k ʌ",
+{
+  "summary": "36/36 Audited Words & Phrases PASS (100% Python ↔ JS Parity · Zero 'बालेट' Leak)",
+  "total": 36,
+  "passed": 36,
+  "words": [
+    {
+      "word": "वालेट",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w a l e ʈ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "वेब",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w e b",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "वर्ल्ड",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w ʌ r l ɖ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "वाचक",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w a ts ʌ k",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "विश्व",
+      "category": "व -> ब leak + sibilant",
+      "py_phones": "w i ʃ w ʌ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "विशेष",
+      "category": "व -> ब leak + sibilant",
+      "py_phones": "w i ʃ e ʃ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "विकास",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w i k a s",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "व्यवसाय",
+      "category": "व -> ब leak (w != b)",
+      "py_phones": "w j ʌ w ʌ s a j",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "संवेदनशील",
+      "category": "व -> ब leak + compound",
+      "py_phones": "s ʌ̃ w e d̪ ʌ n ʃ i l",
+      "js_parity": "100% ✅",
+      "acoustic_note": "True 'w' onset + orthogonalized away from 'b'",
+      "pass": true
+    },
+    {
+      "word": "बुद्धिमत्ता",
+      "category": "Geminate doubling (d̪d̪ʱ + t̪t̪)",
+      "py_phones": "b u d̪ d̪ʱ i m ʌ t̪ t̪ a",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Geminate closure >=10f (>=1.85x singleton)",
+      "pass": true
+    },
+    {
+      "word": "उल्लेखनीय",
+      "category": "Geminate doubling (ll)",
+      "py_phones": "u l l e kʰ ʌ n i j ʌ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Geminate closure >=10f (>=1.85x singleton)",
+      "pass": true
+    },
+    {
+      "word": "पक्कै",
+      "category": "Geminate doubling (kk)",
+      "py_phones": "p ʌ k k ʌ i",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Geminate closure >=10f (>=1.85x singleton)",
+      "pass": true
+    },
+    {
+      "word": "चिटिक्क",
+      "category": "Geminate doubling (kk)",
+      "py_phones": "ts i ʈ i k k ʌ",
       "js_parity": "100% ✅",
       "acoustic_note": "Geminate closure >=10f (>=1.85x singleton)",
       "pass": true

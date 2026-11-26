@@ -1,4 +1,128 @@
-flatness": 0.52,
+{
+  "tier": "sakhiya_one",
+  "model_dir": "/work/tts/Sakhiya/docs/models_sakhiya_one",
+  "int8_mb": 8.464,
+  "fp32_mb": 32.48,
+  "int8_weight_pct": 99.19,
+  "distinct_from_fp32_graph": true,
+  "rtf_1thread": 0.0507,
+  "utmos_15": 3.873,
+  "ne_pcer": 0.059,
+  "anchor_pcer": 0.032,
+  "ne_pcer_gap_vs_anchor": 0.027,
+  "ne_pcer_gap_vs_ProV3": 0.027,
+  "HF_LSD_4_10kHz_dB": 1.037,
+  "HF_LSD_4_12kHz_dB": 1.94,
+  "comb_grit": 1.4618,
+  "mid_vowel_warble_st": 0.1358,
+  "Voiced_HNR_dB": 19.183,
+  "stft_lsd_int8_fp32_dB": 0.0009,
+  "silence_floor_SNR_dB": 72.0,
+  "studio_physics_probes": {
+    "ltas_4band_delta_vs_raw_6834_dB": {
+      "band_150_400Hz_chest_delta_dB": 0.581,
+      "band_1_4kHz_formant_delta_dB": 1.822,
+      "band_4p5_8p5kHz_sibilant_delta_dB": 2.37,
+      "band_8_11p2kHz_air_delta_dB": 3.541,
+      "band_8_12kHz_air_delta_dB": 4.245,
+      "voiced_H1_minus_H2_delta_dB": 0.83
+    },
+    "silence_floor_SNR_dB": 72.0,
+    "voiced_vowel_hnr_0p2_4kHz_dB": 18.75,
+    "voiced_vowel_hnr_delta_vs_anchor_dB": 0.3,
+    "sibilant_4p5_10kHz_flatness": 0.748,
+    "sibilant_phase_coherence": 0.605,
+    "sibilant_separate_envelopes": {
+      "s_dental_fricative": {
+        "flatness_4p5_10kHz": 0.738,
+        "hi_minus_lo_tilt_dB": 7.768,
+        "spectral_centroid_Hz": 7555.2
+      },
+      "chh_aspirated_affricate": {
+        "flatness_4p5_10kHz": 0.762,
+        "hi_minus_lo_tilt_dB": 0.724,
+        "spectral_centroid_Hz": 7020.4
+      }
+    },
+    "anchor_has_creak": false,
+    "phrase_final_creak_SHR": 0.019,
+    "phrase_final_creak_SHR_delta_vs_anchor": 0.0,
+    "phrase_final_CPP_drop_dB": 0.009,
+    "phrase_final_CPP_drop_delta_vs_anchor": 0.035,
+    "breath_span_rms_dB": -27.8,
+    "breath_span_flatness": 0.52,
+    "dead_digital_silence_breaths": 0,
+    "within_word_dur_f0_energy_corr": 0.214,
+    "laryngeal_4way_stop_contrast": {
+      "breathy_voiced_post_release_hnr_dB": 19.72,
+      "aspirated_chh_minus_ch_vot_ms": 10.7
+    }
+  },
+  "geminate_singleton_ratio": 1.609,
+  "clause_final_f0_slope_st_per_sec": -1.616,
+  "inter_clause_pause_ms": 123.5,
+  "breath_pause_naturalness": 0.85,
+  "word_drop_count": 0,
+  "stutter_count": 0,
+  "f0_shutters": 0,
+  "clicks": 0,
+  "sv_cos_ne_sa": 0.8443,
+  "sim_Anchor": 0.8443,
+  "sim_ProV3": 0.8443,
+  "sim_OldV1": 0.406,
+  "margin_Anchor_OldV1": 0.4383,
+  "margin_ProV3_OldV1": 0.4383,
+  "layers": {
+    "layer1_timbre": {
+      "sim_ProV3": 0.8443,
+      "sim_OldV1": 0.406,
+      "margin_ProV3_OldV1": 0.4383,
+      "voiced_ltas_mcd_db": 3.004,
+      "voiced_ltas_mcd_ratio": 0.4845
+    },
+    "layer2_physics": {
+      "HF_LSD_4_10kHz_dB": 1.037,
+      "HF_LSD_4_12kHz_dB": 1.94,
+      "upper_band_HNR_anomaly_dB": 1.087,
+      "mid_vowel_shutters": 0,
+      "intra_voiced_pitch_breaks": 0,
+      "hf_impulse_clicks": 0,
+      "comb_grit": 1.4584,
+      "mid_vowel_warble_st": 0.083,
+      "silence_floor_SNR_dB": 72.0,
+      "studio_physics_probes": {
+        "ltas_4band_delta_vs_raw_6834_dB": {
+          "band_150_400Hz_chest_delta_dB": 0.581,
+          "band_1_4kHz_formant_delta_dB": 1.822,
+          "band_4p5_8p5kHz_sibilant_delta_dB": 2.37,
+          "band_8_11p2kHz_air_delta_dB": 3.541,
+          "band_8_12kHz_air_delta_dB": 4.245,
+          "voiced_H1_minus_H2_delta_dB": 0.83
+        },
+        "silence_floor_SNR_dB": 72.0,
+        "voiced_vowel_hnr_0p2_4kHz_dB": 18.75,
+        "voiced_vowel_hnr_delta_vs_anchor_dB": 0.3,
+        "sibilant_4p5_10kHz_flatness": 0.748,
+        "sibilant_phase_coherence": 0.605,
+        "sibilant_separate_envelopes": {
+          "s_dental_fricative": {
+            "flatness_4p5_10kHz": 0.738,
+            "hi_minus_lo_tilt_dB": 7.768,
+            "spectral_centroid_Hz": 7555.2
+          },
+          "chh_aspirated_affricate": {
+            "flatness_4p5_10kHz": 0.762,
+            "hi_minus_lo_tilt_dB": 0.724,
+            "spectral_centroid_Hz": 7020.4
+          }
+        },
+        "anchor_has_creak": false,
+        "phrase_final_creak_SHR": 0.019,
+        "phrase_final_creak_SHR_delta_vs_anchor": 0.0,
+        "phrase_final_CPP_drop_dB": 0.009,
+        "phrase_final_CPP_drop_delta_vs_anchor": 0.035,
+        "breath_span_rms_dB": -27.8,
+        "breath_span_flatness": 0.52,
         "dead_digital_silence_breaths": 0,
         "within_word_dur_f0_energy_corr": 0.214,
         "laryngeal_4way_stop_contrast": {
