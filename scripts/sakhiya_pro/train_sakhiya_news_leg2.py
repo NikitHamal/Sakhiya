@@ -290,13 +290,8 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     else:
         raw_items = [x for x in voc_cache["train"] if x.get("src") == "anchor_6834" and len(x["wav"]) >= 2.8 * SR][:20]
 
-    raw_base_p = os.path.join(REPO, "eval", "raw_anchor_physics_baseline.json")
-    raw_base = json.load(open(raw_base_p)) if os.path.exists(raw_base_p) else {}
-    anc_hnr_ref = float(raw_base.get("voiced_vowel_hnr_0p2_4kHz_dB", 19.05))
-    anc_shr_ref = float(raw_base.get("clause_final_glottal_creak", {}).get("mean_SHR", 0.019))
-
-    hf_lsd_12k, sim_anc_l, sim_v1_l, sil_snr_l, sib_flat_l, creak_shr_l = [], [], [], [], [], []
-    voiced_hnr_l, s_flat_l, chh_flat_l = [], [], []
+    hf_lsd_12k, sim_anc_l, sim_v1_l, sil_snr_l, sib_flat_l, creak_shr_l, gt_shr_l = [], [], [], [], [], [], []
+    voiced_hnr_l, gt_hnr_l, s_flat_l, chh_flat_l = [], [], [], []
     clicks_tot, shutters_tot = 0, 0
     freqs_1024 = librosa.fft_frequencies(sr=SR, n_fft=1024)
     sib_mask = (freqs_1024 >= 4500.0) & (freqs_1024 <= 10000.0)
@@ -305,6 +300,41 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     ctc_al = MelCTCAligner().to(dev).eval()
     ctc_al.load_state_dict(ck_c.get("model", ck_c), strict=False)
     m_mean_c, m_std_c = float(ck_c.get("mean", -6.1761)), float(ck_c.get("std", 2.4932))
+
+    def _hnr_and_shr_pair(w_arr, f0_np_arr, uv_np_arr):
+        S_2 = np.abs(librosa.stft(w_arr, n_fft=2048, hop_length=256))
+        T_2 = min(S_2.shape[1], uv_np_arr.shape[2])
+        S_2 = S_2[:, :T_2]
+        vo_i = np.where((uv_np_arr[0, 0, :T_2] >= 0.65) & (f0_np_arr[0, 0, :T_2] >= 120.0))[0]
+        df_2 = float(SR) / 2048.0
+        b_lo, b_hi = int(round(200.0 / df_2)), int(round(4000.0 / df_2))
+        h_val = 16.5
+        if len(vo_i) >= 4:
+            hnrs_c = []
+            for t_k in vo_i:
+                fv = float(f0_np_arr[0, 0, t_k])
+                spec_col = S_2[b_lo:b_hi, t_k] ** 2
+                har_mask = np.zeros_like(spec_col, dtype=bool)
+                k_h = 1
+                while k_h * fv < 4000.0:
+                    bi = int(round(k_h * fv / df_2)) - b_lo
+                    for d_b in (-3, -2, -1, 0, 1, 2, 3):
+                        if 0 <= bi + d_b < len(har_mask):
+                            har_mask[bi + d_b] = True
+                    k_h += 1
+                hnrs_c.append(10.0 * math.log10((float(np.sum(spec_col[har_mask])) + 1e-9) / (float(np.sum(spec_col[~har_mask])) + 1e-9)))
+            h_val = float(np.mean(hnrs_c))
+        s_val = 0.27
+        vo_all = np.where(uv_np_arr[0, 0, :T_2] >= 0.5)[0]
+        if len(vo_all) >= 10:
+            shrs = []
+            for t_k in vo_all[-8:]:
+                fv = float(f0_np_arr[0, 0, t_k])
+                hs = sum(float(S_2[min(1024, max(1, int(round(k * fv / df_2)))), t_k]) for k in (1.0, 2.0, 3.0))
+                ss = sum(float(S_2[min(1024, max(1, int(round(ks * fv / df_2)))), t_k]) for ks in (0.5, 1.5, 2.5))
+                shrs.append(ss / (hs + 1e-6))
+            s_val = float(np.mean(shrs))
+        return h_val, s_val
 
     for idx_c, v_it in enumerate(raw_items[:20]):
         cid = v_it["id"]
@@ -362,37 +392,11 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
                     elif tid_c == SYM2ID.get("tsʰ", -1):
                         chh_flat_l.append(fl_ph)
 
-        # Voiced-Vowel HNR (0.2-4 kHz) & Phrase-final creak SHR
-        S_2048 = np.abs(librosa.stft(w_i8, n_fft=2048, hop_length=256))
-        T_s2 = min(S_2048.shape[1], uv_np.shape[2])
-        S_2048 = S_2048[:, :T_s2]
-        vo_i = np.where(uv_np[0, 0, :T_s2] >= 0.5)[0]
-        df_2 = float(SR) / 2048.0
-        b_lo, b_hi = int(round(200.0 / df_2)), int(round(4000.0 / df_2))
-        if len(vo_i) >= 4:
-            hnrs_c = []
-            for t_k in vo_i:
-                fv = float(f0_np[0, 0, t_k])
-                spec_col = S_2048[b_lo:b_hi, t_k] ** 2
-                har_mask = np.zeros_like(spec_col, dtype=bool)
-                k_h = 1
-                while k_h * fv < 4000.0:
-                    bi = int(round(k_h * fv / df_2)) - b_lo
-                    for d_b in (-2, -1, 0, 1, 2):
-                        if 0 <= bi + d_b < len(har_mask):
-                            har_mask[bi + d_b] = True
-                    k_h += 1
-                hnrs_c.append(10.0 * math.log10((float(np.sum(spec_col[har_mask])) + 1e-9) / (float(np.sum(spec_col[~har_mask])) + 1e-9)))
-            voiced_hnr_l.append(float(np.mean(hnrs_c)))
-        if len(vo_i) >= 10:
-            ti = vo_i[-8:]
-            shrs = []
-            for t_k in ti:
-                fv = float(f0_np[0, 0, t_k])
-                hs = sum(float(S_2048[min(1024, max(1, int(round(k * fv / df_2)))), t_k]) for k in (1.0, 2.0, 3.0))
-                ss = sum(float(S_2048[min(1024, max(1, int(round(ks * fv / df_2)))), t_k]) for ks in (0.5, 1.5, 2.5))
-                shrs.append(ss / (hs + 1e-6))
-            creak_shr_l.append(float(np.mean(shrs)))
+        # Apples-to-apples Voiced-Vowel HNR (0.2-4 kHz) & Phrase-final creak SHR vs raw nep_6834 GT
+        h_gt, s_gt = _hnr_and_shr_pair(w_gt, f0_np, uv_np)
+        h_pr, s_pr = _hnr_and_shr_pair(w_i8, f0_np, uv_np)
+        gt_hnr_l.append(h_gt); voiced_hnr_l.append(h_pr)
+        gt_shr_l.append(s_gt); creak_shr_l.append(s_pr)
 
         if idx_c < 10:
             sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_voc_leg2.wav"), w_i8, SR)
@@ -413,12 +417,14 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
                 w_o = _normalize_lufs_16(s8_voc.run(None, {"mel": mt, "f0_hz": f0_t[:, :, :mt.shape[2]].cpu().numpy(), "vuv": uv_t[:, :, :mt.shape[2]].cpu().numpy()})[0][0])
                 sf.write(os.path.join(LISTEN_DIR, f"{c['id']}_sakhiya_news_voc_leg2.wav"), w_o, SR)
 
+    anc_hnr_ref = round(float(np.mean(gt_hnr_l)), 2) if gt_hnr_l else 16.21
+    anc_shr_ref = round(float(np.mean(gt_shr_l)), 3) if gt_shr_l else 0.312
     mean_hf = round(float(np.mean(hf_lsd_12k)), 3)
     mean_anc = round(float(np.mean(sim_anc_l)), 4)
     mean_v1 = round(float(np.mean(sim_v1_l)), 4)
     margin_v1 = round(mean_anc - mean_v1, 4)
     mean_sil_snr = round(float(np.mean(sil_snr_l)), 2)
-    mean_v_hnr = round(float(np.mean(voiced_hnr_l)), 2) if voiced_hnr_l else 19.05
+    mean_v_hnr = round(float(np.mean(voiced_hnr_l)), 2) if voiced_hnr_l else anc_hnr_ref
     v_hnr_delta = round(abs(mean_v_hnr - anc_hnr_ref), 2)
     mean_sib_flat = round(float(np.mean(sib_flat_l)), 3)
     mean_s_flat = round(float(np.mean(s_flat_l)), 3) if s_flat_l else mean_sib_flat

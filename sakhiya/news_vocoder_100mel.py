@@ -140,8 +140,8 @@ class ConvNeXtV2MRFBlock(nn.Module):
         return self.grn(x)
 
 
-# Calibrated from Phase-0 raw un-VC'd nep_6834: P90_SHR = 0.030 <= 0.15 (naturally modal Kathmandu studio anchor)
-ANCHOR_HAS_CREAK_DEFAULT = False
+# Calibrated from Phase-0 raw un-VC'd nep_6834: mean_SHR = 0.312, P90_SHR = 0.479 > 0.15
+ANCHOR_HAS_CREAK_DEFAULT = True
 
 
 class FullBandHarmonicExcitation100Mel(nn.Module):
@@ -168,7 +168,7 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
-        creak_w = 0.28 if (self.anchor_has_creak or shr_creak is not None) else 0.0
+        creak_w = 0.38 if self.anchor_has_creak else 0.0
         if shr_creak is not None:
             if shr_creak.dim() == 2:
                 shr_creak = shr_creak[:, None, :]
@@ -176,6 +176,7 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
             if not self.anchor_has_creak:
                 shr_16 = shr_16 * 0.0
         else:
+            # Soft low-F0 register creak gate when not explicitly passed
             shr_16 = (((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16) if self.anchor_has_creak else torch.zeros_like(f0_16)
 
         cyc = torch.cumsum(f0_16 * (1.0 / (SR / ISTFT_HOP)), dim=-1)
@@ -389,20 +390,14 @@ class StudioVocoder100Mel(nn.Module):
 
         freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
 
-        # Conditional zero-param 0.5*F0 period-doubling glottal pulse modulation on low harmonic bins (0..7)
-        cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
-        ph_sub = (2.0 * math.pi) * (cyc_sub - torch.floor(cyc_sub))
-        low_bin_w = ((8.0 - freq_ar) / 4.0).clamp(0.0, 1.0)
-        creak_mod = 1.0 + 0.35 * shr_16 * uv_16 * low_bin_w * (0.70 * torch.cos(ph_sub) + 0.30 * torch.cos(3.0 * ph_sub))
-
         # Harmonic magnitude & phase
-        A_harm = torch.exp(log_mag) * sg_16 * creak_mod
+        A_harm = torch.exp(log_mag) * sg_16
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
 
-        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, zero bleed into 0.2-4 kHz voiced HNR)
-        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.04, 1.0)
-        unvoiced_boost = 1.0 - 0.85 * uv_16 * (1.0 - 0.65 * hi_band_w)
+        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, gentle on low voiced bins)
+        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.08, 1.0)
+        unvoiced_boost = 1.0 - 0.65 * uv_16 * (1.0 - 0.70 * hi_band_w)
         A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
 
         if noise_re is None or noise_im is None:
