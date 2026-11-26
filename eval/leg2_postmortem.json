@@ -1,0 +1,92 @@
+{
+  "session": 78,
+  "audited_commit": "425bb6f",
+  "rollback_commit": "b02e5a5",
+  "default_reverted_to": "sakhiya_one (a61c100)",
+  "matrix_6point_isolation": {
+    "M0_leg1_vocoder_fp32_on_gt_nep6834": {
+      "voiced_hnr_0p2_4kHz_dB": 16.9869,
+      "voiced_hf_flatness_4p5_10kHz": 0.5636,
+      "unvoiced_sib_flatness_4p5_10kHz": 0.6716,
+      "HF_LSD_4_12kHz_dB": 1.2746,
+      "shutters": 0,
+      "clicks": 0,
+      "verdict": "Clean harmonic baseline when noise_head=0 and creak=0; clean AWPVocoder (sakhiya_one_voc.pt) has zero GRN/upper_proj intermodulation."
+    },
+    "M1_leg2_phase1_vocoder_on_gt_nep6834": {
+      "fp32": {
+        "voiced_hnr_0p2_4kHz_dB": 17.0889,
+        "voiced_hf_flatness_4p5_10kHz": 0.5654,
+        "unvoiced_sib_flatness_4p5_10kHz": 0.6779,
+        "HF_LSD_4_12kHz_dB": 1.0022
+      },
+      "fp32_A_noise_zero_creak_zero": {
+        "voiced_hnr_0p2_4kHz_dB": 17.3014,
+        "voiced_hf_flatness_4p5_10kHz": 0.5618,
+        "unvoiced_sib_flatness_4p5_10kHz": 0.6745,
+        "HF_LSD_4_12kHz_dB": 1.5651
+      },
+      "int8_97p93pct": {
+        "voiced_hnr_0p2_4kHz_dB": 17.023,
+        "voiced_hf_flatness_4p5_10kHz": 0.5768,
+        "unvoiced_sib_flatness_4p5_10kHz": 0.6865,
+        "HF_LSD_4_12kHz_dB": 0.5201
+      },
+      "verdict": "Disabling A_noise, 0.5*F0 creak, and inharmonic upper_proj immediately improves voiced HNR (+0.28 dB) and lowers voiced HF flatness. In eval/ONNX mode, _compute_ola_unit_phasor_noise used sin(12.9898*n)*cos(43.7585*n) (two stationary pure sine waves!) normalized to unit magnitude across all 33 STFT bins, injecting a stationary metallic comb buzz whenever A_noise > 0."
+    },
+    "M2_leg1_am_4step_plus_leg1_vocoder_on_owner_4clips": {
+      "voiced_vowel_hnr_dB": 18.65,
+      "s_flatness": 0.808,
+      "chh_flatness": 0.788,
+      "creak_SHR": 0.027,
+      "sil_SNR_dB": 72.0
+    },
+    "M3_leg2_phase2_am_4step_plus_leg1_vocoder_on_owner_4clips": {
+      "voiced_vowel_hnr_dB": 18.4,
+      "s_flatness": 0.793,
+      "chh_flatness": 0.775,
+      "creak_SHR": 0.033,
+      "sil_SNR_dB": 71.88
+    },
+    "M4_leg2_phase3_e2e_on_owner_4clips": {
+      "step2_fp32": {
+        "voiced_vowel_hnr_dB": 19.2,
+        "s_flatness": 0.788,
+        "chh_flatness": 0.759,
+        "shutters": 1
+      },
+      "step4_fp32": {
+        "voiced_vowel_hnr_dB": 19.17,
+        "s_flatness": 0.784,
+        "chh_flatness": 0.761,
+        "shutters": 0
+      },
+      "verdict": "2-step E2E produced a shutter on the full-length owner clips that 4-step eliminated (0 shutters). Both M2-M5 exhibited high s/chh flatness (0.78-0.80 vs anchor 0.668/0.685) because SakhiyaNewsFlagship.infer left Nyquist bins 98..99 unclamped, injected STUDIO_AIR_BIAS_21 + A_noise stationary tones, and had 97.94% INT8 quantization."
+    },
+    "M5_leg2_model_int8_onnx_on_owner_4clips": {
+      "voiced_vowel_hnr_dB": 18.3,
+      "s_flatness": 0.804,
+      "chh_flatness": 0.776,
+      "creak_SHR": 0.043,
+      "sil_SNR_dB": 72.0,
+      "int8_weight_pct": 97.94
+    }
+  },
+  "root_causes_identified": {
+    "1_metallic_voiced_vowel_buzz_and_mamakah_screech": [
+      "In StudioVocoder100Mel._compute_ola_unit_phasor_noise, eval/ONNX mode replaced Gaussian white noise with eps = sin(n*12.9898)*cos(n*43.7585), which by trig identity is the sum of TWO PURE STATIONARY SINUSOIDS, then divided each STFT bin by mag_n to unit amplitude 1.0 across all 33 bins, injecting a phase-locked metallic ringing tone across all frames (including 80.5% of high-band voiced vowel frames).",
+      "FullBandHarmonicExcitation100Mel hardcoded ANCHOR_HAS_CREAK_DEFAULT = True and injected 0.5*F0 subharmonic + 1.5*F0 pulse-jitter directly into the k=1 fundamental of voiced vowels, plus trained upper_proj4/16 on 16 inharmonic fractional frequencies (ks_u * 0.125 * F0 = 1.125*F0 .. 3.0*F0) and GRN1d channel intermodulation.",
+      "On Clip 4 ('मामकाः'), word-final visarga 'ः' mapped to bare 'h' without a short echo vowel or duration cap, causing coupled_pros_flow to predict 29 frames (309.4 ms!) ofvoiced/noisy 'h' screech (vuv=0.98, mel=-5.99).",
+      "97.93% of vocoder weights (including voc.pre, voc.ups.0, voc.ups.1, and all MRF convs) were quantized to INT8."
+    ],
+    "2_trailing_schwa_and_nepali_g2p_bugs": [
+      "In am_cache_100mel.pt, CTC forced alignment assigned word-final consonants 8-11 frames (85-117 ms) with vuv=1.00 AND assigned word-boundary '|' (ID=1) 4-6 frames (43-64 ms) with vowel-level mel energy (-6.6 to -7.5 dB, vuv_raw=1.00). At inference, the 61-frame Conv1d decoder blended the vowel-energy '|' token into the end of every word-final consonant while vocoder silence gate sg remained 1.00, producing an audible '-अ' release on every consonant-final word.",
+      "Medial schwa deletion was missing on compound/prefixed words and loanwords ('अनलाइन' -> ʌ n ʌ l a i n, 'उतारचढाव' -> u t̪ a r ʌ ts ʌ ɖʱ a w, 'च्याटजिपिटी' -> ts j a ʈ ʌ dz i p i ʈ i, 'दिनमै' -> d̪ i n ʌ m ʌ i).",
+      "Vowel hiatus in 'भएका/भएको' (bʱ ʌ e k a / bʱ ʌ e k o) lacked the palatal glide 'j' (unlike 'आएका' -> a j e k a and 'बनाउनुभएको' -> ... bʱ ʌ j e k o), causing the AM to collapse 'ʌ e' into 'भेका/भेको'. Similarly, 'भइरहेको/भइरहेका' (bʱ ʌ i r ʌ h e k o) had identical 'bʱ ʌ i' to diphthong 'भै', collapsing into 'भिरहेको/भिरहेका'."
+    ],
+    "3_choppy_cadence_and_mid_clause_pauses": [
+      "onnx_tts._segment and docs/tts.js sliced any sentence >20 words every 12 words (or after finite verbs), cutting mid-phrase ('कामहरू | छिटो', 'संस्करणहरू | ल्याउँदै', 'वालेट सुविधा | सुरु', 'आएका नयाँ | परिवर्तनहरूबारे') and appending a full sentence-final danda '.' to every slice!",
+      "Every word boundary '|' (ID=1) inside a clause was given 4-6 frames (43-64 ms) where vuv was abruptly multiplied by 0.04 (1 - 0.96*pause_frame), chopping continuous speech into isolated word-by-word blocks."
+    ]
+  }
+}

@@ -82,11 +82,11 @@ def sync_once():
     api.upload_folder(
         folder_path=STAGE_DIR,
         repo_id=REPO_ID,
-        path_in_repo="sakhiya_news_final",
-        commit_message="sakhiya_news_final 15m auto-backup " + time.strftime("%H:%M:%S"),
+        path_in_repo="sakhiya_news_v2",
+        commit_message="sakhiya_news_v2 15m auto-backup " + time.strftime("%H:%M:%S"),
         ignore_patterns=["*.tmp", "**/__pycache__/**"],
     )
-    print(f"[{time.strftime('%H:%M:%S')}] HF backup ok -> {REPO_ID}/sakhiya_news_final", flush=True)
+    print(f"[{time.strftime('%H:%M:%S')}] HF backup ok -> {REPO_ID}/sakhiya_news_v2", flush=True)
 
 
 if __name__ == "__main__":
