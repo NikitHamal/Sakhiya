@@ -1,0 +1,68 @@
+{
+  "int8_mb": 10.115,
+  "fp32_mb": 34.614,
+  "int8_weight_pct": 87.19,
+  "node_verify": {
+    "model": "/work/sp/sakhiya_news/v2_candidate/model.int8.onnx",
+    "nan_count": 0,
+    "mean_rtf": 0.0556,
+    "clips": [
+      {
+        "lang": "ne",
+        "dur_s": 4.27,
+        "rtf_1thread": 0.0566,
+        "max_abs": 0.88,
+        "rms": 0.1826
+      },
+      {
+        "lang": "ne",
+        "dur_s": 5.84,
+        "rtf_1thread": 0.0571,
+        "max_abs": 0.88,
+        "rms": 0.1502
+      },
+      {
+        "lang": "ne",
+        "dur_s": 7.86,
+        "rtf_1thread": 0.0558,
+        "max_abs": 0.88,
+        "rms": 0.151
+      },
+      {
+        "lang": "sa",
+        "dur_s": 6.99,
+        "rtf_1thread": 0.0541,
+        "max_abs": 0.88,
+        "rms": 0.1975
+      },
+      {
+        "lang": "sa",
+        "dur_s": 6.86,
+        "rtf_1thread": 0.0543,
+        "max_abs": 0.88,
+        "rms": 0.1968
+      }
+    ],
+    "ok": true,
+    "cold_rtf_1thread": 0.0606,
+    "warm_median_rtf_1thread": 0.0574,
+    "warm_p95_rtf_1thread": 0.0598,
+    "short_sentence_median_rtf_1thread": 0.0567,
+    "short_sentence_p95_rtf_1thread": 0.0601,
+    "long_40s_owner_clip_median_rtf_1thread": 0.0576,
+    "long_sentence_median_rtf_1thread": 0.0576,
+    "long_sentence_p95_rtf_1thread": 0.0581,
+    "peak_rss_mb": 319.8,
+    "step4_cfg0_benchmark": {
+      "cold_rtf_1thread": 0.0606,
+      "warm_median_rtf_1thread": 0.0574,
+      "warm_p95_rtf_1thread": 0.0598,
+      "short_sentence_median_rtf_1thread": 0.0567,
+      "short_sentence_p95_rtf_1thread": 0.0601,
+      "long_40s_owner_clip_median_rtf_1thread": 0.0576,
+      "long_sentence_median_rtf_1thread": 0.0576,
+      "long_sentence_p95_rtf_1thread": 0.0581,
+      "peak_rss_mb": 319.8
+    }
+  }
+}

@@ -1,22 +1,13 @@
 {
-  "step2_cfg0": {
-    "cold_rtf_1thread": 0.0585,
-    "warm_median_rtf_1thread": 0.0547,
-    "warm_p95_rtf_1thread": 0.0585,
-    "short_sentence_median_rtf_1thread": 0.0543,
-    "short_sentence_p95_rtf_1thread": 0.0579,
-    "long_sentence_median_rtf_1thread": 0.055,
-    "long_sentence_p95_rtf_1thread": 0.058,
-    "peak_rss_mb": 345.9
-  },
   "step4_cfg0": {
-    "cold_rtf_1thread": 0.0628,
-    "warm_median_rtf_1thread": 0.06,
-    "warm_p95_rtf_1thread": 0.063,
-    "short_sentence_median_rtf_1thread": 0.0596,
-    "short_sentence_p95_rtf_1thread": 0.0621,
-    "long_sentence_median_rtf_1thread": 0.0603,
-    "long_sentence_p95_rtf_1thread": 0.0629,
-    "peak_rss_mb": 494.6
+    "cold_rtf_1thread": 0.0606,
+    "warm_median_rtf_1thread": 0.0574,
+    "warm_p95_rtf_1thread": 0.0598,
+    "short_sentence_median_rtf_1thread": 0.0567,
+    "short_sentence_p95_rtf_1thread": 0.0601,
+    "long_40s_owner_clip_median_rtf_1thread": 0.0576,
+    "long_sentence_median_rtf_1thread": 0.0576,
+    "long_sentence_p95_rtf_1thread": 0.0581,
+    "peak_rss_mb": 319.8
   }
 }

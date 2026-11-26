@@ -1,0 +1,1273 @@
+{
+  "fp16_isolated_nodes": [
+    {
+      "name": "m.enc.emb.weight",
+      "shape": [
+        61,
+        144
+      ],
+      "elems": 8784
+    },
+    {
+      "name": "m.enc.engram.engram_emb.weight",
+      "shape": [
+        384,
+        144
+      ],
+      "elems": 55296
+    },
+    {
+      "name": "m.coupled_pros_flow.o.weight",
+      "shape": [
+        1,
+        96,
+        1
+      ],
+      "elems": 96
+    },
+    {
+      "name": "m.coupled_pros_flow.base_pros_proj.4.weight",
+      "shape": [
+        5,
+        96,
+        1
+      ],
+      "elems": 480
+    },
+    {
+      "name": "m.coupled_pros_flow.t_proj.weight",
+      "shape": [
+        96,
+        32
+      ],
+      "elems": 3072
+    },
+    {
+      "name": "m.coupled_pros_flow.vel_net.5.weight",
+      "shape": [
+        6,
+        96,
+        1
+      ],
+      "elems": 576
+    },
+    {
+      "name": "m.vel.prog_proj.weight",
+      "shape": [
+        160,
+        5,
+        1
+      ],
+      "elems": 800
+    },
+    {
+      "name": "m.vel.blocks.0.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.1.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.2.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.3.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.4.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.5.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.6.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.7.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.8.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.blocks.9.dw.weight",
+      "shape": [
+        160,
+        1,
+        7
+      ],
+      "elems": 1120
+    },
+    {
+      "name": "m.vel.out.weight",
+      "shape": [
+        100,
+        160,
+        1
+      ],
+      "elems": 16000
+    },
+    {
+      "name": "m.f0_head.net.0.weight",
+      "shape": [
+        128,
+        100,
+        5
+      ],
+      "elems": 64000
+    },
+    {
+      "name": "m.f0_head.net.2.weight",
+      "shape": [
+        128,
+        128,
+        5
+      ],
+      "elems": 81920
+    },
+    {
+      "name": "m.f0_head.net.4.weight",
+      "shape": [
+        2,
+        128,
+        3
+      ],
+      "elems": 768
+    },
+    {
+      "name": "m.voc.pre.weight",
+      "shape": [
+        320,
+        100,
+        7
+      ],
+      "elems": 224000
+    },
+    {
+      "name": "m.voc.src.proj4.weight",
+      "shape": [
+        160,
+        16,
+        4
+      ],
+      "elems": 10240
+    },
+    {
+      "name": "m.voc.src.proj16.weight",
+      "shape": [
+        80,
+        16,
+        3
+      ],
+      "elems": 3840
+    },
+    {
+      "name": "m.voc.ups.0.weight",
+      "shape": [
+        320,
+        160,
+        8
+      ],
+      "elems": 409600
+    },
+    {
+      "name": "m.voc.ups.1.weight",
+      "shape": [
+        160,
+        80,
+        8
+      ],
+      "elems": 102400
+    },
+    {
+      "name": "m.voc.amp_branch.dw.weight",
+      "shape": [
+        80,
+        1,
+        7
+      ],
+      "elems": 560
+    },
+    {
+      "name": "m.voc.amp_branch.pw1.weight",
+      "shape": [
+        40,
+        80,
+        1
+      ],
+      "elems": 3200
+    },
+    {
+      "name": "m.voc.amp_branch.pw2.weight",
+      "shape": [
+        80,
+        40,
+        1
+      ],
+      "elems": 3200
+    },
+    {
+      "name": "m.voc.pha_branch.dw.weight",
+      "shape": [
+        80,
+        1,
+        7
+      ],
+      "elems": 560
+    },
+    {
+      "name": "m.voc.pha_branch.pw1.weight",
+      "shape": [
+        40,
+        80,
+        1
+      ],
+      "elems": 3200
+    },
+    {
+      "name": "m.voc.pha_branch.pw2.weight",
+      "shape": [
+        80,
+        40,
+        1
+      ],
+      "elems": 3200
+    },
+    {
+      "name": "m.voc.amp_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480
+    },
+    {
+      "name": "m.voc.pha_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480
+    },
+    {
+      "name": "m.voc.noise_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480
+    },
+    {
+      "name": "onnx::Add_8247",
+      "shape": [
+        1,
+        1,
+        144
+      ],
+      "elems": 144
+    },
+    {
+      "name": "onnx::MatMul_8248",
+      "shape": [
+        5,
+        144
+      ],
+      "elems": 720
+    },
+    {
+      "name": "onnx::MatMul_8249",
+      "shape": [
+        1,
+        144
+      ],
+      "elems": 144
+    },
+    {
+      "name": "onnx::Add_8350",
+      "shape": [
+        1,
+        1,
+        144
+      ],
+      "elems": 144
+    },
+    {
+      "name": "onnx::MatMul_8351",
+      "shape": [
+        144,
+        100
+      ],
+      "elems": 14400
+    },
+    {
+      "name": "onnx::Add_8373",
+      "shape": [
+        1,
+        96,
+        1
+      ],
+      "elems": 96
+    },
+    {
+      "name": "onnx::Add_8379",
+      "shape": [
+        1,
+        96,
+        1
+      ],
+      "elems": 96
+    },
+    {
+      "name": "onnx::Add_8385",
+      "shape": [
+        1,
+        96,
+        1
+      ],
+      "elems": 96
+    },
+    {
+      "name": "onnx::Add_8391",
+      "shape": [
+        1,
+        96,
+        1
+      ],
+      "elems": 96
+    },
+    {
+      "name": "onnx::MatMul_8400",
+      "shape": [
+        144,
+        1
+      ],
+      "elems": 144
+    },
+    {
+      "name": "onnx::Add_8504",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8505",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8506",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8507",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8510",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8519",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8520",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8521",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8522",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8525",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8534",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8535",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8536",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8537",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8540",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8549",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8550",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8551",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8552",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8555",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8564",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8565",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8566",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8567",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8570",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8579",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8580",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8581",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8582",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8585",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8594",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8595",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8596",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8597",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8600",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8609",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8610",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8611",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8612",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8615",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8624",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8625",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8626",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8627",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8630",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8639",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8640",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_8641",
+      "shape": [
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8642",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_8645",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9138",
+      "shape": [
+        1,
+        320,
+        1
+      ],
+      "elems": 320
+    },
+    {
+      "name": "onnx::Clip_9141",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9144",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9147",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9150",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9153",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9156",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_9159",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Add_9160",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9161",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9164",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9167",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9170",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9173",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9176",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_9179",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9181",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9184",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9187",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9190",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9193",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9196",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Mul_9199",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9201",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160
+    },
+    {
+      "name": "onnx::Clip_9204",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9207",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9210",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9213",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9216",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9219",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Mul_9222",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Add_9223",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9224",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9227",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9230",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9233",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9236",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9239",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Mul_9242",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9244",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9247",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9250",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9253",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9256",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9259",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Mul_9262",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Clip_9264",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Mul_9267",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    },
+    {
+      "name": "onnx::Mul_9270",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80
+    }
+  ]
+}
