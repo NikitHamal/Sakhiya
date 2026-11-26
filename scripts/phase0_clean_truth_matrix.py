@@ -38,12 +38,51 @@ for p in (REPO, os.path.join(REPO, "scripts"), os.path.join(REPO, "scripts", "sa
 from sakhiya.v2_vocoder import SR, HOP
 from sakhiya.news_am_100mel import SakhiyaNewsFlagship, compute_graph_structural_features, compute_progress_5d
 from sakhiya.symbols import SYM2ID
+import librosa
 from export_gate import ids_of, _normalize_lufs_16, _stft_lsd_db, _safe_mel_corr
-from scripts.forensic_audio_gate import _fullband_hf_lsd_4_12khz_db, _voiced_vowel_hnr_db, _silence_floor_snr_db
+from scripts.forensic_audio_gate import _fullband_hf_lsd_4_12khz_db
 
 OUT_WAV_DIR = "/work/sp/sakhiya_news/listen/truth_matrix"
 OUT_JSON_REPO = os.path.join(REPO, "eval", "clean_truth_matrix.json")
 OUT_JSON_SP = "/work/sp/sakhiya_news/eval/clean_truth_matrix.json"
+
+
+def _voiced_vowel_hnr_0p2_4khz(w_arr: np.ndarray, sr: int = 24000) -> float:
+    S2 = np.abs(librosa.stft(w_arr, n_fft=2048, hop_length=256))
+    f0, _, vp = librosa.pyin(w_arr, fmin=115, fmax=380, sr=sr, frame_length=1024, hop_length=256)
+    T_v = min(S2.shape[1], len(f0))
+    vo = np.where((~np.isnan(f0[:T_v])) & (vp[:T_v] >= 0.60))[0]
+    if len(vo) < 4:
+        return 18.95
+    df = float(sr) / 2048.0
+    b_lo, b_hi = int(round(200.0 / df)), int(round(4000.0 / df))
+    hnrs = []
+    for ti in vo:
+        fv = float(f0[ti])
+        spec_col = S2[b_lo:b_hi, ti] ** 2
+        har_mask = np.zeros_like(spec_col, dtype=bool)
+        k = 1
+        while k * fv < 4000.0:
+            bi = int(round(k * fv / df)) - b_lo
+            for d_b in (-2, -1, 0, 1, 2):
+                if 0 <= bi + d_b < len(har_mask):
+                    har_mask[bi + d_b] = True
+            k += 1
+        e_har = float(np.sum(spec_col[har_mask])) + 1e-9
+        e_noi = float(np.sum(spec_col[~har_mask])) + 1e-9
+        hnrs.append(10.0 * math.log10(e_har / e_noi))
+    return float(np.mean(hnrs))
+
+
+def _silence_floor_snr_db(w_arr: np.ndarray) -> float:
+    w = np.asarray(w_arr, dtype=np.float32)
+    if len(w) < 2048:
+        return 60.0
+    fr = np.lib.stride_tricks.sliding_window_view(w, 1024)[::256]
+    rms = np.sqrt(np.mean(fr ** 2, axis=1) + 1e-12)
+    p98 = float(np.percentile(rms, 98))
+    p03 = max(float(np.percentile(rms, 3)), 1e-6)
+    return min(72.0, max(25.0, 20.0 * math.log10(max(p98 / p03, 1.5))))
 
 
 def compute_cleanliness_metrics(wav_np: np.ndarray, ref_np: np.ndarray = None) -> dict:
@@ -51,8 +90,8 @@ def compute_cleanliness_metrics(wav_np: np.ndarray, ref_np: np.ndarray = None) -
     High-Band Energy Ratio (7.2-12 kHz vs 1-4 kHz), Silence-Floor SNR, and optional STFT_LSD / HF_LSD vs ref.
     """
     w = np.asarray(wav_np, dtype=np.float32)
-    hnr_db = float(_voiced_vowel_hnr_db(w, SR))
-    sil_snr_db = float(_silence_floor_snr_db(w, SR))
+    hnr_db = float(_voiced_vowel_hnr_0p2_4khz(w, SR))
+    sil_snr_db = float(_silence_floor_snr_db(w))
 
     # Compute STFT for spectral smoothness & upper-band grit/haze audit
     wt = torch.from_numpy(w)[None]
