@@ -89,12 +89,12 @@ class SakhiyaWeb {
   }
   _olaUnitPhasorNoise64(T, seed = 0) {
     // 0-MB Overlap-Add-consistent unit-phasor STFT noise N_hat(t, f) = STFT_64(eps) / (|STFT_64(eps)| + 1e-8)
-    // Matches StudioVocoder100Mel._compute_ola_unit_phasor_noise when seed == 0 for exact Python <-> JS parity.
+    // Uses nonlinear fract(sin(n * 12.9898 + 78.233) * 43758.5453) PRNG matching StudioVocoder100Mel.
     const N = 64, H = 16, L = (T - 1) * H + N, eps = new Float32Array(L);
     for (let n = 0; n < L; n++) {
-      eps[n] = (seed === 0)
-        ? Math.sin(n * 12.9898 + 78.233) * Math.cos(n * 43.7585 - 19.19)
-        : Math.sin((n + seed * 1013) * 12.9898 + 78.233) * Math.cos((n + seed * 1013) * 43.7585 - 19.19);
+      const idx = seed === 0 ? n : (n + seed * 1013);
+      const raw = Math.sin(idx * 12.9898 + 78.233) * 43758.5453;
+      eps[n] = (raw - Math.floor(raw)) * 2.0 - 1.0;
     }
     const re = new Float32Array(33 * T), im = new Float32Array(33 * T), a = new Float32Array(N), b = new Float32Array(N);
     for (let t = 0; t < T; t++) {

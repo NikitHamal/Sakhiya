@@ -1,7 +1,10 @@
 """Torch-free runtime: numpy + onnxruntime.   from sakhiya.onnx_tts import SakhiyaONNX"""
-import json, os
-import numpy as np
-import onnxruntime as ort
+import json, os, re
+try:
+    import numpy as np
+    import onnxruntime as ort
+except ImportError:
+    np = ort = None
 from . import g2p, symbols as S
 
 STYLES = {
@@ -15,8 +18,7 @@ STYLES = {
     "vedic_chant": dict(style_id=5, rate=0.90, pitch_shift=0.0, pitch_scale=0.92, energy_scale=1.04, pause_scale=1.28),
     "chant": dict(style_id=5, rate=0.90, pitch_shift=0.0, pitch_scale=0.92, energy_scale=1.04, pause_scale=1.28),
 }
-import re
-PAUSE = np.array([S.SYM2ID[p] for p in [S.WORD] + S.PUNCT])
+PAUSE = np.array([S.SYM2ID[p] for p in [S.WORD] + S.PUNCT]) if np is not None else [S.SYM2ID[p] for p in [S.WORD] + S.PUNCT]
 FINITE = {"छ", "छन्", "छु", "छौ", "छैन", "छैनन्", "हो", "हुन्", "थियो", "थिए", "थिएन", "थिएनन्", "भयो", "भए", "गर्यो", "गरे", "गर्छ", "गर्छन्",
           "हुन्छ", "हुन्छन्", "पर्छ", "पर्दछ", "सक्छ", "सकिन्छ", "गयो", "आयो", "दियो", "लियो", "भन्यो", "बताए", "पाइन्छ", "मानिन्छ", "गरियो", "देखिन्छ", "रहेछ",
           "बा", "बाटै", "बाटु", "रहे", "है", "नाहै", "बडयी", "बडिय", "हलयी"}

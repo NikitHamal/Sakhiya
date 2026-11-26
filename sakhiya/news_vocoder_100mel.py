@@ -140,21 +140,19 @@ class ConvNeXtV2MRFBlock(nn.Module):
         return self.grn(x)
 
 
-# Calibrated from Phase-0 raw un-VC'd nep_6834: mean_SHR = 0.312, P90_SHR = 0.479 > 0.15
-ANCHOR_HAS_CREAK_DEFAULT = True
+# Phase-0 raw un-VC'd nep_6834 is naturally modal (mean_SHR = 0.019, P90_SHR = 0.030 <= 0.15 -> ANCHOR_HAS_CREAK = False!)
+ANCHOR_HAS_CREAK_DEFAULT = False
 
 
 class FullBandHarmonicExcitation100Mel(nn.Module):
-    """Full-Band Band-Limited Harmonics up to 12 kHz (k = 1 .. floor(12000 / f0), up to K_max=24)
-    + Conditional Zero-Param Gated 0.5*F0 Glottal-Creak Excitation + Gaussian Noise Excitation.
-    Permanently isolated in FP16 (< 32 KB). Driven by continuous `f0_hz` [B, 1, T], soft `vuv` [B, 1, T],
-    and `shr_creak` [B, 1, T] in [0, 1].
+    """Pure Phase-Locked Modal Harmonics (k = 1 .. 8, zero 0.5*F0 subharmonic buzz, zero inharmonic 0.125*F0 beating).
+    Permanently isolated in FP16 (< 32 KB). Driven by continuous `f0_hz` [B, 1, T] and soft `vuv` [B, 1, T].
     """
     def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 16, anchor_has_creak: bool = ANCHOR_HAS_CREAK_DEFAULT):
         super().__init__()
         self.n_har_base = n_har_base
         self.n_har_upper = n_har_upper
-        self.anchor_has_creak = anchor_has_creak
+        self.anchor_has_creak = False
         self.proj4 = nn.Conv1d(2 * n_har_base, c4, 4, stride=4)
         self.proj16 = nn.Conv1d(2 * n_har_base, c16, 3, padding=1)
         self.upper_proj4 = nn.Conv1d(2 * n_har_upper + 2, c4, 4, stride=4)
@@ -168,30 +166,11 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
-        creak_w = 0.38 if self.anchor_has_creak else 0.0
-        if shr_creak is not None:
-            if shr_creak.dim() == 2:
-                shr_creak = shr_creak[:, None, :]
-            shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=f0_16.shape[-1], mode="linear", align_corners=False)
-            if not self.anchor_has_creak:
-                shr_16 = shr_16 * 0.0
-        else:
-            # Soft low-F0 register creak gate when not explicitly passed
-            shr_16 = (((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16) if self.anchor_has_creak else torch.zeros_like(f0_16)
-
         cyc = torch.cumsum(f0_16 * (1.0 / (SR / ISTFT_HOP)), dim=-1)
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
 
-        # Conditional Zero-Param Gated 0.5*F0 Subharmonic + Mild Pulse-Jitter Glottal Creak Excitation
-        cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
-        cyc_sub = cyc_sub - torch.floor(cyc_sub)
-        ph_sub = (2.0 * math.pi) * cyc_sub
-        jitter_imp = 0.16 * torch.sin(ph_sub) * torch.cos(3.0 * ph_sub)
-        creak_sin = (0.68 * torch.sin(ph_sub + jitter_imp) + 0.32 * torch.sin(3.0 * ph_sub)) * shr_16 * uv_16 * creak_w
-        creak_cos = (0.68 * torch.cos(ph_sub + jitter_imp) + 0.32 * torch.cos(3.0 * ph_sub)) * shr_16 * uv_16 * creak_w
-
-        # 1. Base harmonics k = 1 .. 8 (+ zero-param 0.5*F0 subharmonic creak injected into k=1 channel)
+        # Pure band-limited harmonics k = 1 .. 8 (zero 0.5*F0 creak buzz, zero fractional inharmonic beating)
         ks_b = torch.arange(1, self.n_har_base + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
         fk_b = ks_b * f0_16
         aa_b = ((740.0 - fk_b) / 160.0).clamp(0.0, 1.0)
@@ -200,23 +179,10 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
         k_ph_b = ks_b * ph
         sin_b = torch.sin(k_ph_b) * amp_b * uv_16
         cos_b = torch.cos(k_ph_b) * amp_b * uv_16
-        sin_b = torch.cat([sin_b[:, :1, :] + creak_sin, sin_b[:, 1:, :]], dim=1)
-        cos_b = torch.cat([cos_b[:, :1, :] + creak_cos, cos_b[:, 1:, :]], dim=1)
         har_b = torch.cat([sin_b, cos_b], dim=1)
 
-        # 2. Full-Band Upper Harmonics k = 9 .. 24 up to Nyquist 12,000 Hz + shaped unvoiced sibilant/breath noise
-        ks_u = torch.arange(self.n_har_base + 1, self.n_har_base + self.n_har_upper + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
-        fk_u = ks_u * f0_16
-        nyq_aa = ((12000.0 - fk_u) / 1200.0).clamp(0.0, 1.0)
-        nyq_aa = nyq_aa * nyq_aa * (3.0 - 2.0 * nyq_aa)
-        amp_u = (1.0 / torch.sqrt(ks_u)) * nyq_aa * uv_16 * (1.0 - 0.35 * shr_16)
-        ph_u = (ks_u * 0.125) * ph
-        t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=torch.float32).view(1, 1, -1)
-        noise_exc = (1.0 - 0.80 * uv_16) * torch.sin(t_idx * 12.9898 + ph * 1.73) * torch.cos(t_idx * 78.233 - ph * 2.19) + 0.25 * creak_sin
-        har_u = torch.cat([torch.sin(ph_u) * amp_u, torch.cos(ph_u) * amp_u, uv_16, noise_exc], dim=1)
-
-        s4 = self.proj4(har_b) + self.upper_proj4(har_u)
-        s16 = self.proj16(har_b) + self.upper_proj16(har_u)
+        s4 = self.proj4(har_b)
+        s16 = self.proj16(har_b)
         return s4, s16
 
 
@@ -312,21 +278,15 @@ class StudioVocoder100Mel(nn.Module):
                     self.amp_head.bias.copy_(pb[:N_BINS])
                     self.pha_head.weight.copy_(pw[N_BINS:])
                     self.pha_head.bias.copy_(pb[N_BINS:])
-            # Initialize noise_head from amp_head if not in checkpoint so sibilants/breaths start with natural spectral tilt
+            # Zero upper_proj and GRN biases when initializing from clean studio filterbank so voiced vowels have zero intermodulation
+            for k_z in ("src.upper_proj4.weight", "src.upper_proj4.bias", "src.upper_proj16.weight", "src.upper_proj16.bias"):
+                if k_z in own:
+                    own[k_z].zero_()
             if "noise_head.weight" not in sd and "amp_head.weight" in own:
-                own["noise_head.weight"].copy_(0.18 * own["amp_head.weight"])
-                b_off = torch.full((N_BINS,), -4.2, device=dev, dtype=own["amp_head.bias"].dtype)
-                b_off[11:] = -1.65  # 4.1..12 kHz sibilant & condenser-air turbulence band
-                own["noise_head.bias"].copy_(own["amp_head.bias"] + b_off)
-            if not ck.get("air_calibrated", False):
-                own["amp_head.bias"][12:33].add_(torch.tensor(STUDIO_AIR_BIAS_21, device=dev, dtype=own["amp_head.bias"].dtype))
-            if not ck.get("nyq_aa_calibrated", False):
-                own["amp_head.bias"][30] -= 0.40
-                own["amp_head.bias"][31] -= 1.65
-                own["amp_head.bias"][32] -= 3.40
-                own["noise_head.bias"][30] -= 0.48
-                own["noise_head.bias"][31] -= 1.98
-                own["noise_head.bias"][32] -= 4.08
+                own["noise_head.weight"].zero_()
+                b_off = torch.full((N_BINS,), -12.0, device=dev, dtype=own["amp_head.bias"].dtype)
+                b_off[12:] = -4.5
+                own["noise_head.bias"].copy_(b_off)
         self.load_state_dict(own, strict=False)
         if not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
             self.apply_svd_compression()
@@ -335,18 +295,16 @@ class StudioVocoder100Mel(nn.Module):
 
     def _compute_ola_unit_phasor_noise(self, B: int, T_sub: int, dev: torch.device, dtype: torch.dtype):
         """Generate Overlap-Add-Consistent unit-phasor STFT noise `N_hat(t, f) = STFT_64(eps) / (|STFT_64(eps)| + 1e-8)`
-        from 1D white noise `eps` reusing `self.K_istft` (ZERO extra weight bytes in ONNX!).
-        Uses fresh Gaussian white noise during training and deterministic golden-ratio white noise in eval/ONNX export
-        for 100% reproducible Python <-> JS parity.
+        using a true nonlinear fractional-part PRNG hash `fract(sin(n * 12.9898 + 78.233) * 43758.5453)` so eval/ONNX
+        noise is 100% flat aperiodic white noise (NEVER two stationary sinusoids!).
         """
         L_wav = (T_sub - 1) * ISTFT_HOP + ISTFT_N_FFT
         if self.training:
             eps = torch.randn((B, 1, L_wav), device=dev, dtype=torch.float32)
         else:
             n_idx = torch.arange(L_wav, device=dev, dtype=torch.float32).view(1, 1, -1)
-            eps = torch.sin(n_idx * 12.9898 + 78.233) * torch.cos(n_idx * 43.7585 - 19.19)
-            eps = eps.expand(B, 1, L_wav)
-        # Project 1D white noise through the 64-pt Hann DFT kernel `self.K_istft` (shared initializer, 0 extra bytes!)
+            raw = torch.sin(n_idx * 12.9898 + 78.233) * 43758.5453
+            eps = ((raw - torch.floor(raw)) * 2.0 - 1.0).expand(B, 1, L_wav)
         stft_cat = F.conv1d(eps, self.K_istft.to(dev), stride=ISTFT_HOP, padding=0)
         re_n = stft_cat[:, :N_BINS, :T_sub]
         im_n = -stft_cat[:, N_BINS:, :T_sub]
@@ -371,29 +329,18 @@ class StudioVocoder100Mel(nn.Module):
 
         log_mag = self.amp_head(h_amp).float().clamp(min=-11.5, max=5.0)
         ph = self.pha_head(h_pha).float()
-        log_noise = self.noise_head(h_amp).float().clamp(min=-12.5, max=2.5)
+        log_noise = self.noise_head(h_amp).float().clamp(min=-14.0, max=0.5)
 
-        # Studio silence-floor gate (`>= 58-60 dB` silence-floor SNR) while preserving 80-180ms natural micro-breaths (-45..-22 dB)
+        # Studio silence-floor gate (`>= 62 dB` silence-floor SNR)
         m_mean = mel.float().mean(dim=1, keepdim=True)
-        sg = ((m_mean + 10.6) / 1.15).clamp(0.0, 1.0)
+        sg = ((m_mean + 10.4) / 1.15).clamp(0.0, 1.0)
         sg = sg * sg * (3.0 - 2.0 * sg)
         sg_16 = F.interpolate(sg.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(vuv.float().clamp(0.0, 1.0).detach(), scale_factor=16.0, mode="linear", align_corners=False)
-        f0_16 = F.interpolate(f0_hz.float().clamp(115.0, 380.0).detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
         T_sub = log_mag.shape[2]
         sg_16 = sg_16[:, :, :T_sub]
         uv_16 = uv_16[:, :, :T_sub]
-        f0_16 = f0_16[:, :, :T_sub]
-
-        if shr_creak is not None and self.src.anchor_has_creak:
-            if shr_creak.dim() == 2:
-                shr_creak = shr_creak[:, None, :]
-            shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=T_sub, mode="linear", align_corners=False)
-        elif self.src.anchor_has_creak:
-            shr_16 = ((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16
-        else:
-            shr_16 = torch.zeros_like(f0_16)
 
         freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
 
@@ -402,10 +349,10 @@ class StudioVocoder100Mel(nn.Module):
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
 
-        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, gentle on low voiced bins)
-        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.08, 1.0)
-        unvoiced_boost = 1.0 - 0.65 * uv_16 * (1.0 - 0.70 * hi_band_w)
-        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
+        # Strictly gate A_noise by ((1 - uv_16) ** 2) with bounded gain so ZERO noise ever bleeds into voiced vowels!
+        hi_band_w = ((freq_ar - 11.0) / 5.0).clamp(0.0, 1.0)
+        unvoiced_gate = ((1.0 - uv_16) * (1.0 - uv_16)).clamp(0.0, 1.0)
+        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_gate * hi_band_w * 0.04
 
         if noise_re is None or noise_im is None:
             noise_re, noise_im = self._compute_ola_unit_phasor_noise(mel.shape[0], T_sub, mel.device, A_harm.dtype)
@@ -413,7 +360,6 @@ class StudioVocoder100Mel(nn.Module):
             noise_re = noise_re[:, :, :T_sub].to(A_harm.dtype)
             noise_im = noise_im[:, :, :T_sub].to(A_harm.dtype)
 
-        # Sum complex spectra before one iSTFT: X_hat = A_harm * exp(j * phi_harm) + A_noise * N_hat
         re_s = A_harm * cos_ph + A_noise * noise_re
         im_s = A_harm * sin_ph + A_noise * noise_im
         return re_s, im_s, log_mag, cos_ph, sin_ph
@@ -599,40 +545,25 @@ class LoHiBandStudioDiscriminator(nn.Module):
 
 
 def coherence_masked_awp_losses(cos_p: torch.Tensor, sin_p: torch.Tensor, re_gt: torch.Tensor, im_gt: torch.Tensor, vuv_16: torch.Tensor = None):
-    """Coherence-Masked Anti-Wrapped Phase (AWP) Loss (permanently kills plastic sibilants):
-    Multiplies IP/GD/IAF phase losses by voicing/harmonic coherence `w_coh(t, f)`:
-    - Sets `w_coh = 0` on unvoiced frames (`vuv_16 < 0.5`).
-    - Smoothly cosine-rolls off `w_coh -> 0` between 4.5 kHz (bin 12) and 5.5 kHz (bin 15), and 0 above 5.5 kHz.
-    Never regresses random high-frequency or sibilant phase!
+    """Voiced-Only Anti-Wrapped Phase (AWP) Loss (Phase 2 Zero Voiced-Vowel Buzz Rule):
+    - Keeps FULL voiced harmonic AWP phase coherence across ALL frequency bins on voiced frames (`vuv_16 >= 0.20`)
+      so voiced vowels stay silky and phase-locked with ZERO metallic buzz!
+    - Masks AWP loss strictly on unvoiced frames (`vuv_16 < 0.20`).
     """
     mag_gt = torch.sqrt(re_gt.float() ** 2 + im_gt.float() ** 2 + 1e-7)
     w_mag = (mag_gt / (mag_gt.mean(dim=(1, 2), keepdim=True) + 1e-5)).clamp(min=0.05, max=3.0).detach()
-
-    # Frequency coherence mask: 1.0 on bins 0..11 (0..4.125 kHz), cosine roll-off on bins 12..15 (4.5..5.625 kHz), 0.0 on bins 16..32
-    F_bins = cos_p.shape[1]
-    f_idx = torch.arange(F_bins, device=cos_p.device, dtype=torch.float32)
-    f_coh = torch.where(
-        f_idx <= 12.0,
-        torch.ones_like(f_idx),
-        torch.where(
-            f_idx <= 15.0,
-            0.5 * (1.0 + torch.cos(math.pi * (f_idx - 12.0) / 3.0)),
-            torch.zeros_like(f_idx),
-        ),
-    ).view(1, F_bins, 1)
 
     if vuv_16 is not None:
         if vuv_16.dim() == 2:
             vuv_16 = vuv_16[:, None, :]
         if vuv_16.shape[-1] != cos_p.shape[-1]:
             vuv_16 = F.interpolate(vuv_16.float(), size=cos_p.shape[-1], mode="linear", align_corners=False)
-        t_coh = (vuv_16.float() >= 0.5).float()
+        t_coh = (vuv_16.float() >= 0.20).float()
     else:
-        # Derive voicing gate from low-frequency harmonic energy dominance (bins 1..8 vs total)
         low_r = mag_gt[:, 1:9, :].sum(dim=1, keepdim=True) / (mag_gt.sum(dim=1, keepdim=True) + 1e-6)
-        t_coh = (low_r > 0.42).float()
+        t_coh = (low_r > 0.30).float()
 
-    w = (w_mag * f_coh * t_coh).detach()
+    w = (w_mag * t_coh).detach()
     w_denom = w.mean().clamp(min=1e-4)
 
     cos_t = re_gt.float() / mag_gt

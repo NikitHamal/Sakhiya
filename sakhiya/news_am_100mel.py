@@ -445,22 +445,21 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 
 class SakhiyaNewsFlagship(nn.Module):
-    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News` Leg 2: Coupled 6D Prosody Flow + `CFG = 0` Unrolled 2-Step/4-Step iMF + Dual-Source OLA Noise & Creak Vocoder)."""
-    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, steps: int = 2, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
+    """Unified Single-Style Studio Nepali News Model (`Sakhiya-News` v2: Coupled 6D Prosody Flow + `CFG = 0` 4-Step iMF + Studio-Clean Zero-Buzz 100-Mel Vocoder)."""
+    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, r_voc_k11: int = 112, steps: int = 4, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
         super().__init__()
         self.steps = steps
         self.cfg_scale = 0.0  # Strictly CFG = 0 at inference!
-        self.prosody_temp = prosody_temp  # Low-temp coupled prosody flow (T=0.0 deterministic conditional mean vs T=0.30)
+        self.prosody_temp = prosody_temp
         self.cfg = dict(
             tier="sakhiya_news", arch="sakhiya_news", d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc,
-            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, steps=steps, cfg_scale=0.0, prosody_temp=prosody_temp,
+            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, r_voc_k11=r_voc_k11, steps=steps, cfg_scale=0.0, prosody_temp=prosody_temp,
         )
         self.enc = SakhiyaNewsEncoder(n_mel=100, d=d_enc, L=L_enc, ff=ff_enc, n_engram=n_engram, r_enc=r_enc)
-        # ONE Coupled 4-Step Phoneme-Level Prosody Flow jointly modeling [log_dur, f0_mean, f0_slope, energy, creak_prob, post_word_breath_dur]
         self.coupled_pros_flow = CoupledProsodyFlowHead(d_in=d_enc, out_dim=6, h_dim=96)
         self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc)
         self.f0_head = AMF0VUVHead100Mel(n_mels=100)
-        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch, r_k7=None, r_k11=None)
+        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch, r_k7=None, r_k11=r_voc_k11)
 
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
         self.closure_slope = nn.Parameter(torch.tensor(-0.12))   # Grounded downward Kathmandu clause-final F0 closure
@@ -558,8 +557,9 @@ class SakhiyaNewsFlagship(nn.Module):
         dur = torch.where(ids == SYM2ID["ts"], torch.clamp(dur, min=3.0, max=5.0), dur)
         dur = torch.where(ids == SYM2ID["tsʰ"], torch.clamp(dur, min=7.0, max=11.0), dur)
 
-        # Preserve Nepali reduplication hiatus (`आआफ्नो`) and short function words (`र`, `त`, `छ`, `हो`)
+        # Preserve Nepali reduplication hiatus (`आआफ्नो`), heterosyllabic vowel hiatus (`भएका/भइरहेको`), visarga (`मामकाः`), and crisp word-final codas
         id_a, id_wb, id_r, id_h, id_schwa, id_o = SYM2ID["a"], SYM2ID["|"], SYM2ID["r"], SYM2ID["h"], SYM2ID["ʌ"], SYM2ID["o"]
+        id_e, id_i, id_u, id_w, id_bh = SYM2ID["e"], SYM2ID["i"], SYM2ID["u"], SYM2ID["w"], SYM2ID["bʱ"]
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
         prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
         next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
@@ -573,14 +573,44 @@ class SakhiyaNewsFlagship(nn.Module):
         dur = torch.where(is_pre_hiatus_wb > 0.5, torch.full_like(dur, 12.0), dur)
         dur = torch.maximum(dur, is_hiatus_a1 * 19.0 + is_hiatus_a2 * 18.0)
         dur = torch.where(is_hiatus_wb > 0.5, torch.full_like(dur, 7.0), dur)
+
+        # 1. Word-final visarga 'h' (`मामकाः`, `युयुत्सवः`, `प्रायः`, `क्रमशः`, `अतः`): cap to 3-4 frames (never 29 frames!) with soft vowel echo
+        is_final_h = ((ids == id_h) & (next_ids <= 8)).float()
+        dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=4.0), dur)
+
+        # 2. Word-final consonant codas (`मोडेल`, `कोड`, `बजार`, `डलर`, `दिन`, `प्रभाव`, `बृहत`, `वालेट`): crisp 3-5 frame coda (zero trailing schwa drawl!)
+        is_word_final_c = ((ids >= 9) & (ids <= 44) & (ids != id_h) & (next_ids <= 8)).float()
+        dur = torch.where(is_word_final_c > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
+
+        # 3. Normal inter-word boundary '|' (`ID=1`): smooth 1-2 frame coarticulatory transition (kills choppy mid-clause stops & trailing '-अ' on '|')
+        is_normal_wb = ((ids == id_wb) & (is_pre_hiatus_wb < 0.5) & (is_hiatus_wb < 0.5)).float()
+        dur = torch.where(is_normal_wb > 0.5, torch.clamp(dur, min=1.0, max=2.0), dur)
+
+        # 4. Heterosyllabic vowel hiatus (`भएका/भएको`: `bʱ ʌ e`, `भइरहेको/भइरहेका`: `bʱ ʌ i r`): keep both syllables distinct (>= 6 frames)
+        is_v_hiatus_1 = ((prev_ids == id_bh) & (ids == id_schwa) & ((next_ids == id_e) | ((next_ids == id_i) & (next2_ids == id_r)))).float()
+        is_v_hiatus_2 = ((prev2_ids == id_bh) & (prev_ids == id_schwa) & ((ids == id_e) | ((ids == id_i) & (next_ids == id_r)))).float()
+        dur = torch.maximum(dur, is_v_hiatus_1 * 7.0 + is_v_hiatus_2 * 6.0)
+
         mu_next2 = torch.cat([mu[:, 2:, :], mu[:, -2:, :]], dim=1)
         mu_next1 = torch.cat([mu[:, 1:, :], mu[:, -1:, :]], dim=1)
+        mu_prev1 = torch.cat([mu[:, :1, :], mu[:, :-1, :]], dim=1)
         m_pre = is_pre_hiatus_wb[:, :, None]
         m_a1 = is_hiatus_a1[:, :, None]
         m_wb = is_hiatus_wb[:, :, None]
-        mu = mu * (1.0 - m_pre) + mu[:, -1:, :] * m_pre
+        m_norm_wb = is_normal_wb[:, :, None]
+        m_fin_h = is_final_h[:, :, None]
+        mu_sil = mu[:, -1:, :]
+        mu = mu * (1.0 - m_pre) + mu_sil * m_pre
         mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
-        mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu[:, -1:, :]) * m_wb
+        mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu_sil) * m_wb
+        mu = mu * (1.0 - m_norm_wb) + (0.20 * mu + 0.80 * mu_sil) * m_norm_wb
+        mu = mu * (1.0 - m_fin_h) + (0.45 * mu_prev1 + 0.55 * mu_sil) * m_fin_h
+
+        # Labiovelar '/w/' onset anchor (`वालेट` = /wa.let/, never `[b]` `बालेट`!)
+        is_w_tok = (ids == id_w).float()[:, :, None]
+        u_emb = self.enc.mu(self.enc.nf(self.enc.emb(torch.full_like(ids[:, :1], id_u)) * math.sqrt(self.enc.d)))
+        mu = mu * (1.0 - 0.25 * is_w_tok) + u_emb * (0.25 * is_w_tok)
+
         is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
         is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
         dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
@@ -591,7 +621,7 @@ class SakhiyaNewsFlagship(nn.Module):
         is_vowel = (ids >= 45).float()
         v_prom = ((dur - 7.5) / 6.0).clamp(-0.35, 0.85) * is_vowel * (1.0 - 0.85 * clause_tail)
         eng_ph = (eng_ph + 0.45 * v_prom).clamp(-1.2, 1.2)
-        mu = mu + (0.06 * eng_ph)[..., None] * 0.32
+        mu = mu + (0.06 * eng_ph)[..., None] * 0.32 * (1.0 - is_pause[..., None])
 
         ends = torch.cumsum(dur, dim=1)
         T = ends[0, -1].to(torch.int64)
@@ -601,17 +631,13 @@ class SakhiyaNewsFlagship(nn.Module):
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
 
-        # Grounded Kathmandu downward clause-final F0 contour + intra-phoneme F0 slope + vowel prominence + phrase-final glottal creak
+        # Grounded Kathmandu downward clause-final F0 contour + intra-phoneme F0 slope + vowel prominence
         f0_contour_tok = (f0_ph + 0.45 * v_prom + 0.15 * f0_slope_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.45 * clause_tail) * (1.0 - is_pause)
         f0_frame = torch.gather(f0_contour_tok, 1, idx)
         prog_5d = compute_progress_5d(dur, ends, idx, t_arange, f0_frame)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=dev)
 
-        # Phrase-final creak envelope fed to Vocoder 0.5*F0 subharmonic excitation
-        creak_tok = (creak_ph + 0.65 * clause_tail).clamp(0.0, 1.0) * (1.0 - is_pause)
-        shr_frame = torch.gather(creak_tok, 1, idx)[:, None, :]
-
-        # Strictly CFG = 0 X-Pred MeanFlow Decoding (2-step default; supports 4-step if self.steps == 4)
+        # Strictly CFG = 0 4-Step X-Pred MeanFlow Decoding
         t0 = torch.zeros((B,), device=dev, dtype=torch.float32)
         r_one = torch.ones((B,), device=dev, dtype=torch.float32)
         v0 = self.vel(mu_y, t0, mu_y, m_t, prog_5d=prog_5d, r=r_one)
@@ -636,19 +662,18 @@ class SakhiyaNewsFlagship(nn.Module):
             w1 = (1.0 - w2 - w3 - w4).clamp(min=0.51)
             xt = mu_y + w1 * v0 + w2 * v_50 + w3 * v_25 + w4 * v_75
 
-        # Full 100-band log-mel (fmin=0, fmax=12000) -> Dual-Source OLA-Noise + Creak Vocoder
-        mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
+        # Full 100-band log-mel with Nyquist edge clamping (bins 98..99) -> Studio-Clean 100-Mel Vocoder
+        mel_raw = xt * self.mel_stats[1] + self.mel_stats[0]
+        mel_100 = torch.cat([mel_raw[:, :98, :], mel_raw[:, 97:98, :], mel_raw[:, 97:98, :]], dim=1)
         f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.24)
 
-        # Ensure interior <breath> spans are unvoiced studio inhalations (-32dB RMS, flatness > 0.50, zero dead silence)
-        br_frame = torch.gather(is_interior_breath, 1, idx)[:, None, :]
-        pause_frame = torch.gather(is_pause, 1, idx)[:, None, :]
-        vuv = vuv * (1.0 - 0.96 * pause_frame)
-        mel_100 = torch.where(br_frame > 0.5, torch.clamp(mel_100, min=-8.9, max=-7.6), mel_100)
+        # Gate vuv on word-final visarga 'h' and voiceless word-final stops so they never emit voiced vowel/screech tails
+        is_voiceless_fin = (is_final_h + ((next_ids <= 8) & ((ids == SYM2ID["k"]) | (ids == SYM2ID["kʰ"]) | (ids == SYM2ID["ts"]) | (ids == SYM2ID["tsʰ"]) | (ids == SYM2ID["ʈ"]) | (ids == SYM2ID["ʈʰ"]) | (ids == SYM2ID["t̪"]) | (ids == SYM2ID["t̪ʰ"]) | (ids == SYM2ID["p"]) | (ids == SYM2ID["pʰ"]) | (ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]))).float()).clamp(0.0, 1.0)
+        vl_frame = torch.gather(is_voiceless_fin, 1, idx)[:, None, :]
+        wb_frame = torch.gather(is_normal_wb, 1, idx)[:, None, :]
+        vuv = vuv * (1.0 - 0.92 * vl_frame) * (1.0 - 0.85 * wb_frame)
+        mel_100 = mel_100 - 1.8 * wb_frame
 
-        y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv, shr_creak=shr_frame)
-        v_prom_fr = torch.gather(v_prom, 1, idx)
-        v_prom_wav = F.interpolate(v_prom_fr[:, None, :], size=y.shape[-1], mode="linear", align_corners=False)[:, 0, :]
-        y = y * (1.0 + 0.12 * v_prom_wav)
+        y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
