@@ -69,10 +69,10 @@ def _card1():
     bk_badge = "🟢 Active (15-min interval)" if bk_alive else "✅ Final HF Sync Complete (daemon cleanly stopped)"
     rs = jl("/work/sp/repo/RELAY_STATE.json", {}) or {}
     body = (f"<div>🕒 {npt} &nbsp;|&nbsp; ⏳ <b style='font-size:18px;color:#0969da'>{cd}</b> to <code>HARD_CUTOFF</code> (<b>{cutoff_npt}</b> · strict 30m safety buffer before 12h box expiry)</div>"
-            f"<div>🖥️ {H['esc'](gpu) or 'nvidia-smi unavailable'} &nbsp;|&nbsp; RAM {ram} · Disk {disk}</div>"
-            f"<div>{bk_badge} · HF target: <code>{H['esc'](str(rs.get('hf_backup_repo','NikitHamal/sakhiya-v1-train')))}/{H['esc'](str(rs.get('hf_backup_prefix','sakhiya_news_final')))}/</code> — {H['esc'](' | '.join(bk)) or 'synced'}</div>"
+            f"<div>🖥️ {H['esc'](gpu) or 'nvidia-smi unavailable'} &nbsp;|&nbsp; RAM {ram} · Disk {disk} &nbsp;|&nbsp; 🛡️ Live Default: <code>sakhiya_one</code> (Staging only: <code>sakhiya_news_v2_candidate</code>)</div>"
+            f"<div>{bk_badge} · HF target: <code>NikitHamal/sakhiya-v1-train/sakhiya_news_v2/</code> — {H['esc'](' | '.join(bk)) or 'synced'}</div>"
             f"<pre style='font-size:11px;margin:6px 0 0;white-space:pre-wrap'>{H['esc'](procs) or 'GPU idle / ready for next step'}</pre>")
-    return _mo.Html(box("1 · Box Health, Live Countdown to HARD_CUTOFF & 15-Min HF Backup Heartbeat", body))
+    return _mo.Html(box("1 · Box Health, Live Countdown to HARD_CUTOFF, Default Rollback Lock & 15-Min HF Backup Heartbeat", body))
 try:
     _out1 = _card1()
 except Exception as _e:
@@ -214,7 +214,7 @@ _out4
 
 C5_SCAN = r"""
 import marimo as _mo
-sp5_rescan = _mo.ui.run_button(label="🔄 Rescan -16 LUFS Blind A/B/C Listening Desk (Sakhiya-News Leg-2 vs Leg-1 vs Sakhiya-One vs Raw Studio Anchor nep_6834)")
+sp5_rescan = _mo.ui.run_button(label="🔄 Rescan -16 LUFS Side-by-Side Comparison Desk (Sakhiya-News v2 Candidate vs Leg-1 Preview vs Sakhiya-One vs Broken Leg-2 425bb6f on Exact 4 Owner Clips)")
 sp5_rescan
 """
 
@@ -224,6 +224,7 @@ sp5_rescan.value
 def _discover():
     import glob, os
     pats = [
+        "/work/sp/repo/docs/samples/versions/sakhiya_news_v2_candidate/*.mp3",
         "/work/sp/sakhiya_news/listen/*.wav",
         "/work/sp/sakhiya_news/listen/oracle_ladder/*.wav",
         "/work/sp/repo/docs/samples/versions/sakhiya_news/*.mp3",
@@ -234,13 +235,15 @@ def _discover():
     seen = {}
     for p in pats:
         for f in glob.glob(p):
-            if f.lower().endswith((".wav", ".mp3")) and os.path.isfile(f) and os.path.getsize(f) < 6_000_000:
-                bonus = 2e9 if ("_leg2" in f or "/sakhiya_news/" in f) else (1.5e9 if "oracle_" in f else (1e9 if "/sakhiya_news/listen/" in f else 0.0))
+            if f.lower().endswith((".wav", ".mp3")) and os.path.isfile(f) and os.path.getsize(f) < 12_000_000:
+                bonus = (3e9 if ("owner_clip" in f or "sakhiya_news_v2_candidate" in f or "_v2" in f)
+                         else (2e9 if ("_leg2" in f or "/sakhiya_news/" in f)
+                               else (1.5e9 if "oracle_" in f else (1e9 if "/sakhiya_news/listen/" in f else 0.0))))
                 seen[f] = os.path.getmtime(f) + bonus
-    items = sorted(seen.items(), key=lambda kv: -kv[1])[:350]
+    items = sorted(seen.items(), key=lambda kv: -kv[1])[:400]
     return {f.replace("/work/sp/", ""): f for f, _ in items}
 sp5_files = _discover()
-sp5_pick = _mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, -16 LUFS matched, Sakhiya-News Leg-2 & 5-Rung Oracle Ladder)", full_width=True)
+sp5_pick = _mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, -16 LUFS matched, Exact 4 Owner Clips + 15-Clip Pack + Phase-0 6-Point Isolation Matrix)", full_width=True)
 sp5_pick
 """
 
@@ -260,20 +263,21 @@ def _play():
                 f"<div><b>{label}</b> · <code>{os.path.basename(fp)}</code> · {st.st_size/1024:.0f} KB · {time.strftime('%H:%M:%S', time.gmtime(st.st_mtime))} UTC</div>"
                 f"<audio controls preload='auto' style='width:100%;margin-top:4px;height:36px' src='data:{mime};base64,{b}'></audio></div>")
     bn = os.path.basename(p)
-    cid = re.sub(r"(_sakhiya_news_leg2|_sakhiya_news_leg1|_sakhiya_news_voc_leg2|_sakhiya_news_voc_gt|_human_anchor|_candidate_sakhiya_one_fast|_candidate_sakhiya_one|_anchor_ProV3)\.(mp3|wav)$", "", bn)
+    cid = re.sub(r"(_sakhiya_news_v2|_sakhiya_news_leg2|_sakhiya_news_leg1|_sakhiya_news_voc_v2|_sakhiya_news_voc_leg2|_sakhiya_news_voc_gt|_human_anchor|_candidate_sakhiya_one_fast|_candidate_sakhiya_one|_anchor_ProV3|_sakhiya_one|_broken_leg2_425bb6f)\.(mp3|wav)$", "", bn)
     cid = re.sub(r"\.(mp3|wav)$", "", cid)
     ab_cards = [_tag_audio(p, "🎧 Selected Render (-16 LUFS)")]
     cand_peers = [
-        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg2.wav", "Sample A · Sakhiya-News Leg-2 Final [Dual-Source OLA Noise + Coupled Prosody + Unrolled E2E INT8] (-16 LUFS)"),
-        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_voc_leg2.wav", "Sample A-Voc · Sakhiya-News Leg-2 Phase-1 Dual-Source Vocoder Copy-Synthesis (-16 LUFS)"),
-        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg1.wav", "Sample B · Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF INT8] (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_news_v2_candidate/{cid}.mp3", "Sample A · Sakhiya-News v2 Candidate [4-Step CFG=0 · FP16 Heads · Fixed G2P & Chunker] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_v2.wav", "Sample A (WAV) · Sakhiya-News v2 Candidate [4-Step CFG=0 · Zero-Buzz Vocoder] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_v2_am_pre_refine.wav", "Sample A-Pre · Sakhiya-News v2 Pre-Refinement (v2_am_pre_refine.pt · 4-Step CFG=0)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_voc_v2.wav", "Sample A-Voc · Sakhiya-News v2 Clean Vocoder Copy-Synthesis (v2_voc_clean_best.pt · FP16 Heads)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_news_leg1_preview/{cid}.mp3", "Sample B · Sakhiya-News Leg-1 Preview [100-Mel 4-Step Baseline] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg1.wav", "Sample B (WAV) · Sakhiya-News Leg-1 Preview (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_one/{cid}.mp3", "Sample C · Sakhiya-One [Live Public Default · a61c100 · 80-Mel 8-Blk INT8] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_one.wav", "Sample C (WAV) · Sakhiya-One [Live Public Default · a61c100] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_broken_leg2_425bb6f.wav", "Sample D · Broken Leg-2 (425bb6f) [2-Step · 97.9% INT8 · Metallic Buzz & Trailing Schwa] (-16 LUFS)"),
+        (f"/work/sp/repo/docs/samples/versions/sakhiya_news/{cid}.mp3", "Sample D (MP3) · Broken Leg-2 (425bb6f) (-16 LUFS)"),
         ("/work/sp/sakhiya_news/listen/ne_kathmandu_human_anchor.wav", "Ground-Truth Raw Studio Human Anchor · Native Kathmandu Female (nep_6834, Un-VC'd 48 kHz -> 24 kHz, -16 LUFS)"),
-        (f"/work/sp/repo/docs/samples/versions/sakhiya_one/{cid}.mp3", "Sample C · Sakhiya-One Baseline [80-Mel 8-Blk INT8 ONNX] (-16 LUFS)"),
-        ("/work/sp/sakhiya_news/listen/oracle_R1_raw_24k_anchor.wav", "Oracle Ladder R1 · Raw Un-VC'd 24 kHz nep_6834 Studio Anchor"),
-        ("/work/sp/sakhiya_news/listen/oracle_R2_seedvc_self_8kHz_ceil.wav", "Oracle Ladder R2 · Seed-VC / 16 kHz Ceiling Equivalent (7.6 kHz rolloff)"),
-        ("/work/sp/sakhiya_news/listen/oracle_R3_gt_100mel_leg1_voc.wav", "Oracle Ladder R3 · Raw GT 100-Mel -> Leg-1 Unmasked Vocoder"),
-        ("/work/sp/sakhiya_news/listen/oracle_R4_leg1_am_voc.wav", "Oracle Ladder R4 · Leg-1 AM -> Leg-1 Vocoder"),
-        ("/work/sp/sakhiya_news/listen/oracle_R5_gt_100mel_leg2_dual_voc.wav", "Oracle Ladder R5 · Raw GT 100-Mel -> Phase-1 Upgraded Dual-Source OLA-Noise Vocoder"),
     ]
     for fp_c, lbl_c in cand_peers:
         if os.path.abspath(fp_c) != os.path.abspath(p) and os.path.isfile(fp_c):
