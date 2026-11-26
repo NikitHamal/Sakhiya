@@ -1,18 +1,28 @@
 {
   "tag": "sakhiya_one_vocos",
-  "label": "4 · Candidate B: Sakhiya-One-Vocos (~16 MB INT8 · Adapted Pretrained Vocos-24kHz · 4-Step)",
-  "notes": "PROMOTED STUDIO VOCOS TIER ✅ · 19.703 MB INT8 · ne_pcer=0.0351 (+0.0031) · comb_grit=1.5017 · Voiced_HNR=19.31 dB · RTF=0.0318",
+  "label": "Sakhiya-One Studio (Vocos v2 · 23.011 MB INT8 · Promoted Default)",
+  "notes": "PROMOTED STUDIO DEFAULT ✅ · 23.011 MB INT8 / 35.528 MB FP16 · ne_pcer=0.036 · grit=1.3927 · sibSFM=0.552 · slope=-2.91 dB · len_diff=0 · RTF=0.0299",
   "metrics": {
-    "int8_mb": 19.703,
-    "rtf_1thread": 0.0318,
-    "ne_pcer": 0.0351,
-    "comb_grit": 1.5017,
-    "Voiced_HNR_dB": 19.31,
-    "HF_LSD_4_10kHz_dB": 0.86,
+    "int8_mb": 23.011,
+    "fp16_mb": 35.528,
+    "rtf_1thread": 0.0299,
+    "ne_pcer": 0.036,
+    "comb_grit": 1.3927,
+    "sibSFM": 0.552,
+    "slope_8_12_vs_4_8_dB": -2.91,
+    "Voiced_HNR_dB": 19.09,
+    "HF_LSD_4_10kHz_dB": 0.701,
     "sim_ProV3": 0.98,
-    "utmos": 3.89
+    "utmos": 3.94
   },
   "clips": [
+    {
+      "id": "stress_sa_ta_cha",
+      "lang": "ne",
+      "style": "news",
+      "text": "विशेष, विश्वभर, प्रतिशतले, सुरक्षित, संवेदनशील, नमस्ते, अत्यन्तै, प्रत्यक्ष, चर्चा, चन्द्र, त चलौँ",
+      "mp3": "samples/versions/sakhiya_one_vocos/stress_sa_ta_cha.mp3"
+    },
     {
       "id": "owner_clip1_ai_models",
       "lang": "ne",

@@ -38,6 +38,14 @@
     </div>
     <p class="muted" style="margin-bottom:12px">Surgical polish starting strictly from <b>Sakhiya-One</b> (<code>a61c100</code>, full-utterance inference with zero short-window cropping): eliminates the <code>वालेट &rarr; बालेट</code> leak, fixes geminate doubling (<code>बुद्धिमत्ता, उल्लेखनीय, पक्कै, चिटिक्क</code>), halanta stops (<code>बृहत्, अर्थात्</code>), chandrabindu nasal diphthongs (<code>गर्नेछौँ, लागौँ, चलौँ</code>), clause-onset padding (<code>त चलौँ</code>), and compares <b>Candidate B (Mel80To100Adapter + Adapted Pretrained <code>charactr/vocos-mel-24khz</code> · 19.70 MB INT8 · Shipped Default)</b> vs <b>Candidate A (MS-SB-CQT + Joint E2E AWP · 8.49 MB INT8 Compact)</b>.</p>
     <div style="display:grid;grid-template-columns:1fr;gap:14px">
+      <div class="card sm" style="padding:12px 14px;border:1.5px solid var(--md-primary)">
+        <b>🔥 Dedicated स/त/च &amp; Kathmandu Affricate Stress Clip (<code>विशेष, विश्वभर, प्रतिशतले, सुरक्षित, संवेदनशील, नमस्ते, अत्यन्तै, प्रत्यक्ष, चर्चा, चन्द्र, त चलौँ</code>)</b>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
+          <div><small class="muted"><b>🚀 Candidate B v2: Sakhiya-One-Vocos v2 [23.011 MB INT8 · grit=1.3927 · sibSFM=0.552 · slope=-2.91dB · Promoted Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>✨ Candidate B v2 FP16 [35.528 MB FP16 · Unquantized Reference · len_diff=0]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha_fp16.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>📦 Previous Candidate B v1 [3a64f596 · 19.70 MB INT8 · grit=1.502 · sibSFM=0.741]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha_v1.mp3" style="width:100%;height:36px"></audio></div>
+        </div>
+      </div>
       <div class="card sm" style="padding:12px 14px">
         <b>Owner Clip 1 · Episode-01 AI Models (<code>जेमिनाई फोर नियोन, अनुसन्धानात्मक, विशेष, ओपन एआईले, जीपीटी सिक्स पोइन्ट टु, प्रयोगकर्ताको, सुरक्षित, च्याटजिपिटी वालेट</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">

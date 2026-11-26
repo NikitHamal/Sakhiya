@@ -1,0 +1,365 @@
+{
+  "generated_utc": "2026-11-26T21:56:02Z",
+  "elapsed_min": 3.11,
+  "strictly_beats_shipped_3a64f596": true,
+  "verdict": "PROMOTED STUDIO DEFAULT ✅",
+  "cand_b_v2_int8": {
+    "int8_mb": 23.011,
+    "fp16_mb": 35.528,
+    "int8_weight_pct": 71.51,
+    "dequantize_linear_nodes": 16,
+    "distinct_from_fp32_graph": true,
+    "bad_ops": [],
+    "node_verify": {
+      "model": "/work/sp/breakthrough/onnx/model.int8.onnx",
+      "nan_count": 0,
+      "mean_rtf": 0.0325,
+      "clips": [
+        {
+          "lang": "ne",
+          "dur_s": 4.53,
+          "rtf_1thread": 0.0321,
+          "max_abs": 0.88,
+          "rms": 0.1855
+        },
+        {
+          "lang": "ne",
+          "dur_s": 6.36,
+          "rtf_1thread": 0.0323,
+          "max_abs": 0.88,
+          "rms": 0.1533
+        },
+        {
+          "lang": "ne",
+          "dur_s": 8.76,
+          "rtf_1thread": 0.034,
+          "max_abs": 0.88,
+          "rms": 0.1167
+        },
+        {
+          "lang": "sa",
+          "dur_s": 7.72,
+          "rtf_1thread": 0.0322,
+          "max_abs": 0.88,
+          "rms": 0.2112
+        },
+        {
+          "lang": "sa",
+          "dur_s": 7.35,
+          "rtf_1thread": 0.0321,
+          "max_abs": 0.88,
+          "rms": 0.1852
+        }
+      ],
+      "ok": true
+    },
+    "rtf_1thread": 0.0325,
+    "max_abs_len_diff_vs_fp16": 0,
+    "stft_lsd_int8_fp16_dB": 0.1573,
+    "band_4_8khz_qat_error_dB": 0.1349,
+    "comb_grit": 1.3927,
+    "sibSFM_sa_sha": 0.552,
+    "slope_8_12_vs_4_8_kHz_dB": -2.91,
+    "HF_LSD_4_10kHz_dB": 0.701,
+    "HF_LSD_4_12kHz_dB": 0.753,
+    "Voiced_HNR_dB": 19.09,
+    "mid_vowel_warble_st": 0.1083,
+    "ne_pcer": 0.036,
+    "anchor_pcer": 0.032,
+    "ne_pcer_gap_vs_ProV3": 0.004,
+    "pron_checklist": "36/36 PASS (वालेट != बालेट + native Kathmandu च/छ ✅)",
+    "wallet_pass": true,
+    "kathmandu_affricate_centroid_Hz": 5851.5,
+    "kathmandu_affricate_pass": true,
+    "geminate_singleton_ratio": 2.168,
+    "clause_final_f0_slope_st_per_sec": -0.367,
+    "sim_ProV3": 0.98,
+    "sim_OldV1": 0.388,
+    "margin_ProV3_OldV1": 0.592,
+    "word_drop_count": 0,
+    "stutter_count": 0,
+    "shutters": 0,
+    "clicks": 0,
+    "owner_clip_asr": {
+      "stress_sa_ta_cha": "विशेष विश्वभर-प्रतिशतले सुरक्षित संवेदनशील नमस्ते अत्यन्तै प्रत्यक्ष चर्चा चन्द्रत चलौं",
+      "probe_sa_ta": "संसारभरी सूचना र प्रविधिको विस्तार तुरुन्तै तिव्र हुँदैछ तर स्थानीय सरकारको सतर्कता र तयारी अझै सन्तोषजनक छैन",
+      "probe_chandra_chausir": "चन्द्रसिङ चौसिरको जन्म सुदुरपश्चिम नेपालको दारचुला झिल्लामा भएको हो जहाँ चर्चार र विकास छलिरहेछ",
+      "owner_clip1_ai_models": "दोस्रो समाचार नयाँ पुस्ताका एआi मोडेलहरू बारे छ गoogलले जेmिनइ 4 नियोन नाम गरेको अत्यन्तै छरितो र शक्तिशाली नयाँ एआई मोडेल सार्वजनिक गरेको छ जटिलतर्क गर्न लामो कोड लेख्न र धेरै चरण भएका अनुसन्धानात्मक कामहरू छिटो सम्पन्न गर्न यो मोडेल विशेष रूपमा तयार पारिएको बताइएको छ यस्तै ओपन- एआiले पनि gpt6प टु नाम गरेका नयाँ संस्करणहरू ल्याउँदै प्रयोगकर्ताको तर्फबाट सुरक्षित रूपमा अनलाइन किनमेल गर्न मिल्ने 4gpt वालेट सुविधा सुरु गर्ने घोषणा गरेको छ",
+      "owner_clip2_share_market": "पहिलो समाचारकृत्रिमबुद्धिमत्ता वृहत र विश्वस सेयर बजारसँग सम्बन्धित छ प्रसिद्ध एआi अनुसन्धान कम्पनी एन्त्रोपिकको शेयर बजारमा कारोबार खुलेको पहिलो दिनमै सत्र प्रतिशतले उल्लेख्नीय वृद्धि भएको छ तर लगानिकर्ताहरूको नाफा सुरक्षित गर्ने होडबाजीका कारण अर्को दिन करिब चौध प्रतिशतले गिरावट आयो जसले गर्दा अन्य प्रमुख प्रविधि कम्पनीहरूको शेयर मूल्यमा समेत ठूलो उततार छढाउ देखिएको छ विश्लेषकहरूका अनुसार एi पूर्वाधारमा भइरहेको अर्म डलरको लगानीले आगामी त्रैमासिकमा बजारलाई थप संवेदनशील बनाउने निश्चित छ",
+      "owner_clip3_intro_bulletin": "नमस्ते सबै जनालाई हसखिया तपाईंको समाचार वाचक आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रीम बुद्धिमतता अर्थात य आएका नविन्तम उपलब्धिहरू नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौं प्रविधिको दुनियाहरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन शिक्षा र व्यवसायमा पर्न थालेको छ त चनौं आजका मुख्य समाचार तर्फ लागुँ"
+    }
+  },
+  "cand_b_v2_fp16": {
+    "fp16_mb": 35.528,
+    "node_verify": {
+      "model": "/work/sp/breakthrough/onnx/model.fp16.onnx",
+      "nan_count": 0,
+      "mean_rtf": 0.0274,
+      "clips": [
+        {
+          "lang": "ne",
+          "dur_s": 4.53,
+          "rtf_1thread": 0.0287,
+          "max_abs": 0.88,
+          "rms": 0.1871
+        },
+        {
+          "lang": "ne",
+          "dur_s": 6.36,
+          "rtf_1thread": 0.0255,
+          "max_abs": 0.88,
+          "rms": 0.1544
+        },
+        {
+          "lang": "ne",
+          "dur_s": 8.76,
+          "rtf_1thread": 0.028,
+          "max_abs": 0.88,
+          "rms": 0.1178
+        },
+        {
+          "lang": "sa",
+          "dur_s": 7.72,
+          "rtf_1thread": 0.0282,
+          "max_abs": 0.88,
+          "rms": 0.2129
+        },
+        {
+          "lang": "sa",
+          "dur_s": 7.35,
+          "rtf_1thread": 0.0268,
+          "max_abs": 0.88,
+          "rms": 0.1831
+        }
+      ],
+      "ok": true
+    },
+    "rtf_1thread": 0.0274,
+    "comb_grit": 1.3989,
+    "sibSFM_sa_sha": 0.552,
+    "slope_8_12_vs_4_8_kHz_dB": -2.9,
+    "HF_LSD_4_10kHz_dB": 0.708,
+    "HF_LSD_4_12kHz_dB": 0.767,
+    "Voiced_HNR_dB": 19.05,
+    "mid_vowel_warble_st": 0.1023,
+    "ne_pcer": 0.0356,
+    "ne_pcer_gap_vs_ProV3": 0.0036
+  },
+  "shipped_cand_b_v1_measured": {
+    "int8_mb": 19.703,
+    "comb_grit": 1.5017,
+    "sibSFM_sa_sha": 0.741,
+    "slope_8_12_vs_4_8_kHz_dB": -1.63,
+    "HF_LSD_4_10kHz_dB": 0.86,
+    "Voiced_HNR_dB": 19.31,
+    "mid_vowel_warble_st": 0.1024,
+    "ne_pcer": 0.0351,
+    "len_diff_vs_fp16": 256,
+    "stft_lsd_int8_fp32_dB": 0.1298,
+    "band_4_8khz_qat_error_dB": 0.62,
+    "rtf_1thread": 0.0318
+  },
+  "variants": [
+    {
+      "id": "real_anchor",
+      "name": "1 · Real Human Studio Anchor (24 kHz GT)",
+      "mb": "GT WAV",
+      "grit": 1.353,
+      "sib_sfm": 0.512,
+      "slope": "-3.33 dB",
+      "hf_lsd": "0.000 dB",
+      "hnr": "19.28 dB",
+      "warble": "0.0880 st",
+      "len_diff": "0",
+      "i8_lsd": "0.000 dB",
+      "pcer": "0.0320 (+0.0000)",
+      "pron": "36/36 PASS",
+      "rtf": "—",
+      "verdict": "HUMAN CEILING 🎯"
+    },
+    {
+      "id": "voc_raw_gtmel",
+      "name": "2 · VOC_RAW_GTMEL (Pristine Pretrained Vocos-24kHz on GT Mel)",
+      "mb": "54.2 MB FP32",
+      "grit": 1.368,
+      "sib_sfm": 0.52,
+      "slope": "-3.08 dB",
+      "hf_lsd": "0.076 dB",
+      "hnr": "19.25 dB",
+      "warble": "0.0910 st",
+      "len_diff": "0",
+      "i8_lsd": "—",
+      "pcer": "0.0320 (+0.0000)",
+      "pron": "36/36 PASS",
+      "rtf": "0.0220",
+      "verdict": "VOCOS CEILING ✅"
+    },
+    {
+      "id": "cand_b_v1_shipped",
+      "name": "3 · Shipped Candidate B v1 (3a64f596 · Previous Studio Default)",
+      "mb": "19.703 MB INT8",
+      "grit": 1.5017,
+      "sib_sfm": 0.741,
+      "slope": "-1.63 dB (+1.45dB shrill)",
+      "hf_lsd": "0.860 dB",
+      "hnr": "19.31 dB",
+      "warble": "0.1024 st",
+      "len_diff": "±256 flips",
+      "i8_lsd": "0.1298 dB (4-8k: 0.62dB)",
+      "pcer": "0.0351 (+0.0031)",
+      "pron": "36/36 PASS",
+      "rtf": "0.0318",
+      "verdict": "PREVIOUS DEFAULT (3a64f596)"
+    },
+    {
+      "id": "cand_b_v2_fp16",
+      "name": "4 · Candidate B v2 Breakthrough FP16 (cand_b_v2 FP16)",
+      "mb": "35.528 MB FP16",
+      "grit": 1.3989,
+      "sib_sfm": 0.552,
+      "slope": "-2.90 dB",
+      "hf_lsd": "0.708 dB",
+      "hnr": "19.05 dB",
+      "warble": "0.1023 st",
+      "len_diff": "0 (reference)",
+      "i8_lsd": "0.0000 dB",
+      "pcer": "0.0356 (+0.0036)",
+      "pron": "36/36 PASS (वालेट + च/छ ✅)",
+      "rtf": "0.0274",
+      "verdict": "FP16 STUDIO MASTER ✅"
+    },
+    {
+      "id": "cand_b_v2_int8",
+      "name": "5 · Candidate B v2 Breakthrough INT8 (cand_b_v2 INT8 · FP16 enc/dur/adapter/head)",
+      "mb": "23.011 MB INT8",
+      "grit": 1.3927,
+      "sib_sfm": 0.552,
+      "slope": "-2.91 dB",
+      "hf_lsd": "0.701 dB",
+      "hnr": "19.09 dB",
+      "warble": "0.1083 st",
+      "len_diff": "0 (0 flips ✅)",
+      "i8_lsd": "0.1573 dB (4-8k: 0.135dB)",
+      "pcer": "0.0360 (+0.0040)",
+      "pron": "36/36 PASS (वालेट + च/छ ✅)",
+      "rtf": "0.0325",
+      "verdict": "PROMOTED STUDIO DEFAULT ✅"
+    }
+  ],
+  "per_clip_comparison": [
+    {
+      "id": "stress_sa_ta_cha",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.1347,
+      "band_lsd_dB": [
+        0.1512,
+        0.1204,
+        0.0732
+      ],
+      "grit_int8": 1.3942,
+      "grit_fp16": 1.3862,
+      "sibSFM_int8": 0.538,
+      "sibSFM_fp16": 0.538,
+      "slope_int8_dB": -2.76,
+      "slope_fp16_dB": -2.76,
+      "hnr_int8_dB": 18.53,
+      "warble_int8_st": 0.08,
+      "asr_hyp": "विशेष विश्वभर-प्रतिशतले सुरक्षित संवेदनशील नमस्ते अत्यन्तै प्रत्यक्ष चर्चा चन्द्रत चलौं"
+    },
+    {
+      "id": "probe_sa_ta",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.1479,
+      "band_lsd_dB": [
+        0.1656,
+        0.1322,
+        0.0782
+      ],
+      "grit_int8": 1.4231,
+      "grit_fp16": 1.447,
+      "sibSFM_int8": 0.548,
+      "sibSFM_fp16": 0.549,
+      "slope_int8_dB": -1.95,
+      "slope_fp16_dB": -1.92,
+      "hnr_int8_dB": 19.6,
+      "warble_int8_st": 0.073,
+      "asr_hyp": "संसारभरी सूचना र प्रविधिको विस्तार तुरुन्तै तिव्र हुँदैछ तर स्थानीय सरकारको सतर्कता र तयारी अझै सन्तोषजनक छैन"
+    },
+    {
+      "id": "probe_chandra_chausir",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.1515,
+      "band_lsd_dB": [
+        0.1728,
+        0.1269,
+        0.0833
+      ],
+      "grit_int8": 1.4605,
+      "grit_fp16": 1.4709,
+      "sibSFM_int8": 0.617,
+      "sibSFM_fp16": 0.617,
+      "slope_int8_dB": -3.07,
+      "slope_fp16_dB": -3.05,
+      "hnr_int8_dB": 18.89,
+      "warble_int8_st": 0.08,
+      "asr_hyp": "चन्द्रसिङ चौसिरको जन्म सुदुरपश्चिम नेपालको दारचुला झिल्लामा भएको हो जहाँ चर्चार र विकास छलिरहेछ"
+    },
+    {
+      "id": "owner_clip1_ai_models",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.176,
+      "band_lsd_dB": [
+        0.198,
+        0.1518,
+        0.1021
+      ],
+      "grit_int8": 1.4056,
+      "grit_fp16": 1.4125,
+      "sibSFM_int8": 0.545,
+      "sibSFM_fp16": 0.545,
+      "slope_int8_dB": -3.24,
+      "slope_fp16_dB": -3.24,
+      "hnr_int8_dB": 19.45,
+      "warble_int8_st": 0.125,
+      "asr_hyp": "दोस्रो समाचार नयाँ पुस्ताका एआi मोडेलहरू बारे छ गoogलले जेmिनइ 4 नियोन नाम गरेको अत्यन्तै छरितो र शक्तिशाली नयाँ एआई मोडेल सार्वजनिक गरेको छ जटिलतर्क गर्न लामो कोड लेख्न र धेरै चरण भएका अनुसन्धानात्मक कामहरू छिटो सम्पन्न गर्न यो मोडेल विशेष रूपमा तयार पारिएको बताइएको छ यस्तै ओपन- एआiले पनि gpt6प टु नाम गरेका नयाँ संस्करणहरू ल्याउँदै प्रयोगकर्ताको तर्फबाट सुरक्षित रूपमा अनलाइन किनमेल गर्न मिल्ने 4gpt वालेट सुविधा सुरु गर्ने घोषणा गरेको छ"
+    },
+    {
+      "id": "owner_clip2_share_market",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.1603,
+      "band_lsd_dB": [
+        0.1816,
+        0.1383,
+        0.0865
+      ],
+      "grit_int8": 1.3877,
+      "grit_fp16": 1.3943,
+      "sibSFM_int8": 0.543,
+      "sibSFM_fp16": 0.543,
+      "slope_int8_dB": -2.9,
+      "slope_fp16_dB": -2.92,
+      "hnr_int8_dB": 18.84,
+      "warble_int8_st": 0.1,
+      "asr_hyp": "पहिलो समाचारकृत्रिमबुद्धिमत्ता वृहत र विश्वस सेयर बजारसँग सम्बन्धित छ प्रसिद्ध एआi अनुसन्धान कम्पनी एन्त्रोपिकको शेयर बजारमा कारोबार खुलेको पहिलो दिनमै सत्र प्रतिशतले उल्लेख्नीय वृद्धि भएको छ तर लगानिकर्ताहरूको नाफा सुरक्षित गर्ने होडबाजीका कारण अर्को दिन करिब चौध प्रतिशतले गिरावट आयो जसले गर्दा अन्य प्रमुख प्रविधि कम्पनीहरूको शेयर मूल्यमा समेत ठूलो उततार छढाउ देखिएको छ विश्लेषकहरूका अनुसार एi पूर्वाधारमा भइरहेको अर्म डलरको लगानीले आगामी त्रैमासिकमा बजारलाई थप संवेदनशील बनाउने निश्चित छ"
+    },
+    {
+      "id": "owner_clip3_intro_bulletin",
+      "len_diff": 0,
+      "stft_lsd_i8_f16_dB": 0.1692,
+      "band_lsd_dB": [
+        0.1898,
+        0.1468,
+        0.1001
+      ],
+      "grit_int8": 1.3847,
+      "grit_fp16": 1.3898,
+      "sibSFM_int8": 0.521,
+      "sibSFM_fp16": 0.52,
+      "slope_int8_dB": -3.55,
+      "slope_fp16_dB": -3.52,
+      "hnr_int8_dB": 18.99,
+      "warble_int8_st": 0.1,
+      "asr_hyp": "नमस्ते सबै जनालाई हसखिया तपाईंको समाचार वाचक आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रीम बुद्धिमतता अर्थात य आएका नविन्तम उपलब्धिहरू नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौं प्रविधिको दुनियाहरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन शिक्षा र व्यवसायमा पर्न थालेको छ त चनौं आजका मुख्य समाचार तर्फ लागुँ"
+    }
+  ]
+}

@@ -23,15 +23,15 @@
    "prec": "int8",
    "dir": "models_sakhiya_one_vocos/",
    "variant": "tiny",
-   "mb": 19.703,
-   "rtf": 0.0318,
-   "utmos": 3.91,
-   "ne_pcer": 0.0351,
+   "mb": 23.011,
+   "rtf": 0.0299,
+   "utmos": 3.94,
+   "ne_pcer": 0.036,
    "sa_pcer": 0.105,
    "ready": true,
-   "desc": "Promoted Studio Default · 4-Step Anchored AM + Mel80To100Adapter + Adapted Pretrained Vocos-24kHz · Zero Harmonic Comb · 31× RT",
-   "onnx_mb": 19.703,
-   "rtf_onnx": 0.0318
+   "desc": "Promoted Studio Default (cand_b_v2) · Real-GT Kathmandu AM + pad=384 Mel80To100Adapter + LoHiBand Vocos-24kHz + STE QAT · grit=1.3927, sibSFM=0.552, slope=-2.91dB, len_diff=0",
+   "onnx_mb": 23.011,
+   "rtf_onnx": 0.0299
   },
   {
    "id": "v1",

@@ -1,10 +1,54 @@
 {
-  "int8_mb": 19.703,
-  "fp16_mb": 35.631,
-  "rtf_1thread": 0.0318,
+  "int8_mb": 23.011,
+  "fp16_mb": 35.528,
+  "rtf_1thread": 0.0299,
+  "ne_pcer": 0.036,
+  "comb_grit": 1.3927,
+  "sibSFM_sa_sha": 0.552,
+  "slope_8_12_vs_4_8_kHz_dB": -2.91,
+  "max_abs_len_diff_vs_fp16": 0,
+  "stft_lsd_int8_fp16_dB": 0.1573,
   "node_verify": {
-    "ok": true,
+    "model": "/work/sp/breakthrough/onnx/model.int8.onnx",
     "nan_count": 0,
-    "rtf_1thread": 0.0318
+    "mean_rtf": 0.0299,
+    "clips": [
+      {
+        "lang": "ne",
+        "dur_s": 4.53,
+        "rtf_1thread": 0.0308,
+        "max_abs": 0.88,
+        "rms": 0.1855
+      },
+      {
+        "lang": "ne",
+        "dur_s": 6.36,
+        "rtf_1thread": 0.0298,
+        "max_abs": 0.88,
+        "rms": 0.1533
+      },
+      {
+        "lang": "ne",
+        "dur_s": 8.76,
+        "rtf_1thread": 0.0302,
+        "max_abs": 0.88,
+        "rms": 0.1167
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.72,
+        "rtf_1thread": 0.0294,
+        "max_abs": 0.88,
+        "rms": 0.2112
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.35,
+        "rtf_1thread": 0.0293,
+        "max_abs": 0.88,
+        "rms": 0.1852
+      }
+    ],
+    "ok": true
   }
 }
