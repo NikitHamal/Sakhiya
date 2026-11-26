@@ -315,7 +315,7 @@ class StudioCleanDiTDecoder(nn.Module):
         nn.init.zeros_(self.out_proj.weight)
         nn.init.zeros_(self.out_proj.bias)
 
-    def forward(
+    def _forward_core(
         self,
         x_t: torch.Tensor,        # [B, 100, T]
         t: torch.Tensor,          # [B]
@@ -339,6 +339,44 @@ class StudioCleanDiTDecoder(nn.Module):
         h = self.final_norm(h) * (1.0 + scale_f) + shift_f
         v_pred = self.out_proj(h).transpose(1, 2) * ymask[:, None, :].to(x_t.dtype)
         return v_pred
+
+    def forward(
+        self,
+        x_t: torch.Tensor,        # [B, 100, T]
+        t: torch.Tensor,          # [B]
+        mu_frame: torch.Tensor,   # [B, 100, T]
+        h_cond: torch.Tensor,     # [B, 640, T]
+        prog_7d: torch.Tensor,    # [B, 7, T]
+        ymask: torch.Tensor,      # [B, T] bool
+    ) -> torch.Tensor:
+        B, _, T = x_t.shape
+        v_full = self._forward_core(x_t, t, mu_frame, h_cond, prog_7d, ymask)
+        W_win, stride, alpha_win = 176, 88, 0.85
+        if self.training or T <= W_win or B != 1:
+            return v_full
+        starts = list(range(0, T - W_win, stride)) + [T - W_win]
+        n_w = len(starts)
+        x_b = torch.cat([x_t[:, :, s : s + W_win] for s in starts], dim=0)
+        t_b = t.repeat(n_w)
+        mu_b = torch.cat([mu_frame[:, :, s : s + W_win] for s in starts], dim=0)
+        hc_b = torch.cat([h_cond[:, :, s : s + W_win] for s in starts], dim=0)
+        pr_b = torch.cat([prog_7d[:, :, s : s + W_win] for s in starts], dim=0)
+        ym_b = torch.cat([ymask[:, s : s + W_win] for s in starts], dim=0)
+        v_b = self._forward_core(x_b, t_b, mu_b, hc_b, pr_b, ym_b).float()
+
+        win_w = (torch.hann_window(W_win, periodic=False, device=x_t.device, dtype=torch.float32) + 0.05)[None, None, :]
+        v_acc = torch.zeros_like(v_full, dtype=torch.float32)
+        w_acc = torch.zeros((1, 1, T), device=x_t.device, dtype=torch.float32)
+        for wi, s in enumerate(starts):
+            w_cur = win_w.clone()
+            if wi == 0:
+                w_cur[:, :, : W_win // 2] = 1.05
+            if wi == n_w - 1:
+                w_cur[:, :, W_win // 2 :] = 1.05
+            v_acc[:, :, s : s + W_win] += v_b[wi : wi + 1] * w_cur
+            w_acc[:, :, s : s + W_win] += w_cur
+        v_win = v_acc / w_acc.clamp(min=1e-5)
+        return (alpha_win * v_win + (1.0 - alpha_win) * v_full.float()).to(v_full.dtype)
 
 
 def compute_intra_phoneme_progress_7d(
