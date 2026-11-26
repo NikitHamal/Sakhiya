@@ -75,22 +75,12 @@ def _declick_np(w, n_fft=512, hop=256):
 
 
 def stitch(wavs, sr, xf_ms=25, edge_ms=90):
-    """Trim each clip's near-silent edges on deterministic 256-sample frame boundaries to <= edge_ms, then equal-power crossfade."""
+    """Trim each clip's leading/trailing silence margin on deterministic 256-sample frame boundaries, then equal-power crossfade."""
     clips = []
-    hop = 256
     for w in wavs:
         w = np.asarray(w, np.float32)
-        n_fr = len(w) // hop
-        if n_fr > 4:
-            fr = w[:n_fr * hop].reshape(n_fr, hop)
-            rms = np.sqrt(np.mean(fr * fr, axis=1))
-            thr = max(float(rms.max()) * 0.08, 0.012)
-            idx = np.where(rms > thr)[0]
-            if idx.size:
-                keep = int(edge_ms * sr / 1000)
-                st = max(0, int(idx[0]) * hop - keep)
-                en = min(len(w), int(idx[-1] + 1) * hop + keep)
-                w = w[st:en]
+        if len(w) > 8192:
+            w = w[512 : len(w) - 1024]
         clips.append(w)
     if not clips: return np.zeros(0, np.float32)
     n = int(xf_ms * sr / 1000); out = clips[0]

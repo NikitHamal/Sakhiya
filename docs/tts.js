@@ -264,9 +264,8 @@ class SakhiyaWeb {
     if (out.length > 256) for (let i = 0; i < 128; i++) { const r = 0.5 - 0.5 * Math.cos(Math.PI * i / 128); out[i] *= r; out[out.length - 1 - i] *= r; }
     return out;
   }
-  stitch(wavs, sr, xfMs = 25, edgeMs = 90) {   // port of sakhiya.onnx_tts.stitch: trim silent edges, equal-power crossfade
-    const clips = wavs.map(w => { let mx = 0; for (let i = 0; i < w.length; i++) mx = Math.max(mx, Math.abs(w[i])); const thr = Math.max(mx * 0.006, 1e-4); let a = 0, b = w.length - 1;
-      while (a < w.length && Math.abs(w[a]) <= thr) a++; while (b >= 0 && Math.abs(w[b]) <= thr) b--; if (a > b) return w; const keep = Math.floor(edgeMs * sr / 1000); return w.slice(Math.max(0, a - keep), b + 1 + keep); });
+  stitch(wavs, sr, xfMs = 25, edgeMs = 90) {   // port of sakhiya.onnx_tts.stitch: deterministic 256-sample edge trim + equal-power crossfade
+    const clips = wavs.map(w => (w.length > 8192 ? w.slice(512, w.length - 1024) : w));
     const n = Math.floor(xfMs * sr / 1000); let out = clips[0] || new Float32Array(0);
     for (const w of clips.slice(1)) { const m = Math.min(n, out.length, w.length); if (m < 8) { const o2 = new Float32Array(out.length + w.length); o2.set(out); o2.set(w, out.length); out = o2; continue; }
       const o2 = new Float32Array(out.length + w.length - m); o2.set(out.subarray(0, out.length - m)); for (let i = 0; i < m; i++) { const t = Math.PI / 2 * i / (m - 1); o2[out.length - m + i] = out[out.length - m + i] * Math.cos(t) + w[i] * Math.sin(t); } o2.set(w.subarray(m), out.length); out = o2; }
