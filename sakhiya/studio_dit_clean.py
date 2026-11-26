@@ -452,46 +452,23 @@ class SakhiyaStudio80M(nn.Module):
         ) / ym_mel_denom
         l_prior = 0.5 * l_prior_ph + l_prior_fr
 
-        # 3. Frame-level Prior & Continuous Pitch/VUV/Energy Refiner
-        h_cond, mu_frame, lf0_fr_pred, vuv_logit_fr, eng_fr_pred = self.pros.forward_frame(h_exp, mu_exp, prog_7d, ymask_dit)
-
-        ym_f = ymask_dit.float()
-        ym_denom = ym_f.sum().clamp(min=1.0)
-        ym_mel_denom = (ym_denom * 100.0).clamp(min=1.0)
-        m_1d = ym_f[:, None, :]
-
-        voiced_f = (vuv_w.float() > 0.45) & ymask_dit
-        l_f0 = F.smooth_l1_loss(lf0_fr_pred * voiced_f.float(), lf0_w.float() * voiced_f.float(), reduction="sum", beta=0.15) / voiced_f.float().sum().clamp(min=1.0)
-        l_vuv = (F.binary_cross_entropy_with_logits(vuv_logit_fr, vuv_w.float(), reduction="none") * ym_f).sum() / ym_denom
-        l_eng = F.smooth_l1_loss(eng_fr_pred * ym_f, eng_w.float() * ym_f, reduction="sum", beta=0.2) / ym_denom
-
-        l_prior_fr = (
-            F.l1_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
-            + 0.5 * F.mse_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
-        ) / ym_mel_denom
-        l_prior = 0.5 * l_prior_ph + l_prior_fr
-
-        ym_f = ymask_dit.float()
-        ym_denom = ym_f.sum().clamp(min=1.0)
-        ym_mel_denom = (ym_denom * 100.0).clamp(min=1.0)
-        m_1d = ym_f[:, None, :]
-
         # 4. Optimal-Transport Conditional Flow Matching (Prior-OT-CFM) in 16-Layer Dense DiT
-        u_rand = torch.rand((B,), device=mel_gt.device, dtype=torch.float32)
-        t_logit = torch.sigmoid(torch.randn((B,), device=mel_gt.device, dtype=torch.float32))
-        t_unif = torch.rand((B,), device=mel_gt.device, dtype=torch.float32)
+        dev = y_1.device
+        u_rand = torch.rand((B,), device=dev, dtype=torch.float32)
+        t_logit = torch.sigmoid(torch.randn((B,), device=dev, dtype=torch.float32))
+        t_unif = torch.rand((B,), device=dev, dtype=torch.float32)
         t = torch.where(u_rand < 0.80, t_logit, t_unif).clamp(1e-4, 1.0 - 1e-4)
         t_view = t[:, None, None]
 
         eps = torch.randn_like(y_1) * m_1d
-        temp_scale = (0.05 + 0.85 * torch.rand((B, 1, 1), device=mel_gt.device, dtype=torch.float32))
+        temp_scale = (0.05 + 0.85 * torch.rand((B, 1, 1), device=dev, dtype=torch.float32))
         x_0 = (mu_frame.detach() + (self.sigma_0 * temp_scale) * eps) * m_1d
         x_t = ((1.0 - t_view) * x_0 + t_view * y_1) * m_1d
         v_target = (y_1 - x_0) * m_1d
 
         # Mild 10% conditioning dropout for optional CFG sweep at eval
         if self.training and cfg_drop_prob > 0.0:
-            keep = (torch.rand((B, 1, 1), device=mel_gt.device) >= cfg_drop_prob).to(h_cond.dtype)
+            keep = (torch.rand((B, 1, 1), device=dev) >= cfg_drop_prob).to(h_cond.dtype)
             h_cond_in = h_cond * keep
             prog_in = prog_7d * keep.float()
         else:
@@ -514,7 +491,7 @@ class SakhiyaStudio80M(nn.Module):
             m_dt = (ymask_dit[:, 1:] & ymask_dit[:, :-1])[:, None, :].float()
             l_time_grad = F.l1_loss(dt_pred * m_dt, dt_gt * m_dt, reduction="sum") / (m_dt.sum() * 100.0).clamp(min=1.0)
         else:
-            l_time_grad = torch.zeros((), device=mel_gt.device)
+            l_time_grad = torch.zeros((), device=dev)
 
         l_cfm = l_vel_l1 + l_vel_l2 + 0.5 * l_x1 + 0.35 * l_freq_grad + 0.20 * l_time_grad
         total_loss = l_cfm + 0.80 * l_prior + 0.50 * l_dur + 0.40 * (l_f0 + 0.5 * l_vuv + 0.5 * l_eng)
