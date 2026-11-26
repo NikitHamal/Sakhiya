@@ -439,11 +439,10 @@ def train_phase1_studio_80m(
             p_last = os.path.join(CKPT_DIR, "studio_80m_latest.pt")
             torch.save(ck_obj, p_last + ".tmp")
             os.replace(p_last + ".tmp", p_last)
-            if cur_tot < best_loss or step == total_steps:
-                best_loss = cur_tot
-                p_best = os.path.join(CKPT_DIR, "studio_80m_ema_best.pt")
-                torch.save(dict(step=step, ema=ema_model.state_dict(), mel_mean=mel_mean, mel_std=mel_std), p_best + ".tmp")
-                os.replace(p_best + ".tmp", p_best)
+            best_loss = min(best_loss, cur_tot)
+            p_best = os.path.join(CKPT_DIR, "studio_80m_ema_best.pt")
+            torch.save(dict(step=step, ema=ema_model.state_dict(), mel_mean=mel_mean, mel_std=mel_std), p_best + ".tmp")
+            os.replace(p_best + ".tmp", p_best)
 
     del sliced_batches, base_batches
     torch.cuda.empty_cache()
@@ -1047,8 +1046,18 @@ def main():
 
     if args.eval_only:
         ema_model = SakhiyaStudio80M(mel_mean=float(cache_obj["mel_mean"]), mel_std=float(cache_obj["mel_std"])).to(dev).eval()
-        ck = torch.load(os.path.join(CKPT_DIR, "studio_80m_ema_best.pt"), map_location=dev, weights_only=False)
+        p_last = os.path.join(CKPT_DIR, "studio_80m_latest.pt")
+        p_best = os.path.join(CKPT_DIR, "studio_80m_ema_best.pt")
+        ck_last = torch.load(p_last, map_location=dev, weights_only=False) if os.path.exists(p_last) else None
+        ck_best = torch.load(p_best, map_location=dev, weights_only=False) if os.path.exists(p_best) else None
+        if ck_last is not None and (ck_best is None or int(ck_last.get("step", 0)) >= int(ck_best.get("step", 0))):
+            ck = ck_last
+            torch.save(dict(step=int(ck.get("step", 0)), ema=ck["ema"], mel_mean=float(cache_obj["mel_mean"]), mel_std=float(cache_obj["mel_std"])), p_best + ".tmp")
+            os.replace(p_best + ".tmp", p_best)
+        else:
+            ck = ck_best
         ema_model.load_state_dict(ck["ema"])
+        log(f"[Eval-Only] Loaded converged EMA checkpoint at step {ck.get('step')} from {CKPT_DIR}")
     else:
         ema_model = train_phase1_studio_80m(
             cache_obj, bg_frozen,
