@@ -400,14 +400,10 @@ class StudioVocoder100Mel(nn.Module):
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
 
-        # Stochastic OLA-consistent noise amplitude:
-        # - Unvoiced frames (1 - uv_16): active across sibilant & breath bands (bins >= 4)
-        # - Voiced frames (uv_16): strictly confined to >= 6.0 kHz condenser air (bins >= 16) so voiced 0.2-4 kHz HNR has zero bleed!
-        unv_band_w = ((freq_ar - 4.0) / 4.0).clamp(0.06, 1.0)
-        vo_air_w = ((freq_ar - 16.0) / 5.0).clamp(0.0, 1.0)
-        nyq_rolloff = ((32.2 - freq_ar) / 1.5).clamp(0.15, 1.0)
-        noise_gate = ((1.0 - uv_16) * unv_band_w * 0.24 + uv_16 * vo_air_w * 0.08) * nyq_rolloff
-        A_noise = torch.exp(log_noise) * sg_16 * noise_gate
+        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, zero bleed into 0.2-4 kHz voiced HNR)
+        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.04, 1.0)
+        unvoiced_boost = 1.0 - 0.85 * uv_16 * (1.0 - 0.65 * hi_band_w)
+        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
 
         if noise_re is None or noise_im is None:
             noise_re, noise_im = self._compute_ola_unit_phasor_noise(mel.shape[0], T_sub, mel.device, A_harm.dtype)
