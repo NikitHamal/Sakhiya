@@ -554,6 +554,8 @@ class SakhiyaNewsFlagship(nn.Module):
         is_tail = (((pos >= (L_f - 3.0)) & (ids > 8)) | (ids >= 53)).float()
         min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
         dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=60.0)
+        dur = torch.where(ids == SYM2ID["ts"], torch.clamp(dur, min=3.0, max=5.0), dur)
+        dur = torch.where(ids == SYM2ID["tsʰ"], torch.clamp(dur, min=7.0, max=11.0), dur)
 
         # Preserve Nepali reduplication hiatus (`आआफ्नो`) and short function words (`र`, `त`, `छ`, `हो`)
         id_a, id_wb, id_r, id_h, id_schwa, id_o = SYM2ID["a"], SYM2ID["|"], SYM2ID["r"], SYM2ID["h"], SYM2ID["ʌ"], SYM2ID["o"]
@@ -635,7 +637,7 @@ class SakhiyaNewsFlagship(nn.Module):
 
         # Full 100-band log-mel (fmin=0, fmax=12000) -> Dual-Source OLA-Noise + Creak Vocoder
         mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
-        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.45)
+        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.24)
 
         # Ensure interior <breath> spans are unvoiced studio inhalations (-32dB RMS, flatness > 0.50, zero dead silence)
         br_frame = torch.gather(is_interior_breath, 1, idx)[:, None, :]
