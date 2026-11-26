@@ -27,15 +27,15 @@ def _segment(text):
     out = []
     for s in sents:
         ws = s.split()
-        if len(ws) <= 20:
+        if len(ws) <= 36:
             out.append(s); continue
         cur = []
         for i, w in enumerate(ws):
             cur.append(w)
-            if (w in FINITE and len(cur) >= 4 and len(ws) - i - 1 >= 3) or len(cur) >= 12:
+            if (w.endswith((",", ";")) and len(cur) >= 14 and len(ws) - i - 1 >= 6) or (w in FINITE and len(cur) >= 18 and len(ws) - i - 1 >= 8):
                 out.append(" ".join(cur)); cur = []
         if cur:
-            if out and len(cur) < 3: out[-1] += " " + " ".join(cur)
+            if out and len(cur) < 5: out[-1] += " " + " ".join(cur)
             else: out.append(" ".join(cur))
     return out or [str(text)]
 

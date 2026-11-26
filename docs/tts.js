@@ -290,9 +290,9 @@ class SakhiyaWeb {
     const FIN = new Set(["छ","छन्","छु","छौ","छैन","छैनन्","हो","हुन्","थियो","थिए","थिएन","भयो","भए","गर्यो","गरे","गर्छ","गर्छन्","हुन्छ","पर्छ","सक्छ","गयो","आयो","दियो","भन्यो","पाइन्छ","मानिन्छ","गरियो","बा","बाटै","बाटु","रहे","है","नाहै","बडयी","बडिय","हलयी"]);
     const norm = await SK.normalizeAsync(text, o.lang), saSegs = norm.split(/(?<=[।॥])\s*|(?<=[.?!])\s+/).filter(s => /[\u0900-\u097F]/.test(s)), raw = (o.lang === "sa" && norm.trim().split(/\s+/).length <= 45 && saSegs.length <= 2) ? [norm.trim()] : saSegs, parts = [], outs = [], phs = [];
     for (const s of raw.length ? raw : [norm]) {
-      const ws = s.trim().split(/\s+/); if (ws.length <= 20) { parts.push(s); continue; }
-      let cur = []; for (let i = 0; i < ws.length; i++) { cur.push(ws[i]); if ((FIN.has(ws[i]) && cur.length >= 4 && ws.length - i - 1 >= 3) || cur.length >= 12) { parts.push(cur.join(" ")); cur = []; } }
-      if (cur.length) { if (parts.length && cur.length < 3) parts[parts.length - 1] += " " + cur.join(" "); else parts.push(cur.join(" ")); }
+      const ws = s.trim().split(/\s+/); if (ws.length <= 36) { parts.push(s); continue; }
+      let cur = []; for (let i = 0; i < ws.length; i++) { cur.push(ws[i]); if (((ws[i].endsWith(",") || ws[i].endsWith(";")) && cur.length >= 14 && ws.length - i - 1 >= 6) || (FIN.has(ws[i]) && cur.length >= 18 && ws.length - i - 1 >= 8)) { parts.push(cur.join(" ")); cur = []; } }
+      if (cur.length) { if (parts.length && cur.length < 5) parts[parts.length - 1] += " " + cur.join(" "); else parts.push(cur.join(" ")); }
     }
     const isV2 = /^sakhiya-(v2|v3|v4|v6|v15|nano|atom|pico)/.test(String((this.cfg && this.cfg.arch) || ""));
     let lastChandas = null;
@@ -309,8 +309,8 @@ class SakhiyaWeb {
       }
       const ph = acc ? acc.ph : SK.textToPhones(parts[i], o.lang), dm = acc ? acc.dm : (SK.phoneDm ? SK.phoneDm(ph) : null); phs.push(ph.join(" ")); outs.push(await this.chunk(ph, Object.assign({}, o, { is_last: i === parts.length - 1, off: acc ? acc.off : null, dm, has_vedic_marks: acc ? !!acc.has_vedic_marks : false })));
     }
-    const total = outs.reduce((n, c) => n + c.wav.length, 0), wav = new Float32Array(total); let p = 0;
-    outs.forEach(c => { wav.set(c.wav, p); p += c.wav.length; });
+    const wav = outs.length > 1 ? this.stitch(outs.map(c => c.wav), sr) : (outs[0] ? outs[0].wav : new Float32Array(0));
+    const total = wav.length;
     const ms = performance.now() - t0; return { wav, sr, ms, rtf: ms / 1000 / (total / sr), norm, phones: phs.join(" | "), mel: outs.map(c => ({ d: c.mel, F: c.F })) };
   }
 }
