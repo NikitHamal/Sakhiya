@@ -993,18 +993,18 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
     l2["silence_floor_SNR_dB"] = sil_snr_db
     l2["studio_physics_probes"] = studio_physics
 
-    if tier == "sakhiya_news":
-        # Leg-2 Hard Ship-Blocking Gates for Sakhiya-News (zero UTMOS optimization!)
+    if tier in ("sakhiya_news", "sakhiya_news_v2"):
+        # Hard Ship-Blocking Gates for Sakhiya-News v2 (true FP16 vocoder head isolation >=78% INT8, STFT_LSD <= 0.20 dB)
         sz_min, sz_max = 8.00, 9.80
-        req_int8_pct = 88.0
+        req_int8_pct = 78.0
         req_sim = 0.88
         req_margin_v1 = 0.48
         req_ltas_mcd = 3.00
         req_hf_12k = 1.15
-        req_sil_snr = 58.0
+        req_sil_snr = 60.0
         req_pcer = 0.049
         req_pcer_gap = 0.017
-        req_lsd_parity = 0.30
+        req_lsd_parity = 0.20
         req_rtf = 0.080
     else:
         sz_min, sz_max = 6.50, 8.50

@@ -137,7 +137,8 @@ FP16_ISOLATED_NAMES = (
 
 def _is_fp16_isolated(init_name: str, a: np.ndarray, ax: int, fp16_names):
     return (
-        a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64), (33, 100, 1))
+        a.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64), (33, 100, 1), (144, 100), (5, 144), (32, 96))
+        or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1)
         or a.shape[ax] <= 8
         or a.shape[0] in (33, 66)
         or (a.ndim == 2 and min(a.shape) == 1)

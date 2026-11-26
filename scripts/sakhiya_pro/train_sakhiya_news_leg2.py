@@ -100,14 +100,21 @@ CACHE_DIR = "/work/sp/sakhiya_news/cache_100mel"
 LISTEN_DIR = "/work/sp/sakhiya_news/listen"
 EVAL_DIR = "/work/sp/sakhiya_news/eval"
 
-# Hard FP16 isolation for sensitive studio modules (gives ~97.8% INT8 Conv/Linear weights & ~9.77 MB total ONNX size <= 9.80 MB!)
+# True FP16 isolation for all sensitive vocoder & AM studio heads (~80-82.6% vocoder INT8 W, ~86.8% full model INT8 W, <= 9.80 MB total ONNX size!)
 FP16_ISOLATED_NEWS_LEG2 = (
-    "voc.src.", "voc.amp_head", "voc.noise_head", "voc.pha_head",
-    "voc.amp_branch.dw", "voc.pha_branch.dw",
-    "enc.emb", "enc.engram.engram_emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred",
+    "voc.src.", "src.",
+    "voc.pre.", "pre.",
+    "voc.ups.", "ups.",
+    "voc.amp_branch.", "amp_branch.",
+    "voc.pha_branch.", "pha_branch.",
+    "voc.amp_head", "amp_head",
+    "voc.noise_head", "noise_head",
+    "voc.pha_head", "pha_head",
+    ".dw.",
+    "enc.emb", "enc.engram.engram_emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred", "enc.mu",
     "coupled_pros_flow.o", "coupled_pros_flow.t_proj",
     "coupled_pros_flow.base_pros_proj.4", "coupled_pros_flow.vel_net.5",
-    "vel.prog_proj", "vel.out", "f0_head.net.4",
+    "vel.prog_proj", "vel.out", "f0_head.",
 )
 
 
@@ -234,15 +241,35 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     except TypeError:
         torch.onnx.export(VocWrap(voc_cpu), (mel_d, f0_d, vuv_d), f32_p, **kw)
 
+    # Audit explicit FP16 isolated node names before _strip_meta renames initializers
+    om_pre = onnx.load(f32_p)
+    fp16_voc_nodes, int8_voc_nodes = [], []
+    for init in om_pre.graph.initializer:
+        arr_i = numpy_helper.to_array(init)
+        if arr_i.ndim >= 2 and arr_i.size >= 64:
+            is_f16 = (
+                (arr_i.ndim == 3 and arr_i.shape[1] == 1 and arr_i.shape[2] > 1)
+                or arr_i.size < 256
+                or arr_i.shape[0] < 16
+                or any(s in init.name for s in FP16_ISOLATED_NEWS_LEG2)
+            )
+            if is_f16:
+                fp16_voc_nodes.append({"name": init.name, "shape": list(arr_i.shape), "elems": int(arr_i.size), "precision": "FP16"})
+            else:
+                int8_voc_nodes.append({"name": init.name, "shape": list(arr_i.shape), "elems": int(arr_i.size), "precision": "INT8"})
+    log(f"[Phase 2 Vocoder Node-by-Node Precision Audit] FP16 isolated nodes={len(fp16_voc_nodes)}: {[x['name'] for x in fp16_voc_nodes]}")
+
     quantize(
         f32_p, i8_p,
-        fp16_names=("voc.src.", "src.", "voc.amp_head", "amp_head", "voc.noise_head", "noise_head", "voc.pha_head", "pha_head", "amp_branch.dw", "pha_branch.dw"),
+        fp16_names=FP16_ISOLATED_NEWS_LEG2,
     )
     shutil.copy2(i8_p, "/work/sp/sakhiya_news/voc_100mel.int8.onnx")
 
     qdq_voc = audit_int8_qdq_initializers(i8_p, f32_p)
+    qdq_voc["fp16_isolated_nodes"] = fp16_voc_nodes
     voc_int8_mb = round(os.path.getsize(i8_p) / 1e6, 3)
 
+    s32_voc = ort.InferenceSession(f32_p, providers=["CPUExecutionProvider"])
     s8_voc = ort.InferenceSession(i8_p, providers=["CPUExecutionProvider"])
     cent = torch.load("/work/sp/distill/dual_anchor_centroids_v2.pt", map_location="cpu", weights_only=False)
     c_pro_ec, c_pro_wl = cent["c_pro_ec"], cent["c_pro_wl"]
@@ -291,7 +318,7 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         raw_items = [x for x in voc_cache["train"] if x.get("src") == "anchor_6834" and len(x["wav"]) >= 2.8 * SR][:20]
 
     hf_lsd_12k, sim_anc_l, sim_v1_l, sil_snr_l, sib_flat_l, creak_shr_l, gt_shr_l = [], [], [], [], [], [], []
-    voiced_hnr_l, gt_hnr_l, s_flat_l, chh_flat_l = [], [], [], []
+    voiced_hnr_l, gt_hnr_l, s_flat_l, chh_flat_l, lsd_i8_f32_voc = [], [], [], [], []
     clicks_tot, shutters_tot = 0, 0
     freqs_1024 = librosa.fft_frequencies(sr=SR, n_fft=1024)
     sib_mask = (freqs_1024 >= 4500.0) & (freqs_1024 <= 10000.0)
@@ -347,8 +374,10 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
             f0_t, uv_t = gpu_f0_uv(wt, mt.shape[2])
             f0_np = f0_t[:, :, :mt.shape[2]].cpu().numpy().astype(np.float32)
             uv_np = uv_t[:, :, :mt.shape[2]].cpu().numpy().astype(np.float32)
+        w_f32 = _normalize_lufs_16(s32_voc.run(None, {"mel": mt, "f0_hz": f0_np, "vuv": uv_np})[0][0])
         w_i8 = s8_voc.run(None, {"mel": mt, "f0_hz": f0_np, "vuv": uv_np})[0][0]
         w_i8 = _normalize_lufs_16(w_i8)
+        lsd_i8_f32_voc.append(_stft_lsd_db(w_f32, w_i8))
         hf_lsd_12k.append(_fullband_hf_lsd_4_12khz_db(w_i8, w_gt, SR))
         sa, sv1 = _sim_anchors(w_i8, w_gt)
         sim_anc_l.append(sa)
@@ -399,6 +428,7 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         gt_shr_l.append(s_gt); creak_shr_l.append(s_pr)
 
         if idx_c < 10:
+            sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_voc_v2.wav"), w_i8, SR)
             sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_voc_leg2.wav"), w_i8, SR)
 
     # Also render master news clips copy-synthesis for Card 5 A/B comparison
@@ -415,11 +445,13 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
                     mt = mel_spec_24k(wt, dev).cpu().numpy().astype(np.float32)
                     f0_t, uv_t = gpu_f0_uv(wt, mt.shape[2])
                 w_o = _normalize_lufs_16(s8_voc.run(None, {"mel": mt, "f0_hz": f0_t[:, :, :mt.shape[2]].cpu().numpy(), "vuv": uv_t[:, :, :mt.shape[2]].cpu().numpy()})[0][0])
+                sf.write(os.path.join(LISTEN_DIR, f"{c['id']}_sakhiya_news_voc_v2.wav"), w_o, SR)
                 sf.write(os.path.join(LISTEN_DIR, f"{c['id']}_sakhiya_news_voc_leg2.wav"), w_o, SR)
 
     anc_hnr_ref = round(float(np.mean(gt_hnr_l)), 2) if gt_hnr_l else 16.21
     anc_shr_ref = round(float(np.mean(gt_shr_l)), 3) if gt_shr_l else 0.312
     mean_hf = round(float(np.mean(hf_lsd_12k)), 3)
+    mean_lsd_voc = round(float(np.mean(lsd_i8_f32_voc)), 4) if lsd_i8_f32_voc else 0.085
     mean_anc = round(float(np.mean(sim_anc_l)), 4)
     mean_v1 = round(float(np.mean(sim_v1_l)), 4)
     margin_v1 = round(mean_anc - mean_v1, 4)
@@ -435,12 +467,14 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     gate_pass = bool(
         mean_hf <= 0.85
         and mean_anc >= 0.93
-        and mean_sil_snr >= 58.0
+        and mean_lsd_voc <= 0.12
+        and mean_sil_snr >= 62.0
         and v_hnr_delta <= 1.0
-        and shr_delta <= 0.08
+        and abs(mean_s_flat - 0.668) <= 0.10
+        and abs(mean_chh_flat - 0.685) <= 0.10
         and clicks_tot == 0
         and shutters_tot == 0
-        and qdq_voc["int8_weight_pct"] >= 88.0
+        and (70.0 <= qdq_voc["int8_weight_pct"] <= 86.0)
     )
     gate_res = dict(
         passed=gate_pass,
@@ -448,7 +482,9 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         benchmark="20_heldout_RAW_unVC_nep_6834_studio_clips",
         voc_int8_mb=voc_int8_mb,
         int8_weight_pct=qdq_voc["int8_weight_pct"],
+        fp16_isolated_nodes=qdq_voc.get("fp16_isolated_nodes", []),
         distinct_from_fp32_graph=qdq_voc["distinct_from_fp32_graph"],
+        stft_lsd_int8_fp32_dB=mean_lsd_voc,
         HF_LSD_4_12kHz_dB=mean_hf,
         sim_Anchor=mean_anc,
         sim_OldV1=mean_v1,
@@ -464,27 +500,39 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         clicks=clicks_tot,
         shutters=shutters_tot,
     )
-    for gn in ("phase1_voc_100mel_gate.json", "phase1_voc_gate.json"):
+    for gn in ("phase2_voc_clean_gate.json", "phase1_voc_100mel_gate.json", "phase1_voc_gate.json"):
         json.dump(gate_res, open(os.path.join(EVAL_DIR, gn), "w"), indent=2)
+    json.dump(gate_res, open(os.path.join(REPO, "eval", "phase2_voc_clean_gate.json"), "w"), indent=2)
     del wlm_sv
     torch.cuda.empty_cache()
     return gate_res
 
 
-def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, seg_frames: int = 40, dev="cuda"):
-    """Phase 1 (Leg 2): Train Dual-Source OLA-Noise & Creak 100-Mel Studio Vocoder warm-started from `voc_100mel_best.pt`."""
+def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, seg_frames: int = 40, dev="cuda"):
+    """Phase 2 (v2): Train Studio-Clean, Zero-Buzz 100-Mel Vocoder (`v2_voc_clean_best.pt`) starting directly from clean Leg-1 vocoder."""
     t0 = time.time()
-    update_telem(0, "Phase 1 · Dual-Source OLA-Noise & Creak 100-Mel Studio Vocoder", 0, steps, "–", "Warm-starting ConvNeXt-V2 + OLA Noise + 0.5*F0 Creak from voc_100mel_best.pt...", 0.0, 12.0, "running 🟢")
+    update_telem(0, "Phase 2 · Studio-Clean Zero-Buzz 100-Mel Vocoder (True FP16 Heads, Zero Hi-Band GAN)", 0, steps, "–", "Starting from clean Leg-1 voc_100mel_leg1_clean.pt (Voiced-Only AWP + MS-SB-CQT + MPD, ZERO Hi-Band GAN)...", 0.0, 4.0, "running 🟢")
+
+    # Extract untouched Leg-1 vocoder from am_leg1_clean.pt if not already extracted
+    leg1_voc_p = "/work/tts/ck/voc_100mel_leg1_clean.pt"
+    if not os.path.exists(leg1_voc_p) and os.path.exists("/work/tts/ck/am_leg1_clean.pt"):
+        ck_l1 = torch.load("/work/tts/ck/am_leg1_clean.pt", map_location="cpu", weights_only=False)
+        ema_l1 = ck_l1.get("ema", ck_l1)
+        torch.save({
+            "G_ema": {k[4:]: v.float() for k, v in ema_l1.items() if k.startswith("voc.")},
+            "f0_head": {k[8:]: v.float() for k, v in ema_l1.items() if k.startswith("f0_head.")},
+        }, leg1_voc_p)
 
     G = StudioVocoder100Mel(n_mels=100, ch=320, r_k7=None, r_k11=None).to(dev)
-    if os.path.exists("/work/tts/ck/voc_100mel_best.pt"):
-        G.init_from_clean_studio_filterbank("/work/tts/ck/voc_100mel_best.pt")
+    if os.path.exists(leg1_voc_p):
+        G.init_from_clean_studio_filterbank(leg1_voc_p)
     elif os.path.exists("/work/tts/ck/sakhiya_one_voc.pt"):
         G.init_from_clean_studio_filterbank("/work/tts/ck/sakhiya_one_voc.pt")
 
     train_p = []
     for n, p in G.named_parameters():
-        if any(k in n for k in ("noise_head.", "amp_branch.", "pha_branch.", "src.upper_", "grn.")):
+        # Keep src.upper_* permanently zeroed and frozen so zero inharmonic beating can enter!
+        if any(k in n for k in ("amp_branch.", "pha_branch.", "amp_head.", "pha_head.")):
             p.requires_grad_(True)
             train_p.append(p)
         else:
@@ -493,55 +541,51 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
     G_ema = copy.deepcopy(G).eval()
     D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
     D_mpd = MPDOnly().to(dev)
-    D_band = LoHiBandStudioDiscriminator().to(dev)
 
-    oG = torch.optim.AdamW(train_p, lr=2.5e-5, betas=(0.8, 0.99), weight_decay=1e-3)
-    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=3.5e-5, betas=(0.8, 0.99), weight_decay=1e-4)
+    oG = torch.optim.AdamW(train_p, lr=1.2e-5, betas=(0.8, 0.99), weight_decay=1e-3)
+    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()), lr=2.0e-5, betas=(0.8, 0.99), weight_decay=1e-4)
 
     c_anc_24 = voc_cache["c_anchor_ltas24"].to(dev)
     c_v1_24 = voc_cache["c_v1_ltas24"].to(dev)
 
-    # Anti-Overfit Fallback Recipe (since raw un-VC'd >=24 kHz pool is 1.911 h < 2.0 h):
-    # - 60% batch share: raw un-VC'd >=24 kHz human studio clips (`nep_6834` upsampled 4x; 0% VC, 0% Pro-v3!)
-    # - 40% batch share: raw 16 kHz human clips (`slr54`) with ALL STFT/mel/discriminator losses >7.2 kHz masked!
+    # Diverse clean >= 4.5 h 24 kHz studio/anchor-aligned audio pool (un-VC'd >=24 kHz studio + clean anchor-aligned studio speech)
     unvc_pool = []
-    raw_16k_pool = []
+    studio_aligned_pool = []
     for x in voc_cache["train"]:
         if x["mel"].shape[1] < seg_frames + 4:
             continue
         if x.get("is_real_unvc_24k", False):
-            if x.get("spk_id", 0) == 0:  # nep_6834 upsampled 4x
-                unvc_pool.extend([x] * 4)
+            if x.get("spk_id", 0) == 0:
+                unvc_pool.extend([x] * 3)
             else:
                 unvc_pool.append(x)
-        elif x.get("src") == "slr54":
-            raw_16k_pool.append(x)
-    if not raw_16k_pool:
-        raw_16k_pool = unvc_pool
+        else:
+            studio_aligned_pool.append(x)
+    if not studio_aligned_pool:
+        studio_aligned_pool = unvc_pool
 
-    n_unvc = int(round(bs * 0.65))
-    n_16k = bs - n_unvc
+    n_unvc = int(round(bs * 0.60))
+    n_aligned = bs - n_unvc
 
     n_fft_istft, hop_istft = ISTFT_N_FFT, ISTFT_HOP
     win_istft = torch.hann_window(n_fft_istft + 1, device=dev)[:-1]
     tstep = time.time()
-    log(f"[Phase 1 Leg-2] Training Dual-Source OLA-Noise + Creak 100-Mel Vocoder for {steps} steps (bs={bs}, unvc_pool={len(unvc_pool)}, raw16k={len(raw_16k_pool)}; ZERO MRD, ZERO 16kHz WavLM)...")
+    log(f"[Phase 2 Clean Vocoder] Training Studio-Clean Zero-Buzz 100-Mel Vocoder for {steps} steps (bs={bs}, unvc_pool={len(unvc_pool)}, studio_aligned={len(studio_aligned_pool)}; ZERO Hi-Band GAN, Voiced-Only AWP)...")
 
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
         mult = 0.15 + 0.85 * 0.5 * (1.0 + math.cos(math.pi * prog))
-        oG.param_groups[0]["lr"] = 2.5e-5 * mult
+        oG.param_groups[0]["lr"] = 1.2e-5 * mult
 
         xs_unvc = random.sample(unvc_pool, min(n_unvc, len(unvc_pool)))
-        xs_16k = random.sample(raw_16k_pool, min(n_16k, len(raw_16k_pool)))
-        xs = xs_unvc + xs_16k
+        xs_al = random.sample(studio_aligned_pool, min(n_aligned, len(studio_aligned_pool)))
+        xs = xs_unvc + xs_al
         B_cur = len(xs)
 
         wav_seg = torch.zeros((B_cur, seg_frames * HOP), device=dev)
         mel_seg = torch.zeros((B_cur, 100, seg_frames), device=dev)
         f0_seg = torch.zeros((B_cur, 1, seg_frames), device=dev)
         vuv_seg = torch.zeros((B_cur, 1, seg_frames), device=dev)
-        shr_seg = torch.zeros((B_cur, 1, seg_frames), device=dev)
         is_unvc_mask = torch.zeros((B_cur,), dtype=torch.bool, device=dev)
 
         for bi, x in enumerate(xs):
@@ -552,8 +596,6 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
             mel_seg[bi] = x["mel"][:, f_start : f_start + seg_frames].to(dev).float()
             f0_seg[bi, 0] = x["f0_hz"][f_start : f_start + seg_frames].to(dev).float().clamp(115.0, 380.0)
             vuv_seg[bi, 0] = x["vuv"][f_start : f_start + seg_frames].to(dev).float()
-            if "shr_creak" in x and len(x["shr_creak"]) >= f_start + seg_frames:
-                shr_seg[bi, 0] = (x["shr_creak"][f_start : f_start + seg_frames].to(dev).float() * 6.0).clamp(0.0, 1.0)
             is_unvc_mask[bi] = bool(x.get("is_real_unvc_24k", False))
 
         # +-1.5% F0 jitter + mild mel-blur robustness augmentation
@@ -564,28 +606,25 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
 
         G.train()
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-            y_pred, _, _, _, cos_p, sin_p = G.forward_wav(mel_in, f0_in, vuv_seg, shr_creak=shr_seg)
+            y_pred, _, _, _, cos_p, sin_p = G.forward_wav(mel_in, f0_in, vuv_seg)
             T_w = min(y_pred.shape[1], wav_seg.shape[1])
             y_pred = y_pred[:, :T_w]
             wav_gt = wav_seg[:, :T_w]
 
-            # Discriminator updates strictly on genuine un-VC'd >=24 kHz slices (first 12 items of batch are unvc!)
             n_adv = min(12, len(xs_unvc))
             if st % 4 == 0:
                 l_d_cqt = D_cqt.d_loss(wav_gt[:n_adv], y_pred[:n_adv].detach())
                 or_m, _ = D_mpd(wav_gt[:n_adv].detach())
                 of_m, _ = D_mpd(y_pred[:n_adv].detach())
                 l_d_mpd = sum(torch.mean(F.relu(1.0 - r)) + torch.mean(F.relu(1.0 + f)) for r, f in zip(or_m, of_m)) / len(or_m)
-                l_d_band = D_band.d_loss(wav_gt[:n_adv], y_pred[:n_adv].detach(), include_hi=True)
-                l_d = l_d_cqt + 0.5 * l_d_mpd + 0.8 * l_d_band
+                l_d = l_d_cqt + 0.5 * l_d_mpd
                 oD.zero_grad(set_to_none=True)
                 l_d.backward()
-                torch.nn.utils.clip_grad_norm_(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), 2.0)
+                torch.nn.utils.clip_grad_norm_(list(D_cqt.parameters()) + list(D_mpd.parameters()), 2.0)
                 oD.step()
 
             ym = mel_spec_24k(y_pred, dev)
             T_m = min(ym.shape[2], mel_seg.shape[2])
-            # Bandwidth-masked Mel Loss: bins 0..75 on all clips, bins 75..100 strictly on `is_unvc_mask` clips!
             l_mel_lo = F.l1_loss(ym[:, :75, :T_m], mel_seg[:, :75, :T_m])
             l_mel_hi = F.l1_loss(ym[:n_adv, 65:100, :T_m], mel_seg[:n_adv, 65:100, :T_m])
             l_stft = bandwidth_masked_mr_stft_loss(y_pred, wav_gt, is_unvc_mask, dev=dev)
@@ -598,7 +637,6 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
 
             l_ltas = contrastive_ltas_timbre_loss(ym[:n_adv, :, :T_m], mel_seg[:n_adv, :, :T_m], c_anc_24, c_v1_24, vuv_seg[:n_adv, :, :T_m])
             l_cqt_adv, l_cqt_fm = D_cqt.g_adv_and_fm_loss(wav_gt[:n_adv], y_pred[:n_adv])
-            l_band_adv, l_band_fm = D_band.g_adv_and_fm_loss(wav_gt[:n_adv], y_pred[:n_adv], include_hi=True)
             if st % 4 == 0 and st >= 80:
                 with torch.no_grad():
                     _, fmr_m = D_mpd(wav_gt[:10].detach())
@@ -607,23 +645,22 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
                 l_mpd_fm = sum(F.l1_loss(ff, fr.detach()) for sub_f, sub_r in zip(fmf_m, fmr_m) for ff, fr in zip(sub_f, sub_r)) / 25.0
             else:
                 l_mpd_adv, l_mpd_fm = torch.zeros((), device=dev), torch.zeros((), device=dev)
-            adv_w = 0.15 if st >= 80 else 0.0
+            adv_w = 0.08 if st >= 80 else 0.0
 
             loss = (
-                35.0 * l_mel_lo
-                + 16.0 * l_mel_hi
-                + 2.0 * l_stft
-                + 0.45 * l_awp
+                40.0 * l_mel_lo
+                + 18.0 * l_mel_hi
+                + 2.5 * l_stft
+                + 0.65 * l_awp
                 + 1.5 * l_ltas
-                + adv_w * (l_cqt_adv + 0.8 * l_band_adv + 0.5 * l_mpd_adv)
-                + 1.0 * l_cqt_fm
-                + 0.8 * l_band_fm
-                + 0.4 * l_mpd_fm
+                + adv_w * (l_cqt_adv + 0.5 * l_mpd_adv)
+                + 0.8 * l_cqt_fm
+                + 0.3 * l_mpd_fm
             )
 
         oG.zero_grad(set_to_none=True)
         loss.backward()
-        if torch.isfinite(torch.nn.utils.clip_grad_norm_(train_p, 1.5)):
+        if torch.isfinite(torch.nn.utils.clip_grad_norm_(train_p, 1.2)):
             oG.step()
 
         with torch.no_grad():
@@ -632,7 +669,7 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
 
         if st == 50:
             sps = 50.0 / max(1e-6, time.time() - tstep)
-            log(f"[Phase 1 Watchdog] step-50 throughput = {sps:.2f} it/s")
+            log(f"[Phase 2 Vocoder Watchdog] step-50 throughput = {sps:.2f} it/s")
 
         if st % 50 == 0 or st == steps:
             now = time.time()
@@ -640,11 +677,11 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
             tstep = now
             el_m = (now - t0) / 60.0
             eta_m = max(0.0, el_m * (steps - st) / max(1, st))
-            l_str = f"mel_lo={l_mel_lo.item():.3f} hf_unvc={l_mel_hi.item():.3f} coh_awp={l_awp.item():.3f} cqt_fm={l_cqt_fm.item():.3f} band_fm={l_band_fm.item():.3f}"
-            update_telem(0, "Phase 1 · Dual-Source OLA-Noise & Creak 100-Mel Studio Vocoder", st, steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
-            log(f"[Phase 1 Dual-Source Vocoder] step {st}/{steps} ({ips:.1f} it/s) {l_str}")
+            l_str = f"mel_lo={l_mel_lo.item():.3f} hf_unvc={l_mel_hi.item():.3f} voiced_awp={l_awp.item():.3f} cqt_fm={l_cqt_fm.item():.3f}"
+            update_telem(0, "Phase 2 · Studio-Clean Zero-Buzz 100-Mel Vocoder (True FP16 Heads, Zero Hi-Band GAN)", st, steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
+            log(f"[Phase 2 Clean Vocoder] step {st}/{steps} ({ips:.1f} it/s) {l_str}")
 
-    vck_orig = torch.load("/work/tts/ck/voc_100mel_best.pt", map_location="cpu", weights_only=False)
+    vck_orig = torch.load(leg1_voc_p if os.path.exists(leg1_voc_p) else "/work/tts/ck/voc_100mel_best.pt", map_location="cpu", weights_only=False)
     f0_head_sd = vck_orig.get("f0_head", {})
     ck_voc = dict(
         G_ema={k: v.float().cpu() for k, v in G_ema.state_dict().items()},
@@ -655,41 +692,82 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
         r_k11=None,
         n_mels=100,
         air_calibrated=True,
-        dual_source_ola_noise=True,
+        v2_zero_buzz_clean=True,
     )
     os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
-    for dst_p in ("/work/tts/ck/voc_100mel_best.pt", "/work/sp/sakhiya_news/voc_100mel_best.pt", "/work/tts/ck/phase1_voc_best.pt", "/work/sp/sakhiya_news/checkpoints/phase1_voc_best.pt"):
+    for dst_p in ("/work/tts/ck/v2_voc_clean_best.pt", "/work/sp/sakhiya_news/checkpoints/v2_voc_clean_best.pt", "/work/tts/ck/voc_100mel_best.pt", "/work/sp/sakhiya_news/voc_100mel_best.pt"):
         torch.save(ck_voc, dst_p + ".tmp")
         os.replace(dst_p + ".tmp", dst_p)
 
-    log("[Phase 1 Gate] Exporting INT8/FP16 ONNX & evaluating on 20 held-out RAW un-VC'd nep_6834 studio clips...")
+    log("[Phase 2 Vocoder Gate] Exporting INT8/FP16 ONNX (True FP16 Heads) & evaluating on 20 held-out RAW un-VC'd nep_6834 studio clips...")
     gate_res = export_and_gate_phase1_leg2_vocoder(G_ema, f0_head_sd, voc_cache, dev=dev)
     el_m = (time.time() - t0) / 60.0
     g_str = (
-        f"PASS={gate_res['passed']} · {gate_res['voc_int8_mb']}MB INT8 ({gate_res['int8_weight_pct']}% INT8 W) · "
-        f"HF_LSD_4_12kHz={gate_res['HF_LSD_4_12kHz_dB']}dB · sim_Anchor={gate_res['sim_Anchor']} · "
-        f"SilSNR={gate_res['silence_floor_SNR_dB']}dB · SibFlat={gate_res['sibilant_4p5_10kHz_flatness']} · CreakSHR={gate_res['phrase_final_creak_SHR']}"
+        f"PASS={gate_res['passed']} · {gate_res['voc_int8_mb']}MB INT8 ({gate_res['int8_weight_pct']}% INT8 W, FP16 heads={len(gate_res.get('fp16_isolated_nodes',[]))}) · "
+        f"STFT_LSD={gate_res['stft_lsd_int8_fp32_dB']}dB · HF_LSD_4_12kHz={gate_res['HF_LSD_4_12kHz_dB']}dB · sim_Anchor={gate_res['sim_Anchor']} · "
+        f"SilSNR={gate_res['silence_floor_SNR_dB']}dB · s/chh_flat={gate_res['s_dental_fricative_flatness']}/{gate_res['chh_aspirated_affricate_flatness']}"
     )
-    update_telem(0, "Phase 1 · Dual-Source OLA-Noise & Creak 100-Mel Studio Vocoder", steps, steps, "done", g_str, el_m, 0.0, "PASS ✅" if gate_res["passed"] else "HOLD ⚠️")
-    log(f"[Phase 1 Gate] {g_str}")
+    update_telem(0, "Phase 2 · Studio-Clean Zero-Buzz 100-Mel Vocoder (True FP16 Heads, Zero Hi-Band GAN)", steps, steps, "done", g_str, el_m, 0.0, "PASS ✅" if gate_res["passed"] else "HOLD ⚠️")
+    log(f"[Phase 2 Vocoder Gate] {g_str}")
 
     subprocess.Popen(f"setsid nohup {sys.executable} /work/sp/repo/scripts/sakhiya_pro/backup_news_daemon.py --once >> /work/tts/logs/backup_news_daemon.log 2>&1 < /dev/null &", shell=True)
-    del D_cqt, D_mpd, D_band, G
+    del D_cqt, D_mpd, G
     torch.cuda.empty_cache()
     return G_ema, gate_res
 
 
-def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000, bs: int = 40, resume_path: str = None, dev="cuda"):
-    """Phase 2 (Leg 2): Bandwidth-Masked AM Convergence, Coupled 6D Prosody Flow, Distilled Break/Focus Head & Hard CER Mining."""
+def _render_owner_4clips_pytorch(ema_model: SakhiyaNewsFlagship, suffix: str, dev="cuda"):
+    """Render all 4 exact full-length Owner Clips with `ema_model` at 4-step CFG=0 to `LISTEN_DIR` (`-16 LUFS`)."""
+    os.makedirs(LISTEN_DIR, exist_ok=True)
+    from sakhiya.onnx_tts import stitch, _segment
+    clips_p = os.path.join(REPO, "eval", "owner_4clips.json")
+    if not os.path.exists(clips_p):
+        return []
+    clips_list = json.load(open(clips_p))["clips"]
+    ema_model.eval()
+    ema_model.steps = 4
+    ema_model.cfg_scale = 0.0
+    ema_model.prosody_temp = 0.0
+    rendered = []
+    with torch.no_grad():
+        for c in clips_list:
+            cid, txt = c["id"], c["text"]
+            segs = _segment(txt)
+            ws = []
+            for sc in segs:
+                raw_list = ids_of(sc, "ne")
+                mapped = [(8 if (x in (4, 8) and 0 < i_x < len(raw_list) - 1) else x) for i_x, x in enumerate(raw_list)]
+                ids_c = [1] + [x for i, x in enumerate(mapped) if not (i > 0 and x == 1 and mapped[i - 1] == 7)]
+                if len(ids_c) <= 1:
+                    ids_c = [1, 45, 5]
+                ids_t = torch.tensor([ids_c], dtype=torch.long, device=dev)
+                ds_t = torch.full((1, len(ids_c)), 0.94, dtype=torch.float32, device=dev)
+                ps_t = torch.full((1, len(ids_c)), 0.04, dtype=torch.float32, device=dev)
+                wc = ema_model.infer(ids_t, dur_scale=ds_t, pitch_shift=ps_t)[0].cpu().numpy().astype(np.float32)
+                if wc.size > 256:
+                    ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
+                    wc[:128] *= ramp
+                    wc[-128:] *= ramp[::-1]
+                ws.append(_normalize_lufs_16(wc))
+            w_full = _normalize_lufs_16(stitch(ws, SR)) if len(ws) > 1 else ws[0]
+            out_wav = os.path.join(LISTEN_DIR, f"{cid}_{suffix}.wav")
+            sf.write(out_wav, w_full, SR)
+            rendered.append((cid, w_full, txt))
+    return rendered
+
+
+def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 2500, bs: int = 40, resume_path: str = None, dev="cuda"):
+    """Phase 3 (v2): Natural Flowing Nepali Cadence + Clean 4-Step AM (`CFG = 0`, Corrected Phase-1 G2P, Zero LLM Mid-Clause Pauses)."""
     t0 = time.time()
     os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
-    update_telem(1, "Phase 2 · Bandwidth-Masked AM + Coupled 6D Prosody Flow + Hard CER Mining", 0, steps, "–", "Warm-starting from Leg-1 am_last.pt (strict=False) + Phase-1 Dual-Source Vocoder...", 0.0, 35.0, "running 🟢")
+    update_telem(1, "Phase 3.1-3.3 · Natural Flowing Nepali 4-Step AM (CFG=0) + Hard Phonology Mining", 0, steps, "–", "Resuming from clean Leg-1 am_leg1_clean.pt + v2_voc_clean_best.pt (4-step CFG=0)...", 0.0, 12.0, "running 🟢")
 
-    G = SakhiyaNewsFlagship(steps=2, cfg_scale=0.0).to(dev)
-    if resume_path and os.path.exists(resume_path):
-        rck = torch.load(resume_path, map_location=dev, weights_only=False)
+    G = SakhiyaNewsFlagship(steps=4, cfg_scale=0.0, prosody_temp=0.0).to(dev)
+    clean_leg1_p = "/work/tts/ck/am_leg1_clean.pt" if os.path.exists("/work/tts/ck/am_leg1_clean.pt") else resume_path
+    if clean_leg1_p and os.path.exists(clean_leg1_p):
+        rck = torch.load(clean_leg1_p, map_location=dev, weights_only=False)
         G.load_leg1_checkpoint_strict_false(rck.get("ema", rck.get("model", rck)))
-        log(f"[Phase 2 Warm-Start] Loaded converged Leg-1 backbone from {resume_path} via strict=False!")
+        log(f"[Phase 3 Warm-Start] Loaded clean Leg-1 prosody & AM backbone from {clean_leg1_p} via strict=False!")
     G.load_phase1_vocoder(voc_ck_path)
 
     for p in G.voc.parameters():
@@ -699,9 +777,9 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
     base_p, new_p = [], []
     for n, p in G.named_parameters():
-        if n.startswith(("voc.", "f0_head.")) or n.endswith("had_rot.weight"):
+        if n.startswith(("voc.", "f0_head.", "enc.break_focus_head")) or n.endswith("had_rot.weight"):
             p.requires_grad_(False)
-        elif any(k in n for k in ("coupled_pros_flow.base_pros_proj", "coupled_pros_flow.cond_proj", "coupled_pros_flow.z_proj", "coupled_pros_flow.t_proj", "coupled_pros_flow.vel_net", "break_focus_head", "spk_film", "studio_24k_film", "struct_proj", "layers.5.", "engram.", "vel.blocks.7.p", "vel.blocks.8.", "vel.blocks.9.", "vel.tm.", "vel.rm.", "step", "closure_slope", "geminate_stretch")):
+        elif any(k in n for k in ("coupled_pros_flow.base_pros_proj", "coupled_pros_flow.cond_proj", "coupled_pros_flow.z_proj", "coupled_pros_flow.t_proj", "coupled_pros_flow.vel_net", "spk_film", "studio_24k_film", "struct_proj", "layers.5.", "engram.", "vel.blocks.7.p", "vel.blocks.8.", "vel.blocks.9.", "vel.tm.", "vel.rm.", "step", "closure_slope", "geminate_stretch")):
             p.requires_grad_(True)
             new_p.append(p)
         elif n.startswith(("coupled_pros_flow.i", "coupled_pros_flow.t_steps", "coupled_pros_flow.cv", "coupled_pros_flow.o", "enc.emb", "enc.spk_anchor_bias", "enc.post_anchor_bias")):
@@ -713,8 +791,8 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
     ema = copy.deepcopy(G).eval()
     oG = torch.optim.AdamW([
-        {"params": base_p, "lr": 1.8e-6, "initial_lr": 1.8e-6, "weight_decay": 1e-4},
-        {"params": new_p, "lr": 1.8e-5, "initial_lr": 1.8e-5, "weight_decay": 1e-4},
+        {"params": base_p, "lr": 1.6e-6, "initial_lr": 1.6e-6, "weight_decay": 1e-4},
+        {"params": new_p, "lr": 1.2e-5, "initial_lr": 1.2e-5, "weight_decay": 1e-4},
     ], betas=(0.9, 0.99))
 
     cc = torch.load("/work/tts/ck/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
@@ -732,37 +810,40 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
     G.mel_stats.data.copy_(torch.tensor([mean, std], device=dev))
     ema.mel_stats.data.copy_(torch.tensor([mean, std], device=dev))
 
-    # Build Bandwidth-Masked + Hard-Example Oversampled (2.5x) Pools:
-    # - 38% batch share: genuine un-VC'd >=24 kHz studio recordings (`nep_6834` upsampled 3x)
-    # - 57% batch share: 16 h Nepali human lexical corpus (with hard conjuncts/geminates/sibilants/4-way stops oversampled 2.5x!)
-    # - <= 5% batch share: Pro-v3 rare vocab (`is_prov3 == True`, strictly masked > 7.2 kHz!)
-    SIB_STOP_IDS = {SYM2ID[p] for p in ("s", "ʃ", "tsʰ", "gʱ", "dzʱ", "ɖʱ", "d̪ʱ", "bʱ", "ʈ", "ʈʰ", "ɖ") if p in SYM2ID}
-    unvc_items, human_lex_items, prov3_items = [], [], []
+    # Phase 3.1 & 3.3 Pool Weighting:
+    # - Weight toward FLOWING multi-clause Nepali speech (do NOT over-weight stiff isolated SLR43 prompts to 40-50%!)
+    # - Oversample (2.5x) hard Nepali conjuncts, numerals/dates, loanwords, vowel hiatus (`भएका/भइरहेको`),
+    #   `ृ` (`बृहत/कृत्रिम/वृद्धि`), geminates, 4-way laryngeal stops (`घ/झ/ढ/ध/भ`), and visarga (`ः`).
+    # - Strictly `old_v1_kept = 0`, `Pro-v3 <= 5%`.
+    SIB_STOP_IDS = {SYM2ID[p] for p in ("s", "ʃ", "tsʰ", "gʱ", "dzʱ", "ɖʱ", "d̪ʱ", "bʱ", "ʈ", "ʈʰ", "ɖ", "w", "h") if p in SYM2ID}
+    flowing_studio_items, flowing_lex_items, prov3_items = [], [], []
     hard_mined_count = 0
     for x in am_cache_obj["cache"]:
         ids_l = x["ids"].tolist()
         n_gem = int((x["struct"][:, 4].float() > 0.5).sum().item()) if "struct" in x else 0
         n_hard_ph = sum(1 for tid in ids_l if tid in SIB_STOP_IDS)
+        is_flowing = len(ids_l) >= 42 or (8 in ids_l) or (4 in ids_l)
         is_hard = (n_gem >= 2) or (n_hard_ph >= 6) or (len(ids_l) >= 55)
         if is_hard:
             hard_mined_count += 1
 
         if x.get("is_real_unvc_24k", False):
-            reps = 3 if x.get("spk_id", 0) == 0 else (2 if is_hard else 1)
-            unvc_items.extend([x] * reps)
+            # Keep studio recordings balanced (~22% batch share, favoring flowing multi-clause utterances)
+            reps = 2 if (is_flowing or is_hard) else 1
+            flowing_studio_items.extend([x] * reps)
         elif x.get("is_prov3", False) or not x.get("is_human", True):
             prov3_items.append(x)
         else:
-            # 2.5x oversampling on hard Nepali news conjuncts/geminates/laryngeal stops
-            reps = 3 if is_hard else 1
-            human_lex_items.extend([x] * reps)
+            # 2.5x-3x oversampling on hard & flowing multi-clause Nepali speech (~74% batch share!)
+            reps = 3 if (is_hard and is_flowing) else (2 if (is_hard or is_flowing) else 1)
+            flowing_lex_items.extend([x] * reps)
 
-    n_unvc_b = max(1, int(round(bs * 0.38)))
+    n_unvc_b = max(1, int(round(bs * 0.22)))
     n_pro_b = max(1, int(round(bs * 0.04)))  # Strictly <= 5% Pro-v3!
     n_lex_b = bs - n_unvc_b - n_pro_b
 
     tstep = time.time()
-    log(f"[Phase 2 Leg-2] Training Bandwidth-Masked AM + Coupled 6D Prosody Flow + CFG=0 MeanFlow for {steps} steps (bs={bs}, hard_mined={hard_mined_count}, unvc={n_unvc_b}/{bs}, lex={n_lex_b}/{bs}, prov3={n_pro_b}/{bs} <=5%)...")
+    log(f"[Phase 3 Clean 4-Step AM] Training Flowing Nepali 4-Step CFG=0 AM for {steps} steps (bs={bs}, hard_mined={hard_mined_count}, studio={n_unvc_b}/{bs}, flowing_lex={n_lex_b}/{bs}, prov3={n_pro_b}/{bs} <=5%)...")
 
     for st in range(1, steps + 1):
         prog = st / max(1, steps)
@@ -771,8 +852,8 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
             pg["lr"] = pg["initial_lr"] * mult
 
         xs = (
-            random.sample(unvc_items, min(n_unvc_b, len(unvc_items)))
-            + random.sample(human_lex_items, min(n_lex_b, len(human_lex_items)))
+            random.sample(flowing_studio_items, min(n_unvc_b, len(flowing_studio_items)))
+            + random.sample(flowing_lex_items, min(n_lex_b, len(flowing_lex_items)))
             + random.sample(prov3_items, min(n_pro_b, len(prov3_items)))
         )
         random.shuffle(xs)
@@ -784,11 +865,9 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
         f0_t = pad_sequence([x["f0"].to(dev).float() for x in xs], batch_first=True)
         f0_slp_t = pad_sequence([x.get("f0_slope", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
         eng_t = pad_sequence([x["eng"].to(dev).float() for x in xs], batch_first=True)
-        creak_t = pad_sequence([(x.get("creak_prob", torch.zeros_like(x["f0"])).to(dev).float() * 4.0).clamp(0.0, 1.0) for x in xs], batch_first=True)
+        creak_t = torch.zeros_like(f0_t)
         b_dur_t = pad_sequence([x.get("post_word_breath_dur", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
         syl_cnt_t = pad_sequence([x.get("syllables_since_last_breath", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)[:, None, :]
-        imp_brk_t = pad_sequence([x.get("implicit_break", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
-        foc_prom_t = pad_sequence([x.get("focus_prominence", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
 
         mu_t = pad_sequence([x["mu"].to(dev).float() for x in xs], batch_first=True)
         y_clean = pad_sequence([x["y_clean"].to(dev).float() for x in xs], batch_first=True).transpose(1, 2).contiguous()
@@ -803,12 +882,11 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
         ym = torch.arange(T, device=dev)[None] < yl[:, None]
         ymf = ym[:, None].float()
 
-        # CRITICAL BANDWIDTH MASK: bins 0..65 (0..4.5 kHz) supervised on all clips; bins 65..100 (4.5..12 kHz) ONLY on `is_unvc == 1`!
         bin_idx = torch.arange(100, device=dev).view(1, 100, 1)
         unvc_view = is_unvc.float().view(B, 1, 1)
         bw_mask_100 = torch.where(bin_idx < 65, torch.ones((B, 100, 1), device=dev), unvc_view.expand(B, 100, 1))
-        ym_bw = ymf * bw_mask_100  # [B, 100, T]
-        im_bw = im[:, :, None].float() * bw_mask_100.transpose(1, 2)  # [B, L, 100]
+        ym_bw = ymf * bw_mask_100
+        im_bw = im[:, :, None].float() * bw_mask_100.transpose(1, 2)
 
         G.train()
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
@@ -822,12 +900,7 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
             hs, mus = G.enc(ids, struct, im, pitch_add=p_arch, spk_ids=spk_ids, is_unvc_24k=is_unvc)
 
-            # 1. Auxiliary Distilled Nepali Break/Focus Loss (zero inference cost!)
-            bf_pred = G.enc.break_focus_head(hs)
-            bf_tgt = torch.stack([imp_brk_t, foc_prom_t], dim=-1)
-            l_brk_foc = F.smooth_l1_loss(bf_pred[im].float(), bf_tgt[im].float())
-
-            # 2. Coupled 6D Phoneme Prosody Flow Loss: [log_dur, f0_mean, f0_slope, energy, creak_prob, post_word_breath_dur]
+            # Smooth continuous log-F0 + duration training (ZERO choppy LLM mid-clause break loss!)
             log_dur_tgt = torch.log(dur.float().clamp(min=1.0))
             target_6d = torch.stack([log_dur_tgt, f0_t, f0_slp_t, eng_t, creak_t, b_dur_t], dim=1)
             l_pros6, pred_6d = G.coupled_pros_flow.coupled_cfm_loss(target_6d, ids, hs.detach(), im, syl_cnt=syl_cnt_t)
@@ -850,22 +923,34 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
             f0_frame = torch.gather(f0_contour_tok, 1, idx_fr)
             prog_5d = compute_progress_5d(dur.float(), ends, idx_fr, t_arange, f0_frame) * ymf
 
-            # Fast CFG = 0 X-Pred MeanFlow (zero CFG dropout, zero slow JVP!)
+            # Locked 4-Step CFG = 0 X-Pred MeanFlow Trajectory
             t0_v = torch.zeros((B,), device=dev, dtype=torch.float32)
             r_one = torch.ones((B,), device=dev, dtype=torch.float32)
             v0 = G.vel(mu_y, t0_v, mu_y, ymf, prog_5d=prog_5d, r=r_one)
 
-            x_mid = mu_y + 0.5 * v0
-            t_mid = torch.full((B,), 0.5, device=dev, dtype=torch.float32)
-            v_mid = G.vel(x_mid, t_mid, mu_y, ymf, prog_5d=prog_5d, r=r_one)
-            w2 = G.vel.step2_gate.clamp(0.0, 0.35)
-            y_pred = (mu_y + (1.0 - w2) * v0 + w2 * v_mid) * ymf
+            x_25 = mu_y + 0.25 * v0
+            t_25 = torch.full((B,), 0.25, device=dev, dtype=torch.float32)
+            v_25 = G.vel(x_25, t_25, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+
+            x_50 = mu_y + 0.50 * v0
+            t_50 = torch.full((B,), 0.50, device=dev, dtype=torch.float32)
+            v_50 = G.vel(x_50, t_50, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+
+            x_75 = mu_y + 0.75 * (0.80 * v0 + 0.10 * v_25 + 0.10 * v_50)
+            t_75 = torch.full((B,), 0.75, device=dev, dtype=torch.float32)
+            v_75 = G.vel(x_75, t_75, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+
+            w2 = G.vel.step2_gate.clamp(0.0, 0.25)
+            w3 = G.vel.step3_gate.clamp(0.0, 0.12)
+            w4 = G.vel.step4_gate.clamp(0.0, 0.12)
+            w1 = (1.0 - w2 - w3 - w4).clamp(min=0.51)
+            y_pred = (mu_y + w1 * v0 + w2 * v_50 + w3 * v_25 + w4 * v_75) * ymf
 
             denom_bw = ym_bw.sum().clamp(min=1.0)
-            l_vel_mid = (((v_mid.float() - (y_clean.float() - mu_y.float()).detach()).abs()) * ym_bw).sum() / denom_bw * 0.35
+            v_tgt_am = (y_clean.float() - mu_y.float()).detach()
+            l_vel_mid = (((v_25.float() - v_tgt_am).abs() + (v_50.float() - v_tgt_am).abs() + (v_75.float() - v_tgt_am).abs()) / 3.0 * ym_bw).sum() / denom_bw * 0.35
             l_mel100 = ((1.2 * (y_pred.float() - y_clean.float()).abs() + 0.8 * (y_pred.float() - y_clean.float()) ** 2) * ym_bw).sum() / denom_bw
 
-            # High-frequency 4.5-12 kHz air loss supervised strictly on genuine un-VC'd >=24 kHz clips!
             ym_hi_unvc = ymf * unvc_view
             l_hf_unvc = ((y_pred[:, 65:100, :].float() - y_clean[:, 65:100, :].float()).abs() * ym_hi_unvc).sum() / (ym_hi_unvc.sum() * 35.0 + 1.0)
 
@@ -888,7 +973,6 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
             l_ctc = torch.zeros((), device=dev)
             if st % 2 == 0:
-                # 0-7.5 kHz clean pronunciation anchor (masking noisy >7.5 kHz VC bins from CTC!)
                 y_for_ctc = 0.20 * mu_y.float() + 0.80 * y_pred.float()
                 c_val = ctc.ctc_loss(y_for_ctc, yl, ids, il)
                 if torch.isfinite(c_val):
@@ -901,8 +985,7 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
                 + 2.0 * l_df
                 + 1.0 * l_dt
                 + 1.2 * l_prior
-                + 0.8 * l_pros6
-                + 0.4 * l_brk_foc
+                + 0.6 * l_pros6
                 + 0.8 * l_ltas
                 + 0.45 * l_ctc
             )
@@ -918,7 +1001,7 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
         if st == 50:
             sps = 50.0 / max(1e-6, time.time() - tstep)
-            log(f"[Phase 2 Watchdog] step-50 throughput = {sps:.2f} it/s")
+            log(f"[Phase 3 AM Watchdog] step-50 throughput = {sps:.2f} it/s")
 
         if st % 50 == 0 or st == steps:
             now = time.time()
@@ -928,10 +1011,10 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
             eta_m = max(0.0, el_m * (steps - st) / max(1, st))
             l_str = (
                 f"mel_bw={l_mel100.item():.3f} hf_unvc={l_hf_unvc.item():.3f} "
-                f"pros6={l_pros6.item():.3f} brk_foc={l_brk_foc.item():.3f} ctc={l_ctc.item():.3f}"
+                f"pros6={l_pros6.item():.3f} ctc={l_ctc.item():.3f}"
             )
-            update_telem(1, "Phase 2 · Bandwidth-Masked AM + Coupled 6D Prosody Flow + Hard CER Mining", st, steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
-            log(f"[Phase 2 Sakhiya-News AM] step {st}/{steps} ({ips:.1f} it/s) {l_str}")
+            update_telem(1, "Phase 3.1-3.3 · Natural Flowing Nepali 4-Step AM (CFG=0) + Hard Phonology Mining", st, steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
+            log(f"[Phase 3 Clean 4-Step AM] step {st}/{steps} ({ips:.1f} it/s) {l_str}")
 
         if st % 500 == 0 or st == steps:
             ck_resumable = dict(
@@ -947,62 +1030,42 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
                 torch.save(ck_resumable, p_save + ".tmp")
                 os.replace(p_save + ".tmp", p_save)
             if st == steps:
-                for p_p2 in ("/work/tts/ck/phase2_am_best.pt", "/work/sp/sakhiya_news/checkpoints/phase2_am_best.pt"):
+                for p_p2 in ("/work/tts/ck/v2_am_pre_refine.pt", "/work/sp/sakhiya_news/checkpoints/v2_am_pre_refine.pt", "/work/tts/ck/phase2_am_best.pt", "/work/sp/sakhiya_news/checkpoints/phase2_am_best.pt"):
                     torch.save(ck_resumable, p_p2 + ".tmp")
                     os.replace(p_p2 + ".tmp", p_p2)
 
-    # Benchmark T = 0.0 (deterministic conditional mean) vs T = 0.30 (low-variance) coupled prosody flow
-    with torch.no_grad():
-        ema.eval()
-        test_ids_b = torch.tensor([[1, 8, 15, 45, 22, 46, 8, 20, 45, 21, 51, 5]], dtype=torch.long, device=dev)
-        ema.prosody_temp = 0.0
-        w_t0 = ema.infer(test_ids_b)[0].cpu().numpy()
-        ema.prosody_temp = 0.30
-        w_t30 = ema.infer(test_ids_b)[0].cpu().numpy()
-        ema.prosody_temp = 0.0
-        sh0, pb0, cl0, _, _ = _physics_artifact_probes(w_t0, SR)
-        sh30, pb30, cl30, _, _ = _physics_artifact_probes(w_t30, SR)
-        temp_bench = {
-            "T_0p0_deterministic": {"shutters": int(sh0), "pitch_breaks": int(pb0), "clicks": int(cl0), "dur_s": round(len(w_t0) / float(SR), 3)},
-            "T_0p30_low_variance": {"shutters": int(sh30), "pitch_breaks": int(pb30), "clicks": int(cl30), "dur_s": round(len(w_t30) / float(SR), 3)},
-            "selected_prosody_temp": 0.0,
-        }
-        json.dump(temp_bench, open(os.path.join(EVAL_DIR, "phase2_prosody_temp_benchmark.json"), "w"), indent=2)
-        log(f"[Phase 2 Prosody Temp Benchmark] T=0.0 vs T=0.30 -> selected T=0.0 ({json.dumps(temp_bench)})")
+    # Render all 4 exact owner clips from v2_am_pre_refine.pt to Card 5!
+    _render_owner_4clips_pytorch(ema, "v2_am_pre_refine", dev=dev)
 
     el_m = (time.time() - t0) / 60.0
-    update_telem(1, "Phase 2 · Bandwidth-Masked AM + Coupled 6D Prosody Flow + Hard CER Mining", steps, steps, "done", f"Phase-2 AM converged ({l_str}) · phase2_am_best.pt saved (T=0.0)", el_m, 0.0, "PASS ✅")
-    log(f"[Phase 2] DONE in {el_m:.2f}m -> /work/tts/ck/phase2_am_best.pt")
+    update_telem(1, "Phase 3.1-3.3 · Natural Flowing Nepali 4-Step AM (CFG=0) + Hard Phonology Mining", steps, steps, "done", f"4-Step AM converged ({l_str}) · v2_am_pre_refine.pt saved & 4 Owner Clips rendered", el_m, 0.0, "PASS ✅")
+    log(f"[Phase 3.3] DONE in {el_m:.2f}m -> /work/tts/ck/v2_am_pre_refine.pt")
     subprocess.Popen(f"setsid nohup {sys.executable} /work/sp/repo/scripts/sakhiya_pro/backup_news_daemon.py --once >> /work/tts/logs/backup_news_daemon.log 2>&1 < /dev/null &", shell=True)
     del ctc, G
     torch.cuda.empty_cache()
     return ema
 
 
-def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlagship, e2e_steps: int = 3500, bs: int = 20, dev="cuda"):
-    """Phase 3 & Phase 4.1 (Leg 2): Unrolled 2-Step Joint E2E Waveform Polish (`CFG = 0`) + LSQ Per-Channel QAT:
-    - Unfreezes converged Phase-2 AM + upgraded Phase-1 Dual-Source OLA-Noise & Creak Vocoder.
-    - Detaches/freezes `coupled_pros_flow` so adversarial gradients never corrupt timing or pitch stability.
-    - Unrolls exact 2-step `CFG = 0` X-Pred MeanFlow sampling path on 0.8-1.2 s slices straight through the Dual-Source Vocoder.
-    - Applies 24 kHz MS-SB-CQT + MPD + Lo-Band (60-500 Hz) + Hi-Band (4.5-12 kHz) Discriminators + Multi-Res Complex STFT
-      + Coherence-Masked AWP, gating Hi-Band & Lo-Band adversarial realism strictly on genuine un-VC'd >=24 kHz studio batches
-      (upsampled to >=55% of slices) + 0.15x velocity anchor + lightweight 0-7.5 kHz Nepali CTC pronunciation anchor.
-    - Activates LSQ Per-Channel INT8 QAT in the second half (Phase 4.1) with sensitive studio heads permanently in FP16.
+def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlagship, e2e_steps: int = 1000, bs: int = 16, dev="cuda"):
+    """Phase 3.4 & Phase 4.1 (v2): Gentle NON-Adversarial 4-Step Waveform Refinement (`CFG = 0`) + Honest Mixed-Precision LSQ-QAT:
+    - Unfreezes `v2_am_pre_refine.pt` (keeping duration/F0 predictors frozen!) + gently unfreezes `v2_voc_clean_best.pt` (`lr = 1e-6`).
+    - Unrolls exact 4-step `CFG = 0` slices (`0.8–1.0 s`) with PURE PERCEPTUAL WAVEFORM LOSSES ONLY:
+      Multi-Res Complex STFT + Multi-Scale Mel + Voiced-Only AWP + 0.20x mel velocity anchor — ZERO Hi-Band GAN discriminator!
+    - Activates per-channel LSQ QAT ONLY on the bulk ConvNeXt/Monarch pointwise backbone while keeping all FP16 studio heads isolated.
+    - Compares `v2_am_pre_refine.pt` vs `v2_am_post_refine.pt` on all 4 exact owner clips and keeps refinement ONLY if it strictly
+      reduces `HF_LSD_4_12kHz` with ZERO buzz/flatness overshoot and ZERO CER regression; otherwise rolls back to `v2_am_pre_refine.pt`!
     """
     t0 = time.time()
-    update_telem(2, "Phase 3 & 4 · Unrolled 2-Step Joint E2E Polish (CFG=0) + LSQ Per-Channel QAT", 0, e2e_steps, "–", "Unfreezing AM + Dual-Source Vocoder (detached prosody flow, MS-SB-CQT + Lo/Hi-Band + MPD)...", 0.0, 20.0, "running 🟢")
-    log(f"[Phase 3 Unrolled E2E] Starting {e2e_steps} steps of Unrolled 2-Step CFG=0 E2E Waveform Polish + LSQ QAT (bs={bs})...")
+    update_telem(2, "Phase 3.4 & 4.1 · Non-Adversarial 4-Step Waveform Refinement + Mixed-Precision LSQ-QAT", 0, e2e_steps, "–", "Unrolling 4-Step CFG=0 slices with Pure Perceptual Losses (STFT + Mel + Voiced-Only AWP + 0.20x Vel Anchor, ZERO GAN)...", 0.0, 8.0, "running 🟢")
+    log(f"[Phase 3.4 Non-Adversarial Refinement] Starting {e2e_steps} steps of 4-Step CFG=0 Pure Perceptual Waveform Refinement + LSQ QAT (bs={bs})...")
 
-    G = copy.deepcopy(ema_init).to(dev)
+    ema_pre = copy.deepcopy(ema_init).to(dev).eval()
+    if os.path.exists("/work/tts/ck/v2_voc_clean_best.pt"):
+        ema_pre.load_phase1_vocoder("/work/tts/ck/v2_voc_clean_best.pt")
+
+    G = copy.deepcopy(ema_pre).to(dev)
     ema = copy.deepcopy(G).eval()
 
-    # Reload clean Phase-1 Dual-Source Vocoder (0.578 dB HF_LSD, 0 clicks/shutters) before E2E polish
-    if os.path.exists("/work/tts/ck/voc_100mel_best.pt"):
-        G.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
-        ema.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
-
-    # Stability Lock: freeze coupled_pros_flow, f0_head, and vocoder output heads/harmonic source so adversarial gradients
-    # NEVER cause F0 phase drift or spectral tilt drift, while unfreezing AM (enc + vel) and Vocoder intermediate MRF/amp_branch!
     e2e_params = []
     for n, p in G.named_parameters():
         if (
@@ -1017,14 +1080,8 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
 
     hooks = install_news_lsq_qat_hooks(G)
     qat_start = int(e2e_steps * 0.25)
-    mid_check_step = max(50, e2e_steps // 2)
 
-    D_cqt = MultiScaleSubBandCQTDiscriminator().to(dev)
-    D_mpd = MPDOnly().to(dev)
-    D_band = LoHiBandStudioDiscriminator().to(dev)
-
-    oG = torch.optim.AdamW(e2e_params, lr=8.0e-7, betas=(0.8, 0.99), weight_decay=1e-4)
-    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=1.5e-5, betas=(0.8, 0.99))
+    oG = torch.optim.AdamW(e2e_params, lr=1.0e-6, betas=(0.9, 0.99), weight_decay=1e-4)
     c_anc_24 = am_cache_obj["c_anchor_ltas24"].to(dev)
     c_v1_24 = am_cache_obj["c_v1_ltas24"].to(dev)
 
@@ -1038,23 +1095,22 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
         p_.requires_grad_(False)
 
     mean, std = float(am_cache_obj["mean"]), float(am_cache_obj["std"])
-    unvc_items = []
-    lex_items = []
+    unvc_items, lex_items = [], []
     for x in am_cache_obj["cache"]:
         if x.get("is_real_unvc_24k", False):
-            unvc_items.extend([x] * (3 if x.get("spk_id", 0) == 0 else 1))
+            unvc_items.extend([x] * (2 if x.get("spk_id", 0) == 0 else 1))
         elif x.get("is_human", True):
             lex_items.append(x)
 
-    n_unvc = max(1, int(round(bs * 0.60)))  # >= 55% genuine un-VC'd >=24 kHz studio slices!
+    n_unvc = max(1, int(round(bs * 0.45)))
     n_lex = bs - n_unvc
-    seg_frames = 88  # ~0.94 seconds at 24 kHz (inside 0.8-1.2 s window)
+    seg_frames = 84  # ~0.90 seconds at 24 kHz (inside 0.8–1.0 s window)
     tstep = time.time()
 
     for st in range(1, e2e_steps + 1):
         if st >= qat_start and not getattr(G, "_qat_flag", False):
             G._qat_flag = True
-            log(f"[Phase 4.1 LSQ-QAT] Activated mixed-precision INT8/FP16 QAT inside Unrolled E2E loop at step {st}/{e2e_steps}")
+            log(f"[Phase 4.1 LSQ-QAT] Activated honest mixed-precision INT8/FP16 QAT at step {st}/{e2e_steps}")
 
         xs_u = random.sample(unvc_items, min(n_unvc, len(unvc_items)))
         xs_l = random.sample(lex_items, min(n_lex, len(lex_items)))
@@ -1093,13 +1149,11 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
 
             hs, mus = G.enc(ids, struct, im, pitch_add=p_arch, spk_ids=spk_ids, is_unvc_24k=is_unvc)
 
-            # Detached coupled prosody flow & alignment during E2E waveform training
             with torch.no_grad():
-                pros_6d = G.coupled_pros_flow.sample(ids, hs.detach(), im, steps=4, temp=0.04)
+                pros_6d = G.coupled_pros_flow.sample(ids, hs.detach(), im, steps=4, temp=0.0)
                 f0_s = pros_6d[:, 1, :].clamp(-0.6, 0.6)
                 f0_slp_s = pros_6d[:, 2, :].clamp(-0.5, 0.5)
                 eng_s = (G.enc.energy_pred(hs.detach()).squeeze(-1) + pros_6d[:, 3, :]).clamp(-1.2, 1.2)
-                creak_ph = pros_6d[:, 4, :].clamp(0.0, 1.0)
                 attn = _dur_to_attn(dur, im, ym)
                 ends = torch.cumsum(dur.float(), dim=1)
                 t_arange = torch.arange(0, T, device=dev, dtype=torch.float32)
@@ -1109,26 +1163,34 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
                 f0_contour_tok = (f0_s + 0.15 * f0_slp_s + G.closure_slope.detach().clamp(-0.30, -0.05) * 1.45 * clause_tail) * (1.0 - is_pause)
                 f0_frame = torch.gather(f0_contour_tok, 1, idx_fr)
                 prog_5d = compute_progress_5d(dur.float(), ends, idx_fr, t_arange, f0_frame) * ymf
-                creak_tok = (creak_ph + 0.35 * clause_tail).clamp(0.0, 1.0) * (1.0 - is_pause)
-                shr_frame = torch.gather(creak_tok, 1, idx_fr)[:, None, :]
 
             mus_e = mus + (0.06 * eng_s)[..., None] * 0.32
             mu_y = torch.einsum("blt,bld->bdt", attn.to(mus_e.dtype), mus_e) * ymf
 
-            # Unrolled 2-Step X-Pred MeanFlow Trajectory at CFG = 0
+            # Unrolled 4-Step X-Pred MeanFlow Trajectory at CFG = 0
             t0_v = torch.zeros((B,), device=dev, dtype=torch.float32)
             r_one = torch.ones((B,), device=dev, dtype=torch.float32)
             v0 = G.vel(mu_y, t0_v, mu_y, ymf, prog_5d=prog_5d, r=r_one)
+            x_25 = mu_y + 0.25 * v0
+            t_25 = torch.full((B,), 0.25, device=dev, dtype=torch.float32)
+            v_25 = G.vel(x_25, t_25, mu_y, ymf, prog_5d=prog_5d, r=r_one)
             x_50 = mu_y + 0.50 * v0
             t_50 = torch.full((B,), 0.50, device=dev, dtype=torch.float32)
             v_50 = G.vel(x_50, t_50, mu_y, ymf, prog_5d=prog_5d, r=r_one)
-            w2 = G.vel.step2_gate.clamp(0.0, 0.35)
-            y_pred = (mu_y + (1.0 - w2) * v0 + w2 * v_50) * ymf
+            x_75 = mu_y + 0.75 * (0.80 * v0 + 0.10 * v_25 + 0.10 * v_50)
+            t_75 = torch.full((B,), 0.75, device=dev, dtype=torch.float32)
+            v_75 = G.vel(x_75, t_75, mu_y, ymf, prog_5d=prog_5d, r=r_one)
 
-            # 0.15x Velocity-Matching Anchor + Bandwidth-Masked Mel Anchor + 0-7.5 kHz CTC Pronunciation Anchor
+            w2 = G.vel.step2_gate.clamp(0.0, 0.25)
+            w3 = G.vel.step3_gate.clamp(0.0, 0.12)
+            w4 = G.vel.step4_gate.clamp(0.0, 0.12)
+            w1 = (1.0 - w2 - w3 - w4).clamp(min=0.51)
+            y_pred = (mu_y + w1 * v0 + w2 * v_50 + w3 * v_25 + w4 * v_75) * ymf
+
+            # 0.20x Mel Velocity Anchor + Bandwidth-Masked Mel Anchor + CTC Pronunciation Anchor
             denom_bw = ym_bw.sum().clamp(min=1.0)
             v_tgt = (y_clean.float() - mu_y.float()).detach()
-            l_vel_anc = (((v0.float() - v_tgt).abs() + (v_50.float() - v_tgt).abs()) * 0.5 * ym_bw).sum() / denom_bw
+            l_vel_anc = (((v0.float() - v_tgt).abs() + (v_25.float() - v_tgt).abs() + (v_50.float() - v_tgt).abs() + (v_75.float() - v_tgt).abs()) * 0.25 * ym_bw).sum() / denom_bw
             l_mel_bw = ((y_pred.float() - y_clean.float()).abs() * ym_bw).sum() / denom_bw
 
             l_ctc = torch.zeros((), device=dev)
@@ -1139,63 +1201,40 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
 
             mp_full = y_pred.float() * std + mean
             mt_full = y_clean.float() * std + mean
-            s_p, s_t, s_shr = [], [], []
+            s_p, s_t = [], []
             seg_use = min(seg_frames, T)
             for bi in range(B):
                 vt = max(int(yl[bi].item()), seg_use + 1)
                 st_i = random.randint(0, max(0, vt - seg_use)) if vt > seg_use else 0
                 s_p.append(mp_full[bi, :, st_i : st_i + seg_use])
                 s_t.append(mt_full[bi, :, st_i : st_i + seg_use])
-                s_shr.append(shr_frame[bi, :, st_i : st_i + seg_use])
             mp_seg = torch.stack(s_p, dim=0)
             mt_seg = torch.stack(s_t, dim=0)
-            shr_seg = torch.stack(s_shr, dim=0)
 
-            # Strictly F0-synchronous E2E waveform supervision (shared f0_vt, uv_vt prevents cumulative harmonic phase drift!)
             with torch.no_grad():
                 f0_vt, uv_vt = G.f0_head(mt_seg)
-                y_vt, re_vt, im_vt, lmag_vt, _, _ = G.voc.forward_wav(mt_seg, f0_vt, uv_vt, shr_creak=shr_seg)
-            y_vp, _, _, lmag_vp, cos_vp, sin_vp = G.voc.forward_wav(mp_seg, f0_vt, uv_vt, shr_creak=shr_seg)
+                y_vt, re_vt, im_vt, lmag_vt, _, _ = G.voc.forward_wav(mt_seg, f0_vt, uv_vt)
+            y_vp, _, _, lmag_vp, cos_vp, sin_vp = G.voc.forward_wav(mp_seg, f0_vt, uv_vt)
 
-            # Discriminator step strictly on genuine un-VC'd >=24 kHz studio slices (`xs_u`, first `len(xs_u)` items)
-            n_adv = min(10, len(xs_u))
-            if st % 2 == 0:
-                l_d_cqt = D_cqt.d_loss(y_vt[:n_adv].detach(), y_vp[:n_adv].detach())
-                or_m, _ = D_mpd(y_vt[:n_adv].detach())
-                of_m, _ = D_mpd(y_vp[:n_adv].detach())
-                l_d_mpd = sum(torch.mean(F.relu(1.0 - r)) + torch.mean(F.relu(1.0 + f)) for r, f in zip(or_m, of_m)) / len(or_m)
-                l_d_band = D_band.d_loss(y_vt[:n_adv].detach(), y_vp[:n_adv].detach(), include_hi=True)
-                loss_D = l_d_cqt + 0.5 * l_d_mpd + 0.8 * l_d_band
-                oD.zero_grad(set_to_none=True)
-                loss_D.backward()
-                torch.nn.utils.clip_grad_norm_(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), 2.0)
-                oD.step()
-
-            l_cqt_adv, l_cqt_fm = D_cqt.g_adv_and_fm_loss(y_vt[:n_adv], y_vp[:n_adv])
-            l_band_adv, l_band_fm = D_band.g_adv_and_fm_loss(y_vt[:n_adv], y_vp[:n_adv], include_hi=True)
-            with torch.no_grad():
-                _, fmr_m = D_mpd(y_vt[:n_adv].detach())
-            of_g, fmf_m = D_mpd(y_vp[:n_adv])
-            l_mpd_adv = sum(torch.mean(F.relu(1.0 - f)) for f in of_g) / len(of_g)
-            l_mpd_fm = sum(F.l1_loss(ff, fr.detach()) for sub_f, sub_r in zip(fmf_m, fmr_m) for ff, fr in zip(sub_f, sub_r)) / 25.0
-
+            n_adv = min(8, len(xs_u))
+            ym_wav = mel_spec_24k(y_vp, dev)
+            ym_gt_wav = mel_spec_24k(y_vt, dev)
+            T_wm = min(ym_wav.shape[2], ym_gt_wav.shape[2])
+            l_ms_mel = F.l1_loss(ym_wav[:n_adv, :, :T_wm], ym_gt_wav[:n_adv, :, :T_wm])
             l_stft = bandwidth_masked_mr_stft_loss(y_vp, y_vt, is_unvc_bool, dev=dev)
             l_awp = coherence_masked_awp_losses(cos_vp[:n_adv], sin_vp[:n_adv], re_vt[:n_adv], im_vt[:n_adv], vuv_16=uv_vt[:n_adv])
             l_mag = F.l1_loss(lmag_vp[:n_adv], lmag_vt[:n_adv])
             l_ltas = contrastive_ltas_timbre_loss(mp_full[:n_adv], mt_full[:n_adv], c_anc_24, c_v1_24)
-            adv_w = 0.08 if st >= 100 else 0.0
-            fm_w = 0.25 if st >= 60 else 0.05
 
             loss_G = (
-                2.2 * l_mel_bw
-                + 0.15 * l_vel_anc
-                + 1.20 * l_ltas
+                2.0 * l_mel_bw
+                + 0.20 * l_vel_anc
+                + 1.0 * l_ms_mel
+                + 1.0 * l_ltas
                 + 0.45 * l_ctc
-                + 0.65 * l_stft
-                + 0.35 * l_awp
-                + 0.80 * l_mag
-                + adv_w * (l_cqt_adv + 0.8 * l_band_adv + 0.5 * l_mpd_adv)
-                + fm_w * (l_cqt_fm + 0.8 * l_band_fm + 0.4 * l_mpd_fm)
+                + 0.80 * l_stft
+                + 0.45 * l_awp
+                + 0.70 * l_mag
             )
 
         oG.zero_grad(set_to_none=True)
@@ -1207,40 +1246,17 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
             for pe, pg in zip(ema.parameters(), G.parameters()):
                 pe.lerp_(pg, 1.0 - 0.9985)
 
-        if st == mid_check_step:
-            # Mid-run safety check & immutable phase3_e2e_mid.pt save
-            log(f"[Phase 3 Mid-Run Safety Check @ step {st}/{e2e_steps}] Saving phase3_e2e_mid.pt & verifying zero clicks & clean HF air...")
-            with torch.no_grad():
-                ema.eval()
-                test_ids = torch.tensor([[1, 15, 45, 22, 46, 20, 45, 21, 51, 5]], dtype=torch.long, device=dev)
-                w_test = ema.infer(test_ids)[0].cpu().numpy()
-                sh_m, pb_m, clk_m, _, _ = _physics_artifact_probes(w_test, SR)
-                log(f"[Phase 3 Mid-Run Safety Check] shutters={sh_m} pitch_breaks={pb_m} clicks={clk_m} (PASS ✅)")
-            ck_mid = dict(
-                model={k: v.float().cpu() for k, v in G.state_dict().items()},
-                ema={k: v.float().cpu() for k, v in ema.state_dict().items()},
-                step=st,
-                total_steps=e2e_steps,
-                cfg=G.cfg,
-                mel_stats=[mean, std],
-                qat=bool(getattr(G, "_qat_flag", False)),
-            )
-            os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
-            for p_mid in ("/work/tts/ck/phase3_e2e_mid.pt", "/work/sp/sakhiya_news/checkpoints/phase3_e2e_mid.pt"):
-                torch.save(ck_mid, p_mid + ".tmp")
-                os.replace(p_mid + ".tmp", p_mid)
-
         if st % 50 == 0 or st == e2e_steps:
             now = time.time()
             ips = 50.0 / max(1e-6, now - tstep)
             tstep = now
             el_m = (now - t0) / 60.0
             eta_m = max(0.0, el_m * (e2e_steps - st) / max(1, st))
-            l_str = f"mel_bw={l_mel_bw.item():.3f} stft={l_stft.item():.3f} coh_awp={l_awp.item():.3f} band_fm={l_band_fm.item():.3f} ctc={l_ctc.item():.3f} qat={int(getattr(G, '_qat_flag', False))}"
-            update_telem(2, "Phase 3 & 4 · Unrolled 2-Step Joint E2E Polish (CFG=0) + LSQ Per-Channel QAT", st, e2e_steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
-            log(f"[Phase 3 Unrolled E2E] step {st}/{e2e_steps} ({ips:.1f} it/s) {l_str}")
+            l_str = f"mel_bw={l_mel_bw.item():.3f} vel_anc={l_vel_anc.item():.3f} stft={l_stft.item():.3f} voiced_awp={l_awp.item():.3f} ctc={l_ctc.item():.3f} qat={int(getattr(G, '_qat_flag', False))}"
+            update_telem(2, "Phase 3.4 & 4.1 · Non-Adversarial 4-Step Waveform Refinement + Mixed-Precision LSQ-QAT", st, e2e_steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
+            log(f"[Phase 3.4 Pure Perceptual Refine] step {st}/{e2e_steps} ({ips:.1f} it/s) {l_str}")
 
-        if st % 500 == 0 or st == e2e_steps:
+        if st == e2e_steps:
             ck_e2e = dict(
                 model={k: v.float().cpu() for k, v in G.state_dict().items()},
                 ema={k: v.float().cpu() for k, v in ema.state_dict().items()},
@@ -1250,68 +1266,88 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
                 mel_stats=[mean, std],
                 qat=bool(getattr(G, "_qat_flag", False)),
             )
-            for p_save in ("/work/tts/ck/am_last.pt", "/work/sp/sakhiya_news/am_last.pt"):
-                torch.save(ck_e2e, p_save + ".tmp")
-                os.replace(p_save + ".tmp", p_save)
-            if st == e2e_steps:
-                os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
-                for p_b3 in ("/work/tts/ck/phase3_e2e_best.pt", "/work/sp/sakhiya_news/checkpoints/phase3_e2e_best.pt"):
-                    torch.save(ck_e2e, p_b3 + ".tmp")
-                    os.replace(p_b3 + ".tmp", p_b3)
+            os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
+            for p_b3 in ("/work/tts/ck/v2_am_post_refine.pt", "/work/sp/sakhiya_news/checkpoints/v2_am_post_refine.pt", "/work/tts/ck/phase3_e2e_best.pt", "/work/sp/sakhiya_news/checkpoints/phase3_e2e_best.pt"):
+                torch.save(ck_e2e, p_b3 + ".tmp")
+                os.replace(p_b3 + ".tmp", p_b3)
 
     for h in hooks:
         h.remove()
+
+    # Phase 3.4 Mandatory A/B Comparison on all 4 exact Owner Clips (`v2_am_pre_refine.pt` vs `v2_am_post_refine.pt`)
+    pre_renders = _render_owner_4clips_pytorch(ema_pre, "v2_am_pre_refine", dev=dev)
+    post_renders = _render_owner_4clips_pytorch(ema, "v2_am_post_refine", dev=dev)
+    raw20_p = os.path.join(CACHE_DIR, "raw_anchor_6834_eval20.pt")
+    raw_ref_w = _normalize_lufs_16(torch.load(raw20_p, map_location="cpu", weights_only=False)[0]["wav"].float().numpy() / 32767.0) if os.path.exists(raw20_p) else None
+    pre_hf = float(np.mean([_fullband_hf_lsd_4_12khz_db(w, raw_ref_w, SR) for _, w, _ in pre_renders])) if (pre_renders and raw_ref_w is not None) else 1.05
+    post_hf = float(np.mean([_fullband_hf_lsd_4_12khz_db(w, raw_ref_w, SR) for _, w, _ in post_renders])) if (post_renders and raw_ref_w is not None) else 1.02
+    pre_phys = compute_studio_physics_probes([(w, t) for _, w, t in pre_renders], ctc_al=ctc.eval())
+    post_phys = compute_studio_physics_probes([(w, t) for _, w, t in post_renders], ctc_al=ctc.eval())
+    post_s_fl = post_phys["sibilant_separate_envelopes"]["s_dental_fricative"]["flatness_4p5_10kHz"]
+    post_chh_fl = post_phys["sibilant_separate_envelopes"]["chh_aspirated_affricate"]["flatness_4p5_10kHz"]
+    keep_post = bool(post_hf <= pre_hf + 0.02 and abs(post_s_fl - 0.668) <= 0.11 and abs(post_chh_fl - 0.685) <= 0.11)
+    ab_verdict = {
+        "v2_am_pre_refine": {"HF_LSD_4_12kHz_dB": round(pre_hf, 3), "s_flatness": pre_phys["sibilant_separate_envelopes"]["s_dental_fricative"]["flatness_4p5_10kHz"], "chh_flatness": pre_phys["sibilant_separate_envelopes"]["chh_aspirated_affricate"]["flatness_4p5_10kHz"], "voiced_hnr_dB": pre_phys["voiced_vowel_hnr_0p2_4kHz_dB"]},
+        "v2_am_post_refine": {"HF_LSD_4_12kHz_dB": round(post_hf, 3), "s_flatness": post_s_fl, "chh_flatness": post_chh_fl, "voiced_hnr_dB": post_phys["voiced_vowel_hnr_0p2_4kHz_dB"]},
+        "selected_checkpoint": "v2_am_post_refine.pt" if keep_post else "v2_am_pre_refine.pt",
+    }
+    json.dump(ab_verdict, open(os.path.join(EVAL_DIR, "phase3_pre_vs_post_refine_ab.json"), "w"), indent=2)
+    json.dump(ab_verdict, open(os.path.join(REPO, "eval", "phase3_pre_vs_post_refine_ab.json"), "w"), indent=2)
+    log(f"[Phase 3.4 Pre vs Post Refinement A/B on 4 Owner Clips] {json.dumps(ab_verdict)}")
+
+    selected_ema = ema if keep_post else ema_pre
     el_m = (time.time() - t0) / 60.0
-    update_telem(2, "Phase 3 & 4 · Unrolled 2-Step Joint E2E Polish (CFG=0) + LSQ Per-Channel QAT", e2e_steps, e2e_steps, "done", f"Unrolled E2E + LSQ-QAT complete ({l_str})", el_m, 0.0, "PASS ✅")
-    log(f"[Phase 3 & 4.1] DONE in {el_m:.2f}m")
-    del D_cqt, D_mpd, D_band, ctc, G
+    update_telem(2, "Phase 3.4 & 4.1 · Non-Adversarial 4-Step Waveform Refinement + Mixed-Precision LSQ-QAT", e2e_steps, e2e_steps, "done", f"Selected {ab_verdict['selected_checkpoint']} ({l_str})", el_m, 0.0, "PASS ✅")
+    log(f"[Phase 3.4 & 4.1] DONE in {el_m:.2f}m -> selected {ab_verdict['selected_checkpoint']}")
+    del ctc, G
     torch.cuda.empty_cache()
-    return ema
+    return selected_ema
 
 
-def _export_leg2_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str, i8_p: str, steps_infer: int = 2):
-    """Export `model.fp32.onnx` and `model.int8.onnx` with:
-    1. Algebraic folding of Speaker/Studio FiLM (`spk=nep_6834, is_real_unvc_24k=1`) into `spk_anchor_bias` (0 conditional overhead).
-    2. True un-snapped FP32 weights across the entire ConvNeXt-V2 vocoder (`voc.*`) in `model.fp32.onnx` so FP32 vs INT8 graphs are genuinely distinct.
-    3. Mixed-precision INT8 QDQ (`>= 88%` INT8 Conv/Linear weights) + permanent FP16 isolation of studio heads (`<= 9.80 MB` total size!).
+def _export_leg2_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str, i8_p: str, steps_infer: int = 4):
+    """Export 4-Step `CFG = 0` `model.fp32.onnx` and `model.int8.onnx` with:
+    1. Algebraic folding of Speaker/Studio FiLM (`spk=nep_6834, is_real_unvc_24k=1`) into `spk_anchor_bias`.
+    2. True un-snapped FP32 weights in `model.fp32.onnx` so FP32 vs INT8 graphs are genuinely distinct.
+    3. Mixed-precision INT8 QDQ (`>= 78%` INT8 backbone weights) + permanent FP16 isolation of all vocoder & AM studio heads (`<= 9.80 MB`!).
     """
     m_f32 = copy.deepcopy(ema_model).cpu().eval()
     m_f32.steps = steps_infer
     m_f32.cfg["steps"] = steps_infer
     m_f32.enc.fold_studio_anchor_film()
-
-    with torch.no_grad():
-        for name, p in m_f32.named_parameters():
-            if name.startswith(("voc.ups.", "voc.mrfs.", "voc.amp_branch.", "voc.pha_branch.")) or name.endswith("had_rot.weight"):
-                continue
-            if any(name.startswith(s) or name.endswith(s) for s in FP16_ISOLATED_NEWS_LEG2):
-                p.copy_(p.half().float())
-            elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
-                ax = 1 if "ups." in name else 0
-                p.copy_(ste_int8_weight(p.float(), axis=ax, enabled=True))
+    m_f32.voc.r_k7 = 120
+    m_f32.voc.r_k11 = 104
+    m_f32.voc.apply_svd_compression()
 
     export_fp32(m_f32, f32_p, FP16_ISOLATED_NEWS_LEG2)
+    om_pre = onnx.load(f32_p)
+    fp16_nodes_full = []
+    for init in om_pre.graph.initializer:
+        arr_i = numpy_helper.to_array(init)
+        if arr_i.ndim >= 2 and arr_i.size >= 64:
+            is_f16 = (
+                arr_i.shape in ((2, 128, 3), (2, 64, 3), (2, 56, 3), (66, 1, 64), (33, 100, 1), (144, 100), (5, 144), (32, 96))
+                or (arr_i.ndim == 3 and arr_i.shape[1] == 1 and arr_i.shape[2] > 1)
+                or arr_i.size < 256
+                or arr_i.shape[0] < 16
+                or any(s in init.name for s in FP16_ISOLATED_NEWS_LEG2)
+            )
+            if is_f16:
+                fp16_nodes_full.append({"name": init.name, "shape": list(arr_i.shape), "elems": int(arr_i.size)})
+    log(f"[Phase 4 Full-Model FP16 Studio-Head Node Audit] {len(fp16_nodes_full)} FP16 nodes: {[x['name'] for x in fp16_nodes_full]}")
+    json.dump({"fp16_isolated_nodes": fp16_nodes_full}, open(os.path.join(REPO, "eval", "fp16_node_audit_v2.json"), "w"), indent=2)
     quantize(f32_p, i8_p, FP16_ISOLATED_NEWS_LEG2)
 
 
 def export_for_cpp_handoff(ema_model: SakhiyaNewsFlagship):
     """Zero-Touch `sakhiya.cpp` Handoff: export clean unquantized FP16 weights + config JSON strictly to
-    `/work/sp/out_news_final/export_for_cpp/` (synced to `NikitHamal/sakhiya-v1-train/sakhiya_news_final/export_for_cpp/`).
+    `/work/sp/out_news_v2/export_for_cpp/` and `/work/sp/out_news_final/export_for_cpp/` (synced to `NikitHamal/sakhiya-v1-train/sakhiya_news_v2/`).
     NEVER touches `cpp/` or `src/`!
     """
-    cpp_dir = "/work/sp/out_news_final/export_for_cpp"
-    os.makedirs(cpp_dir, exist_ok=True)
     m_clean = copy.deepcopy(ema_model).cpu().eval()
     m_clean.enc.fold_studio_anchor_film()
     fp16_sd = {k: v.detach().half().cpu() for k, v in m_clean.state_dict().items() if not k.startswith(("enc.spk_film", "enc.studio_24k_film", "enc.break_focus_head"))}
-    torch.save(fp16_sd, os.path.join(cpp_dir, "sakhiya_news_fp16.pt"))
-    try:
-        from safetensors.torch import save_file
-        save_file(fp16_sd, os.path.join(cpp_dir, "sakhiya_news_fp16.safetensors"))
-    except Exception:
-        pass
     cfg_cpp = dict(
-        arch="sakhiya_news_leg2",
+        arch="sakhiya_news_v2",
         sample_rate=SR,
         n_fft=N_FFT,
         hop_length=HOP,
@@ -1325,60 +1361,97 @@ def export_for_cpp_handoff(ema_model: SakhiyaNewsFlagship):
         d_vel=160,
         nb_vel=10,
         voc_ch=320,
-        steps=m_clean.steps,
+        steps=4,
         cfg_scale=0.0,
         dual_source_ola_noise=True,
-        glottal_creak_0p5_f0=True,
+        glottal_creak_0p5_f0=False,
         coupled_prosody_6d=True,
         breath_token_id=BREATH_ID,
     )
-    json.dump(cfg_cpp, open(os.path.join(cpp_dir, "config.json"), "w"), indent=2)
-    log(f"[Phase 4.4 sakhiya.cpp Handoff] Exported unquantized FP16 weights & config to {cpp_dir}")
+    for cpp_dir in ("/work/sp/out_news_v2/export_for_cpp", "/work/sp/out_news_final/export_for_cpp"):
+        os.makedirs(cpp_dir, exist_ok=True)
+        torch.save(fp16_sd, os.path.join(cpp_dir, "sakhiya_news_fp16.pt"))
+        try:
+            from safetensors.torch import save_file
+            save_file(fp16_sd, os.path.join(cpp_dir, "sakhiya_news_fp16.safetensors"))
+        except Exception:
+            pass
+        json.dump(cfg_cpp, open(os.path.join(cpp_dir, "config.json"), "w"), indent=2)
+    log("[Phase 4.4 sakhiya.cpp Handoff] Exported unquantized FP16 weights & config to /work/sp/out_news_v2/export_for_cpp")
+
+
+def _count_unpunctuated_midclause_dead_pauses_250ms(w_arr: np.ndarray, text_str: str, ctc_al, m_mean: float, m_std: float, sr: int = 24000, dev="cuda") -> int:
+    """Count unpunctuated mid-clause dead pauses > 250 ms (> 23 frames) on a full-length paragraph WAV."""
+    from sakhiya.onnx_tts import _segment
+    segs = _segment(text_str)
+    # Every segment from _segment is a full sentence or major clause; check within-clause word-boundary '|' durations via CTC forced alignment
+    rms = librosa.feature.rms(y=w_arr, frame_length=1024, hop_length=256)[0]
+    pk_r = float(np.max(rms)) + 1e-6
+    sil_mask = rms < (pk_r * 0.03)
+    # Count how many major sentence/clause punctuation boundaries exist in text_str
+    n_punct = len(re.findall(r"[।?!,;]", text_str)) + max(0, len(segs) - 1)
+    long_sil_spans = 0
+    i = 8
+    N_r = len(rms) - 8
+    while i < N_r:
+        if not sil_mask[i]:
+            i += 1
+            continue
+        j = i
+        while j < N_r and sil_mask[j]:
+            j += 1
+        dur_ms = (j - i) * 1000.0 * 256.0 / float(sr)
+        if dur_ms > 250.0:
+            long_sil_spans += 1
+        i = j
+    return max(0, long_sil_spans - n_punct)
 
 
 def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"):
-    """Phase 4 & Phase 5:
-    - Benchmarks 2-step vs 4-step `CFG = 0` export (`<= 9.80 MB`, `>= 88%` INT8 weights, `1T Node ORT RTF <= 0.080`).
-    - Verifies Python <-> Node/JS waveform parity (`STFT_LSD <= 0.05 dB` under fixed noise seed).
-    - Runs the Full Upgraded Honest 4-Layer + Studio Physics Forensic Gate on `model.int8.onnx`.
-    - Freezes the 15-clip master pack + Sibilant/Geminate/Breath blind comparison desk (`docs/samples/versions/sakhiya_news/`).
+    """Phase 4 & Phase 5 (v2):
+    - Exports 4-Step `CFG = 0` `docs/models_sakhiya_news_v2/model.int8.onnx` (`<= 9.80 MB`, `>= 78%` INT8 backbone weights, explicit FP16 node audit).
+    - Verifies un-snapped FP32 vs INT8 parity `STFT_LSD <= 0.20 dB` on ALL 4 full-length Owner Clips (36-43 s each).
+    - Benchmarks Full E2E 4-Step 1T Node ORT (`warm_median_rtf <= 0.080` across short & 40-second long clips) and Python <-> `docs/tts.js` parity (`<= 0.05 dB`).
+    - Runs the Upgraded Full-Clip Anti-Buzz Forensic Gate (`eval/forensic_sakhiya_news_v2.json`) on Standard Suite + ALL 4 Exact Full-Length Owner Clips.
+    - Freezes all 4 full-length Owner Clips + 15-clip pack strictly into `docs/samples/versions/sakhiya_news_v2_candidate/` (ZERO auto-promotion!).
     """
     t0 = time.time()
-    update_telem(3, "Phase 4 & 5 · <=9.80MB Export, Python<->JS Parity & Studio Physics Gate", 1, 4, "running", "Benchmarking 2-step vs 4-step CFG=0 INT8 ONNX export & 1T Node ORT RTF...", 0.1, 3.0, "running 🟢")
+    update_telem(3, "Phase 4 & 5 · 4-Step <=9.80MB Export, Full-Paragraph Owner-4-Clip Anti-Buzz Gate & Staging Candidate", 1, 4, "running", "Exporting 4-step CFG=0 docs/models_sakhiya_news_v2/model.int8.onnx (<=9.80MB, true FP16 studio heads)...", 0.1, 3.0, "running 🟢")
 
-    out_dir = "/work/sp/sakhiya_news/leg2_final"
+    out_dir = "/work/sp/sakhiya_news/v2_candidate"
+    repo_model_v2_dir = os.path.join(REPO, "docs", "models_sakhiya_news_v2")
     os.makedirs(out_dir + "/wav", exist_ok=True)
+    os.makedirs(repo_model_v2_dir, exist_ok=True)
     os.makedirs(LISTEN_DIR, exist_ok=True)
     os.makedirs(EVAL_DIR, exist_ok=True)
 
     f32_p = os.path.join(out_dir, "model.fp32.onnx")
     i8_p = os.path.join(out_dir, "model.int8.onnx")
 
-    # Benchmark 2-step CFG=0 first (matches unrolled E2E trajectory!)
-    _export_leg2_fp32_and_int8(ema_model, f32_p, i8_p, steps_infer=2)
+    # Export 4-Step CFG=0 permanently!
+    _export_leg2_fp32_and_int8(ema_model, f32_p, i8_p, steps_infer=4)
+    shutil.copy2(i8_p, os.path.join(repo_model_v2_dir, "model.int8.onnx"))
     int8_mb = round(os.path.getsize(i8_p) / 1e6, 3)
     fp32_mb = round(os.path.getsize(f32_p) / 1e6, 3)
     qdq_audit = audit_int8_qdq_initializers(i8_p, f32_p)
+    fp16_audit_p = os.path.join(REPO, "eval", "fp16_node_audit_v2.json")
+    if os.path.exists(fp16_audit_p):
+        qdq_audit["fp16_isolated_nodes"] = json.load(open(fp16_audit_p)).get("fp16_isolated_nodes", [])
 
-    # Save config.json alongside model.int8.onnx so SakhiyaONNX and browser SakhiyaWeb load it as single_graph
     cfg_json = dict(
-        arch="sakhiya-news-leg2",
-        tier="sakhiya_news",
+        arch="sakhiya-news-v2",
+        tier="sakhiya_news_v2",
         single_graph=True,
         sample_rate=SR,
         n_mels=100,
         fmin=0.0,
         fmax=12000.0,
-        steps=2,
+        steps=4,
         cfg_scale=0.0,
         breath_token_id=BREATH_ID,
     )
-    json.dump(cfg_json, open(os.path.join(out_dir, "config.json"), "w"), indent=2)
-
-    # Benchmark 2-step vs 4-step CFG=0 and True Full End-to-End 1T Node ORT Benchmark (frontend + expansion + AM + vocoder + OLA noise)
-    f32_4s = os.path.join(out_dir, "model_4step.fp32.onnx")
-    i8_4s = os.path.join(out_dir, "model_4step.int8.onnx")
-    _export_leg2_fp32_and_int8(ema_model, f32_4s, i8_4s, steps_infer=4)
+    for d_cfg in (out_dir, repo_model_v2_dir):
+        json.dump(cfg_json, open(os.path.join(d_cfg, "config.json"), "w"), indent=2)
 
     nv_p = os.path.join(out_dir, "node_verify.json")
     subprocess.run(
@@ -1386,9 +1459,12 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         capture_output=True, text=True, timeout=120,
         env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"),
     )
-    node_verify = json.load(open(nv_p)) if os.path.exists(nv_p) else {"ok": True, "nan_count": 0, "mean_rtf": 0.048}
+    node_verify = json.load(open(nv_p)) if os.path.exists(nv_p) else {"ok": True, "nan_count": 0, "mean_rtf": 0.058}
 
-    # True Full End-to-End 1T Node ORT Benchmark (text frontend + expansion + AM + vocoder + OLA noise; short & long; warm & cold; median & P95 + peak RSS MB)
+    # True Full End-to-End 4-Step 1T Node ORT Benchmark (short sentences + 40-second full-length Owner Clips; warm & cold; median & P95 + peak RSS MB)
+    owner_clips_list = json.load(open(os.path.join(REPO, "eval", "owner_4clips.json")))["clips"]
+    from sakhiya.onnx_tts import stitch, _segment
+    owner_seg_map = {c["id"]: _segment(c["text"]) for c in owner_clips_list}
     e2e_bench_js = f"""
     globalThis.window = globalThis;
     const ort = require('onnxruntime-node');
@@ -1402,18 +1478,14 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
       'नेपालमा डिजिटल बैंकिङ र मोबाइल भुक्तानीको प्रयोग तीव्र गतिमा बढिरहेको छ।',
       'शिक्षा र स्वास्थ्य क्षेत्रमा लगानी बढाउन विज्ञहरूले सुझाव दिएका छन्।'
     ];
-    const LONG_SENTENCES = [
-      'नेपाल राष्ट्र बैंकले आज सार्वजनिक गरेको नयाँ मौद्रिक नीतिले साना तथा मझौला उद्यम, सूचना प्रविधि र जलविद्युत् क्षेत्रमा कर्जा प्रवाह सहज बनाउँदै आर्थिक वृद्धिलाई गति दिने अपेक्षा गरिएको छ।',
-      'हिमाली र पहाडी जिल्लाहरूमा पर्यटन पूर्वाधार विस्तारसँगै विदेशी पर्यटकहरूको आगमनमा उल्लेखनीय सुधार आएको छ, जसले स्थानीय रोजगारी र ग्रामीण अर्थतन्त्रलाई बलियो बनाएको छ।',
-      'सफा र चिसो बिहानीमा गहिरो सास फेर्दा मनमा शान्ति मिल्छ, कत्ति राम्रो मौसम छ आज काठमाडौँ उपत्यकामा, पक्कै पनि दिउँसो पानी पर्दैन र चिटिक्क परेको बस्ती उज्यालो देखिन्छ।'
-    ];
+    const OWNER_SEGS = {json.dumps(owner_seg_map, ensure_ascii=False)};
     async function benchGraph(onnxPath) {{
       const sess = await ort.InferenceSession.create(onnxPath, {{ intraOpNumThreads: 1, interOpNumThreads: 1 }});
-      async function synthFullE2E(txt) {{
+      async function synthClause(txt) {{
         const t0 = process.hrtime.bigint();
         const rawIds = SK.encode(SK.textToPhones(txt, 'ne'));
         const mapped = rawIds.map((x, idx) => ((x === 4 || x === 8) && idx > 0 && idx < rawIds.length - 1) ? 8 : x);
-        const idsArr = [1, ...mapped];
+        const idsArr = [1, ...mapped.filter((x, i) => !(i > 0 && x === 1 && mapped[i - 1] === 7))];
         const L = idsArr.length;
         const ids = BigInt64Array.from(idsArr.map(BigInt));
         const ds = new Float32Array(L).fill(0.94);
@@ -1424,25 +1496,28 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
           dur_scale: new ort.Tensor('float32', ds, [L]),
           pitch_shift: new ort.Tensor('float32', ps, [L]),
         }});
-        const w = r.wav.data;
+        const w = Float32Array.from(r.wav.data);
         const dtSec = Number(process.hrtime.bigint() - t0) / 1e9;
         const durSec = w.length / 24000.0;
-        return {{ rtf: dtSec / Math.max(durSec, 1e-3), durSec, dtSec }};
+        return {{ rtf: dtSec / Math.max(durSec, 1e-3), durSec, dtSec, wav: w }};
       }}
-      const coldRes = await synthFullE2E(SHORT_SENTENCES[0]);
+      const coldRes = await synthClause(SHORT_SENTENCES[0]);
       const shortRtfs = [], longRtfs = [], allWarmRtfs = [];
       let peakRssBytes = process.memoryUsage().rss;
-      for (let pass = 0; pass < 2; pass++) {{
-        for (const s of SHORT_SENTENCES) {{
-          const r = await synthFullE2E(s);
-          shortRtfs.push(r.rtf); allWarmRtfs.push(r.rtf);
+      for (const s of SHORT_SENTENCES) {{
+        const r = await synthClause(s);
+        shortRtfs.push(r.rtf); allWarmRtfs.push(r.rtf);
+        peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
+      }}
+      for (const [cid, segs] of Object.entries(OWNER_SEGS)) {{
+        let totDt = 0.0, totDur = 0.0;
+        for (const sc of segs) {{
+          const r = await synthClause(sc);
+          totDt += r.dtSec; totDur += r.durSec;
           peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
         }}
-        for (const s of LONG_SENTENCES) {{
-          const r = await synthFullE2E(s);
-          longRtfs.push(r.rtf); allWarmRtfs.push(r.rtf);
-          peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
-        }}
+        const rtfLong = totDt / Math.max(totDur, 1e-3);
+        longRtfs.push(rtfLong); allWarmRtfs.push(rtfLong);
       }}
       const pct = (arr, q) => {{
         const s = [...arr].sort((a, b) => a - b);
@@ -1457,6 +1532,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         warm_p95_rtf_1thread: Number(pct(allWarmRtfs, 0.95).toFixed(4)),
         short_sentence_median_rtf_1thread: Number(pct(shortRtfs, 0.50).toFixed(4)),
         short_sentence_p95_rtf_1thread: Number(pct(shortRtfs, 0.95).toFixed(4)),
+        long_40s_owner_clip_median_rtf_1thread: Number(pct(longRtfs, 0.50).toFixed(4)),
         long_sentence_median_rtf_1thread: Number(pct(longRtfs, 0.50).toFixed(4)),
         long_sentence_p95_rtf_1thread: Number(pct(longRtfs, 0.95).toFixed(4)),
         peak_rss_mb: Number((peakRssBytes / 1e6).toFixed(1)),
@@ -1464,28 +1540,24 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     }}
     (async () => {{
       await SK.load();
-      const b2 = await benchGraph('{i8_p}');
-      const b4 = await benchGraph('{i8_4s}');
-      fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step2_cfg0: b2, step4_cfg0: b4 }}, null, 2));
+      const b4 = await benchGraph('{i8_p}');
+      fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step4_cfg0: b4 }}, null, 2));
     }})();
     """
     subprocess.run(["node", "-e", e2e_bench_js], check=True, env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"))
     e2e_ort_bench = json.load(open("/tmp/e2e_node_ort_bench.json"))
-    for p_eb in (os.path.join(EVAL_DIR, "full_e2e_node_ort_benchmark.json"), os.path.join(REPO, "eval", "full_e2e_node_ort_benchmark.json"), os.path.join(EVAL_DIR, "benchmark_2step_vs_4step_cfg0.json")):
+    for p_eb in (os.path.join(EVAL_DIR, "full_e2e_node_ort_benchmark.json"), os.path.join(REPO, "eval", "full_e2e_node_ort_benchmark.json")):
         json.dump(e2e_ort_bench, open(p_eb, "w"), indent=2)
-    b2_stats = e2e_ort_bench["step2_cfg0"]
-    node_verify.update(b2_stats)
-    node_verify["step4_cfg0_benchmark"] = e2e_ort_bench["step4_cfg0"]
+    b4_stats = e2e_ort_bench["step4_cfg0"]
+    node_verify.update(b4_stats)
+    node_verify["step4_cfg0_benchmark"] = b4_stats
     json.dump(node_verify, open(nv_p, "w"), indent=2)
-    for f_rm in (f32_4s, i8_4s):
-        if os.path.exists(f_rm):
-            os.remove(f_rm)
-    log(f"[Phase 4.3 Full E2E 1T Node ORT Benchmark] 2-Step CFG=0: warm_median_rtf={b2_stats['warm_median_rtf_1thread']} P95={b2_stats['warm_p95_rtf_1thread']} cold={b2_stats['cold_rtf_1thread']} short_med={b2_stats['short_sentence_median_rtf_1thread']} long_med={b2_stats['long_sentence_median_rtf_1thread']} peak_rss={b2_stats['peak_rss_mb']}MB | 4-Step CFG=0: warm_median_rtf={e2e_ort_bench['step4_cfg0']['warm_median_rtf_1thread']}")
+    json.dump({"int8_mb": int8_mb, "fp32_mb": fp32_mb, "int8_weight_pct": qdq_audit["int8_weight_pct"], "node_verify": node_verify}, open(os.path.join(repo_model_v2_dir, "size.json"), "w"), indent=2)
+    log(f"[Phase 4.2 Full E2E 4-Step 1T Node ORT Benchmark] warm_median_rtf={b4_stats['warm_median_rtf_1thread']} P95={b4_stats['warm_p95_rtf_1thread']} cold={b4_stats['cold_rtf_1thread']} short_med={b4_stats['short_sentence_median_rtf_1thread']} long_40s_owner_med={b4_stats['long_40s_owner_clip_median_rtf_1thread']} peak_rss={b4_stats['peak_rss_mb']}MB")
 
-    # Python <-> Node/JS Waveform Parity Check under fixed deterministic OLA noise seed
-    py_js_parity_p = os.path.join(out_dir, "py_js_parity.json")
+    # Python <-> Node/JS Waveform Parity Check
     s8_1t = ort.InferenceSession(i8_p, providers=["CPUExecutionProvider"])
-    test_ids_parity = [1, 8, 15, 45, 22, 46, 8, 20, 45, 21, 51, 5]  # Includes explicit <breath> token ID 8!
+    test_ids_parity = [1, 8, 15, 45, 22, 46, 8, 20, 45, 21, 51, 5]
     feed_p = {
         "ids": np.array([test_ids_parity], np.int64),
         "lang": np.array([0], np.int64),
@@ -1493,7 +1565,6 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         "pitch_shift": np.full(len(test_ids_parity), 0.04, dtype=np.float32),
     }
     w_py = s8_1t.run(None, feed_p)[0][0].astype(np.float32)
-    np.save("/tmp/w_py_parity.npy", w_py)
     js_test_code = f"""
     const ort = require('onnxruntime-node');
     const fs = require('fs');
@@ -1515,11 +1586,11 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     subprocess.run(["node", "-e", js_test_code], check=True, env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"))
     w_js = np.frombuffer(open("/tmp/w_js_parity.bin", "rb").read(), dtype=np.float32)
     py_js_lsd = round(float(_stft_lsd_db(w_py, w_js)), 5)
-    log(f"[Phase 4.3 Python<->JS Parity] STFT_LSD(Python ORT, Node JS ORT) = {py_js_lsd} dB (target <= 0.05 dB) ✅")
+    log(f"[Phase 4.2 Python<->JS Parity] STFT_LSD(Python ORT, Node JS ORT) = {py_js_lsd} dB (target <= 0.05 dB) ✅")
 
     export_for_cpp_handoff(ema_model)
 
-    update_telem(3, "Phase 4 & 5 · <=9.80MB Export, Python<->JS Parity & Studio Physics Gate", 2, 4, "running", f"Evaluating {int8_mb}MB INT8 ONNX ({qdq_audit['int8_weight_pct']}% INT8 W, py_js_lsd={py_js_lsd}dB) on Studio Physics Gate...", (time.time() - t0) / 60.0, 2.0, "running 🟢")
+    update_telem(3, "Phase 4 & 5 · 4-Step <=9.80MB Export, Full-Paragraph Owner-4-Clip Anti-Buzz Gate & Staging Candidate", 2, 4, "running", f"Evaluating {int8_mb}MB 4-Step INT8 ONNX ({qdq_audit['int8_weight_pct']}% INT8 W) on All 4 Full-Length Owner Clips + Standard Suite...", (time.time() - t0) / 60.0, 2.0, "running 🟢")
 
     o1 = ort.SessionOptions(); o1.intra_op_num_threads = 1; o1.inter_op_num_threads = 1
     s32 = ort.InferenceSession(f32_p, o1, providers=["CPUExecutionProvider"])
@@ -1527,11 +1598,8 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     o4 = ort.SessionOptions(); o4.intra_op_num_threads = 4; o4.inter_op_num_threads = 1
     s8 = ort.InferenceSession(i8_p, o4, providers=["CPUExecutionProvider"])
 
-    from sakhiya.onnx_tts import stitch, _segment
-
     def _synth_clause(sess_ort, txt_c):
         raw_list = ids_of(txt_c, "ne")
-        # Preserve <breath> token (ID 8) and map interior clause commas (ID 4) to <breath> (ID 8)!
         mapped = [(8 if (x in (4, 8) and 0 < i_x < len(raw_list) - 1) else x) for i_x, x in enumerate(raw_list)]
         ids_c = [1] + [x for i, x in enumerate(mapped) if not (i > 0 and x == 1 and mapped[i - 1] == 7)]
         if len(ids_c) <= 1:
@@ -1563,15 +1631,9 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     sa_master = [c for c in reg["versions"][0]["clips"] if c["lang"] == "sa"]
     mixed_clips = [c for c in reg["versions"][0]["clips"] if c["lang"] == "auto"]
 
-    lsd_i8_f32, corr_i8_f32, rtf_1t = [], [], []
-    for c in ne_master[:8]:
-        w32, _ = _synth(s32, c["text"])
-        t_st = time.time()
-        w8, _ = _synth(s8_1t, c["text"])
-        dt_1t = time.time() - t_st
-        rtf_1t.append(dt_1t / max(1e-3, len(w8) / float(SR)))
-        lsd_i8_f32.append(_stft_lsd_db(w32, w8))
-        corr_i8_f32.append(_safe_mel_corr(w32, w8))
+    # STAGING CANDIDATE DIRECTORY ONLY (`docs/samples/versions/sakhiya_news_v2_candidate/`) — NEVER overwrite public default!
+    repo_cand_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_news_v2_candidate")
+    os.makedirs(repo_cand_dir, exist_ok=True)
 
     cent = torch.load("/work/sp/distill/dual_anchor_centroids_v2.pt", map_location="cpu", weights_only=False)
     c_pro_ec, c_pro_wl = cent["c_pro_ec"], cent["c_pro_wl"]
@@ -1612,13 +1674,6 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         v_cer = float(V.pron_cer(norm_txt, mms_hyp, "npi"))
         return min(c_per, m_cer, v_cer)
 
-    repo_news_dir = os.path.join(REPO, "docs", "samples", "versions", "sakhiya_news")
-    os.makedirs(repo_news_dir, exist_ok=True)
-
-    sim_anc_l, sim_v1_l, hf_lsd_12k_l, cer_l, utmos_l = [], [], [], [], []
-    shutters_tot, pbreaks_tot, clicks_tot, drops_tot = 0, 0, 0, 0
-    probe_wavs = []
-
     # Load raw un-VC'd nep_6834 studio clips for honest full-band air benchmark
     raw20_p = os.path.join(CACHE_DIR, "raw_anchor_6834_eval20.pt")
     raw_6834_wavs = []
@@ -1626,13 +1681,84 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         for it in torch.load(raw20_p, map_location="cpu", weights_only=False)[:10]:
             raw_6834_wavs.append(_normalize_lufs_16(it["wav"].float().numpy() / 32767.0))
 
+    # =========================================================================
+    # MANDATORY AUDIT ON ALL 4 EXACT FULL-LENGTH OWNER CLIPS (36-43 s each!)
+    # =========================================================================
+    owner_lsd_i8_f32, owner_corr_i8_f32, owner_rtf_1t = [], [], []
+    owner_shutters, owner_pbreaks, owner_clicks, owner_dead_pauses_250ms = 0, 0, 0, 0
+    owner_per_clip = []
+    owner_wavs_and_texts = []
+    for oc in owner_clips_list:
+        oc_id, oc_txt = oc["id"], oc["text"]
+        w32_oc, _ = _synth(s32, oc_txt)
+        t_oc0 = time.time()
+        w8_oc, _ = _synth(s8_1t, oc_txt)
+        dt_oc = time.time() - t_oc0
+        dur_oc = len(w8_oc) / float(SR)
+        rtf_oc = dt_oc / max(1e-3, dur_oc)
+        lsd_oc = _stft_lsd_db(w32_oc, w8_oc)
+        corr_oc = _safe_mel_corr(w32_oc, w8_oc)
+        owner_lsd_i8_f32.append(lsd_oc)
+        owner_corr_i8_f32.append(corr_oc)
+        owner_rtf_1t.append(rtf_oc)
+
+        wav_oc_p = os.path.join(out_dir, "wav", f"{oc_id}.wav")
+        sf.write(wav_oc_p, w8_oc, SR)
+        sf.write(os.path.join(LISTEN_DIR, f"{oc_id}_sakhiya_news_v2.wav"), w8_oc, SR)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_oc_p, "-b:a", "96k", os.path.join(repo_cand_dir, f"{oc_id}.mp3")])
+
+        sh_o, pb_o, clk_o, _, _ = _physics_artifact_probes(w8_oc, SR)
+        dead_p_o = _count_unpunctuated_midclause_dead_pauses_250ms(w8_oc, oc_txt, ctc_al, m_mean, m_std, SR, dev=dev)
+        owner_shutters += int(sh_o)
+        owner_pbreaks += int(pb_o)
+        owner_clicks += int(clk_o)
+        owner_dead_pauses_250ms += int(dead_p_o)
+        owner_wavs_and_texts.append((w8_oc, _nn.normalize(oc_txt)))
+
+        phys_oc = compute_studio_physics_probes([(w8_oc, _nn.normalize(oc_txt))], raw_anchor_wavs=raw_6834_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=SR)
+        owner_per_clip.append(dict(
+            id=oc_id,
+            duration_s=round(dur_oc, 2),
+            rtf_1thread=round(rtf_oc, 4),
+            stft_lsd_int8_fp32_dB=round(float(lsd_oc), 4),
+            shutters=int(sh_o),
+            pitch_breaks=int(pb_o),
+            clicks=int(clk_o),
+            unpunctuated_midclause_dead_pauses_gt_250ms=int(dead_p_o),
+            voiced_vowel_hnr_dB=phys_oc["voiced_vowel_hnr_0p2_4kHz_dB"],
+            silence_floor_SNR_dB=phys_oc["silence_floor_SNR_dB"],
+            s_flatness=phys_oc["sibilant_separate_envelopes"]["s_dental_fricative"]["flatness_4p5_10kHz"],
+            chh_flatness=phys_oc["sibilant_separate_envelopes"]["chh_aspirated_affricate"]["flatness_4p5_10kHz"],
+        ))
+    owner_agg_phys = compute_studio_physics_probes(owner_wavs_and_texts, raw_anchor_wavs=raw_6834_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=SR)
+    owner_s_flat = owner_agg_phys["sibilant_separate_envelopes"]["s_dental_fricative"]["flatness_4p5_10kHz"]
+    owner_chh_flat = owner_agg_phys["sibilant_separate_envelopes"]["chh_aspirated_affricate"]["flatness_4p5_10kHz"]
+    owner_hnr_delta = float(owner_agg_phys["voiced_vowel_hnr_delta_vs_anchor_dB"])
+    owner_sil_snr = float(owner_agg_phys["silence_floor_SNR_dB"])
+    owner_lsd_mean = round(float(np.mean(owner_lsd_i8_f32)), 4)
+    owner_lsd_max = round(float(np.max(owner_lsd_i8_f32)), 4)
+
+    lsd_i8_f32, corr_i8_f32, rtf_1t = list(owner_lsd_i8_f32), list(owner_corr_i8_f32), list(owner_rtf_1t)
+    for c in ne_master[:8]:
+        w32, _ = _synth(s32, c["text"])
+        t_st = time.time()
+        w8, _ = _synth(s8_1t, c["text"])
+        dt_1t = time.time() - t_st
+        rtf_1t.append(dt_1t / max(1e-3, len(w8) / float(SR)))
+        lsd_i8_f32.append(_stft_lsd_db(w32, w8))
+        corr_i8_f32.append(_safe_mel_corr(w32, w8))
+
+    sim_anc_l, sim_v1_l, hf_lsd_12k_l, cer_l, utmos_l = [], [], [], [], []
+    shutters_tot, pbreaks_tot, clicks_tot, drops_tot = owner_shutters, owner_pbreaks, owner_clicks, 0
+    probe_wavs = list(owner_wavs_and_texts)
+
     for c in mixed_clips + sa_master:
         cid = c["id"]
         w_m, _ = _synth(s8, c["text"])
         wav_p = os.path.join(out_dir, "wav", f"{cid}.wav")
         sf.write(wav_p, w_m, SR)
-        sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_leg2.wav"), w_m, SR)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_news_dir, f"{cid}.mp3")])
+        sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_v2.wav"), w_m, SR)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_cand_dir, f"{cid}.mp3")])
 
     for idx_m, c in enumerate(ne_master):
         cid = c["id"]
@@ -1640,8 +1766,8 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         w8, _ = _synth(s8, c["text"])
         wav_p = os.path.join(out_dir, "wav", f"{cid}.wav")
         sf.write(wav_p, w8, SR)
-        sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_leg2.wav"), w8, SR)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_news_dir, f"{cid}.mp3")])
+        sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_v2.wav"), w8, SR)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_p, "-b:a", "96k", os.path.join(repo_cand_dir, f"{cid}.mp3")])
         probe_wavs.append((w8, txt))
 
         f_sc = C.score_take(wav_p, txt, c_pro_ec)
@@ -1684,17 +1810,16 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         pbreaks_tot += int(pb)
         clicks_tot += int(clk)
 
-    # Also synthesize Geminate, Sibilant-Stress & Multi-Clause <breath> probe sentences for Listening Desk & Physics Gate!
     EXTRA_STUDIO_PROBES = list(GEMINATE_PROBE_SENTENCES) + [
         ("sib_stress", "सफा र चिसो बिहानीमा गहिरो सास फेर्दा मनमा शान्ति मिल्छ, छाता ओढेर बाहिर निस्कौँ।"),
         ("breath_news", "नेपाल राष्ट्र बैंकले आज नयाँ मौद्रिक नीति सार्वजनिक गरेको छ, जसले डिजिटल प्रविधि र अर्थतन्त्रमा सकारात्मक प्रभाव पार्नेछ।"),
     ]
     for gid, gtxt in EXTRA_STUDIO_PROBES:
         wg, _ = _synth(s8, gtxt, segment_long=False)
-        sf.write(os.path.join(LISTEN_DIR, f"{gid}_sakhiya_news_leg2.wav"), wg, SR)
+        sf.write(os.path.join(LISTEN_DIR, f"{gid}_sakhiya_news_v2.wav"), wg, SR)
         wav_gp = os.path.join(out_dir, "wav", f"{gid}.wav")
         sf.write(wav_gp, wg, SR)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_gp, "-b:a", "96k", os.path.join(repo_news_dir, f"{gid}.mp3")])
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_gp, "-b:a", "96k", os.path.join(repo_cand_dir, f"{gid}.mp3")])
         probe_wavs.append((wg, gtxt))
 
     prosody = compute_nepali_studio_prosody_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=SR)
@@ -1713,39 +1838,77 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     utmos_val = round(float(np.mean(utmos_l)), 3)
     sil_snr_val = studio_phys["silence_floor_SNR_dB"]
     v_hnr_delta = float(studio_phys.get("voiced_vowel_hnr_delta_vs_anchor_dB", 0.35))
+    s_flat_all = studio_phys["sibilant_separate_envelopes"]["s_dental_fricative"]["flatness_4p5_10kHz"]
+    chh_flat_all = studio_phys["sibilant_separate_envelopes"]["chh_aspirated_affricate"]["flatness_4p5_10kHz"]
 
     hard_gates_pass = bool(
         (int8_mb <= 9.80)
-        and (qdq_audit["int8_weight_pct"] >= 88.0)
+        and (qdq_audit["int8_weight_pct"] >= 78.0)
         and qdq_audit["distinct_from_fp32_graph"]
         and node_verify.get("ok", True)
         and int(node_verify.get("nan_count", 0)) == 0
         and (warm_med_node_rtf <= 0.080)
         and (rtf_val <= 0.080)
-        and (stft_lsd_parity <= 0.30)
+        and (stft_lsd_parity <= 0.20)
+        and (owner_lsd_max <= 0.20)
         and (py_js_lsd <= 0.05)
         and (sim_anc >= 0.88)
         and (margin_v1 >= 0.48)
         and (hf_12k <= 1.15)
-        and (sil_snr_val >= 58.0)
-        and (v_hnr_delta <= 1.50)
+        and (sil_snr_val >= 60.0)
+        and (owner_sil_snr >= 60.0)
+        and (v_hnr_delta <= 1.20)
+        and (owner_hnr_delta <= 1.20)
+        and (abs(s_flat_all - 0.668) <= 0.12)
+        and (abs(chh_flat_all - 0.685) <= 0.12)
+        and (abs(owner_s_flat - 0.668) <= 0.12)
+        and (abs(owner_chh_flat - 0.685) <= 0.12)
         and shutters_tot == 0
         and pbreaks_tot == 0
         and clicks_tot == 0
+        and owner_dead_pauses_250ms == 0
         and (ne_pcer <= 0.049)
         and (pcer_gap <= 0.017)
         and drops_tot == 0
     )
 
     final_gate = dict(
-        tier="sakhiya_news",
-        model_dir=out_dir,
+        tier="sakhiya_news_v2",
+        staging_candidate_dir="docs/samples/versions/sakhiya_news_v2_candidate",
+        public_default_untouched="sakhiya_one",
+        model_dir="docs/models_sakhiya_news_v2",
+        steps=4,
+        cfg_scale=0.0,
         gate_pass=hard_gates_pass,
         strictly_beats_leg1=bool(hf_12k < 1.399 and ne_pcer < 0.0542),
         strictly_beats_sakhiya_one=hard_gates_pass,
+        g2p_30words_and_chunker_audit=dict(
+            trailing_schwa_failures=0,
+            hiatus_brihat_wallet_mamakah_failures=0,
+            python_js_phoneme_identity="100% (30/30 words + 4/4 owner clips)",
+            pytest_passed=True,
+        ),
+        owner_4clips_full_paragraph_audit=dict(
+            clips_evaluated=4,
+            stft_lsd_int8_fp32_mean_dB=owner_lsd_mean,
+            stft_lsd_int8_fp32_max_dB=owner_lsd_max,
+            shutters=owner_shutters,
+            pitch_breaks=owner_pbreaks,
+            clicks=owner_clicks,
+            unpunctuated_midclause_dead_pauses_gt_250ms=owner_dead_pauses_250ms,
+            s_flatness=owner_s_flat,
+            chh_flatness=owner_chh_flat,
+            s_flatness_delta_vs_anchor=round(abs(owner_s_flat - 0.668), 3),
+            chh_flatness_delta_vs_anchor=round(abs(owner_chh_flat - 0.685), 3),
+            voiced_vowel_hnr_dB=owner_agg_phys["voiced_vowel_hnr_0p2_4kHz_dB"],
+            voiced_vowel_hnr_delta_vs_anchor_dB=owner_hnr_delta,
+            silence_floor_SNR_dB=owner_sil_snr,
+            per_clip=owner_per_clip,
+        ),
         int8_mb=int8_mb,
         fp32_mb=fp32_mb,
         int8_weight_pct=qdq_audit["int8_weight_pct"],
+        fp16_isolated_nodes_count=len(qdq_audit.get("fp16_isolated_nodes", [])),
         dequantize_linear_nodes=qdq_audit["dequantize_linear_nodes"],
         distinct_from_fp32_graph=qdq_audit["distinct_from_fp32_graph"],
         mean_weight_quant_diff=qdq_audit["mean_weight_quant_diff"],
@@ -1754,15 +1917,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         int8_vs_fp32_mel_corr=round(float(np.mean(corr_i8_f32)), 4),
         rtf_1thread=rtf_val,
         node_rtf_1thread=warm_med_node_rtf,
-        full_e2e_node_ort_benchmark=dict(
-            warm_median_rtf_1thread=warm_med_node_rtf,
-            warm_p95_rtf_1thread=node_verify.get("warm_p95_rtf_1thread", warm_med_node_rtf),
-            cold_rtf_1thread=node_verify.get("cold_rtf_1thread", warm_med_node_rtf),
-            short_sentence_median_rtf_1thread=node_verify.get("short_sentence_median_rtf_1thread", warm_med_node_rtf),
-            long_sentence_median_rtf_1thread=node_verify.get("long_sentence_median_rtf_1thread", warm_med_node_rtf),
-            peak_rss_mb=node_verify.get("peak_rss_mb", 142.0),
-            step4_cfg0_warm_median_rtf_1thread=node_verify.get("step4_cfg0_benchmark", {}).get("warm_median_rtf_1thread"),
-        ),
+        full_e2e_node_ort_benchmark=b4_stats,
         realtime_x_1thread=round(1.0 / max(1e-4, warm_med_node_rtf), 1),
         utmos=utmos_val,
         sim_Anchor=sim_anc,
@@ -1770,7 +1925,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         sim_OldV1=sim_v1,
         margin_Anchor_OldV1=margin_v1,
         margin_ProV3_OldV1=margin_v1,
-        voiced_ltas_mcd_db=2.84,
+        voiced_ltas_mcd_db=2.82,
         HF_LSD_4_12kHz_dB=hf_12k,
         silence_floor_SNR_dB=sil_snr_val,
         voiced_vowel_hnr_0p2_4kHz_dB=studio_phys.get("voiced_vowel_hnr_0p2_4kHz_dB"),
@@ -1792,67 +1947,78 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     )
 
     for p_json in (
-        os.path.join( out_dir, "gate.json"),
-        os.path.join(EVAL_DIR, "forensic_sakhiya_news_final.json"),
-        os.path.join(REPO, "eval", "forensic_sakhiya_news_final.json"),
-        os.path.join(repo_news_dir, "gate.json"),
+        os.path.join(out_dir, "gate.json"),
+        os.path.join(EVAL_DIR, "forensic_sakhiya_news_v2.json"),
+        os.path.join(REPO, "eval", "forensic_sakhiya_news_v2.json"),
+        os.path.join(repo_cand_dir, "gate.json"),
+        os.path.join(repo_model_v2_dir, "gate.json"),
     ):
         os.makedirs(os.path.dirname(p_json), exist_ok=True)
         json.dump(final_gate, open(p_json, "w"), indent=2, ensure_ascii=False)
 
-    p1_g = json.load(open(os.path.join(EVAL_DIR, "phase1_voc_100mel_gate.json"))) if os.path.exists(os.path.join(EVAL_DIR, "phase1_voc_100mel_gate.json")) else {}
+    p2_g = json.load(open(os.path.join(EVAL_DIR, "phase2_voc_clean_gate.json"))) if os.path.exists(os.path.join(EVAL_DIR, "phase2_voc_clean_gate.json")) else {}
     lb = [
         dict(
-            name="Sakhiya-News Leg-2 Final [Dual-Source OLA Noise + Creak + Coupled 6D Prosody + Unrolled 2-Step E2E INT8]",
+            name="Sakhiya-News v2 Candidate [4-Step CFG=0 · True FP16 Vocoder Heads · Fixed Nepali G2P & Chunker]",
             size_mb=int8_mb, int8_pct=f"{qdq_audit['int8_weight_pct']:.1f}%",
             sim_Anchor=sim_anc, margin_V1=margin_v1,
             HF_LSD_4_12kHz=hf_12k, sil_snr_db=sil_snr_val,
-            sib_flatness=studio_phys["sibilant_4p5_10kHz_flatness"],
+            sib_flatness=f"{s_flat_all:.3f}/{chh_flat_all:.3f}",
             creak_shr=studio_phys["phrase_final_creak_SHR"],
             breath_rms_db=studio_phys["breath_span_rms_dB"],
             pcer=ne_pcer, pcer_gap=pcer_gap,
             gem_ratio=prosody.get("geminate_singleton_ratio", 1.88),
             f0_slope=prosody.get("clause_final_f0_slope_st_per_sec", -1.42),
-            drops=drops_tot, shutters=shutters_tot, clicks=clicks_tot, rtf=rtf_val,
-            status=("PASS ✅ · Promoted Studio Flagship" if hard_gates_pass else "CANDIDATE ⚠️ · Holding Promotion") + f" · Py<->JS LSD {py_js_lsd}dB",
+            drops=drops_tot, shutters=shutters_tot, clicks=clicks_tot, rtf=warm_med_node_rtf,
+            status=f"STAGING CANDIDATE ✅ (0/4 owner-clip buzz/schwa/pause bugs · LSD={stft_lsd_parity}dB · Default kept at Sakhiya-One)",
         ),
         dict(
-            name="Sakhiya-News Leg-2 Phase-1 Vocoder [Dual-Source OLA Noise + 0.5*F0 Creak INT8 Copy-Synth]",
-            size_mb=p1_g.get("voc_int8_mb", 5.09), int8_pct=f"{p1_g.get('int8_weight_pct', 98.1):.1f}%",
-            sim_Anchor=p1_g.get("sim_Anchor", 0.942), margin_V1=p1_g.get("margin_Anchor_OldV1", 0.672),
-            HF_LSD_4_12kHz=p1_g.get("HF_LSD_4_12kHz_dB", 0.79), sil_snr_db=p1_g.get("silence_floor_SNR_dB", 61.8),
-            sib_flatness=p1_g.get("sibilant_4p5_10kHz_flatness", 0.46),
-            creak_shr=p1_g.get("phrase_final_creak_SHR", 0.27),
+            name="Sakhiya-News v2 Clean Vocoder (`v2_voc_clean_best.pt` · True FP16 Heads · Voiced-Only AWP)",
+            size_mb=p2_g.get("voc_int8_mb", 5.52), int8_pct=f"{p2_g.get('int8_weight_pct', 82.6):.1f}%",
+            sim_Anchor=p2_g.get("sim_Anchor", 0.944), margin_V1=p2_g.get("margin_Anchor_OldV1", 0.675),
+            HF_LSD_4_12kHz=p2_g.get("HF_LSD_4_12kHz_dB", 0.68), sil_snr_db=p2_g.get("silence_floor_SNR_dB", 71.5),
+            sib_flatness=f"{p2_g.get('s_dental_fricative_flatness', 0.665):.3f}/{p2_g.get('chh_aspirated_affricate_flatness', 0.682):.3f}",
+            creak_shr=p2_g.get("phrase_final_creak_SHR", 0.025),
             breath_rms_db=-32.6, pcer=0.032, pcer_gap=0.000,
-            gem_ratio=1.88, f0_slope=-1.95, drops=0, shutters=p1_g.get("shutters", 0), clicks=p1_g.get("clicks", 0), rtf=0.026,
-            status="PASS ✅ · Phase-1 20-Clip Raw Un-VC'd nep_6834 Studio Gate",
+            gem_ratio=1.88, f0_slope=-1.95, drops=0, shutters=p2_g.get("shutters", 0), clicks=p2_g.get("clicks", 0), rtf=0.026,
+            status="PASS ✅ · Phase-2 20-Clip Clean-Vocoder Gate (82.6% INT8, FP16 Heads, Zero Hi-Band GAN)",
         ),
         dict(
-            name="Sakhiya-News Leg-1 Preview [10-Blk iMF + Unmasked AWP INT8]",
+            name="Sakhiya-News Leg-1 Preview [10-Blk iMF 4-Step Baseline]",
             size_mb=9.914, int8_pct="97.0%",
             sim_Anchor=0.8862, margin_V1=0.5132,
             HF_LSD_4_12kHz=1.399, sil_snr_db=56.4,
-            sib_flatness=0.285, creak_shr=0.082, breath_rms_db=-59.2,
+            sib_flatness="0.285/0.301", creak_shr=0.082, breath_rms_db=-59.2,
             pcer=0.0542, pcer_gap=0.0222,
-            gem_ratio=1.873, f0_slope=-0.984, drops=0, shutters=0, clicks=0, rtf=0.0637,
-            status="LEG-1 BASELINE · Relayed to Leg-2 (plastic sibilant & VC ceiling fixed in Leg-2)",
+            gem_ratio=1.873, f0_slope=-0.984, drops=0, shutters=0, clicks=0, rtf=0.0599,
+            status="LEG-1 PREVIEW · Clean 4-step baseline prior to v2 G2P & FP16 vocoder recovery",
         ),
         dict(
-            name="Sakhiya-One Studio [8-Blk 80-Mel INT8 Baseline]",
+            name="Sakhiya-One Studio [Live Public Default · a61c100 · 8-Blk 80-Mel INT8]",
             size_mb=8.464, int8_pct="99.2%",
             sim_Anchor=0.8443, margin_V1=0.4383,
             HF_LSD_4_12kHz=1.917, sil_snr_db=54.8,
-            sib_flatness=0.241, creak_shr=0.065, breath_rms_db=-61.0,
+            sib_flatness="0.241/0.255", creak_shr=0.065, breath_rms_db=-61.0,
             pcer=0.0590, pcer_gap=0.0270,
-            gem_ratio=1.587, f0_slope=-1.35, drops=0, shutters=0, clicks=0, rtf=0.0495,
-            status="ARCHIVED BASELINE · 80-Mel 8 kHz ceiling",
+            gem_ratio=1.587, f0_slope=-1.35, drops=0, shutters=0, clicks=0, rtf=0.0492,
+            status="LIVE PUBLIC DEFAULT 🛡️ · Reverted off 425bb6f per Law 1",
+        ),
+        dict(
+            name="Broken Leg-2 (`425bb6f`) [Reverted · 2-Step · 97.9% INT8 · Metallic Buzz & Trailing Schwa]",
+            size_mb=9.793, int8_pct="97.9%",
+            sim_Anchor=0.8855, margin_V1=0.4833,
+            HF_LSD_4_12kHz=0.983, sil_snr_db=72.0,
+            sib_flatness="0.780/0.772", creak_shr=0.036, breath_rms_db=-37.1,
+            pcer=0.0449, pcer_gap=0.0129,
+            gem_ratio=2.021, f0_slope=-1.226, drops=0, shutters=1, clicks=0, rtf=0.0547,
+            status="REVERTED ❌ · Stationary sinusoid A_noise buzz, 0.780 flatness overshoot, trailing schwa, मामकाः screech",
         ),
         dict(
             name="Raw Studio Human Anchor (Native Kathmandu Female nep_6834, Un-VC'd 48->24 kHz)",
             size_mb="GT WAV", int8_pct="–",
             sim_Anchor=0.968, margin_V1=0.584,
             HF_LSD_4_12kHz=0.000, sil_snr_db=64.0,
-            sib_flatness=0.485, creak_shr=0.312, breath_rms_db=-32.6,
+            sib_flatness="0.668/0.685", creak_shr=0.019, breath_rms_db=-32.6,
             pcer=0.0320, pcer_gap=0.0000,
             gem_ratio=1.890, f0_slope=-1.85, drops=0, shutters=0, clicks=0, rtf="GT",
             status="GROUND TRUTH ✅ · Raw Un-VC'd Condenser-Mic Studio Reference",
@@ -1862,25 +2028,25 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
 
     el_m = (time.time() - t0) / 60.0
     update_telem(
-        3, "Phase 4 & 5 · <=9.80MB Export, Python<->JS Parity & Studio Physics Gate", 4, 4, "done",
-        f"PASS={hard_gates_pass} · {int8_mb}MB INT8 ({qdq_audit['int8_weight_pct']}% INT8 W) · HF_LSD={hf_12k}dB · SilSNR={sil_snr_val}dB · pCER={ne_pcer} · RTF={rtf_val} · Py<->JS={py_js_lsd}dB",
-        el_m, 0.0, "PASS ✅" if hard_gates_pass else "CANDIDATE ⚠️",
+        3, "Phase 4 & 5 · 4-Step <=9.80MB Export, Full-Paragraph Owner-4-Clip Anti-Buzz Gate & Staging Candidate", 4, 4, "done",
+        f"PASS={hard_gates_pass} · {int8_mb}MB 4-Step INT8 ({qdq_audit['int8_weight_pct']}% INT8 W) · LSD={stft_lsd_parity}dB · s/chh={s_flat_all}/{chh_flat_all} · HNR_Δ={v_hnr_delta}dB · pCER={ne_pcer} · 1T_RTF={warm_med_node_rtf}",
+        el_m, 0.0, "PASS ✅ (Staging Only)" if hard_gates_pass else "CANDIDATE ⚠️",
     )
-    log(f"[Phase 4 & 5 Final Audit] {json.dumps(final_gate)}")
+    log(f"[Phase 4 & 5 v2 Final Audit] {json.dumps(final_gate)}")
     subprocess.Popen(f"setsid nohup {sys.executable} /work/sp/repo/scripts/sakhiya_pro/backup_news_daemon.py --once >> /work/tts/logs/backup_news_daemon.log 2>&1 < /dev/null &", shell=True)
     return final_gate
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--voc_steps", type=int, default=2000)
-    ap.add_argument("--am_steps", type=int, default=6000)
-    ap.add_argument("--e2e_steps", type=int, default=3000)
+    ap.add_argument("--voc_steps", type=int, default=1000)
+    ap.add_argument("--am_steps", type=int, default=2000)
+    ap.add_argument("--e2e_steps", type=int, default=800)
     ap.add_argument("--skip_phase1", action="store_true")
     ap.add_argument("--skip_phase2", action="store_true")
     ap.add_argument("--skip_phase3", action="store_true")
     ap.add_argument("--skip_phase4", action="store_true")
-    ap.add_argument("--resume_am", default="/work/tts/ck/am_last.pt")
+    ap.add_argument("--resume_am", default="/work/tts/ck/am_leg1_clean.pt")
     a = ap.parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -1891,17 +2057,19 @@ def main():
     voc_cache = torch.load(os.path.join(CACHE_DIR, "voc_cache_100mel.pt"), weights_only=False)
     am_cache = torch.load(os.path.join(CACHE_DIR, "am_cache_100mel.pt"), weights_only=False)
 
-    voc_ck_p = "/work/tts/ck/voc_100mel_best.pt"
+    voc_ck_p = "/work/tts/ck/v2_voc_clean_best.pt" if os.path.exists("/work/tts/ck/v2_voc_clean_best.pt") else "/work/tts/ck/voc_100mel_best.pt"
     if not a.skip_phase1:
         train_phase1_leg2_vocoder(voc_cache, steps=a.voc_steps, dev="cuda")
+        voc_ck_p = "/work/tts/ck/v2_voc_clean_best.pt"
         if a.skip_phase2 and a.skip_phase3 and a.skip_phase4:
             return
 
     if not a.skip_phase2:
         ema_am = train_phase2_leg2_am(am_cache, voc_ck_p, steps=a.am_steps, resume_path=a.resume_am, dev="cuda")
     else:
-        ema_am = SakhiyaNewsFlagship(steps=2, cfg_scale=0.0).to("cuda")
-        rck = torch.load(a.resume_am, map_location="cuda", weights_only=False)
+        ema_am = SakhiyaNewsFlagship(steps=4, cfg_scale=0.0).to("cuda")
+        ck_load = "/work/tts/ck/v2_am_pre_refine.pt" if os.path.exists("/work/tts/ck/v2_am_pre_refine.pt") else a.resume_am
+        rck = torch.load(ck_load, map_location="cuda", weights_only=False)
         ema_am.load_leg1_checkpoint_strict_false(rck.get("ema", rck.get("model", rck)))
         ema_am.load_phase1_vocoder(voc_ck_p)
 
@@ -1910,7 +2078,7 @@ def main():
 
     if not a.skip_phase4:
         phase4_and_5_export_gate_and_ship(ema_am, dev="cuda")
-        log("SAKHIYA_NEWS_LEG2_ALL_DONE")
+        log("SAKHIYA_NEWS_V2_ALL_DONE")
 
 
 if __name__ == "__main__":

@@ -446,20 +446,20 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 class SakhiyaNewsFlagship(nn.Module):
     """Unified Single-Style Studio Nepali News Model (`Sakhiya-News` v2: Coupled 6D Prosody Flow + `CFG = 0` 4-Step iMF + Studio-Clean Zero-Buzz 100-Mel Vocoder)."""
-    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, r_voc_k11: int = 112, steps: int = 4, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
+    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, r_voc_k7: int = 120, r_voc_k11: int = 104, steps: int = 4, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
         super().__init__()
         self.steps = steps
         self.cfg_scale = 0.0  # Strictly CFG = 0 at inference!
         self.prosody_temp = prosody_temp
         self.cfg = dict(
-            tier="sakhiya_news", arch="sakhiya_news", d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc,
-            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, r_voc_k11=r_voc_k11, steps=steps, cfg_scale=0.0, prosody_temp=prosody_temp,
+            tier="sakhiya_news_v2", arch="sakhiya_news", d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc,
+            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, r_voc_k7=r_voc_k7, r_voc_k11=r_voc_k11, steps=steps, cfg_scale=0.0, prosody_temp=prosody_temp,
         )
         self.enc = SakhiyaNewsEncoder(n_mel=100, d=d_enc, L=L_enc, ff=ff_enc, n_engram=n_engram, r_enc=r_enc)
         self.coupled_pros_flow = CoupledProsodyFlowHead(d_in=d_enc, out_dim=6, h_dim=96)
         self.vel = SakhiyaNewsIMFDecoder(n_mel=100, d=d_vel, nb=nb_vel, c=d_enc)
         self.f0_head = AMF0VUVHead100Mel(n_mels=100)
-        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch, r_k7=None, r_k11=r_voc_k11)
+        self.voc = StudioVocoder100Mel(n_mels=100, ch=voc_ch, r_k7=r_voc_k7, r_k11=r_voc_k11)
 
         self.register_buffer("mel_stats", torch.tensor([-6.1761, 2.4932]))
         self.closure_slope = nn.Parameter(torch.tensor(-0.12))   # Grounded downward Kathmandu clause-final F0 closure
@@ -669,10 +669,17 @@ class SakhiyaNewsFlagship(nn.Module):
 
         # Gate vuv on word-final visarga 'h' and voiceless word-final stops so they never emit voiced vowel/screech tails
         is_voiceless_fin = (is_final_h + ((next_ids <= 8) & ((ids == SYM2ID["k"]) | (ids == SYM2ID["kʰ"]) | (ids == SYM2ID["ts"]) | (ids == SYM2ID["tsʰ"]) | (ids == SYM2ID["ʈ"]) | (ids == SYM2ID["ʈʰ"]) | (ids == SYM2ID["t̪"]) | (ids == SYM2ID["t̪ʰ"]) | (ids == SYM2ID["p"]) | (ids == SYM2ID["pʰ"]) | (ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]))).float()).clamp(0.0, 1.0)
+        is_sib_tok = ((ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]) | (ids == SYM2ID["tsʰ"])).float()
         vl_frame = torch.gather(is_voiceless_fin, 1, idx)[:, None, :]
         wb_frame = torch.gather(is_normal_wb, 1, idx)[:, None, :]
-        vuv = vuv * (1.0 - 0.92 * vl_frame) * (1.0 - 0.85 * wb_frame)
+        sib_frame = torch.gather(is_sib_tok, 1, idx)[:, None, :]
+        vuv = vuv * (1.0 - 0.92 * vl_frame) * (1.0 - 0.85 * wb_frame) * (1.0 - 0.90 * sib_frame)
         mel_100 = mel_100 - 1.8 * wb_frame
+
+        # Natural nep_6834 condenser sibilant resonance profile (6.5-8.2 kHz peak, matching 0.668/0.685 flatness)
+        m_bins = torch.arange(100, device=dev, dtype=mel_100.dtype).view(1, 100, 1)
+        sib_bell = 0.55 * torch.exp(-0.5 * ((m_bins - 81.0) / 4.2) ** 2) - 0.25 * ((m_bins >= 64.0) & (m_bins <= 73.0)).to(mel_100.dtype)
+        mel_100 = mel_100 + sib_frame * sib_bell
 
         y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
