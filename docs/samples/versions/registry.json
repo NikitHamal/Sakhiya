@@ -5,14 +5,14 @@
       "label": "Sakhiya-Studio-80M + Pretrained BigVGAN-v2 / Vocos-24kHz (Pure FP32 · 32-Step ODE · Zero-Karkar Studio Master)",
       "notes": "83.25M Dense 16-Layer RoPE-DiT trained on 12.59h 100% pure single-speaker 24kHz studio corpus (0% Seed-VC, 0% Old-V1) decoded at 32 Midpoint ODE steps in pure FP32 through Pretrained nvidia/bigvgan_v2_24khz_100band_256x and charactr/vocos-mel-24khz.",
       "metrics": {
-        "voiced_vowel_hnr_dB": 19.255,
-        "upper_band_comb_grit_index": 1.4572,
+        "voiced_vowel_hnr_dB": 19.508,
+        "upper_band_comb_grit_index": 1.428,
         "HF_LSD_4_12kHz_dB": 0.1152,
-        "silence_floor_SNR_dB": 44.9,
-        "sim_Anchor": 0.8945,
-        "margin_Anchor_OldV1": 0.2025,
-        "ne_pcer": 0.0661,
-        "ne_pcer_gap_vs_anchor": 0.0341,
+        "silence_floor_SNR_dB": 72.0,
+        "sim_Anchor": 0.8874,
+        "margin_Anchor_OldV1": 0.4964,
+        "ne_pcer": 0.0588,
+        "ne_pcer_gap_vs_anchor": 0.0268,
         "f0_shutters": 0,
         "clicks": 0,
         "unpunctuated_12word_slices": 0
@@ -24,7 +24,7 @@
           "style": "studio_clean_fp32",
           "text": "दोस्रो समाचार नयाँ पुस्ताका एआई मोडेलहरू बारे छ। गुगलले जेमिनाई फोर नियोन नाम गरेको अत्यन्तै छरितो र शक्तिशाली नयाँ एआई मोडेल सार्वजनिक गरेको छ। जटिल तर्क गर्न लामो कोड लेख्न र धेरै चरण भएका अनुसन्धानात्मक कामहरू छिटो सम्पन्न गर्न यो मोडेल विशेष रूपमा तयार पारिएको बताइएको छ। यस्तै ओपन एआईले पनि जीपीटी सिक्स पोइन्ट टु नाम गरेका नयाँ संस्करणहरू ल्याउँदै प्रयोगकर्ताको तर्फबाट सुरक्षित रूपमा अनलाइन किनमेल गर्न मिल्ने च्याटजिपिटी वालेट सुविधा सुरु गर्ने घोषणा गरेको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip1_ai_models.wav",
-          "duration_s": 40.47
+          "duration_s": 41.13
         },
         {
           "id": "owner_clip1_ai_models_vocos24k",
@@ -32,7 +32,7 @@
           "style": "vocos24k_fp32",
           "text": "दोस्रो समाचार नयाँ पुस्ताका एआई मोडेलहरू बारे छ। गुगलले जेमिनाई फोर नियोन नाम गरेको अत्यन्तै छरितो र शक्तिशाली नयाँ एआई मोडेल सार्वजनिक गरेको छ। जटिल तर्क गर्न लामो कोड लेख्न र धेरै चरण भएका अनुसन्धानात्मक कामहरू छिटो सम्पन्न गर्न यो मोडेल विशेष रूपमा तयार पारिएको बताइएको छ। यस्तै ओपन एआईले पनि जीपीटी सिक्स पोइन्ट टु नाम गरेका नयाँ संस्करणहरू ल्याउँदै प्रयोगकर्ताको तर्फबाट सुरक्षित रूपमा अनलाइन किनमेल गर्न मिल्ने च्याटजिपिटी वालेट सुविधा सुरु गर्ने घोषणा गरेको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip1_ai_models_vocos24k.wav",
-          "duration_s": 40.47
+          "duration_s": 41.13
         },
         {
           "id": "owner_clip2_share_market",
@@ -40,7 +40,7 @@
           "style": "studio_clean_fp32",
           "text": "पहिलो समाचार कृत्रिम बुद्धिमत्ता बृहत र विश्व सेयर बजारसँग सम्बन्धित छ। प्रसिद्ध एआई अनुसन्धान कम्पनी एन्थ्रोपिकको सेयर बजारमा कारोबार खुलेको पहिलो दिनमै १७ प्रतिशतले उल्लेखनीय वृद्धि भएको छ। तर लगानीकर्ताहरूको नाफा सुरक्षित गर्ने होडबाजीका कारण अर्को दिन करिब १४ प्रतिशतले गिरावट आयो जसले गर्दा अन्य प्रमुख प्रविधि कम्पनीहरूको सेयर मूल्यमा समेत ठूलो उतारचढाव देखिएको छ। विश्लेषकहरूका अनुसार एआई पूर्वाधारमा भइरहेको अर्बौँ डलरको लगानीले आगामी त्रैमासिकमा बजारलाई थप संवेदनशील बनाउने निश्चित छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip2_share_market.wav",
-          "duration_s": 44.46
+          "duration_s": 43.96
         },
         {
           "id": "owner_clip2_share_market_vocos24k",
@@ -48,7 +48,7 @@
           "style": "vocos24k_fp32",
           "text": "पहिलो समाचार कृत्रिम बुद्धिमत्ता बृहत र विश्व सेयर बजारसँग सम्बन्धित छ। प्रसिद्ध एआई अनुसन्धान कम्पनी एन्थ्रोपिकको सेयर बजारमा कारोबार खुलेको पहिलो दिनमै १७ प्रतिशतले उल्लेखनीय वृद्धि भएको छ। तर लगानीकर्ताहरूको नाफा सुरक्षित गर्ने होडबाजीका कारण अर्को दिन करिब १४ प्रतिशतले गिरावट आयो जसले गर्दा अन्य प्रमुख प्रविधि कम्पनीहरूको सेयर मूल्यमा समेत ठूलो उतारचढाव देखिएको छ। विश्लेषकहरूका अनुसार एआई पूर्वाधारमा भइरहेको अर्बौँ डलरको लगानीले आगामी त्रैमासिकमा बजारलाई थप संवेदनशील बनाउने निश्चित छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip2_share_market_vocos24k.wav",
-          "duration_s": 44.46
+          "duration_s": 43.96
         },
         {
           "id": "owner_clip3_intro_bulletin",
@@ -56,7 +56,7 @@
           "style": "studio_clean_fp32",
           "text": "नमस्ते सबैजनालाई। म सखिया तपाईंको समाचार वाचक। आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रिम बुद्धिमत्ता अर्थात एआईका नवीनतम उपलब्धिहरू, नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौँ। प्रविधिको दुनियाँ हरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन, शिक्षा र व्यवसायमा पर्न थालेको छ। त चलौँ आजका मुख्य समाचार तर्फ लागौँ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip3_intro_bulletin.wav",
-          "duration_s": 37.63
+          "duration_s": 36.78
         },
         {
           "id": "owner_clip3_intro_bulletin_vocos24k",
@@ -64,7 +64,7 @@
           "style": "vocos24k_fp32",
           "text": "नमस्ते सबैजनालाई। म सखिया तपाईंको समाचार वाचक। आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रिम बुद्धिमत्ता अर्थात एआईका नवीनतम उपलब्धिहरू, नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौँ। प्रविधिको दुनियाँ हरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन, शिक्षा र व्यवसायमा पर्न थालेको छ। त चलौँ आजका मुख्य समाचार तर्फ लागौँ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip3_intro_bulletin_vocos24k.wav",
-          "duration_s": 37.63
+          "duration_s": 36.78
         },
         {
           "id": "owner_clip4_sanskrit_gita",
@@ -72,7 +72,7 @@
           "style": "studio_clean_fp32",
           "text": "हेलो साथीहरू, म सखिया हुँ। निकित हमाल ज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय। आज मौसम निकै रमाइलो र शान्त छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip4_sanskrit_gita.wav",
-          "duration_s": 19.53
+          "duration_s": 21.18
         },
         {
           "id": "owner_clip4_sanskrit_gita_vocos24k",
@@ -80,7 +80,7 @@
           "style": "vocos24k_fp32",
           "text": "हेलो साथीहरू, म सखिया हुँ। निकित हमाल ज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय। आज मौसम निकै रमाइलो र शान्त छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/owner_clip4_sanskrit_gita_vocos24k.wav",
-          "duration_s": 19.53
+          "duration_s": 21.18
         },
         {
           "id": "unseen_news1_hydropower",
@@ -88,7 +88,7 @@
           "style": "studio_clean_fp32",
           "text": "नेपाल विद्युत प्राधिकरणले आगामी वर्षायाममा थप चार सय पचास मेगावाट स्वच्छ जलविद्युत ऊर्जा छिमेकी मुलुकहरूमा निर्यात गर्ने महत्त्वाकांक्षी योजना सार्वजनिक गरेको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news1_hydropower.wav",
-          "duration_s": 14.07
+          "duration_s": 14.03
         },
         {
           "id": "unseen_news1_hydropower_vocos24k",
@@ -96,7 +96,7 @@
           "style": "vocos24k_fp32",
           "text": "नेपाल विद्युत प्राधिकरणले आगामी वर्षायाममा थप चार सय पचास मेगावाट स्वच्छ जलविद्युत ऊर्जा छिमेकी मुलुकहरूमा निर्यात गर्ने महत्त्वाकांक्षी योजना सार्वजनिक गरेको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news1_hydropower_vocos24k.wav",
-          "duration_s": 14.07
+          "duration_s": 14.03
         },
         {
           "id": "unseen_news2_digital_banking",
@@ -104,7 +104,7 @@
           "style": "studio_clean_fp32",
           "text": "नेपाल राष्ट्र बैंकका अनुसार पछिल्लो एक वर्षमा मोबाइल बैंकिङ र क्यूआर कोडमार्फत हुने डिजिटल कारोबारमा उल्लेखनीय वृद्धि भएसँगै साइबर सुरक्षामा विशेष सतर्कता अपनाइएको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news2_digital_banking.wav",
-          "duration_s": 15.06
+          "duration_s": 14.5
         },
         {
           "id": "unseen_news2_digital_banking_vocos24k",
@@ -112,7 +112,7 @@
           "style": "vocos24k_fp32",
           "text": "नेपाल राष्ट्र बैंकका अनुसार पछिल्लो एक वर्षमा मोबाइल बैंकिङ र क्यूआर कोडमार्फत हुने डिजिटल कारोबारमा उल्लेखनीय वृद्धि भएसँगै साइबर सुरक्षामा विशेष सतर्कता अपनाइएको छ।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news2_digital_banking_vocos24k.wav",
-          "duration_s": 15.06
+          "duration_s": 14.5
         },
         {
           "id": "unseen_news3_kathmandu_weather",
@@ -120,7 +120,7 @@
           "style": "studio_clean_fp32",
           "text": "पश्चिमी वायुको सामान्य प्रभावका कारण आज काठमाडौँ उपत्यका लगायत पहाडी भूभागमा मौसम आंशिक बदली रहे पनि आन्तरिक तथा अन्तर्राष्ट्रिय हवाई उडानहरू नियमित रूपमा सञ्चालन भइरहेका छन्।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news3_kathmandu_weather.wav",
-          "duration_s": 15.7
+          "duration_s": 15.78
         },
         {
           "id": "unseen_news3_kathmandu_weather_vocos24k",
@@ -128,7 +128,7 @@
           "style": "vocos24k_fp32",
           "text": "पश्चिमी वायुको सामान्य प्रभावका कारण आज काठमाडौँ उपत्यका लगायत पहाडी भूभागमा मौसम आंशिक बदली रहे पनि आन्तरिक तथा अन्तर्राष्ट्रिय हवाई उडानहरू नियमित रूपमा सञ्चालन भइरहेका छन्।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news3_kathmandu_weather_vocos24k.wav",
-          "duration_s": 15.7
+          "duration_s": 15.78
         },
         {
           "id": "unseen_news4_ai_education",
@@ -136,7 +136,7 @@
           "style": "studio_clean_fp32",
           "text": "त्रिभुवन विश्वविद्यालय र काठमाडौँ विश्वविद्यालयका अनुसन्धानकर्ताहरूले नेपाली भाषाको प्राकृतिक प्रशोधन र कृत्रिम बुद्धिमत्ताको विकासका लागि संयुक्त प्रयोगशाला स्थापना गरेका छन्।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news4_ai_education.wav",
-          "duration_s": 15.58
+          "duration_s": 15.25
         },
         {
           "id": "unseen_news4_ai_education_vocos24k",
@@ -144,7 +144,7 @@
           "style": "vocos24k_fp32",
           "text": "त्रिभुवन विश्वविद्यालय र काठमाडौँ विश्वविद्यालयका अनुसन्धानकर्ताहरूले नेपाली भाषाको प्राकृतिक प्रशोधन र कृत्रिम बुद्धिमत्ताको विकासका लागि संयुक्त प्रयोगशाला स्थापना गरेका छन्।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news4_ai_education_vocos24k.wav",
-          "duration_s": 15.58
+          "duration_s": 15.25
         },
         {
           "id": "unseen_news5_closing_bulletin",
@@ -152,7 +152,7 @@
           "style": "studio_clean_fp32",
           "text": "आजको विशेष प्राविधिक र आर्थिक समाचार बुलेटिन यहीँ सकिन्छ। ताजा र तथ्यपरक समाचारका लागि हामीसँग जोडिरहनुहोला, नमस्ते अनि शुभरात्री।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news5_closing_bulletin.wav",
-          "duration_s": 11.6
+          "duration_s": 11.71
         },
         {
           "id": "unseen_news5_closing_bulletin_vocos24k",
@@ -160,7 +160,7 @@
           "style": "vocos24k_fp32",
           "text": "आजको विशेष प्राविधिक र आर्थिक समाचार बुलेटिन यहीँ सकिन्छ। ताजा र तथ्यपरक समाचारका लागि हामीसँग जोडिरहनुहोला, नमस्ते अनि शुभरात्री।",
           "mp3": "samples/versions/sakhiya_studio_80m_clean/unseen_news5_closing_bulletin_vocos24k.wav",
-          "duration_s": 11.6
+          "duration_s": 11.71
         }
       ]
     },
