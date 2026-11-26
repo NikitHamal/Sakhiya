@@ -390,15 +390,18 @@ class StudioVocoder100Mel(nn.Module):
 
         freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
 
+        # Exact Nyquist bin-32 (12.0 kHz fs/2) antialias gate (1.0 on bins 0..31, 0.18 at bin 32)
+        nyq_bin32_gate = ((32.18 - freq_ar) / 1.18).clamp(0.18, 1.0)
+
         # Harmonic magnitude & phase
-        A_harm = torch.exp(log_mag) * sg_16
+        A_harm = torch.exp(log_mag) * sg_16 * nyq_bin32_gate
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
 
         # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, gentle on low voiced bins)
         hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.08, 1.0)
         unvoiced_boost = 1.0 - 0.65 * uv_16 * (1.0 - 0.70 * hi_band_w)
-        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
+        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22 * nyq_bin32_gate
 
         if noise_re is None or noise_im is None:
             noise_re, noise_im = self._compute_ola_unit_phasor_noise(mel.shape[0], T_sub, mel.device, A_harm.dtype)
