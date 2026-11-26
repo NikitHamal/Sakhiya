@@ -6,13 +6,13 @@
       "notes": "83.25M Dense 16-Layer RoPE-DiT trained on 12.59h 100% pure single-speaker 24kHz studio corpus (0% Seed-VC, 0% Old-V1) decoded at 32 Midpoint ODE steps in pure FP32 through Pretrained nvidia/bigvgan_v2_24khz_100band_256x and charactr/vocos-mel-24khz.",
       "metrics": {
         "voiced_vowel_hnr_dB": 19.156,
-        "upper_band_comb_grit_index": 1.4177,
+        "upper_band_comb_grit_index": 1.4001,
         "HF_LSD_4_12kHz_dB": 0.1152,
         "silence_floor_SNR_dB": 72.0,
-        "sim_Anchor": 0.8675,
-        "margin_Anchor_OldV1": 0.4731,
-        "ne_pcer": 0.0756,
-        "ne_pcer_gap_vs_anchor": 0.0436,
+        "sim_Anchor": 0.9259,
+        "margin_Anchor_OldV1": 0.5616,
+        "ne_pcer": 0.0716,
+        "ne_pcer_gap_vs_anchor": 0.0396,
         "f0_shutters": 0,
         "clicks": 0,
         "unpunctuated_12word_slices": 0
