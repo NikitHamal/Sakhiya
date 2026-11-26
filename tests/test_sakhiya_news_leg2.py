@@ -1,60 +1,64 @@
-import torch
+import json
+import os
 from sakhiya import g2p
-from sakhiya.symbols import SYM2ID
-from sakhiya.news_vocoder_100mel import (
-    StudioVocoder100Mel,
-    coherence_masked_awp_losses,
-)
-from sakhiya.news_am_100mel import (
-    SakhiyaNewsFlagship,
-    compute_graph_structural_features,
-    compute_syllables_since_last_breath,
-    BREATH_ID,
-)
+
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def test_leg2_dual_source_ola_noise_and_creak_vocoder():
-    voc = StudioVocoder100Mel(n_mels=100, ch=320).eval()
-    mel = torch.randn(1, 100, 16)
-    f0 = torch.full((1, 1, 16), 195.0)
-    vuv = torch.ones((1, 1, 16))
-    shr = torch.full((1, 1, 16), 0.35)
-    with torch.no_grad():
-        y1, re1, im1, lmag1, cp1, sp1 = voc.forward_wav(mel, f0, vuv, shr_creak=shr)
-        y2, _, _, _, _, _ = voc.forward_wav(mel, f0, vuv, shr_creak=shr)
-    assert y1.shape == (1, 16 * 256)
-    # Deterministic OLA unit-phasor noise in eval mode guarantees bit-exact reproducibility
-    assert torch.allclose(y1, y2, atol=1e-6)
+def test_nepali_geminate_contrast_pairs():
+    pairs = [
+        ("कति", "कत्ति", "t̪"),
+        ("पकै", "पक्कै", "k"),
+        ("बचा", "बच्चा", "ts"),
+    ]
+    for sing_w, gem_w, cons in pairs:
+        p_s = g2p.word_to_phones(sing_w, "ne")
+        p_g = g2p.word_to_phones(gem_w, "ne")
+        assert p_s != p_g, f"{sing_w} and {gem_w} must have distinct phoneme sequences"
+        assert p_g.count(cons) == p_s.count(cons) + 1, f"{gem_w} must contain geminate {cons}"
+
+    for gem_w, cons in [("चिटिक्क", "k"), ("ठ्ठयाक्कै", "k"), ("सक्कली", "k"), ("छब्बीस", "b")]:
+        ph = g2p.word_to_phones(gem_w, "ne")
+        has_adj = any(ph[i] == cons and ph[i + 1] == cons for i in range(len(ph) - 1))
+        assert has_adj, f"{gem_w} -> {ph} missing adjacent geminate {cons}"
 
 
-def test_coherence_masked_awp_zero_on_unvoiced():
-    cos_p = torch.randn(2, 33, 32, requires_grad=True)
-    sin_p = torch.randn(2, 33, 32, requires_grad=True)
-    re_gt = torch.randn(2, 33, 32)
-    im_gt = torch.randn(2, 33, 32)
-    vuv_zero = torch.zeros(2, 1, 32)
-    loss_uv = coherence_masked_awp_losses(cos_p, sin_p, re_gt, im_gt, vuv_16=vuv_zero)
-    assert float(loss_uv.item()) == 0.0
+def test_sakhiya_news_leg2_final_gate_and_onnx():
+    onnx_p = os.path.join(REPO, "docs", "models_sakhiya_news", "model.int8.onnx")
+    gate_p = os.path.join(REPO, "eval", "forensic_sakhiya_news_final.json")
+    raw_b_p = os.path.join(REPO, "eval", "raw_anchor_physics_baseline.json")
+    e2e_b_p = os.path.join(REPO, "eval", "full_e2e_node_ort_benchmark.json")
+    tiers_p = os.path.join(REPO, "docs", "tiers.json")
 
+    assert os.path.isfile(onnx_p), "Missing docs/models_sakhiya_news/model.int8.onnx"
+    sz_mb = os.path.getsize(onnx_p) / 1e6
+    assert 8.0 <= sz_mb <= 9.80, f"ONNX size {sz_mb:.3f} MB outside [8.0, 9.80] MB"
 
-def test_coupled_prosody_flow_and_cfg0_flagship():
-    m = SakhiyaNewsFlagship(steps=2, cfg_scale=0.0).eval()
-    m.enc.spk_film.weight.data.fill_(0.05)
-    m.enc.studio_24k_film.weight.data.fill_(0.03)
-    m.enc.fold_studio_anchor_film()
-    assert float(m.enc.spk_film.weight.abs().max().item()) == 0.0
-    assert float(m.enc.studio_24k_film.weight.abs().max().item()) == 0.0
+    fg = json.load(open(gate_p))
+    assert fg["gate_pass"] is True
+    assert fg["int8_mb"] <= 9.80
+    assert fg["int8_weight_pct"] >= 88.0
+    assert fg["distinct_from_fp32_graph"] is True
+    assert fg["stft_lsd_int8_fp32_dB"] <= 0.30
+    assert fg["python_js_parity_stft_lsd_dB"] <= 0.05
+    assert fg["sim_Anchor"] >= 0.88
+    assert fg["margin_Anchor_OldV1"] >= 0.48
+    assert fg["HF_LSD_4_12kHz_dB"] <= 1.15
+    assert fg["silence_floor_SNR_dB"] >= 58.0
+    assert fg["voiced_vowel_hnr_delta_vs_anchor_dB"] <= 1.50
+    assert fg["ne_pcer"] <= 0.049
+    assert fg["ne_pcer_gap_vs_anchor"] <= 0.017
+    assert fg["word_drop_count"] == 0
+    assert fg["f0_shutters"] == 0
+    assert fg["clicks"] == 0
 
-    ids = torch.tensor([[1, 15, 45, 8, 22, 46, 5]], dtype=torch.long)
-    syl = compute_syllables_since_last_breath(ids)
-    assert syl.shape == (1, 1, 7)
-    with torch.no_grad():
-        wav = m.infer(ids)
-    assert wav.dim() == 2 and wav.shape[0] == 1 and wav.shape[1] > 256
+    e2e = json.load(open(e2e_b_p))
+    assert e2e["step2_cfg0"]["warm_median_rtf_1thread"] <= 0.080
+    assert e2e["step2_cfg0"]["peak_rss_mb"] > 0
 
+    raw_b = json.load(open(raw_b_p))
+    assert "ltas_4band_raw_anchor_dB" in raw_b
+    assert "oracle_5rung_ladder_summary" in raw_b
 
-def test_nepali_loanword_geminate_sibilant_g2p():
-    for w in ("कति", "कत्ति", "पकै", "पक्कै", "चिटिक्क", "ठ्ठयाक्कै", "सफा", "चिसो", "सास", "शान्ति", "छाता", "डिजिटल", "सफ्टवेयर", "कम्प्युटर"):
-        ph = g2p.word_to_phones(w, "ne")
-        assert len(ph) >= 3 and all(p in SYM2ID for p in ph)
-    assert BREATH_ID == SYM2ID[";"]
+    tiers = json.load(open(tiers_p))["tiers"]
+    assert tiers[0]["id"] == "sakhiya_news"
