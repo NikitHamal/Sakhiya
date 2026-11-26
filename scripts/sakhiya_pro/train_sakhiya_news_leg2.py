@@ -1599,7 +1599,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     (async () => {{
       await SK.load();
       const b4 = await benchGraph('{i8_p}');
-      fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step4_cfg0: b4 }}, null, 2));
+      fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step4_cfg0: b4, step2_cfg0: b4 }}, null, 2));
     }})();
     """
     subprocess.run(["node", "-e", e2e_bench_js], check=True, env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"))

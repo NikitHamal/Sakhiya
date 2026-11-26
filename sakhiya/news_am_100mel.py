@@ -427,6 +427,7 @@ class AMF0VUVHead100Mel(nn.Module):
         lf0 = torch.log2(f0.clamp(115.0, 380.0))
         if f0_bias_st is not None:
             lf0 = lf0 + f0_bias_st.to(lf0.dtype) * (1.0 / 12.0)
+        lf0 = F.avg_pool1d(F.pad(lf0, (2, 2), mode="replicate"), 5, stride=1)
         f0_hz = torch.pow(2.0, lf0).clamp(115.0, 380.0)
         return f0_hz, vuv
 
@@ -568,11 +569,7 @@ class SakhiyaNewsFlagship(nn.Module):
         is_final_h = ((ids == id_h) & (next_ids <= 8)).float()
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=4.0), dur)
 
-        # 2. Normal inter-word boundary '|' (`ID=1`): smooth 2-3 frame coarticulatory transition (kills >250ms mid-clause stops without merging words!)
-        is_normal_wb = ((ids == id_wb) & (is_pre_hiatus_wb < 0.5) & (is_hiatus_wb < 0.5)).float()
-        dur = torch.where(is_normal_wb > 0.5, torch.clamp(dur, min=2.0, max=3.0), dur)
-
-        # 3. Heterosyllabic vowel hiatus (`भएका/भएको`: `bʱ ʌ e`, `भइरहेको/भइरहेका`: `bʱ ʌ i r`): keep both syllables distinct (>= 6 frames)
+        # 2. Heterosyllabic vowel hiatus (`भएका/भएको`: `bʱ ʌ e`, `भइरहेको/भइरहेका`: `bʱ ʌ i r`): keep both syllables distinct (>= 6 frames)
         is_v_hiatus_1 = ((prev_ids == id_bh) & (ids == id_schwa) & ((next_ids == id_e) | ((next_ids == id_i) & (next2_ids == id_r)))).float()
         is_v_hiatus_2 = ((prev2_ids == id_bh) & (prev_ids == id_schwa) & ((ids == id_e) | ((ids == id_i) & (next_ids == id_r)))).float()
         dur = torch.maximum(dur, is_v_hiatus_1 * 7.0 + is_v_hiatus_2 * 6.0)
@@ -645,14 +642,11 @@ class SakhiyaNewsFlagship(nn.Module):
         mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
         f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.24)
 
-        # Post-decoder release gate on word-final visarga 'h' (`मामकाः`) and word-final consonant boundaries so zero vocalic '-अ' or screech tail occurs
-        is_coda_wb = ((ids == id_wb) & (prev_ids >= 9) & (prev_ids <= 44)).float()
+        # Post-decoder release gate on word-final visarga 'h' (`मामकाः`) and unvoiced sibilant profile (`स/श/छ`)
         is_sib_tok = ((ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]) | (ids == SYM2ID["tsʰ"])).float()
         fin_h_frame = torch.gather(is_final_h, 1, idx)[:, None, :]
-        coda_wb_frame = torch.gather(is_coda_wb, 1, idx)[:, None, :]
         sib_frame = torch.gather(is_sib_tok, 1, idx)[:, None, :]
-        vuv = vuv * (1.0 - 0.92 * fin_h_frame) * (1.0 - 0.80 * coda_wb_frame) * (1.0 - 0.90 * sib_frame)
-        mel_100 = mel_100 - 1.1 * coda_wb_frame
+        vuv = vuv * (1.0 - 0.92 * fin_h_frame) * (1.0 - 0.90 * sib_frame)
 
         # Natural nep_6834 condenser sibilant resonance profile (6.5-8.2 kHz peak, matching 0.668/0.685 flatness)
         m_bins = torch.arange(100, device=dev, dtype=mel_100.dtype).view(1, 100, 1)
