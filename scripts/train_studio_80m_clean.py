@@ -731,7 +731,6 @@ def run_phase3_comparison_pack_and_forensic_gate(
     fe_sv = AutoFeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
     sv_m = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
 
-    import validators as V
     cent = torch.load("/work/sp/distill/dual_anchor_centroids_v2.pt", map_location="cpu", weights_only=False)
     c_pro_ec = cent["c_pro_ec"]
     c_pro_wl = cent["c_pro_wl"]
@@ -774,8 +773,7 @@ def run_phase3_comparison_pack_and_forensic_gate(
         ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
         rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
         m_cer = float(min(1.0, jiwer.cer(rp, hp))) if (rp and hp) else c_per
-        v_cer = float(V.pron_cer(text_str, hyp, "sa" if "धर्मक्षेत्रे" in text_str else "npi"))
-        ne_pcer = round(float(min(c_per, m_cer, v_cer)), 4)
+        ne_pcer = round(float(min(c_per, m_cer)), 4)
 
         ec_e = C.spk_emb(w_arr, SR)
         e_wl_c = (sv_e - wl_mid) / max(np.linalg.norm(sv_e - wl_mid), 1e-8)
