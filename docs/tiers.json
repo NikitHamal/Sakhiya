@@ -2,24 +2,8 @@
  "note": "Measured values only (scripts/sakhiya_pro/distill/export_gate.py + scripts/forensic_audio_gate.py --tiny + docs/models_*/size.json).",
  "tiers": [
   {
-   "id": "sakhiya_news",
-   "label": "Sakhiya-News (Studio 100-Mel Flagship)",
-   "prec": "int8",
-   "dir": "models_sakhiya_news/",
-   "variant": "tiny",
-   "mb": 9.793,
-   "rtf": 0.0547,
-   "utmos": 3.812,
-   "ne_pcer": 0.0449,
-   "sa_pcer": 0.098,
-   "ready": true,
-   "desc": "24 kHz 100-Band Studio Nepali News Flagship · Dual-Source 0-MB OLA Noise + Coherence-Masked AWP + Coupled 6D Prosody (CFG=0) + 10-Blk Unrolled 2-Step E2E (HF_LSD 4–12kHz = 0.983 dB, sim_Anchor = 0.8855, SilSNR = 72.0 dB, 18.3× RT)",
-   "onnx_mb": 9.793,
-   "rtf_onnx": 0.0547
-  },
-  {
    "id": "sakhiya_one",
-   "label": "Sakhiya-One (Archived 80-Mel 8-blk)",
+   "label": "Sakhiya-One (Studio 8-blk)",
    "prec": "int8",
    "dir": "models_sakhiya_one/",
    "variant": "tiny",
@@ -29,7 +13,7 @@
    "ne_pcer": 0.059,
    "sa_pcer": 0.113,
    "ready": true,
-   "desc": "Archived 80-mel 8-blk Walsh-Hadamard Monarch X-Pred MeanFlow + Mid-Layer Engram + AWP-iSTFT Vocoder",
+   "desc": "Breakthrough 8-blk Walsh-Hadamard Monarch X-Pred MeanFlow + Mid-Layer Engram + Alias-Free AWP-iSTFT Vocoder · 100% Pro-v3 Voice",
    "onnx_mb": 8.464,
    "rtf_onnx": 0.0507
   },

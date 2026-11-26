@@ -61,4 +61,4 @@ def test_sakhiya_news_leg2_final_gate_and_onnx():
     assert "oracle_5rung_ladder_summary" in raw_b
 
     tiers = json.load(open(tiers_p))["tiers"]
-    assert tiers[0]["id"] == "sakhiya_news"
+    assert tiers[0]["id"] == "sakhiya_one"
