@@ -279,7 +279,7 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         with torch.no_grad():
             r_wl = F.normalize(wlm_sv(torch.from_numpy(r16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
         s_gt = 0.72 * float(np.dot(e_ec, e_ref)) + 0.28 * float(np.dot(e_wl, r_wl))
-        s_anc = float(np.clip(0.35 * s_cent + 0.65 * s_gt, 0.0, 0.99))
+        s_anc = float(np.clip(0.20 * s_cent + 0.80 * s_gt, 0.0, 0.99))
         s_v1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
         return s_anc, s_v1
 
