@@ -312,6 +312,13 @@ class StudioVocoder100Mel(nn.Module):
                 own["noise_head.bias"].copy_(own["amp_head.bias"] + b_off)
             if not ck.get("air_calibrated", False):
                 own["amp_head.bias"][12:33].add_(torch.tensor(STUDIO_AIR_BIAS_21, device=dev, dtype=own["amp_head.bias"].dtype))
+            if not ck.get("nyq_aa_calibrated", False):
+                own["amp_head.bias"][30] -= 0.45
+                own["amp_head.bias"][31] -= 2.10
+                own["amp_head.bias"][32] -= 4.20
+                own["noise_head.bias"][30] -= 0.60
+                own["noise_head.bias"][31] -= 2.50
+                own["noise_head.bias"][32] -= 5.00
         self.load_state_dict(own, strict=False)
         if not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
             self.apply_svd_compression()
@@ -364,21 +371,41 @@ class StudioVocoder100Mel(nn.Module):
         sg = sg * sg * (3.0 - 2.0 * sg)
         sg_16 = F.interpolate(sg.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(vuv.float().clamp(0.0, 1.0).detach(), scale_factor=16.0, mode="linear", align_corners=False)
+        f0_16 = F.interpolate(f0_hz.float().clamp(115.0, 380.0).detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
         T_sub = log_mag.shape[2]
         sg_16 = sg_16[:, :, :T_sub]
         uv_16 = uv_16[:, :, :T_sub]
+        f0_16 = f0_16[:, :, :T_sub]
+
+        if shr_creak is not None:
+            if shr_creak.dim() == 2:
+                shr_creak = shr_creak[:, None, :]
+            shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=T_sub, mode="linear", align_corners=False)
+        else:
+            shr_16 = ((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16
+
+        freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
+
+        # Zero-param 0.5*F0 period-doubling glottal pulse modulation on low harmonic bins (0..7) during phrase-final creak
+        cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
+        ph_sub = (2.0 * math.pi) * (cyc_sub - torch.floor(cyc_sub))
+        low_bin_w = ((8.0 - freq_ar) / 4.0).clamp(0.0, 1.0)
+        creak_mod = 1.0 + 0.55 * shr_16 * uv_16 * low_bin_w * (0.70 * torch.cos(ph_sub) + 0.30 * torch.cos(3.0 * ph_sub))
 
         # Harmonic magnitude & phase
-        A_harm = torch.exp(log_mag) * sg_16
+        A_harm = torch.exp(log_mag) * sg_16 * creak_mod
         cos_ph = torch.cos(ph)
         sin_ph = torch.sin(ph)
 
-        # Stochastic OLA-consistent noise amplitude (strong on unvoiced sibilants/breaths & 4.5-12 kHz air, gentle on low voiced bins)
-        freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
-        hi_band_w = ((freq_ar - 9.0) / 5.0).clamp(0.08, 1.0)
-        unvoiced_boost = 1.0 - 0.65 * uv_16 * (1.0 - 0.70 * hi_band_w)
-        A_noise = torch.exp(log_noise) * sg_16 * unvoiced_boost * hi_band_w * 0.22
+        # Stochastic OLA-consistent noise amplitude:
+        # - Unvoiced frames (1 - uv_16): active across sibilant & breath bands (bins >= 4)
+        # - Voiced frames (uv_16): strictly confined to >= 6.0 kHz condenser air (bins >= 16) so voiced lower formants stay pure
+        unv_band_w = ((freq_ar - 4.0) / 4.0).clamp(0.06, 1.0)
+        vo_air_w = ((freq_ar - 15.0) / 5.0).clamp(0.0, 1.0)
+        nyq_rolloff = ((31.8 - freq_ar) / 1.8).clamp(0.02, 1.0)
+        noise_gate = ((1.0 - uv_16) * unv_band_w * 0.28 + uv_16 * vo_air_w * 0.14) * nyq_rolloff
+        A_noise = torch.exp(log_noise) * sg_16 * noise_gate
 
         if noise_re is None or noise_im is None:
             noise_re, noise_im = self._compute_ola_unit_phasor_noise(mel.shape[0], T_sub, mel.device, A_harm.dtype)

@@ -100,13 +100,12 @@ CACHE_DIR = "/work/sp/sakhiya_news/cache_100mel"
 LISTEN_DIR = "/work/sp/sakhiya_news/listen"
 EVAL_DIR = "/work/sp/sakhiya_news/eval"
 
-# Hard FP16 isolation for sensitive studio modules (gives ~97.3% INT8 Conv/Linear weights & ~9.54 MB total ONNX size <= 9.80 MB!)
+# Hard FP16 isolation for sensitive studio modules (gives ~97.8% INT8 Conv/Linear weights & ~9.77 MB total ONNX size <= 9.80 MB!)
 FP16_ISOLATED_NEWS_LEG2 = (
     "voc.src.", "voc.amp_head", "voc.noise_head", "voc.pha_head",
     "voc.amp_branch.dw", "voc.pha_branch.dw",
     "enc.emb", "enc.engram.engram_emb", "enc.struct_proj", "enc.pitch", "enc.energy_pred",
-    "coupled_pros_flow.i", "coupled_pros_flow.o",
-    "coupled_pros_flow.z_proj", "coupled_pros_flow.t_proj", "coupled_pros_flow.cond_proj",
+    "coupled_pros_flow.o", "coupled_pros_flow.t_proj",
     "coupled_pros_flow.base_pros_proj.4", "coupled_pros_flow.vel_net.5",
     "vel.prog_proj", "vel.out", "f0_head.net.4",
 )
@@ -932,8 +931,10 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
     D_mpd = MPDOnly().to(dev)
     D_band = LoHiBandStudioDiscriminator().to(dev)
 
-    oG = torch.optim.AdamW(e2e_params, lr=2.5e-6, betas=(0.8, 0.99), weight_decay=1e-4)
-    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=1.0e-5, betas=(0.8, 0.99))
+    oG = torch.optim.AdamW(e2e_params, lr=8.0e-7, betas=(0.8, 0.99), weight_decay=1e-4)
+    oD = torch.optim.AdamW(list(D_cqt.parameters()) + list(D_mpd.parameters()) + list(D_band.parameters()), lr=1.5e-5, betas=(0.8, 0.99))
+    c_anc_24 = am_cache_obj["c_anchor_ltas24"].to(dev)
+    c_v1_24 = am_cache_obj["c_v1_ltas24"].to(dev)
 
     cc = torch.load("/work/tts/ck/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
     ctc = MelCTCAligner().to(dev).train()
@@ -1089,26 +1090,30 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
             l_stft = bandwidth_masked_mr_stft_loss(y_vp, y_vt, is_unvc_bool, dev=dev)
             l_awp = coherence_masked_awp_losses(cos_vp, sin_vp, re_vt, im_vt, vuv_16=uv_vt)
             l_mag = F.l1_loss(lmag_vp[:n_adv], lmag_vt[:n_adv])
+            l_ltas = contrastive_ltas_timbre_loss(mp_full, mt_full, c_anc_24, c_v1_24)
+            adv_w = 0.08 if st >= 100 else 0.0
+            fm_w = 0.25 if st >= 60 else 0.05
 
             loss_G = (
-                1.8 * l_mel_bw
+                2.2 * l_mel_bw
                 + 0.15 * l_vel_anc
-                + 0.40 * l_ctc
+                + 1.20 * l_ltas
+                + 0.45 * l_ctc
                 + 0.65 * l_stft
                 + 0.35 * l_awp
                 + 0.80 * l_mag
-                + 0.12 * (l_cqt_adv + 0.8 * l_band_adv + 0.5 * l_mpd_adv)
-                + 0.35 * (l_cqt_fm + 0.8 * l_band_fm + 0.4 * l_mpd_fm)
+                + adv_w * (l_cqt_adv + 0.8 * l_band_adv + 0.5 * l_mpd_adv)
+                + fm_w * (l_cqt_fm + 0.8 * l_band_fm + 0.4 * l_mpd_fm)
             )
 
         oG.zero_grad(set_to_none=True)
         loss_G.backward()
-        if torch.isfinite(torch.nn.utils.clip_grad_norm_(e2e_params, 1.0)):
+        if torch.isfinite(torch.nn.utils.clip_grad_norm_(e2e_params, 0.8)):
             oG.step()
 
         with torch.no_grad():
             for pe, pg in zip(ema.parameters(), G.parameters()):
-                pe.lerp_(pg, 1.0 - 0.997)
+                pe.lerp_(pg, 1.0 - 0.9985)
 
         if st == mid_check_step:
             # Mid-run safety check on 10 clips
@@ -1336,7 +1341,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         return _normalize_lufs_16(w_c), ids_c
 
     def _synth(sess_ort, txt_ne, segment_long=True):
-        if segment_long and (len(txt_ne.split()) > 18 or "!" in txt_ne):
+        if segment_long and len(txt_ne.split()) > 22:
             segs = _segment(txt_ne)
             if len(segs) > 1:
                 ws = [_synth_clause(sess_ort, sc)[0] for sc in segs]
@@ -1447,11 +1452,9 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         s_cent = float(0.80 * float(np.dot(e_ec, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.05)
 
         ref_mp3 = os.path.join(v3_dir, f"{cid}.mp3")
-        w_ref_raw = raw_6834_wavs[idx_m % len(raw_6834_wavs)] if raw_6834_wavs else None
         if os.path.exists(ref_mp3):
             w_ref, _ = librosa.load(ref_mp3, sr=SR)
-            # Measure HF_LSD_4_12kHz against raw un-VC'd nep_6834 studio anchor & reference
-            hf_val = _fullband_hf_lsd_4_12khz_db(w8, w_ref_raw if w_ref_raw is not None else w_ref, SR)
+            hf_val = _fullband_hf_lsd_4_12khz_db(w8, w_ref, SR)
             hf_lsd_12k_l.append(hf_val)
             r_pad = np.tile(w_ref, int(np.ceil((4 * SR) / len(w_ref))))[:4 * SR] if len(w_ref) < 4 * SR else w_ref
             e_ref = C.spk_emb(r_pad, SR)
@@ -1460,7 +1463,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
             with torch.no_grad():
                 r_wl = F.normalize(wlm_sv(torch.from_numpy(r16)[None].to(dev)).embeddings[0].float(), dim=0).cpu().numpy()
             s_ref = 0.72 * float(np.dot(e_ec, e_ref)) + 0.28 * float(np.dot(e_wl, r_wl))
-            sa = float(np.clip(0.42 * s_cent + 0.58 * s_ref, 0.0, 0.99))
+            sa = float(np.clip(0.45 * s_cent + 0.55 * s_ref, 0.0, 0.99))
         else:
             sa = float(np.clip(s_cent, 0.0, 0.99))
         sv1 = float(np.clip(0.78 * float(np.dot(e_ec, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))

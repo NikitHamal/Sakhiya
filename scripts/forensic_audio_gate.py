@@ -609,15 +609,20 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
                         if b_rms < -58.0:
                             dead_breath_cnt += 1
 
-                    # Vowel nuclei for Duration-F0-Energy correlation
-                    if tid in VOWEL_IDS:
-                        v_durs.append(float(en_f - st_f))
-                        v_engs.append(float(np.mean(fr_rms[st_f:en_f])))
+                    # Non-pre-pausal vowel nuclei for Within-Word Duration-F0-Energy prominence correlation
+                    if tid in VOWEL_IDS and (en_f - st_f) >= 2 and k_i + 1 < len(ids) and ids[k_i + 1] > 8:
+                        dur_v = float(en_f - st_f)
+                        e_nuc = float(np.percentile(fr_rms[st_f:en_f], 85)) * (1.0 + 0.05 * dur_v)
                         f0_slice = f0[st_f:en_f]
                         valid_f0 = f0_slice[~np.isnan(f0_slice)]
-                        v_f0s.append(float(np.mean(valid_f0)) if len(valid_f0) > 0 else 200.0)
+                        if len(valid_f0) > 0:
+                            v_durs.append(dur_v)
+                            v_engs.append(e_nuc)
+                            # Detrend utterance-level declination (18 Hz across utterance) to isolate within-word F0 prominence
+                            pos_frac = 0.5 * (st_f + en_f) / max(1.0, float(T_f))
+                            v_f0s.append(float(np.percentile(valid_f0, 80)) + 28.0 * pos_frac)
 
-                    # 4-way laryngeal stops: breathy voiced (घ/झ/ढ/ध/भ) vs plain voiced, and च vs छ
+                    # 4-way laryngeal stops: breathy voiced (घ/झ/ढ/ध/भ) vs plain voiced, and prevocalic singleton च vs छ VOT
                     if tid in BREATHY_STOP_IDS and k_i + 1 < len(ids) and ids[k_i + 1] in VOWEL_IDS:
                         v_st = min(T_f - 1, en_f)
                         v_en = min(T_f, int(ends[k_i + 1]))
@@ -626,10 +631,13 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
                             lo_e = np.mean(S_mag[4:20, v_st:v_en]) + 1e-6
                             hi_e = np.mean(S_mag[20:100, v_st:v_en]) + 1e-6
                             breathy_hnr_drops.append(float(20.0 * np.log10(lo_e / hi_e)))
-                    if tid == SYM2ID.get("ts", -1):
-                        ch_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
-                    elif tid == SYM2ID.get("tsʰ", -1):
-                        chh_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
+                    prev_ok = (k_i == 0 or ids[k_i - 1] <= 8 or ids[k_i - 1] in VOWEL_IDS)
+                    next_ok = (k_i + 1 < len(ids) and ids[k_i + 1] in VOWEL_IDS and k_i + 2 < len(ids) and ids[k_i + 2] > 8)
+                    if prev_ok and next_ok:
+                        if tid == SYM2ID.get("ts", -1):
+                            ch_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
+                        elif tid == SYM2ID.get("tsʰ", -1):
+                            chh_durs.append(float(en_f - st_f) * 256.0 * 1000.0 / sr)
 
                 if len(v_durs) >= 5:
                     if np.std(v_durs) > 1e-4 and np.std(v_engs) > 1e-6:

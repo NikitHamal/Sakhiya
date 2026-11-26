@@ -543,14 +543,13 @@ class SakhiyaNewsFlagship(nn.Module):
         eng_ph = (self.enc.energy_pred(h).squeeze(-1) + pros_6d[:, 3, :]).clamp(-1.2, 1.2)
         creak_ph = pros_6d[:, 4, :].clamp(0.0, 1.0)
 
-        mu = mu + (0.06 * eng_ph)[..., None] * 0.32
         dur_frames = (torch.exp(x_d).clamp(min=1.0, max=60.0) * ds_tok).clamp(min=1.0, max=60.0)
 
         # Emphatic Nepali geminate stretching & natural 80-180ms inter-clause <breath> preservation
         is_gem = struct_5d[:, :, 4]
         dur_frames = dur_frames * (1.0 + (self.geminate_stretch.clamp(1.03, 1.25) - 1.0) * is_gem)
-        is_breath = (ids == BREATH_ID).float()
-        dur_frames = torch.where(is_breath > 0.5, torch.clamp(dur_frames, min=9.0, max=16.0), dur_frames)
+        is_interior_breath = (((ids == BREATH_ID) | (ids == COMMA_ID)) & (pos > 0.5) & (pos < (L_f - 1.5))).float()
+        dur_frames = torch.where(is_interior_breath > 0.5, torch.clamp(dur_frames, min=9.0, max=15.0), dur_frames)
 
         is_tail = (((pos >= (L_f - 3.0)) & (ids > 8)) | (ids >= 53)).float()
         min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
@@ -583,6 +582,14 @@ class SakhiyaNewsFlagship(nn.Module):
         is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
         dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
 
+        # Positive within-word Duration-F0-Energy prominence coupling on vowel nuclei
+        dist_danda_tok = struct_5d[:, :, 1]
+        clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
+        is_vowel = (ids >= 45).float()
+        v_prom = ((dur - 7.5) / 6.0).clamp(-0.35, 0.85) * is_vowel * (1.0 - 0.85 * clause_tail)
+        eng_ph = (eng_ph + 0.45 * v_prom).clamp(-1.2, 1.2)
+        mu = mu + (0.06 * eng_ph)[..., None] * 0.32
+
         ends = torch.cumsum(dur, dim=1)
         T = ends[0, -1].to(torch.int64)
         t_arange = torch.arange(0, T, device=dev, dtype=torch.float32)
@@ -591,16 +598,14 @@ class SakhiyaNewsFlagship(nn.Module):
         mu_t = mu.transpose(1, 2)
         mu_y = torch.gather(mu_t, 2, idx[:, None, :].expand(-1, mu_t.shape[1], -1))
 
-        # Grounded Kathmandu downward clause-final F0 contour + intra-phoneme F0 slope + phrase-final glottal creak
-        dist_danda_tok = struct_5d[:, :, 1]
-        clause_tail = ((0.28 - dist_danda_tok).clamp(min=0.0) / 0.28) * (1.0 - is_pause)
-        f0_contour_tok = (f0_ph + 0.15 * f0_slope_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.45 * clause_tail) * (1.0 - is_pause)
+        # Grounded Kathmandu downward clause-final F0 contour + intra-phoneme F0 slope + vowel prominence + phrase-final glottal creak
+        f0_contour_tok = (f0_ph + 0.45 * v_prom + 0.15 * f0_slope_ph + self.closure_slope.clamp(-0.30, -0.05) * 1.45 * clause_tail) * (1.0 - is_pause)
         f0_frame = torch.gather(f0_contour_tok, 1, idx)
         prog_5d = compute_progress_5d(dur, ends, idx, t_arange, f0_frame)
         m_t = torch.ones((B, 1, T), dtype=mu_y.dtype, device=dev)
 
         # Phrase-final creak envelope fed to Vocoder 0.5*F0 subharmonic excitation
-        creak_tok = (creak_ph + 0.35 * clause_tail).clamp(0.0, 1.0) * (1.0 - is_pause)
+        creak_tok = (creak_ph + 0.65 * clause_tail).clamp(0.0, 1.0) * (1.0 - is_pause)
         shr_frame = torch.gather(creak_tok, 1, idx)[:, None, :]
 
         # Strictly CFG = 0 X-Pred MeanFlow Decoding (2-step default; supports 4-step if self.steps == 4)
@@ -630,7 +635,17 @@ class SakhiyaNewsFlagship(nn.Module):
 
         # Full 100-band log-mel (fmin=0, fmax=12000) -> Dual-Source OLA-Noise + Creak Vocoder
         mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
-        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.22)
+        f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.45)
+
+        # Ensure interior <breath> spans are unvoiced studio inhalations (-32dB RMS, flatness > 0.50, zero dead silence)
+        br_frame = torch.gather(is_interior_breath, 1, idx)[:, None, :]
+        pause_frame = torch.gather(is_pause, 1, idx)[:, None, :]
+        vuv = vuv * (1.0 - 0.96 * pause_frame)
+        mel_100 = torch.where(br_frame > 0.5, torch.clamp(mel_100, min=-8.9, max=-7.6), mel_100)
+
         y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv, shr_creak=shr_frame)
+        v_prom_fr = torch.gather(v_prom, 1, idx)
+        v_prom_wav = F.interpolate(v_prom_fr[:, None, :], size=y.shape[-1], mode="linear", align_corners=False)[:, 0, :]
+        y = y * (1.0 + 0.12 * v_prom_wav)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
