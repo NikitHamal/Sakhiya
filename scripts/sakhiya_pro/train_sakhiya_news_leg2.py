@@ -1366,11 +1366,13 @@ def _export_leg2_fp32_and_int8(ema_model: SakhiyaNewsFlagship, f32_p: str, i8_p:
     m_f32 = m_cal.cpu().eval()
     with torch.no_grad():
         for name, p in m_f32.named_parameters():
-            if name.startswith(("voc.", "f0_head.", "vel.blocks.7.", "vel.blocks.8.", "vel.blocks.9.")) or name.endswith("had_rot.weight"):
+            if name.startswith(("voc.mrfs.", "voc.amp_branch.", "voc.pha_branch.")) or name.endswith("had_rot.weight"):
                 continue
-            if any(name.startswith(s) or name.endswith(s) or s in name for s in FP16_ISOLATED_NEWS_LEG2):
+            if p.ndim < 2 or p.numel() <= 64:
+                continue
+            if any(name.startswith(s) or name.endswith(s) or s in name for s in FP16_ISOLATED_NEWS_LEG2) or p.numel() < 256 or p.shape[0] < 16:
                 p.copy_(p.half().float())
-            elif p.ndim >= 2 and p.numel() >= 256 and p.shape[0] >= 16:
+            else:
                 p.copy_(ste_int8_weight(p.float(), axis=0, enabled=True))
 
     export_fp32(m_f32, f32_p, FP16_ISOLATED_NEWS_LEG2)
