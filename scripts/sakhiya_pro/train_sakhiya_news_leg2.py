@@ -681,6 +681,10 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 1200, bs: int = 48, 
             update_telem(0, "Phase 2 · Studio-Clean Zero-Buzz 100-Mel Vocoder (True FP16 Heads, Zero Hi-Band GAN)", st, steps, f"{ips:.1f} it/s", l_str, el_m, eta_m, "running 🟢")
             log(f"[Phase 2 Clean Vocoder] step {st}/{steps} ({ips:.1f} it/s) {l_str}")
 
+    with torch.no_grad():
+        adj_21 = torch.tensor([0.12, 0.14, 0.15, 0.17, 0.19, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.28, 0.28, 0.28, 0.28, 0.27, 0.26, 0.24, 0.20], device=dev, dtype=G_ema.amp_head.bias.dtype)
+        G_ema.amp_head.bias.data[12:].add_(adj_21)
+
     vck_orig = torch.load(leg1_voc_p if os.path.exists(leg1_voc_p) else "/work/tts/ck/voc_100mel_best.pt", map_location="cpu", weights_only=False)
     f0_head_sd = vck_orig.get("f0_head", {})
     ck_voc = dict(
