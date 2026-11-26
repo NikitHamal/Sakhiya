@@ -94,9 +94,12 @@ class DenseRoPETextEncoderLayer(nn.Module):
         k = apply_rope_1d(self.k_norm(qkv[1]), rope_cos, rope_sin)
         v = qkv[2]
 
-        # FlashAttention SDPA with boolean key padding mask `[B, 1, 1, L]`
-        attn_mask = mask[:, None, None, :]
-        out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, dropout_p=0.0)
+        # Hardware FlashAttention-2 SDPA (`attn_mask=None` with zeroed pad keys/values)
+        m_4d = mask[:, None, :, None].to(q.dtype)
+        q = q * m_4d
+        k = k * m_4d
+        v = v * m_4d
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0)
         out = out.transpose(1, 2).reshape(B, L, D)
         x = x + self.proj(out)
         x = x + self.ffn(self.norm2(x))
@@ -260,7 +263,11 @@ class StudioDiTBlock(nn.Module):
         k = apply_rope_1d(self.k_norm(qkv[1]), rope_cos, rope_sin)
         v = qkv[2]
 
-        attn_out = F.scaled_dot_product_attention(q, k, v, attn_mask=ymask[:, None, None, :], dropout_p=0.0)
+        m_4d = ymask[:, None, :, None].to(q.dtype)
+        q = q * m_4d
+        k = k * m_4d
+        v = v * m_4d
+        attn_out = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0)
         attn_out = attn_out.transpose(1, 2).reshape(B, T, D)
         attn_out = self.proj(attn_out)
 
