@@ -1,0 +1,152 @@
+{
+  "tier": "sakhiya_news",
+  "model_dir": "/work/sp/sakhiya_news/leg2_final",
+  "gate_pass": true,
+  "strictly_beats_leg1": true,
+  "strictly_beats_sakhiya_one": true,
+  "int8_mb": 9.793,
+  "fp32_mb": 36.985,
+  "int8_weight_pct": 97.94,
+  "dequantize_linear_nodes": 152,
+  "distinct_from_fp32_graph": true,
+  "mean_weight_quant_diff": 0.008272,
+  "stft_lsd_int8_fp32_dB": 0.117,
+  "python_js_parity_stft_lsd_dB": 0.0,
+  "int8_vs_fp32_mel_corr": 0.9998,
+  "rtf_1thread": 0.0545,
+  "node_rtf_1thread": 0.0547,
+  "full_e2e_node_ort_benchmark": {
+    "warm_median_rtf_1thread": 0.0547,
+    "warm_p95_rtf_1thread": 0.0585,
+    "cold_rtf_1thread": 0.0585,
+    "short_sentence_median_rtf_1thread": 0.0543,
+    "long_sentence_median_rtf_1thread": 0.055,
+    "peak_rss_mb": 345.9,
+    "step4_cfg0_warm_median_rtf_1thread": 0.06
+  },
+  "realtime_x_1thread": 18.3,
+  "utmos": 3.344,
+  "sim_Anchor": 0.8855,
+  "sim_ProV3": 0.8855,
+  "sim_OldV1": 0.4022,
+  "margin_Anchor_OldV1": 0.4833,
+  "margin_ProV3_OldV1": 0.4833,
+  "voiced_ltas_mcd_db": 2.84,
+  "HF_LSD_4_12kHz_dB": 0.983,
+  "silence_floor_SNR_dB": 72.0,
+  "voiced_vowel_hnr_0p2_4kHz_dB": 18.16,
+  "voiced_vowel_hnr_delta_vs_anchor_dB": 0.89,
+  "studio_physics_probes": {
+    "ltas_4band_delta_vs_raw_6834_dB": {
+      "band_150_400Hz_chest_delta_dB": 0.495,
+      "band_1_4kHz_formant_delta_dB": 0.681,
+      "band_4p5_8p5kHz_sibilant_delta_dB": 0.683,
+      "band_8_11p2kHz_air_delta_dB": 0.872,
+      "band_8_12kHz_air_delta_dB": 0.955,
+      "voiced_H1_minus_H2_delta_dB": 2.025
+    },
+    "silence_floor_SNR_dB": 72.0,
+    "voiced_vowel_hnr_0p2_4kHz_dB": 18.16,
+    "voiced_vowel_hnr_delta_vs_anchor_dB": 0.89,
+    "sibilant_4p5_10kHz_flatness": 0.777,
+    "sibilant_phase_coherence": 0.594,
+    "sibilant_separate_envelopes": {
+      "s_dental_fricative": {
+        "flatness_4p5_10kHz": 0.78,
+        "hi_minus_lo_tilt_dB": 4.704,
+        "spectral_centroid_Hz": 7407.4
+      },
+      "chh_aspirated_affricate": {
+        "flatness_4p5_10kHz": 0.772,
+        "hi_minus_lo_tilt_dB": -1.548,
+        "spectral_centroid_Hz": 6914.1
+      }
+    },
+    "anchor_has_creak": false,
+    "phrase_final_creak_SHR": 0.036,
+    "phrase_final_creak_SHR_delta_vs_anchor": 0.017,
+    "phrase_final_CPP_drop_dB": 0.002,
+    "phrase_final_CPP_drop_delta_vs_anchor": 0.042,
+    "breath_span_rms_dB": -37.07,
+    "breath_span_flatness": 0.677,
+    "dead_digital_silence_breaths": 0,
+    "within_word_dur_f0_energy_corr": 0.19,
+    "laryngeal_4way_stop_contrast": {
+      "breathy_voiced_post_release_hnr_dB": 21.28,
+      "aspirated_chh_minus_ch_vot_ms": 18.1
+    }
+  },
+  "ne_pcer": 0.0449,
+  "anchor_pcer": 0.032,
+  "ne_pcer_gap_vs_anchor": 0.0129,
+  "geminate_singleton_ratio": 2.021,
+  "clause_final_f0_slope_st_per_sec": -1.226,
+  "inter_clause_pause_ms": 114.1,
+  "breath_pause_naturalness": 0.862,
+  "word_drop_count": 0,
+  "stutter_count": 0,
+  "f0_shutters": 0,
+  "pitch_breaks": 0,
+  "clicks": 0,
+  "node_verify": {
+    "model": "/work/sp/sakhiya_news/leg2_final/model.int8.onnx",
+    "nan_count": 0,
+    "mean_rtf": 0.0527,
+    "clips": [
+      {
+        "lang": "ne",
+        "dur_s": 4.53,
+        "rtf_1thread": 0.0529,
+        "max_abs": 0.88,
+        "rms": 0.1839
+      },
+      {
+        "lang": "ne",
+        "dur_s": 6.26,
+        "rtf_1thread": 0.0548,
+        "max_abs": 0.88,
+        "rms": 0.1493
+      },
+      {
+        "lang": "ne",
+        "dur_s": 8.56,
+        "rtf_1thread": 0.053,
+        "max_abs": 0.88,
+        "rms": 0.1627
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.53,
+        "rtf_1thread": 0.0508,
+        "max_abs": 0.88,
+        "rms": 0.2209
+      },
+      {
+        "lang": "sa",
+        "dur_s": 7.21,
+        "rtf_1thread": 0.0519,
+        "max_abs": 0.88,
+        "rms": 0.1756
+      }
+    ],
+    "ok": true,
+    "cold_rtf_1thread": 0.0585,
+    "warm_median_rtf_1thread": 0.0547,
+    "warm_p95_rtf_1thread": 0.0585,
+    "short_sentence_median_rtf_1thread": 0.0543,
+    "short_sentence_p95_rtf_1thread": 0.0579,
+    "long_sentence_median_rtf_1thread": 0.055,
+    "long_sentence_p95_rtf_1thread": 0.058,
+    "peak_rss_mb": 345.9,
+    "step4_cfg0_benchmark": {
+      "cold_rtf_1thread": 0.0628,
+      "warm_median_rtf_1thread": 0.06,
+      "warm_p95_rtf_1thread": 0.063,
+      "short_sentence_median_rtf_1thread": 0.0596,
+      "short_sentence_p95_rtf_1thread": 0.0621,
+      "long_sentence_median_rtf_1thread": 0.0603,
+      "long_sentence_p95_rtf_1thread": 0.0629,
+      "peak_rss_mb": 494.6
+    }
+  }
+}

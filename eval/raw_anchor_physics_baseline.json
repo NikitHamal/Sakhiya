@@ -1,0 +1,65 @@
+{
+  "anchor_speaker": "nep_6834 (Raw Un-VCd OpenSLR SLR43 48kHz -> 24kHz Polyphase Resampled)",
+  "n_heldout_clips": 20,
+  "n_oracle_ladder_clips": 10,
+  "ltas_4band_raw_anchor_dB": {
+    "band_150_400Hz_chest_dB": 14.602,
+    "band_1_4kHz_formant_dB": -6.127,
+    "band_4p5_8p5kHz_sibilant_dB": -21.124,
+    "band_8_11p2kHz_air_dB": -22.751,
+    "band_8_12kHz_air_dB": -23.81,
+    "voiced_H1_minus_H2_dB": 8.825
+  },
+  "voiced_vowel_hnr_0p2_4kHz_dB": 19.05,
+  "sibilant_separate_envelopes": {
+    "s_dental_fricative": {
+      "flatness_4p5_10kHz": 0.668,
+      "hi_minus_lo_tilt_dB": 8.106,
+      "spectral_centroid_Hz": 7512.7
+    },
+    "chh_aspirated_affricate": {
+      "flatness_4p5_10kHz": 0.685,
+      "hi_minus_lo_tilt_dB": 5.085,
+      "spectral_centroid_Hz": 7391.2
+    }
+  },
+  "clause_final_glottal_creak": {
+    "mean_SHR": 0.019,
+    "P90_SHR": 0.03,
+    "ANCHOR_HAS_CREAK": false,
+    "mean_CPP_drop_dB": 0.044
+  },
+  "genuine_breath_distribution": {
+    "verified_studio_breath_spans": 1970,
+    "mean_breath_rms_db": -32.64,
+    "mean_breath_flatness": 0.637,
+    "mean_breath_dur_ms": 113.3
+  },
+  "oracle_5rung_ladder_summary": {
+    "R1_raw_24k_anchor": {
+      "HF_LSD_4_12kHz_dB": 0.0,
+      "voiced_vowel_HNR_0p2_4kHz_dB": 18.95,
+      "sibilant_4p5_10kHz_flatness": 0.601
+    },
+    "R2_seedvc_self_8kHz_ceil": {
+      "HF_LSD_4_12kHz_dB": 10.753,
+      "voiced_vowel_HNR_0p2_4kHz_dB": 18.91,
+      "sibilant_4p5_10kHz_flatness": 0.019
+    },
+    "R3_gt_100mel_leg1_voc": {
+      "HF_LSD_4_12kHz_dB": 1.255,
+      "voiced_vowel_HNR_0p2_4kHz_dB": 18.63,
+      "sibilant_4p5_10kHz_flatness": 0.604
+    },
+    "R4_leg1_am_voc": {
+      "HF_LSD_4_12kHz_dB": 1.974,
+      "voiced_vowel_HNR_0p2_4kHz_dB": 17.58,
+      "sibilant_4p5_10kHz_flatness": 0.73
+    },
+    "R5_gt_100mel_leg2_dual_voc": {
+      "HF_LSD_4_12kHz_dB": 1.188,
+      "voiced_vowel_HNR_0p2_4kHz_dB": 19.1,
+      "sibilant_4p5_10kHz_flatness": 0.603
+    }
+  }
+}
