@@ -324,7 +324,7 @@ class Student(nn.Module):
             self.am.fold_time_embeddings(steps=self.steps)
 
         self.to(dev)
-        snap_am_int8(self.am)
+        # Never pre-snap FP32 weights inside warm_init so model.fp32.onnx stays a true un-snapped FP32 graph
         return self
 
     def voc_wav(self, mel, f0_hz=None, vuv=None, shift_st=None):
@@ -429,16 +429,21 @@ class Student(nn.Module):
 
         if self.arch == "sakhiya_one":
             t0 = torch.zeros((B,), device=mu_y.device, dtype=torch.float32)
+            nb_v = self.cfg["nb_vel"]
             if self.steps == 1:
-                xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d, n_blocks=self.cfg["nb_vel"])
+                xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d, n_blocks=nb_v)
             else:
-                v0 = self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d, n_blocks=self.cfg["nb_vel"])
-                x_mid = mu_y + 0.5 * v0
-                t_mid = torch.full((B,), 0.5, device=mu_y.device, dtype=torch.float32)
+                v_cur = self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d, n_blocks=nb_v)
                 r_one = torch.ones((B,), device=mu_y.device, dtype=torch.float32)
-                v_mid = self.am.vel(x_mid, t_mid, mu_y, g, m_t, prog=prog_4d, r=r_one, n_blocks=self.cfg["nb_vel"])
                 w2 = self.am.vel.step2_gate.clamp(0.0, 0.35)
-                xt = mu_y + (1.0 - w2) * v0 + w2 * v_mid
+                n_st = max(2, int(self.steps))
+                for s_i in range(1, n_st):
+                    alpha_s = float(s_i) / float(n_st)
+                    x_s = mu_y + alpha_s * v_cur
+                    t_s = torch.full((B,), alpha_s, device=mu_y.device, dtype=torch.float32)
+                    v_s = self.am.vel(x_s, t_s, mu_y, g, m_t, prog=prog_4d, r=r_one, n_blocks=nb_v)
+                    v_cur = (1.0 - w2) * v_cur + w2 * v_s
+                xt = mu_y + v_cur
         elif self.steps == 1:
             t0 = torch.zeros((B,), device=mu_y.device, dtype=torch.float32)
             xt = mu_y + self.am.vel(mu_y, t0, mu_y, g, m_t, prog=prog_4d)

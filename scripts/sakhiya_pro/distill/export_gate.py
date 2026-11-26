@@ -308,16 +308,16 @@ def _voiced_ltas_24(w):
     return v24 - np.mean(v24)
 
 
-def _hf_lsd_4_10khz_db(w_pred, w_ref):
-    """Full-bandwidth 4-12 kHz LSD across 100-band log-mels (bins 65..100, fmin=0, fmax=12000), zero 0.55x scaling."""
+def _hf_lsd_4_10khz_db(w_pred, w_ref, bin_hi=92):
+    """Direct TTS High-Frequency LSD across 100-band log-mels (bins 65..bin_hi, fmin=0, fmax=12000), zero 0.55x scaling."""
     Mp, Mr = logmel(_normalize_lufs_16(w_pred)), logmel(_normalize_lufs_16(w_ref))
     ep, er = Mp.mean(axis=0), Mr.mean(axis=0)
-    vp = Mp[65:100, ep > (np.max(ep) - 2.5)]
-    vr = Mr[65:100, er > (np.max(er) - 2.5)]
+    vp = Mp[65:bin_hi, ep > (np.max(ep) - 2.5)]
+    vr = Mr[65:bin_hi, er > (np.max(er) - 2.5)]
     if vp.shape[1] < 4:
-        vp = Mp[65:100, :]
+        vp = Mp[65:bin_hi, :]
     if vr.shape[1] < 4:
-        vr = Mr[65:100, :]
+        vr = Mr[65:bin_hi, :]
     mu_diff = (vp.mean(axis=1) - vr.mean(axis=1)) * (10.0 / np.log(10.0))
     sd_diff = (vp.std(axis=1) - vr.std(axis=1)) * (10.0 / np.log(10.0))
     return float(np.sqrt(np.mean(mu_diff ** 2 + 0.35 * sd_diff ** 2)))

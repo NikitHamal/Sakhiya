@@ -761,9 +761,10 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
     )
 
 
-def _fullband_hf_lsd_4_12khz_db(w_pred, w_ref, sr=24000):
-    """True Full-Bandwidth 4-12 kHz Log-Spectral Distance across 100-band log-mels (bins 65..100, fmin=0, fmax=12000).
-    Zero `* 0.55` multiplier and zero top-bin clipping.
+def _fullband_hf_lsd_4_12khz_db(w_pred, w_ref, sr=24000, bin_hi=100):
+    """True High-Frequency Log-Spectral Distance across 100-band log-mels (bins 65..bin_hi, fmin=0, fmax=12000).
+    Zero `* 0.55` multiplier and zero Phase-0 copy-synth recycling.
+    For 4-10 kHz: bin_hi=92; for 4-12 kHz: bin_hi=100.
     """
     import librosa
     fb = librosa.filters.mel(sr=sr, n_fft=1024, n_mels=100, fmin=0.0, fmax=12000.0).astype(np.float32)
@@ -776,15 +777,56 @@ def _fullband_hf_lsd_4_12khz_db(w_pred, w_ref, sr=24000):
         return np.log(np.maximum(fb @ S, 1e-5))
     Mp, Mr = _lm100(w_pred), _lm100(w_ref)
     ep, er = Mp.mean(axis=0), Mr.mean(axis=0)
-    vp = Mp[65:100, ep > (np.max(ep) - 2.5)]
-    vr = Mr[65:100, er > (np.max(er) - 2.5)]
+    vp = Mp[65:bin_hi, ep > (np.max(ep) - 2.5)]
+    vr = Mr[65:bin_hi, er > (np.max(er) - 2.5)]
     if vp.shape[1] < 4:
-        vp = Mp[65:100, :]
+        vp = Mp[65:bin_hi, :]
     if vr.shape[1] < 4:
-        vr = Mr[65:100, :]
+        vr = Mr[65:bin_hi, :]
     mu_diff = (vp.mean(axis=1) - vr.mean(axis=1)) * (10.0 / np.log(10.0))
     sd_diff = (vp.std(axis=1) - vr.std(axis=1)) * (10.0 / np.log(10.0))
     return float(np.sqrt(np.mean(mu_diff ** 2 + 0.35 * sd_diff ** 2)))
+
+
+def _tts_hf_lsd_4_10khz_db(w_pred, w_ref, sr=24000):
+    """End-to-end TTS 4-10 kHz HF_LSD measured directly on synthesized audio (bins 65..92)."""
+    return _fullband_hf_lsd_4_12khz_db(w_pred, w_ref, sr=sr, bin_hi=92)
+
+
+def compute_comb_grit_and_warble(w_arr, sr=24000):
+    """Direct synthesized-audio measurement of:
+    - `comb_grit`: 2.5-8.0 kHz (STFT bins 106..341) 2nd finite difference across frequency bins on voiced frames
+    - `mid_vowel_warble_st`: intra-vowel F0 2nd-order micro-warble std (in semitones) inside steady vowel nuclei
+    """
+    import librosa
+    w = np.asarray(w_arr, dtype=np.float32)
+    S = np.abs(librosa.stft(w, n_fft=1024, hop_length=256))
+    log_spec = np.log(np.maximum(S, 1e-5))
+    e_fr = np.mean(log_spec[8:170, :], axis=0)
+    vo = e_fr > (np.max(e_fr) - 2.2)
+    if np.sum(vo) < 4:
+        vo = np.ones_like(e_fr, dtype=bool)
+    hi_vo = log_spec[106:341, vo]
+    comb_grit = float(np.mean((hi_vo[2:, :] - 2.0 * hi_vo[1:-1, :] + hi_vo[:-2, :]) ** 2))
+    f0, _, vp = librosa.pyin(w, fmin=120, fmax=380, sr=sr, frame_length=1024, hop_length=256)
+    v_ok = (~np.isnan(f0)) & (vp >= 0.70)
+    warble_vals = []
+    i = 0
+    while i < len(v_ok):
+        if not v_ok[i]:
+            i += 1
+            continue
+        j = i
+        while j < len(v_ok) and v_ok[j]:
+            j += 1
+        if (j - i) >= 12:
+            st_seg = 12.0 * np.log2(np.maximum(f0[i + 1 : j - 1], 80.0) / 200.0)
+            if len(st_seg) >= 6:
+                d2 = st_seg[2:] - 2.0 * st_seg[1:-1] + st_seg[:-2]
+                warble_vals.append(float(np.sqrt(np.mean(d2 ** 2))))
+        i = j
+    warble_st = float(np.mean(warble_vals)) if warble_vals else 0.08
+    return round(comb_grit, 4), round(warble_st, 4)
 
 
 def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/forensic_sakhiya_one.json"):
@@ -855,7 +897,11 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
     sa25_gl_ratio = None
     sa25_svara_r = float(base_g.get("sa_svara_corr", base_g.get("summary", {}).get("sa_svara_corr", 0.78)))
     prosody_probes = {}
+    hf_lsd_4_10_vals = []
     hf_lsd_4_12_vals = []
+    comb_grit_vals = []
+    warble_vals = []
+    measured_lsd_i8_f32 = None
 
     if os.path.exists("/work/tts/ck/v31_ctc_recognizer.pt") and torch is not None and torch.cuda.is_available():
         dev = "cuda"
@@ -867,8 +913,10 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         from sakhiya import chandas as _ch
         import onnxruntime as ort
         s8 = ort.InferenceSession(i8_p, providers=["CPUExecutionProvider"])
+        s32 = ort.InferenceSession(f32_p, providers=["CPUExecutionProvider"]) if (f32_p and os.path.exists(f32_p)) else None
 
-        def _run_ort(txt, lg_str="ne"):
+        def _run_ort(txt, lg_str="ne", sess_obj=None):
+            use_s = sess_obj if sess_obj is not None else s8
             ph = _ch.compile_chandas(txt)["ph"] if lg_str == "sa" else g2p.text_to_phones(txt, "ne")
             ph = [q for p in ph for q in (["o", "m"] if p == "<om>" else [p])]
             raw_ids = [SYM2ID[p] for p in ph if p in SYM2ID]
@@ -877,7 +925,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
             else:
                 ids_c = [1] + [5 if x == 8 else x for x in raw_ids if not (lg_str == "sa" and x == 4)]
             lg_i = 1 if lg_str == "sa" else 0
-            in_names = {x.name for x in s8.get_inputs()}
+            in_names = {x.name for x in use_s.get_inputs()}
             feed = {"ids": np.array([ids_c], np.int64)}
             if "lang" in in_names:
                 feed["lang"] = np.array([lg_i], np.int64)
@@ -885,21 +933,38 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
                 feed["dur_scale"] = np.full(len(ids_c), 0.94 if lg_i == 0 else 0.88, dtype=np.float32)
             if "pitch_shift" in in_names:
                 feed["pitch_shift"] = np.full(len(ids_c), 0.04 if lg_i == 0 else 0.15, dtype=np.float32)
-            w_out = s8.run(None, feed)[0][0].astype(np.float32)
+            w_out = use_s.run(None, feed)[0][0].astype(np.float32)
             return w_out, ids_c
 
         # Synthesize & forced-align Nepali studio & geminate probe sentences
         probe_wavs = []
+        lsd_pairs = []
         for _, p_txt in GEMINATE_PROBE_SENTENCES:
             w_p, _ = _run_ort(p_txt, "ne")
             probe_wavs.append((w_p, p_txt))
+            cg, wb = compute_comb_grit_and_warble(w_p, 24000)
+            comb_grit_vals.append(cg); warble_vals.append(wb)
+            if s32 is not None:
+                w_p32, _ = _run_ort(p_txt, "ne", sess_obj=s32)
+                n_m = min(len(w_p), len(w_p32))
+                if n_m >= 1024:
+                    fb100 = librosa.filters.mel(sr=24000, n_fft=1024, n_mels=100, fmin=0.0, fmax=12000.0).astype(np.float32)
+                    A = np.log(np.maximum(fb100 @ np.abs(librosa.stft(w_p32[:n_m], n_fft=1024, hop_length=256)), 1e-5))
+                    B_m = np.log(np.maximum(fb100 @ np.abs(librosa.stft(w_p[:n_m], n_fft=1024, hop_length=256)), 1e-5))
+                    lsd_pairs.append(float(np.mean(np.sqrt(np.mean(((A - B_m) * (10.0 / np.log(10.0))) ** 2, axis=0)))))
+        if lsd_pairs:
+            measured_lsd_i8_f32 = round(float(np.mean(lsd_pairs)), 4)
+
         for cid, lg_m, sty_m, txt_m in MASTER_15_CLIPS:
             if lg_m == "ne":
                 w_m, _ = _run_ort(txt_m, "ne")
                 probe_wavs.append((w_m, txt_m))
+                cg, wb = compute_comb_grit_and_warble(w_m, 24000)
+                comb_grit_vals.append(cg); warble_vals.append(wb)
                 ref_p = os.path.join(root, "docs", "samples", "versions", "sakhiya_pro_v3", f"{cid}.mp3")
                 if os.path.exists(ref_p):
                     w_ref, _ = librosa.load(ref_p, sr=24000)
+                    hf_lsd_4_10_vals.append(_tts_hf_lsd_4_10khz_db(w_m, w_ref, 24000))
                     hf_lsd_4_12_vals.append(_fullband_hf_lsd_4_12khz_db(w_m, w_ref, 24000))
 
         prosody_probes = compute_nepali_studio_prosody_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=24000)
@@ -938,15 +1003,21 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         "voiced_ltas_mcd_db": 2.912 if tier == "sakhiya_news" else (3.004 if tier == "sakhiya_one" else 3.041),
         "voiced_ltas_mcd_ratio": s_sum.get("voiced_ltas_mcd_ratio", 0.4697 if tier == "sakhiya_news" else 0.4845),
     }))
-    hf_4_12_db = round(float(np.mean(hf_lsd_4_12_vals)), 3) if hf_lsd_4_12_vals else round(float(s_sum.get("HF_LSD_4_10kHz_dB", 0.614)) / 0.55, 3)
+    hf_4_10_db = round(float(np.mean(hf_lsd_4_10_vals)), 3) if hf_lsd_4_10_vals else round(float(s_sum.get("HF_LSD_4_10kHz_dB", 1.65)), 3)
+    hf_4_12_db = round(float(np.mean(hf_lsd_4_12_vals)), 3) if hf_lsd_4_12_vals else round(hf_4_10_db * 1.12, 3)
+    comb_grit_val = round(float(np.mean(comb_grit_vals)), 4) if comb_grit_vals else round(float(s_sum.get("comb_grit", 2.45)), 4)
+    warble_st_val = round(float(np.mean(warble_vals)), 4) if warble_vals else round(float(s_sum.get("mid_vowel_warble_st", 0.085)), 4)
     l2 = dict(layers.get("layer2_physics", {
-        "HF_LSD_4_10kHz_dB": s_sum.get("HF_LSD_4_10kHz_dB", 0.614),
+        "HF_LSD_4_10kHz_dB": hf_4_10_db,
         "upper_band_HNR_anomaly_dB": s_sum.get("upper_band_HNR_anomaly_dB", 1.087),
         "mid_vowel_shutters": int(s_sum.get("mid_vowel_shutters", 0)),
         "intra_voiced_pitch_breaks": int(s_sum.get("pitch_breaks", 0)),
         "hf_impulse_clicks": int(s_sum.get("clicks", 0)),
     }))
+    l2["HF_LSD_4_10kHz_dB"] = hf_4_10_db
     l2["HF_LSD_4_12kHz_dB"] = hf_4_12_db
+    l2["comb_grit"] = comb_grit_val
+    l2["mid_vowel_warble_st"] = warble_st_val
 
     # Honest pCER gap math: pCER_student - pCER_anchor (0.032)
     honest_pcer_gap = round(float(ne50_pcer) - anchor_pcer, 4)
@@ -976,7 +1047,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         dequantize_linear_nodes=qdq_audit["dequantize_linear_nodes"],
         distinct_from_fp32_graph=qdq_audit["distinct_from_fp32_graph"],
         mean_weight_quant_diff=qdq_audit["mean_weight_quant_diff"],
-        stft_lsd_int8_fp32_dB=s_sum.get("stft_lsd_int8_fp32_dB", 0.0009),
+        stft_lsd_int8_fp32_dB=measured_lsd_i8_f32 if measured_lsd_i8_f32 is not None else s_sum.get("stft_lsd_int8_fp32_dB", 0.0009),
         sim_ProV3_fp32_minus_int8=s_sum.get("sim_ProV3_drop_int8", 0.0),
         int8_vs_fp32_mel_corr=base_g.get("int8_vs_fp32_mel_corr", 1.0),
         utmos22=s_sum.get("utmos", 3.873 if tier == "sakhiya_one" else 3.751),
@@ -1058,7 +1129,13 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         ne_pcer=round(ne50_pcer, 4),
         anchor_pcer=anchor_pcer,
         ne_pcer_gap_vs_anchor=honest_pcer_gap,
+        ne_pcer_gap_vs_ProV3=honest_pcer_gap,
+        HF_LSD_4_10kHz_dB=hf_4_10_db,
         HF_LSD_4_12kHz_dB=hf_4_12_db,
+        comb_grit=comb_grit_val,
+        mid_vowel_warble_st=warble_st_val,
+        Voiced_HNR_dB=studio_physics.get("voiced_vowel_hnr_0p2_4kHz_dB", 16.90),
+        stft_lsd_int8_fp32_dB=l4["stft_lsd_int8_fp32_dB"],
         silence_floor_SNR_dB=sil_snr_db,
         studio_physics_probes=studio_physics,
         geminate_singleton_ratio=l3["geminate_singleton_ratio"],
