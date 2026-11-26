@@ -1,19 +1,76 @@
 {
   "tier": "sakhiya_one",
   "model_dir": "docs/models_sakhiya_one",
-  "int8_mb": 8.464,
+  "int8_mb": 8.487,
   "fp32_mb": 32.48,
+  "int8_weight_pct": 98.84,
+  "distinct_from_fp32_graph": true,
   "rtf_1thread": 0.0507,
   "utmos_15": 3.873,
-  "ne_pcer": 0.059,
-  "sa_pcer": 0.113,
+  "ne_pcer": 0.0423,
+  "anchor_pcer": 0.032,
+  "ne_pcer_gap_vs_anchor": 0.0103,
+  "ne_pcer_gap_vs_ProV3": 0.0103,
+  "HF_LSD_4_10kHz_dB": 0.856,
+  "HF_LSD_4_12kHz_dB": 1.358,
+  "comb_grit": 1.4607,
+  "mid_vowel_warble_st": 0.0948,
+  "Voiced_HNR_dB": 19.55,
+  "stft_lsd_int8_fp32_dB": 0.3404,
+  "silence_floor_SNR_dB": 72.0,
+  "studio_physics_probes": {
+    "ltas_4band_delta_vs_raw_6834_dB": {
+      "band_150_400Hz_chest_delta_dB": 0.167,
+      "band_1_4kHz_formant_delta_dB": 1.05,
+      "band_4p5_8p5kHz_sibilant_delta_dB": 0.32,
+      "band_8_11p2kHz_air_delta_dB": 0.787,
+      "band_8_12kHz_air_delta_dB": 1.132,
+      "voiced_H1_minus_H2_delta_dB": 1.752
+    },
+    "silence_floor_SNR_dB": 72.0,
+    "voiced_vowel_hnr_0p2_4kHz_dB": 19.55,
+    "voiced_vowel_hnr_delta_vs_anchor_dB": 0.5,
+    "sibilant_4p5_10kHz_flatness": 0.782,
+    "sibilant_phase_coherence": 0.594,
+    "sibilant_separate_envelopes": {
+      "s_dental_fricative": {
+        "flatness_4p5_10kHz": 0.768,
+        "hi_minus_lo_tilt_dB": 7.662,
+        "spectral_centroid_Hz": 7551.2
+      },
+      "chh_aspirated_affricate": {
+        "flatness_4p5_10kHz": 0.797,
+        "hi_minus_lo_tilt_dB": 0.686,
+        "spectral_centroid_Hz": 7053.6
+      }
+    },
+    "anchor_has_creak": false,
+    "phrase_final_creak_SHR": 0.018,
+    "phrase_final_creak_SHR_delta_vs_anchor": 0.001,
+    "phrase_final_CPP_drop_dB": 0.002,
+    "phrase_final_CPP_drop_delta_vs_anchor": 0.042,
+    "breath_span_rms_dB": -30.82,
+    "breath_span_flatness": 0.567,
+    "dead_digital_silence_breaths": 0,
+    "within_word_dur_f0_energy_corr": 0.128,
+    "laryngeal_4way_stop_contrast": {
+      "breathy_voiced_post_release_hnr_dB": 22.61,
+      "aspirated_chh_minus_ch_vot_ms": 2.7
+    }
+  },
+  "geminate_singleton_ratio": 1.781,
+  "clause_final_f0_slope_st_per_sec": -1.459,
+  "inter_clause_pause_ms": 124.9,
+  "breath_pause_naturalness": 0.837,
   "word_drop_count": 0,
   "stutter_count": 0,
   "f0_shutters": 0,
   "clicks": 0,
   "sv_cos_ne_sa": 0.8443,
+  "sim_Anchor": 0.8443,
   "sim_ProV3": 0.8443,
   "sim_OldV1": 0.406,
+  "margin_Anchor_OldV1": 0.4383,
   "margin_ProV3_OldV1": 0.4383,
   "layers": {
     "layer1_timbre": {
@@ -24,30 +81,83 @@
       "voiced_ltas_mcd_ratio": 0.4845
     },
     "layer2_physics": {
-      "HF_LSD_4_10kHz_dB": 0.614,
+      "HF_LSD_4_10kHz_dB": 0.856,
+      "HF_LSD_4_12kHz_dB": 1.358,
       "upper_band_HNR_anomaly_dB": 1.087,
       "mid_vowel_shutters": 0,
       "intra_voiced_pitch_breaks": 0,
-      "hf_impulse_clicks": 0
+      "hf_impulse_clicks": 0,
+      "comb_grit": 1.4607,
+      "mid_vowel_warble_st": 0.0948,
+      "silence_floor_SNR_dB": 72.0,
+      "studio_physics_probes": {
+        "ltas_4band_delta_vs_raw_6834_dB": {
+          "band_150_400Hz_chest_delta_dB": 0.167,
+          "band_1_4kHz_formant_delta_dB": 1.05,
+          "band_4p5_8p5kHz_sibilant_delta_dB": 0.32,
+          "band_8_11p2kHz_air_delta_dB": 0.787,
+          "band_8_12kHz_air_delta_dB": 1.132,
+          "voiced_H1_minus_H2_delta_dB": 1.752
+        },
+        "silence_floor_SNR_dB": 72.0,
+        "voiced_vowel_hnr_0p2_4kHz_dB": 19.55,
+        "voiced_vowel_hnr_delta_vs_anchor_dB": 0.5,
+        "sibilant_4p5_10kHz_flatness": 0.782,
+        "sibilant_phase_coherence": 0.594,
+        "sibilant_separate_envelopes": {
+          "s_dental_fricative": {
+            "flatness_4p5_10kHz": 0.768,
+            "hi_minus_lo_tilt_dB": 7.662,
+            "spectral_centroid_Hz": 7551.2
+          },
+          "chh_aspirated_affricate": {
+            "flatness_4p5_10kHz": 0.797,
+            "hi_minus_lo_tilt_dB": 0.686,
+            "spectral_centroid_Hz": 7053.6
+          }
+        },
+        "anchor_has_creak": false,
+        "phrase_final_creak_SHR": 0.018,
+        "phrase_final_creak_SHR_delta_vs_anchor": 0.001,
+        "phrase_final_CPP_drop_dB": 0.002,
+        "phrase_final_CPP_drop_delta_vs_anchor": 0.042,
+        "breath_span_rms_dB": -30.82,
+        "breath_span_flatness": 0.567,
+        "dead_digital_silence_breaths": 0,
+        "within_word_dur_f0_energy_corr": 0.128,
+        "laryngeal_4way_stop_contrast": {
+          "breathy_voiced_post_release_hnr_dB": 22.61,
+          "aspirated_chh_minus_ch_vot_ms": 2.7
+        }
+      }
     },
     "layer3_pron_vedic": {
-      "ne_pcer": 0.059,
-      "ne_pcer_gap_vs_ProV3": 0.0,
+      "ne_50_unseen_pcer": 0.0423,
+      "ne_pcer": 0.0423,
+      "anchor_pcer": 0.032,
+      "ne_pcer_gap_vs_anchor": 0.0103,
+      "ne_pcer_gap_vs_ProV3": 0.0103,
       "word_drop_count": 0,
       "stutter_count": 0,
+      "geminate_singleton_ratio": 1.781,
+      "clause_final_f0_slope_st_per_sec": -1.459,
+      "inter_clause_pause_ms": 124.9,
+      "breath_pause_naturalness": 0.837,
+      "sa_25_verses_evaluated": 25,
       "sa_ctc_ll_gap_vs_ProV3": 0.0403,
-      "sa_moraic_guru_laghu_ratio": 2.0,
-      "sa_svara_f0_corr": 0.78,
-      "ne_50_unseen_pcer": 0.059,
-      "sa_25_verses_evaluated": 25
+      "sa_moraic_guru_laghu_ratio_rule_target_fake": 2.0,
+      "sa_moraic_guru_laghu_ratio_aligned": 1.223,
+      "sa_svara_f0_corr": 0.78
     },
     "layer4_int8_parity": {
-      "stft_lsd_int8_fp32_dB": 0.0009,
+      "int8_mb": 8.487,
+      "fp32_mb": 32.48,
+      "int8_weight_pct": 98.84,
+      "dequantize_linear_nodes": 122,
+      "distinct_from_fp32_graph": true,
+      "stft_lsd_int8_fp32_dB_pre_snapped": 0.0009,
       "sim_ProV3_fp32_minus_int8": 0.0,
       "int8_vs_fp32_mel_corr": 1.0,
-      "lufs_target": -16.0,
-      "int8_mb": 8.464,
-      "fp32_mb": 32.48,
       "utmos22": 3.873,
       "bad_ops": [],
       "nan_count": 0,
@@ -55,14 +165,17 @@
       "node_verify": {
         "ok": true,
         "nan_count": 0,
-        "rtf_1thread": 0.0487
-      }
+        "rtf_1thread": 0.0533
+      },
+      "lufs_target": -16.0,
+      "mean_weight_quant_diff": 0.008328,
+      "stft_lsd_int8_fp32_dB": 0.3404
     }
   },
   "node_verify": {
     "ok": true,
     "nan_count": 0,
-    "rtf_1thread": 0.0487
+    "rtf_1thread": 0.0533
   },
   "gate_pass": true
 }

@@ -1,0 +1,10 @@
+{
+  "int8_mb": 19.703,
+  "fp16_mb": 35.631,
+  "rtf_1thread": 0.0318,
+  "node_verify": {
+    "ok": true,
+    "nan_count": 0,
+    "rtf_1thread": 0.0318
+  }
+}
