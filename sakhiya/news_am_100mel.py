@@ -446,7 +446,7 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 class SakhiyaNewsFlagship(nn.Module):
     """Unified Single-Style Studio Nepali News Model (`Sakhiya-News` v2: Coupled 6D Prosody Flow + `CFG = 0` 4-Step iMF + Studio-Clean Zero-Buzz 100-Mel Vocoder)."""
-    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, r_voc_k7: int = 120, r_voc_k11: int = 104, steps: int = 4, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
+    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, r_voc_k7: int = None, r_voc_k11: int = None, steps: int = 4, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
         super().__init__()
         self.steps = steps
         self.cfg_scale = 0.0  # Strictly CFG = 0 at inference!
@@ -497,17 +497,7 @@ class SakhiyaNewsFlagship(nn.Module):
     def load_phase1_vocoder(self, voc_ck_path: str):
         dev = next(self.parameters()).device
         ck = torch.load(voc_ck_path, map_location=dev, weights_only=False)
-        vsd = {k: v.float() for k, v in ck.get("G_ema", ck.get("G", ck)).items()}
-        has_svd = any(".c1.0.0.weight" in k for k in vsd)
-        if has_svd and os.path.exists("/work/tts/ck/sakhiya_one_voc.pt"):
-            self.voc.init_from_clean_studio_filterbank("/work/tts/ck/sakhiya_one_voc.pt")
-            own_v = self.voc.state_dict()
-            for k, v in vsd.items():
-                if k in own_v and own_v[k].shape == v.shape and not k.startswith("amp_head"):
-                    own_v[k].copy_(v)
-            self.voc.load_state_dict(own_v, strict=False)
-        else:
-            self.voc.init_from_clean_studio_filterbank(voc_ck_path)
+        self.voc.init_from_clean_studio_filterbank(voc_ck_path)
         if "f0_head" in ck:
             self.f0_head.load_state_dict({k: v.float() for k, v in ck["f0_head"].items()}, strict=False)
         return self
@@ -578,15 +568,11 @@ class SakhiyaNewsFlagship(nn.Module):
         is_final_h = ((ids == id_h) & (next_ids <= 8)).float()
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=4.0), dur)
 
-        # 2. Word-final consonant codas (`मोडेल`, `कोड`, `बजार`, `डलर`, `दिन`, `प्रभाव`, `बृहत`, `वालेट`): crisp 3-5 frame coda (zero trailing schwa drawl!)
-        is_word_final_c = ((ids >= 9) & (ids <= 44) & (ids != id_h) & (next_ids <= 8)).float()
-        dur = torch.where(is_word_final_c > 0.5, torch.clamp(dur, min=3.0, max=5.0), dur)
-
-        # 3. Normal inter-word boundary '|' (`ID=1`): smooth 1-2 frame coarticulatory transition (kills choppy mid-clause stops & trailing '-अ' on '|')
+        # 2. Normal inter-word boundary '|' (`ID=1`): smooth 2-3 frame coarticulatory transition (kills >250ms mid-clause stops without merging words!)
         is_normal_wb = ((ids == id_wb) & (is_pre_hiatus_wb < 0.5) & (is_hiatus_wb < 0.5)).float()
-        dur = torch.where(is_normal_wb > 0.5, torch.clamp(dur, min=1.0, max=2.0), dur)
+        dur = torch.where(is_normal_wb > 0.5, torch.clamp(dur, min=2.0, max=3.0), dur)
 
-        # 4. Heterosyllabic vowel hiatus (`भएका/भएको`: `bʱ ʌ e`, `भइरहेको/भइरहेका`: `bʱ ʌ i r`): keep both syllables distinct (>= 6 frames)
+        # 3. Heterosyllabic vowel hiatus (`भएका/भएको`: `bʱ ʌ e`, `भइरहेको/भइरहेका`: `bʱ ʌ i r`): keep both syllables distinct (>= 6 frames)
         is_v_hiatus_1 = ((prev_ids == id_bh) & (ids == id_schwa) & ((next_ids == id_e) | ((next_ids == id_i) & (next2_ids == id_r)))).float()
         is_v_hiatus_2 = ((prev2_ids == id_bh) & (prev_ids == id_schwa) & ((ids == id_e) | ((ids == id_i) & (next_ids == id_r)))).float()
         dur = torch.maximum(dur, is_v_hiatus_1 * 7.0 + is_v_hiatus_2 * 6.0)
@@ -597,19 +583,12 @@ class SakhiyaNewsFlagship(nn.Module):
         m_pre = is_pre_hiatus_wb[:, :, None]
         m_a1 = is_hiatus_a1[:, :, None]
         m_wb = is_hiatus_wb[:, :, None]
-        m_norm_wb = is_normal_wb[:, :, None]
         m_fin_h = is_final_h[:, :, None]
         mu_sil = mu[:, -1:, :]
         mu = mu * (1.0 - m_pre) + mu_sil * m_pre
         mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
         mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu_sil) * m_wb
-        mu = mu * (1.0 - m_norm_wb) + (0.20 * mu + 0.80 * mu_sil) * m_norm_wb
         mu = mu * (1.0 - m_fin_h) + (0.45 * mu_prev1 + 0.55 * mu_sil) * m_fin_h
-
-        # Labiovelar '/w/' onset anchor (`वालेट` = /wa.let/, never `[b]` `बालेट`!)
-        is_w_tok = (ids == id_w).float()[:, :, None]
-        u_emb = self.enc.mu(self.enc.nf(self.enc.emb(torch.full_like(ids[:, :1], id_u)) * math.sqrt(self.enc.d)))
-        mu = mu * (1.0 - 0.25 * is_w_tok) + u_emb * (0.25 * is_w_tok)
 
         is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
         is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
@@ -621,7 +600,7 @@ class SakhiyaNewsFlagship(nn.Module):
         is_vowel = (ids >= 45).float()
         v_prom = ((dur - 7.5) / 6.0).clamp(-0.35, 0.85) * is_vowel * (1.0 - 0.85 * clause_tail)
         eng_ph = (eng_ph + 0.45 * v_prom).clamp(-1.2, 1.2)
-        mu = mu + (0.06 * eng_ph)[..., None] * 0.32 * (1.0 - is_pause[..., None])
+        mu = mu + (0.06 * eng_ph)[..., None] * 0.32
 
         ends = torch.cumsum(dur, dim=1)
         T = ends[0, -1].to(torch.int64)
@@ -662,23 +641,22 @@ class SakhiyaNewsFlagship(nn.Module):
             w1 = (1.0 - w2 - w3 - w4).clamp(min=0.51)
             xt = mu_y + w1 * v0 + w2 * v_50 + w3 * v_25 + w4 * v_75
 
-        # Full 100-band log-mel with Nyquist edge clamping (bins 98..99) -> Studio-Clean 100-Mel Vocoder
-        mel_raw = xt * self.mel_stats[1] + self.mel_stats[0]
-        mel_100 = torch.cat([mel_raw[:, :98, :], mel_raw[:, 97:98, :], mel_raw[:, 97:98, :]], dim=1)
+        # Full 100-band log-mel -> Studio-Clean 100-Mel Vocoder
+        mel_100 = xt * self.mel_stats[1] + self.mel_stats[0]
         f0_hz, vuv = self.f0_head(mel_100, f0_bias_st=f0_frame[:, None, :] * 0.24)
 
-        # Gate vuv on word-final visarga 'h' and voiceless word-final stops so they never emit voiced vowel/screech tails
-        is_voiceless_fin = (is_final_h + ((next_ids <= 8) & ((ids == SYM2ID["k"]) | (ids == SYM2ID["kʰ"]) | (ids == SYM2ID["ts"]) | (ids == SYM2ID["tsʰ"]) | (ids == SYM2ID["ʈ"]) | (ids == SYM2ID["ʈʰ"]) | (ids == SYM2ID["t̪"]) | (ids == SYM2ID["t̪ʰ"]) | (ids == SYM2ID["p"]) | (ids == SYM2ID["pʰ"]) | (ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]))).float()).clamp(0.0, 1.0)
+        # Post-decoder release gate on word-final visarga 'h' (`मामकाः`) and word-final consonant boundaries so zero vocalic '-अ' or screech tail occurs
+        is_coda_wb = ((ids == id_wb) & (prev_ids >= 9) & (prev_ids <= 44)).float()
         is_sib_tok = ((ids == SYM2ID["s"]) | (ids == SYM2ID["ʃ"]) | (ids == SYM2ID["tsʰ"])).float()
-        vl_frame = torch.gather(is_voiceless_fin, 1, idx)[:, None, :]
-        wb_frame = torch.gather(is_normal_wb, 1, idx)[:, None, :]
+        fin_h_frame = torch.gather(is_final_h, 1, idx)[:, None, :]
+        coda_wb_frame = torch.gather(is_coda_wb, 1, idx)[:, None, :]
         sib_frame = torch.gather(is_sib_tok, 1, idx)[:, None, :]
-        vuv = vuv * (1.0 - 0.92 * vl_frame) * (1.0 - 0.85 * wb_frame) * (1.0 - 0.90 * sib_frame)
-        mel_100 = mel_100 - 1.8 * wb_frame
+        vuv = vuv * (1.0 - 0.92 * fin_h_frame) * (1.0 - 0.80 * coda_wb_frame) * (1.0 - 0.90 * sib_frame)
+        mel_100 = mel_100 - 1.1 * coda_wb_frame
 
         # Natural nep_6834 condenser sibilant resonance profile (6.5-8.2 kHz peak, matching 0.668/0.685 flatness)
         m_bins = torch.arange(100, device=dev, dtype=mel_100.dtype).view(1, 100, 1)
-        sib_bell = 0.55 * torch.exp(-0.5 * ((m_bins - 81.0) / 4.2) ** 2) - 0.25 * ((m_bins >= 64.0) & (m_bins <= 73.0)).to(mel_100.dtype)
+        sib_bell = 0.42 * torch.exp(-0.5 * ((m_bins - 81.0) / 4.2) ** 2) - 0.20 * ((m_bins >= 64.0) & (m_bins <= 73.0)).to(mel_100.dtype)
         mel_100 = mel_100 + sib_frame * sib_bell
 
         y, _, _, _, _, _ = self.voc.forward_wav(mel_100, f0_hz, vuv)

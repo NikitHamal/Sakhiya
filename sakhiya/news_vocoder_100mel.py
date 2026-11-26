@@ -232,6 +232,7 @@ class StudioVocoder100Mel(nn.Module):
     def apply_svd_compression(self):
         if self._svd_applied or (self.r_k7 is None and self.r_k11 is None):
             return self
+        # Factor ONLY the 4x-rate mrfs[0][1] and mrfs[0][2], keeping the 16x sub-frame mrfs[1] 100% full rank!
         for b_idx, r_k in ((1, self.r_k7), (2, self.r_k11)):
             if r_k is not None:
                 blk = self.mrfs[0][b_idx]
@@ -240,13 +241,6 @@ class StudioVocoder100Mel(nn.Module):
                         blk.c1[i] = _make_svd_conv1d(blk.c1[i], r_k)
                     if isinstance(blk.c2[i], nn.Conv1d):
                         blk.c2[i] = _make_svd_conv1d(blk.c2[i], r_k)
-                blk2 = self.mrfs[1][b_idx]
-                r_k2 = max(28, int(round(r_k * 0.70)))
-                for i in range(len(blk2.c1)):
-                    if isinstance(blk2.c1[i], nn.Conv1d):
-                        blk2.c1[i] = _make_svd_conv1d(blk2.c1[i], r_k2)
-                    if isinstance(blk2.c2[i], nn.Conv1d):
-                        blk2.c2[i] = _make_svd_conv1d(blk2.c2[i], r_k2)
         self._svd_applied = True
         return self
 
@@ -288,9 +282,6 @@ class StudioVocoder100Mel(nn.Module):
                 b_off[12:] = -4.5
                 own["noise_head.bias"].copy_(b_off)
         self.load_state_dict(own, strict=False)
-        if not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
-            self.apply_svd_compression()
-            self.to(dev)
         return self
 
     def _compute_ola_unit_phasor_noise(self, B: int, T_sub: int, dev: torch.device, dtype: torch.dtype):
