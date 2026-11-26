@@ -3,7 +3,7 @@
  "tiers": [
   {
    "id": "sakhiya_one",
-   "label": "Sakhiya-One (Studio 8-blk)",
+   "label": "Sakhiya-One Compact (8.5 MB)",
    "prec": "int8",
    "dir": "models_sakhiya_one/",
    "variant": "tiny",
@@ -13,13 +13,13 @@
    "ne_pcer": 0.0423,
    "sa_pcer": 0.113,
    "ready": true,
-   "desc": "Sakhiya-One-Polish (~8.47 MB INT8 · 4-Step Anchored AM + MS-SB-CQT AWP Vocoder + Surgical Nepali G2P · 100% Pro-v3 Voice)",
+   "desc": "Compact <8.5 MB option · 4-Step Anchored AM + MS-SB-CQT AWP Vocoder + Surgical Nepali G2P · 100% Pro-v3 Voice",
    "onnx_mb": 8.487,
    "rtf_onnx": 0.0531
   },
   {
    "id": "sakhiya_one_vocos",
-   "label": "Sakhiya-One Studio (Vocos)",
+   "label": "Sakhiya-One Studio (Vocos · Default)",
    "prec": "int8",
    "dir": "models_sakhiya_one_vocos/",
    "variant": "tiny",
@@ -29,7 +29,7 @@
    "ne_pcer": 0.0351,
    "sa_pcer": 0.105,
    "ready": true,
-   "desc": "Sakhiya-One 4-Step Anchored AM + Mel80To100Adapter + Adapted Pretrained charactr/vocos-mel-24khz (Zero Harmonic Comb · Silky Sibilants)",
+   "desc": "Promoted Studio Default · 4-Step Anchored AM + Mel80To100Adapter + Adapted Pretrained Vocos-24kHz · Zero Harmonic Comb · 31× RT",
    "onnx_mb": 19.703,
    "rtf_onnx": 0.0318
   },

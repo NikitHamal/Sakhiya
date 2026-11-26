@@ -3,7 +3,7 @@
 (function () {
   const $ = s => document.querySelector(s), el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
   const NAMES = { fp16: "Sakhiya-V1 (fp16)", int8: "Sakhiya-V1 (int8)" }, DIR = "samples/v25/";
-  let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "sakhiya_one", verB = "sakhiya_news";
+  let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "sakhiya_one_vocos", verB = "sakhiya_one_polish";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   const RETIRED_OR_DUP_TAGS = new Set(["sakhiya_v3_t5", "sakhiya_v4_micro", "sakhiya_v5_micro", "sakhiya_v4_pico", "sakhiya_v5_pico"]);
@@ -119,14 +119,15 @@
     try {
       REG = await (await fetch("samples/versions/registry.json?t=" + Date.now(), { cache: "no-cache" })).json();
       if (REG && REG.versions && REG.versions.length) {
-        const hasNewsLeg1 = REG.versions.some(v => v.tag === "sakhiya_news_leg1_preview");
+        const hasVocos = REG.versions.some(v => v.tag === "sakhiya_one_vocos");
+        const hasPolish = REG.versions.some(v => v.tag === "sakhiya_one_polish");
         const hasOne = REG.versions.some(v => v.tag === "sakhiya_one");
         const hasProV3 = REG.versions.some(v => v.tag === "sakhiya_pro_v3");
         const hasProV4Vedic = REG.versions.some(v => v.tag === "sakhiya_pro_v4_vedic");
         const hasProV4 = REG.versions.some(v => v.tag === "sakhiya_pro_v4");
         const hasV15 = REG.versions.some(v => v.tag === "v15_v1_chandas");
-        verA = hasOne ? "sakhiya_one" : (hasProV3 ? "sakhiya_pro_v3" : (hasProV4 ? "sakhiya_pro_v4" : REG.versions[0].tag));
-        verB = hasNewsLeg1 ? "sakhiya_news_leg1_preview" : (hasOne ? "sakhiya_one" : (hasProV4Vedic ? "sakhiya_pro_v4_vedic" : REG.versions[REG.versions.length - 1].tag));
+        verA = hasVocos ? "sakhiya_one_vocos" : (hasOne ? "sakhiya_one" : (hasProV3 ? "sakhiya_pro_v3" : (hasProV4 ? "sakhiya_pro_v4" : REG.versions[0].tag)));
+        verB = hasPolish ? "sakhiya_one_polish" : (hasOne ? "sakhiya_one" : (hasProV4Vedic ? "sakhiya_pro_v4_vedic" : REG.versions[REG.versions.length - 1].tag));
         renderAllComparators();
       }
       const rep = await (await fetch("ggml_proof/diff_gate_report.json?t=" + Date.now(), { cache: "no-cache" })).json();

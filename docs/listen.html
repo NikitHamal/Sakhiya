@@ -34,15 +34,15 @@
   <div class="card" id="owner-4clips-desk" style="margin-bottom:24px;border:2px solid var(--md-primary)">
     <div class="card-h" style="flex-wrap:wrap;gap:10px">
       <span class="ms">verified</span>
-      <h2>Sakhiya-One Surgical Polish · 4-Way Side-by-Side Comparison Desk (-16 LUFS · <code>Candidate A: Sakhiya-One-Polish ~8.5 MB INT8</code> vs <code>Candidate B: Sakhiya-One-Vocos ~16 MB INT8</code> vs <code>Baseline+G2P+4step</code> vs <code>Original Baseline a61c100</code>)</h2>
+      <h2>Sakhiya-One Surgical Polish · 4-Way Side-by-Side Comparison Desk (-16 LUFS · <code>Candidate B: Sakhiya-One-Vocos 19.70 MB INT8 [Default]</code> vs <code>Candidate A: Sakhiya-One-Polish 8.49 MB INT8</code> vs <code>Baseline+G2P+4step</code> vs <code>Original Baseline a61c100</code>)</h2>
     </div>
-    <p class="muted" style="margin-bottom:12px">Surgical polish starting strictly from <b>Sakhiya-One</b> (<code>a61c100</code>, full-utterance inference with zero short-window cropping): eliminates the <code>वालेट &rarr; बालेट</code> leak, fixes geminate doubling (<code>बुद्धिमत्ता, उल्लेखनीय, पक्कै, चिटिक्क</code>), halanta stops (<code>बृहत्, अर्थात्</code>), chandrabindu nasal diphthongs (<code>गर्नेछौँ, लागौँ, चलौँ</code>), clause-onset padding (<code>त चलौँ</code>), and compares <b>Candidate A (MS-SB-CQT + Joint E2E AWP ~8.5 MB INT8)</b> vs <b>Candidate B (Mel80To100Adapter + Adapted Pretrained <code>charactr/vocos-mel-24khz</code> ~16 MB INT8)</b>.</p>
+    <p class="muted" style="margin-bottom:12px">Surgical polish starting strictly from <b>Sakhiya-One</b> (<code>a61c100</code>, full-utterance inference with zero short-window cropping): eliminates the <code>वालेट &rarr; बालेट</code> leak, fixes geminate doubling (<code>बुद्धिमत्ता, उल्लेखनीय, पक्कै, चिटिक्क</code>), halanta stops (<code>बृहत्, अर्थात्</code>), chandrabindu nasal diphthongs (<code>गर्नेछौँ, लागौँ, चलौँ</code>), clause-onset padding (<code>त चलौँ</code>), and compares <b>Candidate B (Mel80To100Adapter + Adapted Pretrained <code>charactr/vocos-mel-24khz</code> · 19.70 MB INT8 · Shipped Default)</b> vs <b>Candidate A (MS-SB-CQT + Joint E2E AWP · 8.49 MB INT8 Compact)</b>.</p>
     <div style="display:grid;grid-template-columns:1fr;gap:14px">
       <div class="card sm" style="padding:12px 14px">
         <b>Owner Clip 1 · Episode-01 AI Models (<code>जेमिनाई फोर नियोन, अनुसन्धानात्मक, विशेष, ओपन एआईले, जीपीटी सिक्स पोइन्ट टु, प्रयोगकर्ताको, सुरक्षित, च्याटजिपिटी वालेट</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [~8.5 MB INT8 · CQT-AWP · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [~16 MB INT8 · Pretrained Vocos-24kHz · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [19.70 MB INT8 · Pretrained Vocos-24kHz · Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · CQT-AWP · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>2 · Baseline + Fixed G2P + 4-Step MeanFlow [0 Extra Bytes]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_base_4step_g2p/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>1 · Original Baseline Sakhiya-One [a61c100 · 2-Step · 8.46 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_baseline_a61c100/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
         </div>
@@ -50,8 +50,8 @@
       <div class="card sm" style="padding:12px 14px">
         <b>Owner Clip 2 · Episode-01 AI &amp; Global Share Market (<code>बुद्धिमत्ता, बृहत, विश्व, एन्थ्रोपिकको, १७ प्रतिशतले, उल्लेखनीय, १४ प्रतिशतले, गिरावट आयो, उतारचढाव, त्रैमासिकमा, संवेदनशील</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [~8.5 MB INT8 · CQT-AWP · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [~16 MB INT8 · Pretrained Vocos-24kHz · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [19.70 MB INT8 · Pretrained Vocos-24kHz · Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · CQT-AWP · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>2 · Baseline + Fixed G2P + 4-Step MeanFlow [0 Extra Bytes]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_base_4step_g2p/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>1 · Original Baseline Sakhiya-One [a61c100 · 2-Step · 8.46 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_baseline_a61c100/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
         </div>
@@ -59,8 +59,8 @@
       <div class="card sm" style="padding:12px 14px">
         <b>Owner Clip 3 · Episode-01 Tech Bulletin Intro (<code>वाचक, विशेष, विश्वभर, बुद्धिमत्ता, अर्थात, उपलब्धिहरू, विकास, मोबाइल एप्लिकेसन, गर्नेछौँ, व्यवसायमा, त चलौँ, लागौँ</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [~8.5 MB INT8 · CQT-AWP · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [~16 MB INT8 · Pretrained Vocos-24kHz · 4-Step]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>4 · Candidate B: Sakhiya-One-Vocos [19.70 MB INT8 · Pretrained Vocos-24kHz · Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>3 · Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · CQT-AWP · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>2 · Baseline + Fixed G2P + 4-Step MeanFlow [0 Extra Bytes]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_base_4step_g2p/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
           <div><small class="muted"><b>1 · Original Baseline Sakhiya-One [a61c100 · 2-Step · 8.46 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_baseline_a61c100/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
         </div>
