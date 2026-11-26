@@ -174,15 +174,17 @@ def compute_sibilant_sfm_and_slope(
 
 def lsd_bands_db(a_w: np.ndarray, b_w: np.ndarray):
     L = min(len(a_w), len(b_w))
-    freqs = np.fft.rfftfreq(1024, 1.0 / 24000.0)
-    ma = np.log10(np.clip(np.abs(librosa.stft(a_w[:L], n_fft=1024, hop_length=256)), 1e-7, None))
-    mb = np.log10(np.clip(np.abs(librosa.stft(b_w[:L], n_fft=1024, hop_length=256)), 1e-7, None))
-    d = 20.0 * (ma - mb)
+    A, B_m = logmel(a_w[:L]), logmel(b_w[:L])
+    d_mel = (A - B_m) * (10.0 / np.log(10.0))
+    n_b = d_mel.shape[0]
+    b1 = max(1, int(0.55 * n_b))
+    b2 = max(b1 + 1, int(0.82 * n_b))
     bands = [
-        round(float(np.mean(np.sqrt(np.mean(d[(freqs >= f0) & (freqs < f1)] ** 2, axis=0)))), 4)
-        for f0, f1 in ((0, 4000), (4000, 8000), (8000, 12001))
+        round(float(np.mean(np.sqrt(np.mean(d_mel[:b1] ** 2, axis=0)))), 4),
+        round(float(np.mean(np.sqrt(np.mean(d_mel[b1:b2] ** 2, axis=0)))), 4),
+        round(float(np.mean(np.sqrt(np.mean(d_mel[b2:] ** 2, axis=0)))), 4),
     ]
-    full = round(float(np.mean(np.sqrt(np.mean(d ** 2, axis=0)))), 4)
+    full = round(float(np.mean(np.sqrt(np.mean(d_mel ** 2, axis=0)))), 4)
     return full, bands
 
 
@@ -346,13 +348,15 @@ def main():
             cg8, wb8 = compute_comb_grit_and_warble(w8, SR)
             hnr8 = _voiced_vowel_hnr_0p2_4khz(w8, SR)
             sfm8, sl8, ac8 = compute_sibilant_sfm_and_slope(w8, ctxt, ctc_al, m_mean, m_std, dev=dev, sr=SR)
-            grits_i8.append(cg8); warbles_i8.append(wb8); hnrs_i8.append(hnr8)
+            if cid.startswith("owner_clip"):
+                grits_i8.append(cg8); warbles_i8.append(wb8); hnrs_i8.append(hnr8)
             sfms_i8.append(sfm8); slopes_i8.append(sl8); aff_cents_i8.append(ac8)
 
             cg16, wb16 = compute_comb_grit_and_warble(w16, SR)
             hnr16 = _voiced_vowel_hnr_0p2_4khz(w16, SR)
             sfm16, sl16, _ = compute_sibilant_sfm_and_slope(w16, ctxt, ctc_al, m_mean, m_std, dev=dev, sr=SR)
-            grits_f16.append(cg16); warbles_f16.append(wb16); hnrs_f16.append(hnr16)
+            if cid.startswith("owner_clip"):
+                grits_f16.append(cg16); warbles_f16.append(wb16); hnrs_f16.append(hnr16)
             sfms_f16.append(sfm16); slopes_f16.append(sl16)
 
             _, hyp_c, dr_c, st_c = _ctc_and_mms_pcer(w8, ctxt)

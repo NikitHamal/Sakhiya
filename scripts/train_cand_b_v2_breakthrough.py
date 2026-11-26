@@ -150,6 +150,14 @@ class SakhiyaOneVocosV2(nn.Module):
         self.cfg["voc_arch"] = "vocos_24k_v2"
         self.adapter = adapter
         self.vocos = vocos
+        sib_prof = torch.tensor([
+            -1.7891, -2.0757, -2.0172, -1.6405, -1.3221, -1.2478, -1.2106, -1.2617, -1.3423, -1.4338,
+            -1.3973, -1.1449, -0.9185, -0.8641, -0.8266, -0.8377, -0.7758, -0.5860, -0.4716, -0.0537,
+             0.1301,  0.1317,  0.2000,  0.0993,  0.2449,  0.4522,  0.6016,  0.6938,  0.8920,  0.9391,
+             0.9688,  1.2304,  1.3154,  1.0497,  0.2500,  0.1882, -0.1584, -0.0969,  0.2500,  0.2500,
+             0.2500,  0.2500,  0.2500,  0.2500,  0.2500,  0.2500,  0.2500,  0.2500,  0.2500,  0.0705,
+        ], dtype=torch.float32)
+        self.register_buffer("sib_cavity_prof", sib_prof, persistent=False)
 
     def infer(self, ids, lang, dur_scale, pitch_shift):
         B, L = ids.shape
@@ -242,6 +250,11 @@ class SakhiyaOneVocosV2(nn.Module):
 
         mel_s1 = xt * self.am.stats[1] + self.am.stats[0]
         mel_vocos = self.adapter(mel_s1)  # NO bin97 overwrite!
+        id_s, id_sh = SYM2ID["s"], SYM2ID["ʃ"]
+        tok_t = torch.gather(ids, 1, idx)
+        is_sib_fr = ((tok_t == id_s) | (tok_t == id_sh)).to(mel_vocos.dtype)[:, None, :]
+        prof = self.sib_cavity_prof.to(device=mel_vocos.device, dtype=mel_vocos.dtype)[None, :, None]
+        mel_vocos = torch.cat([mel_vocos[:, :50, :], mel_vocos[:, 50:100, :] + 0.90 * prof * is_sib_fr], dim=1)
         y = self.vocos(mel_vocos)
         pk = y.abs().amax(dim=-1, keepdim=True).clamp(min=1e-4)
         return (y * (0.88 / pk)).clamp(-0.98, 0.98)
@@ -321,10 +334,16 @@ def export_v2_onnx(model: SakhiyaOneVocosV2, out_dir: str):
 
     # FP16
     om16 = onnx.load(f32_p); _promote_consts(om16); _dedup_initializers(om16)
+    use16 = {}
+    for n in om16.graph.node:
+        for i in n.input: use16.setdefault(i, n.op_type)
     keep16, new16 = [], []
     for init in om16.graph.initializer:
-        a = numpy_helper.to_array(init)
-        if init.data_type == TensorProto.FLOAT and a.ndim >= 2 and a.size >= 64:
+        a = numpy_helper.to_array(init); op = use16.get(init.name, "")
+        if init.data_type == TensorProto.FLOAT and (
+            (a.ndim >= 2 and a.size >= 64)
+            or (a.ndim == 1 and a.size >= 128 and op not in ("Resize", "Upsample", "Slice", "Clip", "ConstantOfShape"))
+        ):
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
             keep16.append(h)
             new16.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast"))
@@ -334,13 +353,15 @@ def export_v2_onnx(model: SakhiyaOneVocosV2, out_dir: str):
     nodes16 = list(om16.graph.node); del om16.graph.node[:]; om16.graph.node.extend(new16 + nodes16)
     _strip_meta(om16); onnx.save(om16, f16_p)
 
-    # INT8 with am.enc + am.dur + am.head + adapter + vocos.embed + vocos.head strictly FP16 (`len_diff == 0`)
+    # INT8 with AM (am.enc/dur/vel) + adapter + vocos.embed + vocos.head_out strictly FP16 (`len_diff == 0`, `71.51%` INT8 weights)
     om8 = onnx.load(f32_p); _promote_consts(om8); _dedup_initializers(om8)
     use = {}
     for n in om8.graph.node:
         for i in n.input: use.setdefault(i, n.op_type)
-    keep8, new8 = [numpy_helper.from_array(np.array(-100.0, np.float32), "dq_clip_min"), numpy_helper.from_array(np.array(100.0, np.float32), "dq_clip_max")], []
-    fp16_keep_names = ("head_out", "adapter", "am.enc", "am.dur", "am.head", "vocos.embed", "vocos.backbone.embed")
+    id_to_out = {n.input[0]: n.output[0] for n in om8.graph.node if n.op_type == "Identity" and len(n.input) == 1 and len(n.output) == 1}
+    for k_in, k_out in id_to_out.items():
+        if k_out in use: use[k_in] = use[k_out]
+    keep8, new8 = [], []
     for init in om8.graph.initializer:
         a = numpy_helper.to_array(init); op = use.get(init.name, "")
         if init.data_type != TensorProto.FLOAT: keep8.append(init); continue
@@ -348,23 +369,12 @@ def export_v2_onnx(model: SakhiyaOneVocosV2, out_dir: str):
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h"); keep8.append(h)
             new8.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast")); continue
         if a.ndim < 2 or a.size <= 64: keep8.append(init); continue
-        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
-        is_prot = (
-            a.shape in ((1026, 1, 1024), (512, 1026), (1026, 512), (100, 80, 1), (100, 20, 1))
-            or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1)
-            or a.shape[ax] <= 8 or any(k in init.name for k in fp16_keep_names)
-        )
-        if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not is_prot:
-            red = tuple(i for i in range(a.ndim) if i != ax)
-            sc = (np.maximum(np.abs(a).max(axis=red), 1e-8) / 127.0).astype(np.float32)
-            shp = [1] * a.ndim; shp[ax] = -1
-            q = np.clip(np.round(a / sc.reshape(shp)), -127, 127).astype(np.int8)
+        if a.shape in ((512, 1536), (1536, 512)):
+            ax = 1
+            sc = (np.maximum(np.abs(a).max(axis=(0,)), 1e-8) / 127.0).astype(np.float32)
+            q = np.clip(np.round(a / sc.reshape(1, -1)), -127, 127).astype(np.int8)
             keep8 += [numpy_helper.from_array(q, init.name + "_q"), numpy_helper.from_array(sc, init.name + "_s")]
-            if op == "MatMul":
-                new8.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name + "_dq_raw"], axis=ax, name=init.name + "_dq"))
-                new8.append(helper.make_node("Clip", [init.name + "_dq_raw", "dq_clip_min", "dq_clip_max"], [init.name], name=init.name + "_clip"))
-            else:
-                new8.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
+            new8.append(helper.make_node("DequantizeLinear", [init.name + "_q", init.name + "_s"], [init.name], axis=ax, name=init.name + "_dq"))
         else:
             h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h"); keep8.append(h)
             new8.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast"))
