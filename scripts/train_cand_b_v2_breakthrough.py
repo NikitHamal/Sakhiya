@@ -861,10 +861,18 @@ def main():
 
     # Restore clean weights (`_orig_w`) before saving EMA checkpoint & exporting
     set_ste_qat(G, False)
+    raw_ck_p = os.path.join(CK_DIR, "cand_b_v2_raw.pt")
+    torch.save(dict(ema={k: v.float().cpu() for k, v in ema.state_dict().items()}, cfg=ema.cfg, fit_info=fit_info), raw_ck_p)
+    # Apply 15% Phase-1 AM anchor lock (`0.85 * stage_b2 + 0.15 * phase1_am_polished`) to eliminate mid-vowel warble while keeping Real-GT sibilants/transients
+    with torch.no_grad():
+        p1_sd = S.get("ema", {})
+        for k, v in ema.state_dict().items():
+            if k.startswith("am.") and k in p1_sd and v.shape == p1_sd[k].shape and v.is_floating_point():
+                v.copy_(0.85 * v.float() + 0.15 * p1_sd[k].to(v.device).float())
     _calibrate_styles(ema.am)
     ck_p = os.path.join(CK_DIR, "cand_b_v2_breakthrough.pt")
     torch.save(dict(ema={k: v.float().cpu() for k, v in ema.state_dict().items()}, cfg=ema.cfg, fit_info=fit_info), ck_p)
-    log(f"[Done Training] Saved {ck_p}")
+    log(f"[Done Training] Saved {ck_p} (with 0.85/0.15 Phase-1 AM anchor lock)")
 
     # Export ONNX (FP16 + QDQ INT8 with am.enc/am.dur FP16!)
     f32_p, f16_p, i8_p = export_v2_onnx(ema, ONNX_DIR)
