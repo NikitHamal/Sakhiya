@@ -419,35 +419,20 @@ class SakhiyaStudio80M(nn.Module):
         im_denom = im_f.sum().clamp(min=1.0)
         l_dur = F.smooth_l1_loss(log_dur_pred * im_f, log_dur_gt * im_f, reduction="sum", beta=0.25) / im_denom
 
-        # Expand encoder features & phoneme predictions using ground-truth durations
+        # Expand encoder features & phoneme predictions using ground-truth durations across full paragraph
         prog_7d_full, idx_fr = compute_intra_phoneme_progress_7d(dur_gt, lf0_ph_pred, vuv_ph_pred, eng_ph_pred, ymask)
         h_enc_t = h_enc.transpose(1, 2)  # [B, 512, L]
         mu_ph_t = mu_ph.transpose(1, 2)  # [B, 100, L]
-        h_exp = torch.gather(h_enc_t, 2, idx_fr[:, None, :].expand(-1, h_enc_t.shape[1], -1)) * ymask[:, None, :].to(h_enc.dtype)
-        mu_exp = torch.gather(mu_ph_t, 2, idx_fr[:, None, :].expand(-1, 100, -1)) * ymask[:, None, :].to(mu_ph.dtype)
-
-        # 3. Frame-level Prior & Continuous Pitch/VUV/Energy Refiner (full paragraph/utterance)
-        h_cond_full, mu_frame_full, lf0_fr_pred, vuv_logit_fr, eng_fr_pred = self.pros.forward_frame(h_exp, mu_exp, prog_7d_full, ymask)
+        h_exp_full = torch.gather(h_enc_t, 2, idx_fr[:, None, :].expand(-1, h_enc_t.shape[1], -1)) * ymask[:, None, :].to(h_enc.dtype)
+        mu_exp_full = torch.gather(mu_ph_t, 2, idx_fr[:, None, :].expand(-1, 100, -1)) * ymask[:, None, :].to(mu_ph.dtype)
 
         ym_f_full = ymask.float()
         ym_denom_full = ym_f_full.sum().clamp(min=1.0)
         ym_mel_denom_full = (ym_denom_full * 100.0).clamp(min=1.0)
-
-        voiced_f = (vuv_gt.float() > 0.45) & ymask
-        l_f0 = F.smooth_l1_loss(lf0_fr_pred * voiced_f.float(), lf0_gt.float() * voiced_f.float(), reduction="sum", beta=0.15) / voiced_f.float().sum().clamp(min=1.0)
-        l_vuv = (F.binary_cross_entropy_with_logits(vuv_logit_fr, vuv_gt.float(), reduction="none") * ym_f_full).sum() / ym_denom_full
-        l_eng = F.smooth_l1_loss(eng_fr_pred * ym_f_full, eng_gt.float() * ym_f_full, reduction="sum", beta=0.2) / ym_denom_full
-
-        # Supervise both phoneme-expanded prior `mu_exp` and frame-refined prior `mu_frame_full` against `y_1_full`
         m_1d_full = ym_f_full[:, None, :]
-        l_prior_ph = F.l1_loss(mu_exp.float() * m_1d_full, y_1_full * m_1d_full, reduction="sum") / ym_mel_denom_full
-        l_prior_fr = (
-            F.l1_loss(mu_frame_full * m_1d_full, y_1_full * m_1d_full, reduction="sum")
-            + 0.5 * F.mse_loss(mu_frame_full * m_1d_full, y_1_full * m_1d_full, reduction="sum")
-        ) / ym_mel_denom_full
-        l_prior = 0.5 * l_prior_ph + l_prior_fr
+        l_prior_ph = F.l1_loss(mu_exp_full.float() * m_1d_full, y_1_full * m_1d_full, reduction="sum") / ym_mel_denom_full
 
-        # Optional random contiguous windowing for DiT when `dit_max_frames > 0` and `T > dit_max_frames`
+        # Optional random contiguous windowing for Frame Prior + 16L DiT when `dit_max_frames > 0` and `T > dit_max_frames`
         if dit_max_frames > 0 and T > dit_max_frames:
             W = dit_max_frames
             valid_lens = ymask.long().sum(dim=1)
@@ -455,22 +440,47 @@ class SakhiyaStudio80M(nn.Module):
             starts = (torch.rand((B,), device=mel_gt.device) * (max_starts.float() + 0.99)).long()
             idx_w = starts[:, None] + torch.arange(W, device=mel_gt.device)[None, :]  # [B, W]
             idx_w_100 = idx_w[:, None, :].expand(-1, 100, -1)
-            idx_w_640 = idx_w[:, None, :].expand(-1, h_cond_full.shape[1], -1)
+            idx_w_512 = idx_w[:, None, :].expand(-1, h_exp_full.shape[1], -1)
             idx_w_7 = idx_w[:, None, :].expand(-1, 7, -1)
 
             y_1 = torch.gather(y_1_full, 2, idx_w_100)
-            mu_frame = torch.gather(mu_frame_full, 2, idx_w_100)
-            h_cond = torch.gather(h_cond_full, 2, idx_w_640)
+            h_exp = torch.gather(h_exp_full, 2, idx_w_512)
+            mu_exp = torch.gather(mu_exp_full, 2, idx_w_100)
             prog_7d = torch.gather(prog_7d_full, 2, idx_w_7)
+            lf0_w = torch.gather(lf0_gt, 1, idx_w)
+            vuv_w = torch.gather(vuv_gt, 1, idx_w)
+            eng_w = torch.gather(eng_gt, 1, idx_w)
             ymask_dit = torch.gather(ymask, 1, idx_w)
             T_dit = W
         else:
             y_1 = y_1_full
-            mu_frame = mu_frame_full
-            h_cond = h_cond_full
+            h_exp = h_exp_full
+            mu_exp = mu_exp_full
             prog_7d = prog_7d_full
+            lf0_w = lf0_gt
+            vuv_w = vuv_gt
+            eng_w = eng_gt
             ymask_dit = ymask
             T_dit = T
+
+        # 3. Frame-level Prior & Continuous Pitch/VUV/Energy Refiner
+        h_cond, mu_frame, lf0_fr_pred, vuv_logit_fr, eng_fr_pred = self.pros.forward_frame(h_exp, mu_exp, prog_7d, ymask_dit)
+
+        ym_f = ymask_dit.float()
+        ym_denom = ym_f.sum().clamp(min=1.0)
+        ym_mel_denom = (ym_denom * 100.0).clamp(min=1.0)
+        m_1d = ym_f[:, None, :]
+
+        voiced_f = (vuv_w.float() > 0.45) & ymask_dit
+        l_f0 = F.smooth_l1_loss(lf0_fr_pred * voiced_f.float(), lf0_w.float() * voiced_f.float(), reduction="sum", beta=0.15) / voiced_f.float().sum().clamp(min=1.0)
+        l_vuv = (F.binary_cross_entropy_with_logits(vuv_logit_fr, vuv_w.float(), reduction="none") * ym_f).sum() / ym_denom
+        l_eng = F.smooth_l1_loss(eng_fr_pred * ym_f, eng_w.float() * ym_f, reduction="sum", beta=0.2) / ym_denom
+
+        l_prior_fr = (
+            F.l1_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
+            + 0.5 * F.mse_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
+        ) / ym_mel_denom
+        l_prior = 0.5 * l_prior_ph + l_prior_fr
 
         ym_f = ymask_dit.float()
         ym_denom = ym_f.sum().clamp(min=1.0)
