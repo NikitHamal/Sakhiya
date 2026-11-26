@@ -55,6 +55,7 @@ from sakhiya.symbols import SYM2ID
 from sakhiya.v2_vocoder import SR, HOP
 from sakhiya.studio_dit_clean import SakhiyaStudio80M
 from sakhiya.ctc_aligner import MelCTCAligner
+from sakhiya.onnx_tts import stitch, _declick_np
 from scripts.phase0_clean_truth_matrix import compute_cleanliness_metrics, save_wav_lufs16
 from scripts.forensic_audio_gate import waveform_glitch_audit, _fullband_hf_lsd_4_12khz_db
 from scripts.eval_v3 import clean_asr_norm, align_compound_words, ph_ne_mms
@@ -180,31 +181,18 @@ def synthesize_full_paragraph_fp32(
         w_t = voc_fn(mel_100.float())
         w_np = w_t.squeeze().detach().cpu().numpy().astype(np.float32)
 
-        # Smoothly soft-gate vocoder Conv1d DC/bias floor on pure silence frames (mel mean < -10.2)
+        # Smoothly soft-gate vocoder Conv1d DC/bias floor on pure silence frames without any abrupt step (0 clicks)
         mel_fr_mean = mel_100.float().mean(dim=1).squeeze(0)  # [T_mel]
-        gate_fr = torch.sigmoid((mel_fr_mean + 10.2) * 3.5).clamp(0.0, 1.0)
-        gate_fr = torch.where(gate_fr < 0.08, torch.zeros_like(gate_fr), gate_fr)
-        gate_wav = F.interpolate(gate_fr[None, None, :], size=len(w_np), mode="linear", align_corners=False).squeeze().detach().cpu().numpy().astype(np.float32)
+        gate_fr = torch.sigmoid((mel_fr_mean + 10.4) * 1.8).clamp(0.0, 1.0)[None, None, :]
+        for _ in range(3):
+            gate_fr = F.avg_pool1d(F.pad(gate_fr, (5, 5), mode="replicate"), kernel_size=11, stride=1)
+        gate_wav = F.interpolate(gate_fr, size=len(w_np), mode="linear", align_corners=False).squeeze().detach().cpu().numpy().astype(np.float32)
         w_np = w_np * gate_wav
 
-        # Trim tiny leading/trailing pads carefully without touching speech
-        if len(w_np) > 2048:
-            w_np = w_np[256 : len(w_np) - 256]
-        if len(w_np) > fade_in + fade_out:
-            ramp_in = (0.5 - 0.5 * np.cos(np.pi * np.arange(fade_in, dtype=np.float32) / fade_in)).astype(np.float32)
-            ramp_out = (0.5 + 0.5 * np.cos(np.pi * np.arange(fade_out, dtype=np.float32) / fade_out)).astype(np.float32)
-            w_np[:fade_in] *= ramp_in
-            w_np[-fade_out:] *= ramp_out
-        if si == 0:
-            wav_parts.append(np.zeros(int(0.080 * SR), dtype=np.float32))
         wav_parts.append(w_np)
-        if si < len(sents) - 1:
-            wav_parts.append(np.zeros(pause_samples, dtype=np.float32))
-        else:
-            wav_parts.append(np.zeros(int(0.160 * SR), dtype=np.float32))
 
-    full_wav = np.concatenate(wav_parts) if wav_parts else np.zeros(SR, dtype=np.float32)
-    return _normalize_lufs_16(full_wav)
+    full_wav = stitch(wav_parts, SR) if wav_parts else np.zeros(SR, dtype=np.float32)
+    return _declick_np(_normalize_lufs_16(full_wav))
 
 
 @torch.no_grad()
@@ -724,7 +712,10 @@ def run_phase3_comparison_pack_and_forensic_gate(
     all_9_clips = owner_clips + UNSEEN_5_NEWS_SENTENCES
 
     # Load ASR & speaker similarity models for honest `ne_pcer` and `sim_Anchor` measurement
-    from transformers import AutoFeatureExtractor, AutoProcessor, Wav2Vec2ForCTC, WavLMForXVector
+    os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
+    sys.modules["torchvision"] = None
+    from transformers import AutoFeatureExtractor, Wav2Vec2ForCTC, Wav2Vec2Processor, WavLMForXVector
+    AutoProcessor = Wav2Vec2Processor
     proc_asr = AutoProcessor.from_pretrained("facebook/mms-1b-all", target_lang="npi")
     asr_m = Wav2Vec2ForCTC.from_pretrained("facebook/mms-1b-all", target_lang="npi", ignore_mismatched_sizes=True).to(dev).eval()
     fe_sv = AutoFeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
