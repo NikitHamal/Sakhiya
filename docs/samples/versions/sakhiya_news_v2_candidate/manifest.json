@@ -1,0 +1,180 @@
+{
+  "tag": "sakhiya_news_v2_candidate",
+  "label": "Sakhiya-News v2 Staging Candidate (9.714 MB 4-Step CFG=0 INT8 · True FP16 Vocoder Heads · Fixed Nepali G2P & Chunker)",
+  "commit_sha": "2b01a6d",
+  "timestamp_utc": "2026-11-26T10:15:24Z",
+  "notes": "STAGING CANDIDATE ONLY (Public default kept at Sakhiya-One per Law 1). 4-Step CFG=0 X-Pred MeanFlow + Studio-Clean Zero-Buzz 100-Mel Vocoder with 144 FP16-isolated studio/harmonic/depthwise nodes (86.56% INT8 W) + 0/30 Nepali G2P schwa/hiatus/ृ/व/visarga failures + deterministic clause chunker. Passes all hard gates on Standard Suite + All 4 Full-Length Owner Clips: 9.714 MB INT8, STFT_LSD(INT8,FP32)=0.1004 dB (Owner 4-Clip mean=0.0941 dB, max=0.1145 dB), 1T Node ORT warm median RTF=0.0567 (40s Owner Clip RTF=0.0563), ne_pcer=0.0431 (gap +0.0111), HF_LSD_4_12kHz=0.930 dB, sim_Anchor=0.8917 (ΔV1=+0.5172), Voiced HNR=19.04 dB (Δ=0.01 dB), s/chh flatness=0.677/0.651 (Owner 4-Clip=0.682/0.641), SilSNR=71.34 dB, 0 shutters, 0 pitch breaks, 0 clicks, 0 mid-clause pauses >250ms.",
+  "metrics": {
+    "int8_mb": 9.714,
+    "int8_weight_pct": 86.56,
+    "ne_pcer": 0.0431,
+    "ne_pcer_gap_vs_anchor": 0.0111,
+    "utmos": 3.047,
+    "spk_sim": 0.8917,
+    "sim_Anchor": 0.8917,
+    "margin_Anchor_OldV1": 0.5172,
+    "HF_LSD_4_12kHz_dB": 0.93,
+    "silence_floor_SNR_dB": 71.34,
+    "voiced_vowel_hnr_0p2_4kHz_dB": 19.04,
+    "geminate_singleton_ratio": 2.075,
+    "end_slope_st": -0.949,
+    "rtf_1thread": 0.0567,
+    "clicks": 0,
+    "glitch_frames": 0,
+    "word_drops": 0
+  },
+  "clips": [
+    {
+      "id": "owner_clip1_ai_models",
+      "lang": "ne",
+      "style": "news",
+      "text": "दोस्रो समाचार नयाँ पुस्ताका एआई मोडेलहरू बारे छ। गुगलले जेमिनाई फोर नियोन नाम गरेको अत्यन्तै छरितो र शक्तिशाली नयाँ एआई मोडेल सार्वजनिक गरेको छ। जटिल तर्क गर्न लामो कोड लेख्न र धेरै चरण भएका अनुसन्धानात्मक कामहरू छिटो सम्पन्न गर्न यो मोडेल विशेष रूपमा तयार पारिएको बताइएको छ। यस्तै ओपन एआईले पनि जीपीटी सिक्स पोइन्ट टु नाम गरेका नयाँ संस्करणहरू ल्याउँदै प्रयोगकर्ताको तर्फबाट सुरक्षित रूपमा अनलाइन किनमेल गर्न मिल्ने च्याटजिपिटी वालेट सुविधा सुरु गर्ने घोषणा गरेको छ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/owner_clip1_ai_models.mp3",
+      "duration_s": 34.95
+    },
+    {
+      "id": "owner_clip2_share_market",
+      "lang": "ne",
+      "style": "news",
+      "text": "पहिलो समाचार कृत्रिम बुद्धिमत्ता बृहत र विश्व सेयर बजारसँग सम्बन्धित छ। प्रसिद्ध एआई अनुसन्धान कम्पनी एन्थ्रोपिकको सेयर बजारमा कारोबार खुलेको पहिलो दिनमै १७ प्रतिशतले उल्लेखनीय वृद्धि भएको छ। तर लगानीकर्ताहरूको नाफा सुरक्षित गर्ने होडबाजीका कारण अर्को दिन करिब १४ प्रतिशतले गिरावट आयो जसले गर्दा अन्य प्रमुख प्रविधि कम्पनीहरूको सेयर मूल्यमा समेत ठूलो उतारचढाव देखिएको छ। विश्लेषकहरूका अनुसार एआई पूर्वाधारमा भइरहेको अर्बौँ डलरको लगानीले आगामी त्रैमासिकमा बजारलाई थप संवेदनशील बनाउने निश्चित छ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/owner_clip2_share_market.mp3",
+      "duration_s": 36.74
+    },
+    {
+      "id": "owner_clip3_intro_bulletin",
+      "lang": "ne",
+      "style": "news",
+      "text": "नमस्ते सबैजनालाई। म सखिया तपाईंको समाचार वाचक। आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रिम बुद्धिमत्ता अर्थात एआईका नवीनतम उपलब्धिहरू, नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौँ। प्रविधिको दुनियाँ हरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन, शिक्षा र व्यवसायमा पर्न थालेको छ। त चलौँ आजका मुख्य समाचार तर्फ लागौँ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/owner_clip3_intro_bulletin.mp3",
+      "duration_s": 31.33
+    },
+    {
+      "id": "owner_clip4_sanskrit_gita",
+      "lang": "auto",
+      "style": "news",
+      "text": "हेलो साथीहरू, म सखिया हुँ। निकित हमाल ज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय। आज मौसम निकै रमाइलो र शान्त छ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/owner_clip4_sanskrit_gita.mp3",
+      "duration_s": 17.61
+    },
+    {
+      "id": "ne_kathmandu",
+      "lang": "ne",
+      "style": "news",
+      "text": "नेपालको राजधानी काठमाडौँ हिमालको काखमा रहेको एउटा ऐतिहासिक सहर हो।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_kathmandu.mp3",
+      "duration_s": 5.38
+    },
+    {
+      "id": "ne_story",
+      "lang": "ne",
+      "style": "storytelling",
+      "text": "एक समयको कुरा हो, एउटा सानो गाउँमा एउटी बुढी आमा बस्थिन्। उनी बिहानै उठेर चरालाई दाना हाल्थिन्।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_story.mp3",
+      "duration_s": 7.21
+    },
+    {
+      "id": "ne_chat",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "नमस्ते! आज मौसम धेरै राम्रो छ, चिया खान जाऔँ न? तिमी कताबाट आउँदै छौ?",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_chat.mp3",
+      "duration_s": 5.2
+    },
+    {
+      "id": "ne_warm",
+      "lang": "ne",
+      "style": "warm_soft",
+      "text": "शान्त मन र मधुर मुस्कानले हरेक कठिन दिनलाई सहज बनाउँछ। गहिरो श्वास लिनुहोस् र आजको पललाई हृदयदेखि अनुभव गर्नुहोस्।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_warm.mp3",
+      "duration_s": 9.35
+    },
+    {
+      "id": "ne_expressive",
+      "lang": "ne",
+      "style": "expressive",
+      "text": "वाह! के अद्भुत दृश्य हो यो! माछापुच्छ्रे हिमाल बिहानको घाममा सुनजस्तै चम्किरहेको छ!",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_expressive.mp3",
+      "duration_s": 6.03
+    },
+    {
+      "id": "ne_tricky_real",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "बाटोबाट हिँड्दै गर्दा गाउँका साथीहरूसँग भेट भयो, अनि हामीले विद्यालयको कार्यक्रमबारे लामो कुरा गर्‍यौँ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_tricky_real.mp3",
+      "duration_s": 7.43
+    },
+    {
+      "id": "ne_loan_num",
+      "lang": "ne",
+      "style": "news",
+      "text": "सन् २०२६ मा नेपालको प्रविधि क्षेत्रमा १५ प्रतिशत वृद्धि भएको छ, र मोबाइल एप्लिकेसन चलाउने प्रयोगकर्ता झन् बढेका छन्।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_loan_num.mp3",
+      "duration_s": 10.3
+    },
+    {
+      "id": "sa_om",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "ॐ पूर्णमदः पूर्णमिदं पूर्णात्पूर्णमुदच्यते। पूर्णस्य पूर्णमादाय पूर्णमेवावशिष्यते॥",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/sa_om.mp3",
+      "duration_s": 6.34
+    },
+    {
+      "id": "sa_rv",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "अ॒ग्निमी॑ळे पु॒रोहि॑तं य॒ज्ञस्य॑ दे॒वमृ॒त्विज॑म् । होता॑रं रत्न॒धात॑मम् ॥",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/sa_rv.mp3",
+      "duration_s": 4.64
+    },
+    {
+      "id": "sa_gita",
+      "lang": "sa",
+      "style": "storytelling",
+      "text": "धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/sa_gita.mp3",
+      "duration_s": 5.85
+    },
+    {
+      "id": "sa_gayatri",
+      "lang": "sa",
+      "style": "vedic_chant",
+      "text": "ॐ भूर्भुवः स्वः। तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि। धियो यो नः प्रचोदयात्॥",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/sa_gayatri.mp3",
+      "duration_s": 5.75
+    },
+    {
+      "id": "mixed_owner",
+      "lang": "auto",
+      "style": "news",
+      "text": "हेलो साथीहरू। म सखिया हुँ, निकित हमालज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥ आज मौसम निकै रमाइलो र शान्त छ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/mixed_owner.mp3",
+      "duration_s": 17.29
+    },
+    {
+      "id": "ne_unseen_dialogue",
+      "lang": "ne",
+      "style": "conversational",
+      "text": "दिदी, आज बजारमा नयाँ किताबहरू आएका रहेछन्। हामी साँझपख सँगै गएर हेरौँला नि, हुँदैन र?",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_unseen_dialogue.mp3",
+      "duration_s": 6.58
+    },
+    {
+      "id": "ne_unseen_narrative",
+      "lang": "ne",
+      "style": "storytelling",
+      "text": "वर्षा थामिएपछि पहाडको टुप्पोबाट कलकल बग्ने झरनाको आवाज अझै मीठो सुनियो। गाउँलेहरू आआफ्नो खेतबारीमा काम गर्न निस्किए।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_unseen_narrative.mp3",
+      "duration_s": 9.45
+    },
+    {
+      "id": "ne_unseen_prose",
+      "lang": "ne",
+      "style": "news",
+      "text": "स्वास्थ्य र शिक्षामा समान पहुँच पुर्‍याउन स्थानीय तहले डिजिटल पुस्तकालय र घुम्ती स्वास्थ्य शिविर सञ्चालन गरेको छ।",
+      "mp3": "samples/versions/sakhiya_news_v2_candidate/ne_unseen_prose.mp3",
+      "duration_s": 8.52
+    }
+  ]
+}
