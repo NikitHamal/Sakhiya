@@ -1390,10 +1390,12 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
 
     # True Full End-to-End 1T Node ORT Benchmark (text frontend + expansion + AM + vocoder + OLA noise; short & long; warm & cold; median & P95 + peak RSS MB)
     e2e_bench_js = f"""
+    globalThis.window = globalThis;
     const ort = require('onnxruntime-node');
     const fs = require('fs');
     const path = require('path');
-    const g2p = require(path.join('{REPO}', 'docs', 'g2p.js'));
+    require(path.join('{REPO}', 'docs', 'g2p.js'));
+    const SK = globalThis.window.SK;
     const SHORT_SENTENCES = [
       'काठमाडौँ उपत्यकामा आज बिहानैदेखि मौसम सफा र न्यानो छ।',
       'नेपालमा डिजिटल बैंकिङ र मोबाइल भुक्तानीको प्रयोग तीव्र गतिमा बढिरहेको छ।',
@@ -1408,7 +1410,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
       const sess = await ort.InferenceSession.create(onnxPath, {{ intraOpNumThreads: 1, interOpNumThreads: 1 }});
       async function synthFullE2E(txt) {{
         const t0 = process.hrtime.bigint();
-        const rawIds = g2p.textToIds(txt, 'ne');
+        const rawIds = SK.encode(SK.textToPhones(txt, 'ne'));
         const mapped = rawIds.map((x, idx) => ((x === 4 || x === 8) && idx > 0 && idx < rawIds.length - 1) ? 8 : x);
         const idsArr = [1, ...mapped];
         const L = idsArr.length;
