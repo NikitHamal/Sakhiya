@@ -1,0 +1,655 @@
+{
+  "passed": true,
+  "n_clips": 20,
+  "benchmark": "20_heldout_RAW_unVC_nep_6834_studio_clips",
+  "voc_int8_mb": 5.817,
+  "int8_weight_pct": 83.1,
+  "fp16_isolated_nodes": [
+    {
+      "name": "voc.pre.weight",
+      "shape": [
+        320,
+        100,
+        7
+      ],
+      "elems": 224000,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.src.proj4.weight",
+      "shape": [
+        160,
+        16,
+        4
+      ],
+      "elems": 10240,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.src.proj16.weight",
+      "shape": [
+        80,
+        16,
+        3
+      ],
+      "elems": 3840,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.ups.0.weight",
+      "shape": [
+        320,
+        160,
+        8
+      ],
+      "elems": 409600,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.ups.1.weight",
+      "shape": [
+        160,
+        80,
+        8
+      ],
+      "elems": 102400,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.amp_branch.dw.weight",
+      "shape": [
+        80,
+        1,
+        7
+      ],
+      "elems": 560,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.amp_branch.pw1.weight",
+      "shape": [
+        40,
+        80,
+        1
+      ],
+      "elems": 3200,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.amp_branch.pw2.weight",
+      "shape": [
+        80,
+        40,
+        1
+      ],
+      "elems": 3200,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.pha_branch.dw.weight",
+      "shape": [
+        80,
+        1,
+        7
+      ],
+      "elems": 560,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.pha_branch.pw1.weight",
+      "shape": [
+        40,
+        80,
+        1
+      ],
+      "elems": 3200,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.pha_branch.pw2.weight",
+      "shape": [
+        80,
+        40,
+        1
+      ],
+      "elems": 3200,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.amp_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.pha_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480,
+      "precision": "FP16"
+    },
+    {
+      "name": "voc.noise_head.weight",
+      "shape": [
+        33,
+        80,
+        7
+      ],
+      "elems": 18480,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1319",
+      "shape": [
+        1,
+        320,
+        1
+      ],
+      "elems": 320,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1322",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1325",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1328",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1331",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1334",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1337",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1340",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Add_1341",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1342",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1345",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1348",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1351",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1354",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1357",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1360",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1362",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1365",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1368",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1371",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1374",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1377",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1380",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1382",
+      "shape": [
+        1,
+        160,
+        1
+      ],
+      "elems": 160,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1385",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1388",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1391",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1394",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1397",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1400",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1403",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Add_1404",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1405",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1408",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1411",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1414",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1417",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1420",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1423",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1425",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1428",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1431",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1434",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1437",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1440",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1443",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Clip_1445",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1448",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    },
+    {
+      "name": "onnx::Mul_1451",
+      "shape": [
+        1,
+        80,
+        1
+      ],
+      "elems": 80,
+      "precision": "FP16"
+    }
+  ],
+  "distinct_from_fp32_graph": true,
+  "stft_lsd_int8_fp32_dB": 0.0809,
+  "HF_LSD_4_12kHz_dB": 0.406,
+  "sim_Anchor": 0.9317,
+  "sim_OldV1": 0.2621,
+  "margin_Anchor_OldV1": 0.6696,
+  "silence_floor_SNR_dB": 71.77,
+  "voiced_vowel_hnr_0p2_4kHz_dB": 16.53,
+  "voiced_vowel_hnr_delta_vs_anchor_dB": 0.32,
+  "sibilant_4p5_10kHz_flatness": 0.7,
+  "s_dental_fricative_flatness": 0.656,
+  "chh_aspirated_affricate_flatness": 0.683,
+  "phrase_final_creak_SHR": 0.273,
+  "phrase_final_creak_SHR_delta_vs_anchor": 0.072,
+  "clicks": 0,
+  "shutters": 0
+}
