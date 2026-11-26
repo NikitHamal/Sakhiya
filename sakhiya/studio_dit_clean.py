@@ -27,13 +27,13 @@ from .news_am_100mel import compute_graph_structural_features, CONSONANT_IDS_TUP
 class RMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
+        self.dim = (dim,)
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out_dtype = torch.bfloat16 if torch.is_autocast_enabled() else x.dtype
-        norm = x.float().pow(2).mean(-1, keepdim=True).add(self.eps).rsqrt()
-        return (x.float() * norm * self.weight.float()).to(out_dtype)
+        return F.rms_norm(x.to(out_dtype), self.dim, self.weight.to(out_dtype), self.eps)
 
 
 def apply_rope_1d(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
@@ -403,15 +403,16 @@ class SakhiyaStudio80M(nn.Module):
         ymask: torch.Tensor,        # [B, T] bool
         lang: torch.Tensor = None,  # [B]
         cfg_drop_prob: float = 0.10,
+        dit_max_frames: int = 0,
     ):
         B, _, T = mel_gt.shape
         mel_mean, mel_std = self.mel_stats[0], self.mel_stats[1]
-        y_1 = ((mel_gt.float() - mel_mean) / mel_std) * ymask[:, None, :].float()
+        y_1_full = ((mel_gt.float() - mel_mean) / mel_std) * ymask[:, None, :].float()
 
-        # 1. Text Encoder
+        # 1. Text Encoder (full paragraph/utterance)
         h_enc, mu_ph = self.enc(ids, struct_5d, imask, lang=lang)
 
-        # 2. Phoneme-level Duration & Prosody Prediction
+        # 2. Phoneme-level Duration & Prosody Prediction (full paragraph/utterance)
         log_dur_pred, lf0_ph_pred, vuv_ph_pred, eng_ph_pred = self.pros.forward_phoneme(h_enc, imask)
         log_dur_gt = torch.log(dur_gt.float().clamp(min=1.0))
         im_f = imask.float()
@@ -419,35 +420,64 @@ class SakhiyaStudio80M(nn.Module):
         l_dur = F.smooth_l1_loss(log_dur_pred * im_f, log_dur_gt * im_f, reduction="sum", beta=0.25) / im_denom
 
         # Expand encoder features & phoneme predictions using ground-truth durations
-        prog_7d, idx_fr = compute_intra_phoneme_progress_7d(dur_gt, lf0_ph_pred, vuv_ph_pred, eng_ph_pred, ymask)
+        prog_7d_full, idx_fr = compute_intra_phoneme_progress_7d(dur_gt, lf0_ph_pred, vuv_ph_pred, eng_ph_pred, ymask)
         h_enc_t = h_enc.transpose(1, 2)  # [B, 512, L]
         mu_ph_t = mu_ph.transpose(1, 2)  # [B, 100, L]
         h_exp = torch.gather(h_enc_t, 2, idx_fr[:, None, :].expand(-1, h_enc_t.shape[1], -1)) * ymask[:, None, :].to(h_enc.dtype)
         mu_exp = torch.gather(mu_ph_t, 2, idx_fr[:, None, :].expand(-1, 100, -1)) * ymask[:, None, :].to(mu_ph.dtype)
 
-        # 3. Frame-level Prior & Continuous Pitch/VUV/Energy Refiner
-        h_cond, mu_frame, lf0_fr_pred, vuv_logit_fr, eng_fr_pred = self.pros.forward_frame(h_exp, mu_exp, prog_7d, ymask)
+        # 3. Frame-level Prior & Continuous Pitch/VUV/Energy Refiner (full paragraph/utterance)
+        h_cond_full, mu_frame_full, lf0_fr_pred, vuv_logit_fr, eng_fr_pred = self.pros.forward_frame(h_exp, mu_exp, prog_7d_full, ymask)
 
-        ym_f = ymask.float()
-        ym_denom = ym_f.sum().clamp(min=1.0)
-        ym_mel_denom = (ym_denom * 100.0).clamp(min=1.0)
+        ym_f_full = ymask.float()
+        ym_denom_full = ym_f_full.sum().clamp(min=1.0)
+        ym_mel_denom_full = (ym_denom_full * 100.0).clamp(min=1.0)
 
         voiced_f = (vuv_gt.float() > 0.45) & ymask
         l_f0 = F.smooth_l1_loss(lf0_fr_pred * voiced_f.float(), lf0_gt.float() * voiced_f.float(), reduction="sum", beta=0.15) / voiced_f.float().sum().clamp(min=1.0)
-        l_vuv = (F.binary_cross_entropy_with_logits(vuv_logit_fr, vuv_gt.float(), reduction="none") * ym_f).sum() / ym_denom
-        l_eng = F.smooth_l1_loss(eng_fr_pred * ym_f, eng_gt.float() * ym_f, reduction="sum", beta=0.2) / ym_denom
+        l_vuv = (F.binary_cross_entropy_with_logits(vuv_logit_fr, vuv_gt.float(), reduction="none") * ym_f_full).sum() / ym_denom_full
+        l_eng = F.smooth_l1_loss(eng_fr_pred * ym_f_full, eng_gt.float() * ym_f_full, reduction="sum", beta=0.2) / ym_denom_full
 
-        # Supervise both phoneme-expanded prior `mu_exp` and frame-refined prior `mu_frame` against `y_1`
-        m_1d = ym_f[:, None, :]
-        l_prior_ph = F.l1_loss(mu_exp.float() * m_1d, y_1 * m_1d, reduction="sum") / ym_mel_denom
+        # Supervise both phoneme-expanded prior `mu_exp` and frame-refined prior `mu_frame_full` against `y_1_full`
+        m_1d_full = ym_f_full[:, None, :]
+        l_prior_ph = F.l1_loss(mu_exp.float() * m_1d_full, y_1_full * m_1d_full, reduction="sum") / ym_mel_denom_full
         l_prior_fr = (
-            F.l1_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
-            + 0.5 * F.mse_loss(mu_frame * m_1d, y_1 * m_1d, reduction="sum")
-        ) / ym_mel_denom
+            F.l1_loss(mu_frame_full * m_1d_full, y_1_full * m_1d_full, reduction="sum")
+            + 0.5 * F.mse_loss(mu_frame_full * m_1d_full, y_1_full * m_1d_full, reduction="sum")
+        ) / ym_mel_denom_full
         l_prior = 0.5 * l_prior_ph + l_prior_fr
 
+        # Optional random contiguous windowing for DiT when `dit_max_frames > 0` and `T > dit_max_frames`
+        if dit_max_frames > 0 and T > dit_max_frames:
+            W = dit_max_frames
+            valid_lens = ymask.long().sum(dim=1)
+            max_starts = (valid_lens - W).clamp(min=0)
+            starts = (torch.rand((B,), device=mel_gt.device) * (max_starts.float() + 0.99)).long()
+            idx_w = starts[:, None] + torch.arange(W, device=mel_gt.device)[None, :]  # [B, W]
+            idx_w_100 = idx_w[:, None, :].expand(-1, 100, -1)
+            idx_w_640 = idx_w[:, None, :].expand(-1, h_cond_full.shape[1], -1)
+            idx_w_7 = idx_w[:, None, :].expand(-1, 7, -1)
+
+            y_1 = torch.gather(y_1_full, 2, idx_w_100)
+            mu_frame = torch.gather(mu_frame_full, 2, idx_w_100)
+            h_cond = torch.gather(h_cond_full, 2, idx_w_640)
+            prog_7d = torch.gather(prog_7d_full, 2, idx_w_7)
+            ymask_dit = torch.gather(ymask, 1, idx_w)
+            T_dit = W
+        else:
+            y_1 = y_1_full
+            mu_frame = mu_frame_full
+            h_cond = h_cond_full
+            prog_7d = prog_7d_full
+            ymask_dit = ymask
+            T_dit = T
+
+        ym_f = ymask_dit.float()
+        ym_denom = ym_f.sum().clamp(min=1.0)
+        ym_mel_denom = (ym_denom * 100.0).clamp(min=1.0)
+        m_1d = ym_f[:, None, :]
+
         # 4. Optimal-Transport Conditional Flow Matching (Prior-OT-CFM) in 16-Layer Dense DiT
-        # Sample t from 80% logit-normal sigmoid(N(0, 1)) + 20% Uniform(0, 1)
         u_rand = torch.rand((B,), device=mel_gt.device, dtype=torch.float32)
         t_logit = torch.sigmoid(torch.randn((B,), device=mel_gt.device, dtype=torch.float32))
         t_unif = torch.rand((B,), device=mel_gt.device, dtype=torch.float32)
@@ -469,7 +499,7 @@ class SakhiyaStudio80M(nn.Module):
             h_cond_in = h_cond
             prog_in = prog_7d
 
-        v_pred = self.dit(x_t.to(h_cond.dtype), t, mu_frame.detach(), h_cond_in, prog_in, ymask).float() * m_1d
+        v_pred = self.dit(x_t.to(h_cond.dtype), t, mu_frame.detach(), h_cond_in, prog_in, ymask_dit).float() * m_1d
         l_vel_l1 = F.l1_loss(v_pred, v_target, reduction="sum") / ym_mel_denom
         l_vel_l2 = F.mse_loss(v_pred, v_target, reduction="sum") / ym_mel_denom
 
@@ -479,10 +509,10 @@ class SakhiyaStudio80M(nn.Module):
         df_pred = x_1_hat[:, 1:, :] - x_1_hat[:, :-1, :]
         df_gt = y_1[:, 1:, :] - y_1[:, :-1, :]
         l_freq_grad = F.l1_loss(df_pred * m_1d, df_gt * m_1d, reduction="sum") / (ym_denom * 99.0).clamp(min=1.0)
-        if T > 2:
+        if T_dit > 2:
             dt_pred = x_1_hat[:, :, 1:] - x_1_hat[:, :, :-1]
             dt_gt = y_1[:, :, 1:] - y_1[:, :, :-1]
-            m_dt = (ymask[:, 1:] & ymask[:, :-1])[:, None, :].float()
+            m_dt = (ymask_dit[:, 1:] & ymask_dit[:, :-1])[:, None, :].float()
             l_time_grad = F.l1_loss(dt_pred * m_dt, dt_gt * m_dt, reduction="sum") / (m_dt.sum() * 100.0).clamp(min=1.0)
         else:
             l_time_grad = torch.zeros((), device=mel_gt.device)
