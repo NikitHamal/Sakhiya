@@ -876,8 +876,8 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
     cand_gates = [
         best_gate_p,
         os.path.join(model_dir, "gate.json"),
-        "/work/sp/sakhiya_news/eval/forensic_sakhiya_news_leg1.json",
-        os.path.join(root, "eval", "forensic_sakhiya_news_leg1.json"),
+        os.path.join(root, "eval", f"forensic_{tier}_honest_baseline.json"),
+        os.path.join(root, "eval", f"forensic_{tier}.json"),
     ]
     for cg_p in cand_gates:
         if os.path.exists(cg_p):

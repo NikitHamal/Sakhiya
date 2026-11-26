@@ -1,0 +1,220 @@
+flatness": 0.52,
+        "dead_digital_silence_breaths": 0,
+        "within_word_dur_f0_energy_corr": 0.214,
+        "laryngeal_4way_stop_contrast": {
+          "breathy_voiced_post_release_hnr_dB": 19.72,
+          "aspirated_chh_minus_ch_vot_ms": 10.7
+        }
+      }
+    },
+    "layer3_pron_vedic": {
+      "ne_50_unseen_pcer": 0.059,
+      "ne_pcer": 0.059,
+      "anchor_pcer": 0.032,
+      "ne_pcer_gap_vs_anchor": 0.027,
+      "ne_pcer_gap_vs_ProV3": 0.027,
+      "word_drop_count": 0,
+      "stutter_count": 0,
+      "geminate_singleton_ratio": 1.609,
+      "clause_final_f0_slope_st_per_sec": -1.616,
+      "inter_clause_pause_ms": 123.5,
+      "breath_pause_naturalness": 0.85,
+      "sa_25_verses_evaluated": 25,
+      "sa_ctc_ll_gap_vs_ProV3": 0.0403,
+      "sa_moraic_guru_laghu_ratio_rule_target_fake": 2.0,
+      "sa_moraic_guru_laghu_ratio_aligned": 1.322,
+      "sa_svara_f0_corr": 0.78
+    },
+    "layer4_int8_parity": {
+      "int8_mb": 8.464,
+      "fp32_mb": 32.48,
+      "int8_weight_pct": 99.19,
+      "dequantize_linear_nodes": 132,
+      "distinct_from_fp32_graph": true,
+      "stft_lsd_int8_fp32_dB_pre_snapped": 0.0009,
+      "sim_ProV3_fp32_minus_int8": 0.0,
+      "int8_vs_fp32_mel_corr": 1.0,
+      "utmos22": 3.873,
+      "bad_ops": [],
+      "nan_count": 0,
+      "rtf_1thread": 0.0507,
+      "node_verify": {
+        "ok": true,
+        "nan_count": 0,
+        "rtf_1thread": 0.0489
+      },
+      "lufs_target": -16.0,
+      "mean_weight_quant_diff": null,
+      "stft_lsd_int8_fp32_dB": 0.0009
+    }
+  },
+  "node_verify": {
+    "ok": true,
+    "nan_count": 0,
+    "rtf_1thread": 0.0489
+  },
+  "gate_pass": false,
+  "name": "1 · Baseline Sakhiya-One (a61c100 · 2-step)",
+  "steps": 2,
+  "pron_checklist": "12/26 PASS (वालेट/geminate/compound bugs)",
+  "phase0_step_ablation": {
+    "2_step": {
+      "steps": 2,
+      "rtf_1thread_est": 0.0212,
+      "fp32_mean": {
+        "comb_grit": 1.4612,
+        "Voiced_HNR_dB": 19.172,
+        "mid_vowel_warble_st": 0.1261
+      },
+      "int8_mean": {
+        "comb_grit": 1.4618,
+        "Voiced_HNR_dB": 19.183,
+        "mid_vowel_warble_st": 0.1358
+      },
+      "clips": {
+        "owner_clip1_ai_models": {
+          "fp32": {
+            "comb_grit": 1.4572,
+            "Voiced_HNR_dB": 19.431,
+            "mid_vowel_warble_st": 0.1284
+          },
+          "int8": {
+            "comb_grit": 1.4623,
+            "Voiced_HNR_dB": 19.471,
+            "mid_vowel_warble_st": 0.1575
+          }
+        },
+        "owner_clip2_share_market": {
+          "fp32": {
+            "comb_grit": 1.4671,
+            "Voiced_HNR_dB": 19.182,
+            "mid_vowel_warble_st": 0.1235
+          },
+          "int8": {
+            "comb_grit": 1.4643,
+            "Voiced_HNR_dB": 19.19,
+            "mid_vowel_warble_st": 0.1235
+          }
+        },
+        "owner_clip3_intro_bulletin": {
+          "fp32": {
+            "comb_grit": 1.4593,
+            "Voiced_HNR_dB": 18.904,
+            "mid_vowel_warble_st": 0.1265
+          },
+          "int8": {
+            "comb_grit": 1.4587,
+            "Voiced_HNR_dB": 18.889,
+            "mid_vowel_warble_st": 0.1265
+          }
+        }
+      }
+    },
+    "4_step": {
+      "steps": 4,
+      "rtf_1thread_est": 0.0227,
+      "fp32_mean": {
+        "comb_grit": 1.4544,
+        "Voiced_HNR_dB": 19.179,
+        "mid_vowel_warble_st": 0.1164
+      },
+      "int8_mean": {
+        "comb_grit": 1.4513,
+        "Voiced_HNR_dB": 19.174,
+        "mid_vowel_warble_st": 0.1132
+      },
+      "clips": {
+        "owner_clip1_ai_models": {
+          "fp32": {
+            "comb_grit": 1.463,
+            "Voiced_HNR_dB": 19.387,
+            "mid_vowel_warble_st": 0.1189
+          },
+          "int8": {
+            "comb_grit": 1.4607,
+            "Voiced_HNR_dB": 19.408,
+            "mid_vowel_warble_st": 0.1097
+          }
+        },
+        "owner_clip2_share_market": {
+          "fp32": {
+            "comb_grit": 1.4472,
+            "Voiced_HNR_dB": 19.196,
+            "mid_vowel_warble_st": 0.1435
+          },
+          "int8": {
+            "comb_grit": 1.4372,
+            "Voiced_HNR_dB": 19.196,
+            "mid_vowel_warble_st": 0.1412
+          }
+        },
+        "owner_clip3_intro_bulletin": {
+          "fp32": {
+            "comb_grit": 1.453,
+            "Voiced_HNR_dB": 18.953,
+            "mid_vowel_warble_st": 0.0868
+          },
+          "int8": {
+            "comb_grit": 1.4559,
+            "Voiced_HNR_dB": 18.919,
+            "mid_vowel_warble_st": 0.0888
+          }
+        }
+      }
+    },
+    "8_step": {
+      "steps": 8,
+      "rtf_1thread_est": 0.0278,
+      "fp32_mean": {
+        "comb_grit": 1.4491,
+        "Voiced_HNR_dB": 19.092,
+        "mid_vowel_warble_st": 0.1383
+      },
+      "int8_mean": {
+        "comb_grit": 1.4514,
+        "Voiced_HNR_dB": 19.134,
+        "mid_vowel_warble_st": 0.1048
+      },
+      "clips": {
+        "owner_clip1_ai_models": {
+          "fp32": {
+            "comb_grit": 1.4597,
+            "Voiced_HNR_dB": 19.316,
+            "mid_vowel_warble_st": 0.1114
+          },
+          "int8": {
+            "comb_grit": 1.452,
+            "Voiced_HNR_dB": 19.406,
+            "mid_vowel_warble_st": 0.1114
+          }
+        },
+        "owner_clip2_share_market": {
+          "fp32": {
+            "comb_grit": 1.4412,
+            "Voiced_HNR_dB": 19.133,
+            "mid_vowel_warble_st": 0.2264
+          },
+          "int8": {
+            "comb_grit": 1.4519,
+            "Voiced_HNR_dB": 19.119,
+            "mid_vowel_warble_st": 0.1225
+          }
+        },
+        "owner_clip3_intro_bulletin": {
+          "fp32": {
+            "comb_grit": 1.4463,
+            "Voiced_HNR_dB": 18.828,
+            "mid_vowel_warble_st": 0.077
+          },
+          "int8": {
+            "comb_grit": 1.4502,
+            "Voiced_HNR_dB": 18.877,
+            "mid_vowel_warble_st": 0.0806
+          }
+        }
+      }
+    }
+  },
+  "locked_fast_step_count": 4,
+  "verdict": "LOCKED BASELINE (a61c100)"
+}

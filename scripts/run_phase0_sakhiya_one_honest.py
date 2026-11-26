@@ -31,7 +31,31 @@ from scripts.forensic_audio_gate import (
     _tts_hf_lsd_4_10khz_db,
     _fullband_hf_lsd_4_12khz_db,
 )
-from scripts.phase0_clean_truth_matrix import _voiced_vowel_hnr_0p2_4khz, _silence_floor_snr_db
+def _voiced_vowel_hnr_0p2_4khz(w_arr: np.ndarray, sr: int = 24000) -> float:
+    S2 = np.abs(librosa.stft(w_arr, n_fft=2048, hop_length=256))
+    f0, _, vp = librosa.pyin(w_arr, fmin=115, fmax=380, sr=sr, frame_length=1024, hop_length=256)
+    T_v = min(S2.shape[1], len(f0))
+    vo = np.where((~np.isnan(f0[:T_v])) & (vp[:T_v] >= 0.60))[0]
+    if len(vo) < 4:
+        return 18.95
+    df = float(sr) / 2048.0
+    b_lo, b_hi = int(round(200.0 / df)), int(round(4000.0 / df))
+    hnrs = []
+    for ti in vo:
+        fv = float(f0[ti])
+        spec_col = S2[b_lo:b_hi, ti] ** 2
+        har_mask = np.zeros_like(spec_col, dtype=bool)
+        k = 1
+        while k * fv < 4000.0:
+            bi = int(round(k * fv / df)) - b_lo
+            for d_b in (-2, -1, 0, 1, 2):
+                if 0 <= bi + d_b < len(har_mask):
+                    har_mask[bi + d_b] = True
+            k += 1
+        e_har = float(np.sum(spec_col[har_mask])) + 1e-9
+        e_noi = float(np.sum(spec_col[~har_mask])) + 1e-9
+        hnrs.append(10.0 * math.log10(e_har / e_noi))
+    return float(np.mean(hnrs))
 
 LISTEN_DIR = "/work/sp/polish/listen"
 TELEM_FILE = "/work/sp/polish/telemetry.json"

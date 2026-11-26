@@ -127,6 +127,12 @@ def _calibrate_styles(am, pre_baked=False):
             w_e = am.enc.emb.weight
             id_l, id_r = SYM2ID["l"], SYM2ID["ɽ"]
             w_e[id_r].copy_(0.60 * w_e[id_l] + 0.40 * w_e[id_r])
+            # Orthogonalize labio-velar approximant 'w' away from bilabial stop 'b' toward rounded glide 'u'
+            # so 'वालेट' -> ['w','a','l','e','ʈ'] never leaks into 'बालेट'!
+            id_w, id_u, id_b = SYM2ID["w"], SYM2ID["u"], SYM2ID["b"]
+            orig_w = w_e[id_w].clone()
+            v_w = 0.55 * orig_w + 0.45 * w_e[id_u] - 0.25 * w_e[id_b]
+            w_e[id_w].copy_(v_w * (orig_w.norm() / v_w.norm().clamp(min=1e-6)))
         w_l = am.enc.lang.weight
         if w_l.shape[0] > 4:
             w_l[4].copy_(0.94 * w_l[0] + 0.06 * w_l[4])
@@ -320,6 +326,7 @@ class Student(nn.Module):
             self._apply_svd_structure()
             self.to(dev)
 
+        _calibrate_styles(self.am)
         if hasattr(self.am, "fold_time_embeddings"):
             self.am.fold_time_embeddings(steps=self.steps)
 
@@ -412,10 +419,27 @@ class Student(nn.Module):
         mu = mu * (1.0 - m_pre) + mu[:, -1:, :] * m_pre
         mu = mu * (1.0 - m_a1) + mu_next2 * m_a1
         mu = mu * (1.0 - m_wb) + (0.45 * mu_next1 + 0.55 * mu[:, -1:, :]) * m_wb
-        id_r, id_schwa = SYM2ID["r"], SYM2ID["ʌ"]
-        is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
-        is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
-        dur = torch.maximum(dur, is_func_c * 7.0 + is_func_v * 9.0)
+        id_r, id_schwa, id_t, id_m_c = SYM2ID["r"], SYM2ID["ʌ"], SYM2ID["t̪"], SYM2ID["m"]
+        is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h) | (ids == id_t) | (ids == id_m_c)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
+        is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h) | (prev_ids == id_t) | (prev_ids == id_m_c)) & ((ids == id_schwa) | (ids == id_o))).float()
+        dur = torch.maximum(dur, is_func_c * 6.0 + is_func_v * 8.0)
+
+        # Clause-onset padding so 'त चलौँ' / 'म सखिया' never clips at utterance start
+        is_onset_wb = ((pos == 0.0) & (ids == id_wb)).float()
+        dur = torch.maximum(dur, is_onset_wb * 4.0)
+
+        # Geminate stop/sonorant doubling floor (बुद्धिमत्ता, उल्लेखनीय, पक्कै, चिटिक्क -> >= 5 frames each half = >= 10 frames total)
+        is_gem_half = ((ids > 8) & ((ids == next_ids) | (ids == prev_ids))).float()
+        dur = torch.maximum(dur, is_gem_half * 5.0)
+
+        # Word-final halanta dental stop release (बृहत्, अर्थात्) + clean inter-word separation
+        is_word_final_t = ((ids == id_t) & (next_ids <= 6) & (prev_ids > 8)).float()
+        is_post_stop_wb = ((ids == id_wb) & (prev_ids == id_t)).float()
+        dur = torch.maximum(dur, is_word_final_t * 5.0 + is_post_stop_wb * 3.0)
+
+        # Strong chandrabindu nasal diphthong floor (गर्नेछौँ, लागौँ, चलौँ, पाँचौँ, काठमाडौँ, अर्बौँ)
+        is_nas_vow = (ids >= 58).float()
+        dur = torch.maximum(dur, is_nas_vow * 5.0)
 
         ends = torch.cumsum(dur, 1)
         T = ends[0, -1].to(torch.int64)
