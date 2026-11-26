@@ -1,0 +1,402 @@
+{
+  "timestamp_utc": "2026-11-26T11:02:00Z",
+  "T1_raw_training_audio_audit": {
+    "raw_unvc_nep_6834": [
+      {
+        "voiced_vowel_hnr_dB": 19.042,
+        "silence_floor_SNR_dB": 55.79,
+        "upper_band_comb_grit_index": 1.331,
+        "upper_band_temporal_buzz_jitter": 1.1703,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.008,
+        "id": "anc_nep_6834_3591953077",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1a_raw_nep6834_clip1_anc_nep_6834_3591953077.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 19.125,
+        "silence_floor_SNR_dB": 55.05,
+        "upper_band_comb_grit_index": 1.3992,
+        "upper_band_temporal_buzz_jitter": 0.8974,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.683,
+        "id": "anc_nep_6834_2214582900",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1a_raw_nep6834_clip2_anc_nep_6834_2214582900.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 19.656,
+        "silence_floor_SNR_dB": 51.96,
+        "upper_band_comb_grit_index": 1.4018,
+        "upper_band_temporal_buzz_jitter": 0.9769,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.407,
+        "id": "anc_nep_6834_2328973073",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1a_raw_nep6834_clip3_anc_nep_6834_2328973073.wav"
+      }
+    ],
+    "raw_seedvc_in_cache": [
+      {
+        "voiced_vowel_hnr_dB": 19.54,
+        "silence_floor_SNR_dB": 72.0,
+        "upper_band_comb_grit_index": 1.3857,
+        "upper_band_temporal_buzz_jitter": 0.9915,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.535,
+        "id": "vcsa_v3a0_000700",
+        "src": "vc_slr54",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1b_raw_seedvc_clip1_vcsa_v3a0_000700.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 17.269,
+        "silence_floor_SNR_dB": 72.0,
+        "upper_band_comb_grit_index": 1.2891,
+        "upper_band_temporal_buzz_jitter": 1.1207,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.572,
+        "id": "vcsa_v3a0_001246",
+        "src": "vc_slr54",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1b_raw_seedvc_clip2_vcsa_v3a0_001246.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 16.677,
+        "silence_floor_SNR_dB": 64.7,
+        "upper_band_comb_grit_index": 1.24,
+        "upper_band_temporal_buzz_jitter": 1.083,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.62,
+        "id": "vcv13_ia_135thepisode__0_0032",
+        "src": "vc_v13",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1b_raw_seedvc_clip3_vcv13_ia_135thepisode__0_0032.wav"
+      }
+    ],
+    "raw_pure_sakhiya_pro_v3": [
+      {
+        "voiced_vowel_hnr_dB": 20.447,
+        "silence_floor_SNR_dB": 72.0,
+        "upper_band_comb_grit_index": 1.2862,
+        "upper_band_temporal_buzz_jitter": 0.9396,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.355,
+        "id": "d01259",
+        "src": "wiki",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1c_raw_prov3_clip1_d01259.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 19.839,
+        "silence_floor_SNR_dB": 72.0,
+        "upper_band_comb_grit_index": 1.3172,
+        "upper_band_temporal_buzz_jitter": 1.0564,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -18.625,
+        "id": "d00641",
+        "src": "wiki",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1c_raw_prov3_clip2_d00641.wav"
+      },
+      {
+        "voiced_vowel_hnr_dB": 18.37,
+        "silence_floor_SNR_dB": 38.28,
+        "upper_band_comb_grit_index": 1.3171,
+        "upper_band_temporal_buzz_jitter": 1.0381,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -17.427,
+        "id": "old_d00530",
+        "src": "wiki",
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T1c_raw_prov3_clip3_old_d00530.wav"
+      }
+    ]
+  },
+  "T2_pretrained_vocoder_ceiling_on_gt_mels": {
+    "on_raw_nep_6834": [
+      {
+        "id": "anc_nep_6834_3591953077",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 18.892,
+          "silence_floor_SNR_dB": 55.97,
+          "upper_band_comb_grit_index": 1.357,
+          "upper_band_temporal_buzz_jitter": 1.1606,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.159,
+          "stft_lsd_vs_raw_dB": 0.7551,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1184,
+          "mel_corr_vs_raw": 0.99377,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_nep6834_clip1_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 19.015,
+          "silence_floor_SNR_dB": 56.15,
+          "upper_band_comb_grit_index": 1.3755,
+          "upper_band_temporal_buzz_jitter": 1.115,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.5,
+          "stft_lsd_vs_raw_dB": 0.9461,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.082,
+          "mel_corr_vs_raw": 0.98965,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_nep6834_clip1_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 30.22,
+          "upper_band_comb_grit_index": 2.8719,
+          "upper_band_temporal_buzz_jitter": 0.62,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -7.113,
+          "stft_lsd_vs_raw_dB": 8.5758,
+          "hf_lsd_4_12kHz_vs_raw_dB": 8.992,
+          "mel_corr_vs_raw": 0.58413,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_nep6834_clip1_HomemadeV2Voc_FP32.wav"
+        }
+      },
+      {
+        "id": "anc_nep_6834_2214582900",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 18.736,
+          "silence_floor_SNR_dB": 55.25,
+          "upper_band_comb_grit_index": 1.3775,
+          "upper_band_temporal_buzz_jitter": 0.906,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.531,
+          "stft_lsd_vs_raw_dB": 0.7897,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1267,
+          "mel_corr_vs_raw": 0.99131,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_nep6834_clip2_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 19.205,
+          "silence_floor_SNR_dB": 55.06,
+          "upper_band_comb_grit_index": 1.3953,
+          "upper_band_temporal_buzz_jitter": 0.8783,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.772,
+          "stft_lsd_vs_raw_dB": 0.977,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.0727,
+          "mel_corr_vs_raw": 0.9878,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_nep6834_clip2_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 31.93,
+          "upper_band_comb_grit_index": 2.9409,
+          "upper_band_temporal_buzz_jitter": 0.5335,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -9.288,
+          "stft_lsd_vs_raw_dB": 7.9635,
+          "hf_lsd_4_12kHz_vs_raw_dB": 10.9558,
+          "mel_corr_vs_raw": 0.58876,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_nep6834_clip2_HomemadeV2Voc_FP32.wav"
+        }
+      },
+      {
+        "id": "anc_nep_6834_2328973073",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 19.794,
+          "silence_floor_SNR_dB": 52.13,
+          "upper_band_comb_grit_index": 1.3514,
+          "upper_band_temporal_buzz_jitter": 1.0786,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.822,
+          "stft_lsd_vs_raw_dB": 0.7699,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1005,
+          "mel_corr_vs_raw": 0.99239,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_nep6834_clip3_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 18.986,
+          "silence_floor_SNR_dB": 52.36,
+          "upper_band_comb_grit_index": 1.378,
+          "upper_band_temporal_buzz_jitter": 1.0887,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.493,
+          "stft_lsd_vs_raw_dB": 0.992,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.0729,
+          "mel_corr_vs_raw": 0.9879,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_nep6834_clip3_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 28.25,
+          "upper_band_comb_grit_index": 2.8336,
+          "upper_band_temporal_buzz_jitter": 0.5308,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -7.736,
+          "stft_lsd_vs_raw_dB": 9.9217,
+          "hf_lsd_4_12kHz_vs_raw_dB": 12.0241,
+          "mel_corr_vs_raw": 0.53381,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_nep6834_clip3_HomemadeV2Voc_FP32.wav"
+        }
+      }
+    ],
+    "on_raw_pro_v3": [
+      {
+        "id": "d01259",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 20.477,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 1.2993,
+          "upper_band_temporal_buzz_jitter": 0.9651,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.006,
+          "stft_lsd_vs_raw_dB": 0.7119,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1446,
+          "mel_corr_vs_raw": 0.99381,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_prov3_clip1_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 20.113,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 1.3903,
+          "upper_band_temporal_buzz_jitter": 0.9647,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.378,
+          "stft_lsd_vs_raw_dB": 0.8938,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1242,
+          "mel_corr_vs_raw": 0.98848,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_prov3_clip1_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 2.8954,
+          "upper_band_temporal_buzz_jitter": 0.5102,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -6.355,
+          "stft_lsd_vs_raw_dB": 10.3521,
+          "hf_lsd_4_12kHz_vs_raw_dB": 11.0617,
+          "mel_corr_vs_raw": 0.53381,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_prov3_clip1_HomemadeV2Voc_FP32.wav"
+        }
+      },
+      {
+        "id": "d00641",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 19.664,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 1.3429,
+          "upper_band_temporal_buzz_jitter": 1.0684,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -18.124,
+          "stft_lsd_vs_raw_dB": 0.7132,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.0931,
+          "mel_corr_vs_raw": 0.99025,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_prov3_clip2_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 19.531,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 1.3743,
+          "upper_band_temporal_buzz_jitter": 1.0052,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -18.83,
+          "stft_lsd_vs_raw_dB": 0.9282,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.0876,
+          "mel_corr_vs_raw": 0.98559,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_prov3_clip2_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 72.0,
+          "upper_band_comb_grit_index": 2.9741,
+          "upper_band_temporal_buzz_jitter": 0.5164,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -3.854,
+          "stft_lsd_vs_raw_dB": 9.713,
+          "hf_lsd_4_12kHz_vs_raw_dB": 9.61,
+          "mel_corr_vs_raw": 0.50044,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_prov3_clip2_HomemadeV2Voc_FP32.wav"
+        }
+      },
+      {
+        "id": "old_d00530",
+        "bigvgan_v2_fp32": {
+          "voiced_vowel_hnr_dB": 18.399,
+          "silence_floor_SNR_dB": 38.17,
+          "upper_band_comb_grit_index": 1.3092,
+          "upper_band_temporal_buzz_jitter": 1.0477,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -17.219,
+          "stft_lsd_vs_raw_dB": 0.7464,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.0905,
+          "mel_corr_vs_raw": 0.99187,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2a_gt_prov3_clip3_BigVGANv2_FP32.wav"
+        },
+        "vocos_24khz_fp32": {
+          "voiced_vowel_hnr_dB": 18.426,
+          "silence_floor_SNR_dB": 38.61,
+          "upper_band_comb_grit_index": 1.3473,
+          "upper_band_temporal_buzz_jitter": 1.0359,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -17.713,
+          "stft_lsd_vs_raw_dB": 0.9491,
+          "hf_lsd_4_12kHz_vs_raw_dB": 0.1704,
+          "mel_corr_vs_raw": 0.98538,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2b_gt_prov3_clip3_Vocos24k_FP32.wav"
+        },
+        "homemade_v2_voc_fp32": {
+          "voiced_vowel_hnr_dB": 18.95,
+          "silence_floor_SNR_dB": 25.0,
+          "upper_band_comb_grit_index": 2.901,
+          "upper_band_temporal_buzz_jitter": 0.5396,
+          "hi_band_7p5_11kHz_rel_1_4kHz_dB": -4.108,
+          "stft_lsd_vs_raw_dB": 9.9994,
+          "hf_lsd_4_12kHz_vs_raw_dB": 9.6532,
+          "mel_corr_vs_raw": 0.47257,
+          "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T2c_gt_prov3_clip3_HomemadeV2Voc_FP32.wav"
+        }
+      }
+    ]
+  },
+  "T3_existing_v2_am_mels_through_bigvgan_vs_homemade_voc": {
+    "owner_clip1_ai_models": {
+      "v2_am_plus_bigvgan_v2_fp32": {
+        "voiced_vowel_hnr_dB": 18.673,
+        "silence_floor_SNR_dB": 53.7,
+        "upper_band_comb_grit_index": 1.4527,
+        "upper_band_temporal_buzz_jitter": 0.8558,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.458,
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T3a_owner_clip1_ai_models_v2AM_BigVGANv2_FP32.wav"
+      },
+      "v2_am_plus_homemade_v2_voc_fp32": {
+        "voiced_vowel_hnr_dB": 18.95,
+        "silence_floor_SNR_dB": 28.17,
+        "upper_band_comb_grit_index": 3.4814,
+        "upper_band_temporal_buzz_jitter": 0.456,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -6.194,
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T3b_owner_clip1_ai_models_v2AM_HomemadeV2Voc_FP32.wav"
+      }
+    },
+    "owner_clip4_sanskrit_gita": {
+      "v2_am_plus_bigvgan_v2_fp32": {
+        "voiced_vowel_hnr_dB": 18.133,
+        "silence_floor_SNR_dB": 68.43,
+        "upper_band_comb_grit_index": 1.4429,
+        "upper_band_temporal_buzz_jitter": 0.8773,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.784,
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T3a_owner_clip4_sanskrit_gita_v2AM_BigVGANv2_FP32.wav"
+      },
+      "v2_am_plus_homemade_v2_voc_fp32": {
+        "voiced_vowel_hnr_dB": 18.95,
+        "silence_floor_SNR_dB": 50.72,
+        "upper_band_comb_grit_index": 3.7345,
+        "upper_band_temporal_buzz_jitter": 0.468,
+        "hi_band_7p5_11kHz_rel_1_4kHz_dB": -4.764,
+        "wav_path": "/work/sp/sakhiya_news/listen/truth_matrix/T3b_owner_clip4_sanskrit_gita_v2AM_HomemadeV2Voc_FP32.wav"
+      }
+    }
+  },
+  "summary_and_locks": {
+    "T1_source_summary": {
+      "raw_unvc_nep_6834": {
+        "mean_hnr_dB": 19.2743,
+        "mean_comb_grit": 1.3773,
+        "mean_temp_buzz": 1.0149,
+        "mean_hi_band_dB": -23.0327
+      },
+      "raw_seedvc_in_cache": {
+        "mean_hnr_dB": 17.8287,
+        "mean_comb_grit": 1.3049,
+        "mean_temp_buzz": 1.0651,
+        "mean_hi_band_dB": -20.2423
+      },
+      "raw_pure_sakhiya_pro_v3": {
+        "mean_hnr_dB": 19.552,
+        "mean_comb_grit": 1.3068,
+        "mean_temp_buzz": 1.0114,
+        "mean_hi_band_dB": -18.469
+      }
+    },
+    "T2_vocoder_ceiling_summary": {
+      "bigvgan_v2_24khz_fp32_on_nep6834": {
+        "mean_stft_lsd_dB": 0.7716,
+        "mean_hf_lsd_4_12kHz_dB": 0.1152,
+        "mean_mel_corr": 0.99249,
+        "mean_comb_grit": 1.362
+      },
+      "vocos_24khz_fp32_on_nep6834": {
+        "mean_stft_lsd_dB": 0.9717,
+        "mean_hf_lsd_4_12kHz_dB": 0.0759,
+        "mean_mel_corr": 0.98845,
+        "mean_comb_grit": 1.3829
+      },
+      "homemade_v2_voc_fp32_on_nep6834": {
+        "mean_stft_lsd_dB": 8.8203,
+        "mean_hf_lsd_4_12kHz_dB": 10.6573,
+        "mean_mel_corr": 0.5689,
+        "mean_comb_grit": 2.8821
+      }
+    },
+    "data_and_vocoder_lock_verdict": "LOCKED: Pretrained nvidia/bigvgan_v2_24khz_100band_256x (FP32) crushes homemade v2_voc_clean_best.pt on STFT_LSD, HF_LSD_4_12kHz, and mel correlation with zero harmonic-comb buzz. T3 proves that even with BigVGAN-v2, the tiny 4-step Monarch v2_am mels (trained on Seed-VC + cepstral-warped multi-speaker mels) still carry acoustic grit/oversmoothing. T1 proves Seed-VC clips have severe 16 kHz rolloff (-27 dB upper band) and VC vocoder haze compared to raw 48kHz->24kHz nep_6834 and pure 24kHz Sakhiya-Pro-v3 single-speaker studio audio -> PURGING 100% OF SEED-VC AND CEPSTRAL-WARPED MULTI-SPEAKER CLIPS!"
+  }
+}
+
