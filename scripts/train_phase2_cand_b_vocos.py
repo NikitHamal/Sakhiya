@@ -280,10 +280,10 @@ def export_vocos_onnx_fp16_and_int8(model: SakhiyaOneVocosModel, out_dir: str):
         if a.ndim < 2 or a.size <= 64:
             keep8.append(init)
             continue
-        ax = 0 if a.shape == (1026, 1, 1024) else (1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0)
+        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
         is_istft_or_head = (
-            a.shape in ((512, 1026), (1026, 512), (100, 80, 1), (100, 20, 1))
-            or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1 and a.shape != (1026, 1, 1024))
+            a.shape in ((1026, 1, 1024), (512, 1026), (1026, 512), (100, 80, 1), (100, 20, 1))
+            or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1)
             or a.shape[ax] <= 8
             or any(k in init.name for k in fp16_keep_names)
         )
