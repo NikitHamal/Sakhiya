@@ -180,6 +180,13 @@ def synthesize_full_paragraph_fp32(
         w_t = voc_fn(mel_100.float())
         w_np = w_t.squeeze().detach().cpu().numpy().astype(np.float32)
 
+        # Smoothly soft-gate vocoder Conv1d DC/bias floor on pure silence frames (mel mean < -10.2)
+        mel_fr_mean = mel_100.float().mean(dim=1).squeeze(0)  # [T_mel]
+        gate_fr = torch.sigmoid((mel_fr_mean + 10.2) * 3.5).clamp(0.0, 1.0)
+        gate_fr = torch.where(gate_fr < 0.08, torch.zeros_like(gate_fr), gate_fr)
+        gate_wav = F.interpolate(gate_fr[None, None, :], size=len(w_np), mode="linear", align_corners=False).squeeze().detach().cpu().numpy().astype(np.float32)
+        w_np = w_np * gate_wav
+
         # Trim tiny leading/trailing pads carefully without touching speech
         if len(w_np) > 2048:
             w_np = w_np[256 : len(w_np) - 256]
@@ -188,9 +195,13 @@ def synthesize_full_paragraph_fp32(
             ramp_out = (0.5 + 0.5 * np.cos(np.pi * np.arange(fade_out, dtype=np.float32) / fade_out)).astype(np.float32)
             w_np[:fade_in] *= ramp_in
             w_np[-fade_out:] *= ramp_out
+        if si == 0:
+            wav_parts.append(np.zeros(int(0.080 * SR), dtype=np.float32))
         wav_parts.append(w_np)
         if si < len(sents) - 1:
             wav_parts.append(np.zeros(pause_samples, dtype=np.float32))
+        else:
+            wav_parts.append(np.zeros(int(0.160 * SR), dtype=np.float32))
 
     full_wav = np.concatenate(wav_parts) if wav_parts else np.zeros(SR, dtype=np.float32)
     return _normalize_lufs_16(full_wav)
