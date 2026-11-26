@@ -140,16 +140,21 @@ class ConvNeXtV2MRFBlock(nn.Module):
         return self.grn(x)
 
 
+# Calibrated from Phase-0 raw un-VC'd nep_6834: P90_SHR = 0.030 <= 0.15 (naturally modal Kathmandu studio anchor)
+ANCHOR_HAS_CREAK_DEFAULT = False
+
+
 class FullBandHarmonicExcitation100Mel(nn.Module):
     """Full-Band Band-Limited Harmonics up to 12 kHz (k = 1 .. floor(12000 / f0), up to K_max=24)
-    + Zero-Param Gated 0.5*F0 Glottal-Creak Excitation + Gaussian Noise Excitation.
+    + Conditional Zero-Param Gated 0.5*F0 Glottal-Creak Excitation + Gaussian Noise Excitation.
     Permanently isolated in FP16 (< 32 KB). Driven by continuous `f0_hz` [B, 1, T], soft `vuv` [B, 1, T],
     and `shr_creak` [B, 1, T] in [0, 1].
     """
-    def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 16):
+    def __init__(self, c4: int = 160, c16: int = 80, n_har_base: int = 8, n_har_upper: int = 16, anchor_has_creak: bool = ANCHOR_HAS_CREAK_DEFAULT):
         super().__init__()
         self.n_har_base = n_har_base
         self.n_har_upper = n_har_upper
+        self.anchor_has_creak = anchor_has_creak
         self.proj4 = nn.Conv1d(2 * n_har_base, c4, 4, stride=4)
         self.proj16 = nn.Conv1d(2 * n_har_base, c16, 3, padding=1)
         self.upper_proj4 = nn.Conv1d(2 * n_har_upper + 2, c4, 4, stride=4)
@@ -163,25 +168,27 @@ class FullBandHarmonicExcitation100Mel(nn.Module):
         f0_16 = F.interpolate(f0.detach(), scale_factor=16.0, mode="linear", align_corners=False)
         uv_16 = F.interpolate(uv.detach(), scale_factor=16.0, mode="linear", align_corners=False)
 
+        creak_w = 0.28 if (self.anchor_has_creak or shr_creak is not None) else 0.0
         if shr_creak is not None:
             if shr_creak.dim() == 2:
                 shr_creak = shr_creak[:, None, :]
             shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=f0_16.shape[-1], mode="linear", align_corners=False)
+            if not self.anchor_has_creak:
+                shr_16 = shr_16 * 0.0
         else:
-            # Soft low-F0 register creak gate when not explicitly passed
-            shr_16 = ((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16
+            shr_16 = (((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16) if self.anchor_has_creak else torch.zeros_like(f0_16)
 
         cyc = torch.cumsum(f0_16 * (1.0 / (SR / ISTFT_HOP)), dim=-1)
         cyc = cyc - torch.floor(cyc)
         ph = (2.0 * math.pi) * cyc
 
-        # Zero-Param Gated 0.5*F0 Subharmonic + Mild Pulse-Jitter Glottal Creak Excitation
+        # Conditional Zero-Param Gated 0.5*F0 Subharmonic + Mild Pulse-Jitter Glottal Creak Excitation
         cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
         cyc_sub = cyc_sub - torch.floor(cyc_sub)
         ph_sub = (2.0 * math.pi) * cyc_sub
         jitter_imp = 0.16 * torch.sin(ph_sub) * torch.cos(3.0 * ph_sub)
-        creak_sin = (0.68 * torch.sin(ph_sub + jitter_imp) + 0.32 * torch.sin(3.0 * ph_sub)) * shr_16 * uv_16 * 0.38
-        creak_cos = (0.68 * torch.cos(ph_sub + jitter_imp) + 0.32 * torch.cos(3.0 * ph_sub)) * shr_16 * uv_16 * 0.38
+        creak_sin = (0.68 * torch.sin(ph_sub + jitter_imp) + 0.32 * torch.sin(3.0 * ph_sub)) * shr_16 * uv_16 * creak_w
+        creak_cos = (0.68 * torch.cos(ph_sub + jitter_imp) + 0.32 * torch.cos(3.0 * ph_sub)) * shr_16 * uv_16 * creak_w
 
         # 1. Base harmonics k = 1 .. 8 (+ zero-param 0.5*F0 subharmonic creak injected into k=1 channel)
         ks_b = torch.arange(1, self.n_har_base + 1, device=ph.device, dtype=ph.dtype)[None, :, None]
@@ -312,13 +319,6 @@ class StudioVocoder100Mel(nn.Module):
                 own["noise_head.bias"].copy_(own["amp_head.bias"] + b_off)
             if not ck.get("air_calibrated", False):
                 own["amp_head.bias"][12:33].add_(torch.tensor(STUDIO_AIR_BIAS_21, device=dev, dtype=own["amp_head.bias"].dtype))
-            if not ck.get("nyq_aa_calibrated", False):
-                own["amp_head.bias"][30] -= 0.45
-                own["amp_head.bias"][31] -= 2.10
-                own["amp_head.bias"][32] -= 4.20
-                own["noise_head.bias"][30] -= 0.60
-                own["noise_head.bias"][31] -= 2.50
-                own["noise_head.bias"][32] -= 5.00
         self.load_state_dict(own, strict=False)
         if not self._svd_applied and (self.r_k7 is not None or self.r_k11 is not None):
             self.apply_svd_compression()
@@ -378,20 +378,22 @@ class StudioVocoder100Mel(nn.Module):
         uv_16 = uv_16[:, :, :T_sub]
         f0_16 = f0_16[:, :, :T_sub]
 
-        if shr_creak is not None:
+        if shr_creak is not None and self.src.anchor_has_creak:
             if shr_creak.dim() == 2:
                 shr_creak = shr_creak[:, None, :]
             shr_16 = F.interpolate(shr_creak.float().clamp(0.0, 1.0).detach(), size=T_sub, mode="linear", align_corners=False)
-        else:
+        elif self.src.anchor_has_creak:
             shr_16 = ((188.0 - f0_16) / 48.0).clamp(0.0, 0.35) * uv_16
+        else:
+            shr_16 = torch.zeros_like(f0_16)
 
         freq_ar = torch.arange(N_BINS, device=mel.device, dtype=torch.float32).view(1, N_BINS, 1)
 
-        # Zero-param 0.5*F0 period-doubling glottal pulse modulation on low harmonic bins (0..7) during phrase-final creak
+        # Conditional zero-param 0.5*F0 period-doubling glottal pulse modulation on low harmonic bins (0..7)
         cyc_sub = torch.cumsum((0.5 * f0_16) * (1.0 / (SR / ISTFT_HOP)), dim=-1)
         ph_sub = (2.0 * math.pi) * (cyc_sub - torch.floor(cyc_sub))
         low_bin_w = ((8.0 - freq_ar) / 4.0).clamp(0.0, 1.0)
-        creak_mod = 1.0 + 0.55 * shr_16 * uv_16 * low_bin_w * (0.70 * torch.cos(ph_sub) + 0.30 * torch.cos(3.0 * ph_sub))
+        creak_mod = 1.0 + 0.35 * shr_16 * uv_16 * low_bin_w * (0.70 * torch.cos(ph_sub) + 0.30 * torch.cos(3.0 * ph_sub))
 
         # Harmonic magnitude & phase
         A_harm = torch.exp(log_mag) * sg_16 * creak_mod
@@ -400,11 +402,11 @@ class StudioVocoder100Mel(nn.Module):
 
         # Stochastic OLA-consistent noise amplitude:
         # - Unvoiced frames (1 - uv_16): active across sibilant & breath bands (bins >= 4)
-        # - Voiced frames (uv_16): strictly confined to >= 6.0 kHz condenser air (bins >= 16) so voiced lower formants stay pure
+        # - Voiced frames (uv_16): strictly confined to >= 6.0 kHz condenser air (bins >= 16) so voiced 0.2-4 kHz HNR has zero bleed!
         unv_band_w = ((freq_ar - 4.0) / 4.0).clamp(0.06, 1.0)
-        vo_air_w = ((freq_ar - 15.0) / 5.0).clamp(0.0, 1.0)
-        nyq_rolloff = ((31.8 - freq_ar) / 1.8).clamp(0.02, 1.0)
-        noise_gate = ((1.0 - uv_16) * unv_band_w * 0.28 + uv_16 * vo_air_w * 0.14) * nyq_rolloff
+        vo_air_w = ((freq_ar - 16.0) / 5.0).clamp(0.0, 1.0)
+        nyq_rolloff = ((32.2 - freq_ar) / 1.5).clamp(0.15, 1.0)
+        noise_gate = ((1.0 - uv_16) * unv_band_w * 0.24 + uv_16 * vo_air_w * 0.08) * nyq_rolloff
         A_noise = torch.exp(log_noise) * sg_16 * noise_gate
 
         if noise_re is None or noise_im is None:

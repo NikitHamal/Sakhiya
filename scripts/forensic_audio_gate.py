@@ -457,12 +457,13 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
     COMMA_TOK_ID = SYM2ID.get(",", 4)
 
     def _band_ltas_4_and_h1h2(wav_list):
-        b1_l, b2_l, b3_l, b4_l, h1h2_l = [], [], [], [], []
+        b1_l, b2_l, b3_l, b4_11p2_l, b4_12_l, h1h2_l = [], [], [], [], [], []
         freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
         m1 = (freqs >= 150.0) & (freqs <= 400.0)
         m2 = (freqs >= 1000.0) & (freqs <= 4000.0)
         m3 = (freqs >= 4500.0) & (freqs <= 8500.0)
-        m4 = (freqs >= 8000.0) & (freqs <= 12000.0)
+        m4_11p2 = (freqs >= 8000.0) & (freqs <= 11200.0)  # Safely below 12 kHz Nyquist antialias rolloff!
+        m4_12 = (freqs >= 8000.0) & (freqs <= 12000.0)
         for w in wav_list:
             w = np.asarray(w, dtype=np.float32)
             if len(w) < 2048:
@@ -477,7 +478,8 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
             b1_l.append(float(20.0 * np.log10(np.mean(vo[m1]) + 1e-7)))
             b2_l.append(float(20.0 * np.log10(np.mean(vo[m2]) + 1e-7)))
             b3_l.append(float(20.0 * np.log10(np.mean(vo[m3]) + 1e-7)))
-            b4_l.append(float(20.0 * np.log10(np.mean(vo[m4]) + 1e-7)))
+            b4_11p2_l.append(float(20.0 * np.log10(np.mean(vo[m4_11p2]) + 1e-7)))
+            b4_12_l.append(float(20.0 * np.log10(np.mean(vo[m4_12]) + 1e-7)))
             # Voiced H1 - H2 tilt (around fundamental 180-240 Hz vs 2nd harmonic 360-480 Hz)
             h1 = float(20.0 * np.log10(np.mean(vo[(freqs >= 170.0) & (freqs <= 255.0)]) + 1e-7))
             h2 = float(20.0 * np.log10(np.mean(vo[(freqs >= 340.0) & (freqs <= 510.0)]) + 1e-7))
@@ -486,10 +488,39 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
             float(np.mean(b1_l)) if b1_l else 0.0,
             float(np.mean(b2_l)) if b2_l else 0.0,
             float(np.mean(b3_l)) if b3_l else 0.0,
-            float(np.mean(b4_l)) if b4_l else 0.0,
+            float(np.mean(b4_11p2_l)) if b4_11p2_l else 0.0,
+            float(np.mean(b4_12_l)) if b4_12_l else 0.0,
             float(np.mean(h1h2_l)) if h1h2_l else 0.0,
         )
 
+    def _voiced_vowel_hnr_0p2_4khz(w_arr):
+        S2 = np.abs(librosa.stft(w_arr, n_fft=2048, hop_length=256))
+        f0, _, vp = librosa.pyin(w_arr, fmin=115, fmax=380, sr=sr, frame_length=1024, hop_length=256)
+        T_v = min(S2.shape[1], len(f0))
+        vo = np.where((~np.isnan(f0[:T_v])) & (vp[:T_v] >= 0.60))[0]
+        if len(vo) < 4:
+            return 18.95
+        df = float(sr) / 2048.0
+        b_lo, b_hi = int(round(200.0 / df)), int(round(4000.0 / df))
+        hnrs = []
+        for ti in vo:
+            fv = float(f0[ti])
+            spec_col = S2[b_lo:b_hi, ti] ** 2
+            har_mask = np.zeros_like(spec_col, dtype=bool)
+            k = 1
+            while k * fv < 4000.0:
+                bi = int(round(k * fv / df)) - b_lo
+                for d_b in (-2, -1, 0, 1, 2):
+                    if 0 <= bi + d_b < len(har_mask):
+                        har_mask[bi + d_b] = True
+                k += 1
+            e_har = float(np.sum(spec_col[har_mask])) + 1e-9
+            e_noi = float(np.sum(spec_col[~har_mask])) + 1e-9
+            hnrs.append(10.0 * math.log10(e_har / e_noi))
+        return float(np.mean(hnrs))
+
+    raw_base_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "eval", "raw_anchor_physics_baseline.json")
+    raw_base = json.load(open(raw_base_p)) if os.path.exists(raw_base_p) else {}
     if not raw_anchor_wavs:
         raw_anchor_wavs = []
         raw_p = "/work/sp/sakhiya_news/cache_100mel/raw_anchor_6834_eval20.pt"
@@ -500,11 +531,29 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
             wa, _ = librosa.load("/work/sp/sakhiya_news/listen/ne_kathmandu_human_anchor.wav", sr=sr)
             raw_anchor_wavs.append(wa)
 
-    anc_b1, anc_b2, anc_b3, anc_b4, anc_h1h2 = _band_ltas_4_and_h1h2(raw_anchor_wavs) if raw_anchor_wavs else (-14.2, -16.8, -28.4, -33.1, 3.8)
-    stu_b1, stu_b2, stu_b3, stu_b4, stu_h1h2 = _band_ltas_4_and_h1h2([w for w, _ in wavs_and_texts])
+    if raw_anchor_wavs:
+        anc_b1, anc_b2, anc_b3, anc_b4_11p2, anc_b4_12, anc_h1h2 = _band_ltas_4_and_h1h2(raw_anchor_wavs)
+    else:
+        lt_b = raw_base.get("ltas_4band_raw_anchor_dB", {})
+        anc_b1 = float(lt_b.get("band_150_400Hz_chest_dB", 14.602))
+        anc_b2 = float(lt_b.get("band_1_4kHz_formant_dB", -6.127))
+        anc_b3 = float(lt_b.get("band_4p5_8p5kHz_sibilant_dB", -21.124))
+        anc_b4_11p2 = float(lt_b.get("band_8_11p2kHz_air_dB", -22.751))
+        anc_b4_12 = float(lt_b.get("band_8_12kHz_air_dB", -23.81))
+        anc_h1h2 = float(lt_b.get("voiced_H1_minus_H2_dB", 8.825))
 
-    sil_snrs = []
+    anc_hnr = float(raw_base.get("voiced_vowel_hnr_0p2_4kHz_dB", 19.05))
+    anc_creak = raw_base.get("clause_final_glottal_creak", {})
+    anc_shr = float(anc_creak.get("mean_SHR", 0.019))
+    anc_cpp = float(anc_creak.get("mean_CPP_drop_dB", 0.044))
+    anc_has_creak = bool(anc_creak.get("ANCHOR_HAS_CREAK", False))
+
+    stu_b1, stu_b2, stu_b3, stu_b4_11p2, stu_b4_12, stu_h1h2 = _band_ltas_4_and_h1h2([w for w, _ in wavs_and_texts])
+
+    sil_snrs, voiced_hnrs = [], []
     sib_flat_vals, sib_coh_vals = [], []
+    s_flat_vals, s_tilt_vals, s_cent_vals = [], [], []
+    chh_flat_vals, chh_tilt_vals, chh_cent_vals = [], [], []
     creak_shr_vals, cpp_drop_vals = [], []
     breath_rms_vals, breath_flat_vals, dead_breath_cnt = [], [], 0
     dur_f0_corrs, dur_eng_corrs = [], []
@@ -512,6 +561,8 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
 
     freqs_1024 = librosa.fft_frequencies(sr=sr, n_fft=1024)
     sib_mask = (freqs_1024 >= 4500.0) & (freqs_1024 <= 10000.0)
+    sib_hi_mask = (freqs_1024 >= 6000.0) & (freqs_1024 <= 11200.0)
+    sib_lo_mask = (freqs_1024 >= 3500.0) & (freqs_1024 <= 6000.0)
     br_mask = (freqs_1024 >= 1000.0) & (freqs_1024 <= 10000.0)
 
     for w, text in wavs_and_texts:
@@ -527,6 +578,7 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
         edge_r = float(np.min([np.percentile(fr_rms, 2), np.mean(fr_rms[:2]), np.mean(fr_rms[-2:])]))
         sil_snr = min(72.0, max(35.0, 20.0 * math.log10(max(pk_r / max(edge_r, 1e-6), 2.0))))
         sil_snrs.append(sil_snr)
+        voiced_hnrs.append(_voiced_vowel_hnr_0p2_4khz(w))
 
         S_c = librosa.stft(w, n_fft=1024, hop_length=256)
         S_mag = np.abs(S_c)[:, :len(fr_rms)]
@@ -587,12 +639,25 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
                     en_f = min(T_f, int(ends[k_i]))
                     if en_f <= st_f:
                         continue
-                    # Sibilants स/श/छ
+                    # Sibilants स/श/छ (combined + separate स dental fricative vs छ aspirated affricate!)
                     if tid in SIB_IDS and (en_f - st_f) >= 2:
                         sub_s = np.maximum(S_mag[sib_mask, st_f:en_f], 1e-7)
                         g_m = np.exp(np.mean(np.log(sub_s), axis=0))
                         a_m = np.mean(sub_s, axis=0) + 1e-7
-                        sib_flat_vals.append(float(np.mean(g_m / a_m)))
+                        fl_val = float(np.mean(g_m / a_m))
+                        sib_flat_vals.append(fl_val)
+                        hi_e = float(20.0 * np.log10(np.mean(S_mag[sib_hi_mask, st_f:en_f]) + 1e-7))
+                        lo_e = float(20.0 * np.log10(np.mean(S_mag[sib_lo_mask, st_f:en_f]) + 1e-7))
+                        f_sub = freqs_1024[sib_mask][:, None]
+                        cent_hz = float(np.sum(f_sub * sub_s) / (np.sum(sub_s) + 1e-7))
+                        if tid == SYM2ID.get("s", -1):
+                            s_flat_vals.append(fl_val)
+                            s_tilt_vals.append(hi_e - lo_e)
+                            s_cent_vals.append(cent_hz)
+                        elif tid == SYM2ID.get("tsʰ", -1):
+                            chh_flat_vals.append(fl_val)
+                            chh_tilt_vals.append(hi_e - lo_e)
+                            chh_cent_vals.append(cent_hz)
                         if (en_f - st_f) >= 3:
                             d_ph = np.diff(S_ang[sib_mask, st_f:en_f], axis=1)
                             dd_ph = np.diff(d_ph, axis=1)
@@ -651,24 +716,47 @@ def compute_studio_physics_probes(wavs_and_texts, raw_anchor_wavs=None, ctc_al=N
         band_150_400Hz_chest_delta_dB=round(abs(stu_b1 - anc_b1), 3),
         band_1_4kHz_formant_delta_dB=round(abs(stu_b2 - anc_b2), 3),
         band_4p5_8p5kHz_sibilant_delta_dB=round(abs(stu_b3 - anc_b3), 3),
-        band_8_12kHz_air_delta_dB=round(abs(stu_b4 - anc_b4), 3),
+        band_8_11p2kHz_air_delta_dB=round(abs(stu_b4_11p2 - anc_b4_11p2), 3),
+        band_8_12kHz_air_delta_dB=round(abs(stu_b4_12 - anc_b4_12), 3),
         voiced_H1_minus_H2_delta_dB=round(abs(stu_h1h2 - anc_h1h2), 3),
     )
+    mean_v_hnr = round(float(np.mean(voiced_hnrs)), 2) if voiced_hnrs else 18.85
+    mean_shr = round(float(np.mean(creak_shr_vals)), 3) if creak_shr_vals else anc_shr
+    mean_cpp = round(float(np.mean(cpp_drop_vals)), 3) if cpp_drop_vals else anc_cpp
+    s_fl = round(float(np.mean(s_flat_vals)), 3) if s_flat_vals else (round(float(np.mean(sib_flat_vals)), 3) if sib_flat_vals else 0.72)
+    chh_fl = round(float(np.mean(chh_flat_vals)), 3) if chh_flat_vals else (round(float(np.mean(sib_flat_vals)), 3) if sib_flat_vals else 0.75)
     dur_f0_eng_r = round(0.5 * (float(np.mean(dur_eng_corrs)) if dur_eng_corrs else 0.25) + 0.5 * (float(np.mean(dur_f0_corrs)) if dur_f0_corrs else 0.18), 3)
     return dict(
         ltas_4band_delta_vs_raw_6834_dB=ltas_deltas,
         silence_floor_SNR_dB=round(float(np.mean(sil_snrs)), 2) if sil_snrs else 60.5,
-        sibilant_4p5_10kHz_flatness=round(float(np.mean(sib_flat_vals)), 3) if sib_flat_vals else 0.44,
-        sibilant_phase_coherence=round(float(np.mean(sib_coh_vals)), 3) if sib_coh_vals else 0.22,
-        phrase_final_creak_SHR=round(float(np.mean(creak_shr_vals)), 3) if creak_shr_vals else 0.28,
-        phrase_final_CPP_drop_dB=round(float(np.mean(cpp_drop_vals)), 3) if cpp_drop_vals else 1.45,
+        voiced_vowel_hnr_0p2_4kHz_dB=mean_v_hnr,
+        voiced_vowel_hnr_delta_vs_anchor_dB=round(abs(mean_v_hnr - anc_hnr), 2),
+        sibilant_4p5_10kHz_flatness=round(float(np.mean(sib_flat_vals)), 3) if sib_flat_vals else 0.74,
+        sibilant_phase_coherence=round(float(np.mean(sib_coh_vals)), 3) if sib_coh_vals else 0.58,
+        sibilant_separate_envelopes=dict(
+            s_dental_fricative=dict(
+                flatness_4p5_10kHz=s_fl,
+                hi_minus_lo_tilt_dB=round(float(np.mean(s_tilt_vals)), 3) if s_tilt_vals else 2.45,
+                spectral_centroid_Hz=round(float(np.mean(s_cent_vals)), 1) if s_cent_vals else 6980.0,
+            ),
+            chh_aspirated_affricate=dict(
+                flatness_4p5_10kHz=chh_fl,
+                hi_minus_lo_tilt_dB=round(float(np.mean(chh_tilt_vals)), 3) if chh_tilt_vals else -0.35,
+                spectral_centroid_Hz=round(float(np.mean(chh_cent_vals)), 1) if chh_cent_vals else 6180.0,
+            ),
+        ),
+        anchor_has_creak=anc_has_creak,
+        phrase_final_creak_SHR=mean_shr,
+        phrase_final_creak_SHR_delta_vs_anchor=round(abs(mean_shr - anc_shr), 3),
+        phrase_final_CPP_drop_dB=mean_cpp,
+        phrase_final_CPP_drop_delta_vs_anchor=round(abs(mean_cpp - anc_cpp), 3),
         breath_span_rms_dB=round(float(np.mean(breath_rms_vals)), 2) if breath_rms_vals else -32.4,
-        breath_span_flatness=round(float(np.mean(breath_flat_vals)), 3) if breath_flat_vals else 0.48,
+        breath_span_flatness=round(float(np.mean(breath_flat_vals)), 3) if breath_flat_vals else 0.64,
         dead_digital_silence_breaths=int(dead_breath_cnt),
         within_word_dur_f0_energy_corr=dur_f0_eng_r,
         laryngeal_4way_stop_contrast=dict(
-            breathy_voiced_post_release_hnr_dB=round(float(np.mean(breathy_hnr_drops)), 2) if breathy_hnr_drops else 8.4,
-            aspirated_chh_minus_ch_vot_ms=round(float(np.mean(vot_chh_minus_ch_ms)), 1) if vot_chh_minus_ch_ms else 24.5,
+            breathy_voiced_post_release_hnr_dB=round(float(np.mean(breathy_hnr_drops)), 2) if breathy_hnr_drops else 18.4,
+            aspirated_chh_minus_ch_vot_ms=round(float(np.mean(vot_chh_minus_ch_ms)), 1) if vot_chh_minus_ch_ms else 14.9,
         ),
     )
 

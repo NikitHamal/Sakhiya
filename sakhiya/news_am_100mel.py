@@ -446,13 +446,14 @@ def compute_progress_5d(dur: torch.Tensor, ends: torch.Tensor, idx: torch.Tensor
 
 class SakhiyaNewsFlagship(nn.Module):
     """Unified Single-Style Studio Nepali News Model (`Sakhiya-News` Leg 2: Coupled 6D Prosody Flow + `CFG = 0` Unrolled 2-Step/4-Step iMF + Dual-Source OLA Noise & Creak Vocoder)."""
-    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, steps: int = 2, cfg_scale: float = 0.0):
+    def __init__(self, d_enc: int = 144, L_enc: int = 6, ff_enc: int = 224, d_vel: int = 160, nb_vel: int = 10, voc_ch: int = 320, n_engram: int = 384, r_enc: int = 104, steps: int = 2, cfg_scale: float = 0.0, prosody_temp: float = 0.0):
         super().__init__()
         self.steps = steps
         self.cfg_scale = 0.0  # Strictly CFG = 0 at inference!
+        self.prosody_temp = prosody_temp  # Low-temp coupled prosody flow (T=0.0 deterministic conditional mean vs T=0.30)
         self.cfg = dict(
             tier="sakhiya_news", arch="sakhiya_news", d_enc=d_enc, L_enc=L_enc, ff_enc=ff_enc,
-            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, steps=steps, cfg_scale=0.0,
+            d_vel=d_vel, nb_vel=nb_vel, voc_ch=voc_ch, n_engram=n_engram, r_enc=r_enc, steps=steps, cfg_scale=0.0, prosody_temp=prosody_temp,
         )
         self.enc = SakhiyaNewsEncoder(n_mel=100, d=d_enc, L=L_enc, ff=ff_enc, n_engram=n_engram, r_enc=r_enc)
         # ONE Coupled 4-Step Phoneme-Level Prosody Flow jointly modeling [log_dur, f0_mean, f0_slope, energy, creak_prob, post_word_breath_dur]
@@ -536,7 +537,7 @@ class SakhiyaNewsFlagship(nn.Module):
         h, mu = self.enc(ids, struct_5d, im, pitch_add=p_enc)
 
         # Coupled 4-Step Phoneme Prosody Flow: [log_dur, f0_mean, f0_slope, energy, creak_prob, post_word_breath_dur] at CFG = 0
-        pros_6d = self.coupled_pros_flow.sample(ids, h, im, steps=4, temp=0.05)  # [B, 6, L]
+        pros_6d = self.coupled_pros_flow.sample(ids, h, im, steps=4, temp=float(getattr(self, "prosody_temp", 0.0)))  # [B, 6, L]
         x_d = pros_6d[:, 0, :] + self.dur_rate_bias.clamp(-0.12, 0.12)
         f0_ph = pros_6d[:, 1, :].clamp(-0.6, 0.6)
         f0_slope_ph = pros_6d[:, 2, :].clamp(-0.5, 0.5)

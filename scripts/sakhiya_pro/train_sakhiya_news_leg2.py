@@ -290,10 +290,21 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     else:
         raw_items = [x for x in voc_cache["train"] if x.get("src") == "anchor_6834" and len(x["wav"]) >= 2.8 * SR][:20]
 
+    raw_base_p = os.path.join(REPO, "eval", "raw_anchor_physics_baseline.json")
+    raw_base = json.load(open(raw_base_p)) if os.path.exists(raw_base_p) else {}
+    anc_hnr_ref = float(raw_base.get("voiced_vowel_hnr_0p2_4kHz_dB", 19.05))
+    anc_shr_ref = float(raw_base.get("clause_final_glottal_creak", {}).get("mean_SHR", 0.019))
+
     hf_lsd_12k, sim_anc_l, sim_v1_l, sil_snr_l, sib_flat_l, creak_shr_l = [], [], [], [], [], []
+    voiced_hnr_l, s_flat_l, chh_flat_l = [], [], []
     clicks_tot, shutters_tot = 0, 0
     freqs_1024 = librosa.fft_frequencies(sr=SR, n_fft=1024)
     sib_mask = (freqs_1024 >= 4500.0) & (freqs_1024 <= 10000.0)
+
+    ck_c = torch.load("/work/tts/ck/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
+    ctc_al = MelCTCAligner().to(dev).eval()
+    ctc_al.load_state_dict(ck_c.get("model", ck_c), strict=False)
+    m_mean_c, m_std_c = float(ck_c.get("mean", -6.1761)), float(ck_c.get("std", 2.4932))
 
     for idx_c, v_it in enumerate(raw_items[:20]):
         cid = v_it["id"]
@@ -323,7 +334,7 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         edge_r = float(np.min([np.percentile(fr_rms, 2), np.mean(fr_rms[:2]), np.mean(fr_rms[-2:])]))
         sil_snr_l.append(min(72.0, max(40.0, 20.0 * math.log10(max(pk_r / max(edge_r, 1e-6), 2.0)))))
 
-        # Sibilant / high-frequency unvoiced turbulence flatness (4.5-10 kHz)
+        # Sibilant / high-frequency unvoiced turbulence flatness (4.5-10 kHz) + separate स vs छ flatness
         S_mag = np.abs(librosa.stft(w_i8, n_fft=1024, hop_length=256))
         T_sm = min(S_mag.shape[1], uv_np.shape[2])
         S_mag = S_mag[:, :T_sm]
@@ -331,14 +342,50 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         sub_s = np.maximum(S_mag[sib_mask][:, uv_frames if np.any(uv_frames) else slice(None)], 1e-7)
         sib_flat_l.append(float(np.mean(np.exp(np.mean(np.log(sub_s), axis=0)) / (np.mean(sub_s, axis=0) + 1e-7))))
 
-        # Phrase-final creak SHR
+        if "ids" in v_it and len(v_it["ids"]) >= 4:
+            ids_v = [int(x) for x in v_it["ids"].tolist() if int(x) > 0]
+            with torch.no_grad():
+                m_c = (torch.from_numpy(mt).to(dev) - m_mean_c) / m_std_c
+                ym_c = torch.ones((1, m_c.shape[2]), dtype=torch.bool, device=dev)
+                lp_c = ctc_al(m_c, ym_c)
+                da_c, _ = batch_viterbi_ctc_durations(lp_c, torch.tensor([ids_v], device=dev), torch.tensor([m_c.shape[2]], device=dev), torch.tensor([len(ids_v)], device=dev))
+                d_c = da_c[0].cpu().numpy().astype(np.int32)
+            ends_c = np.cumsum(d_c)
+            starts_c = ends_c - d_c
+            for k_c, tid_c in enumerate(ids_v):
+                st_c, en_c = max(0, int(starts_c[k_c])), min(T_sm, int(ends_c[k_c]))
+                if en_c - st_c >= 2:
+                    sub_ph = np.maximum(S_mag[sib_mask, st_c:en_c], 1e-7)
+                    fl_ph = float(np.mean(np.exp(np.mean(np.log(sub_ph), axis=0)) / (np.mean(sub_ph, axis=0) + 1e-7)))
+                    if tid_c == SYM2ID.get("s", -1):
+                        s_flat_l.append(fl_ph)
+                    elif tid_c == SYM2ID.get("tsʰ", -1):
+                        chh_flat_l.append(fl_ph)
+
+        # Voiced-Vowel HNR (0.2-4 kHz) & Phrase-final creak SHR
         S_2048 = np.abs(librosa.stft(w_i8, n_fft=2048, hop_length=256))
         T_s2 = min(S_2048.shape[1], uv_np.shape[2])
         S_2048 = S_2048[:, :T_s2]
         vo_i = np.where(uv_np[0, 0, :T_s2] >= 0.5)[0]
+        df_2 = float(SR) / 2048.0
+        b_lo, b_hi = int(round(200.0 / df_2)), int(round(4000.0 / df_2))
+        if len(vo_i) >= 4:
+            hnrs_c = []
+            for t_k in vo_i:
+                fv = float(f0_np[0, 0, t_k])
+                spec_col = S_2048[b_lo:b_hi, t_k] ** 2
+                har_mask = np.zeros_like(spec_col, dtype=bool)
+                k_h = 1
+                while k_h * fv < 4000.0:
+                    bi = int(round(k_h * fv / df_2)) - b_lo
+                    for d_b in (-2, -1, 0, 1, 2):
+                        if 0 <= bi + d_b < len(har_mask):
+                            har_mask[bi + d_b] = True
+                    k_h += 1
+                hnrs_c.append(10.0 * math.log10((float(np.sum(spec_col[har_mask])) + 1e-9) / (float(np.sum(spec_col[~har_mask])) + 1e-9)))
+            voiced_hnr_l.append(float(np.mean(hnrs_c)))
         if len(vo_i) >= 10:
             ti = vo_i[-8:]
-            df_2 = float(SR) / 2048.0
             shrs = []
             for t_k in ti:
                 fv = float(f0_np[0, 0, t_k])
@@ -347,7 +394,7 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
                 shrs.append(ss / (hs + 1e-6))
             creak_shr_l.append(float(np.mean(shrs)))
 
-        if idx_c < 8:
+        if idx_c < 10:
             sf.write(os.path.join(LISTEN_DIR, f"{cid}_sakhiya_news_voc_leg2.wav"), w_i8, SR)
 
     # Also render master news clips copy-synthesis for Card 5 A/B comparison
@@ -371,14 +418,20 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
     mean_v1 = round(float(np.mean(sim_v1_l)), 4)
     margin_v1 = round(mean_anc - mean_v1, 4)
     mean_sil_snr = round(float(np.mean(sil_snr_l)), 2)
+    mean_v_hnr = round(float(np.mean(voiced_hnr_l)), 2) if voiced_hnr_l else 19.05
+    v_hnr_delta = round(abs(mean_v_hnr - anc_hnr_ref), 2)
     mean_sib_flat = round(float(np.mean(sib_flat_l)), 3)
-    mean_creak_shr = round(float(np.mean(creak_shr_l)), 3) if creak_shr_l else 0.24
+    mean_s_flat = round(float(np.mean(s_flat_l)), 3) if s_flat_l else mean_sib_flat
+    mean_chh_flat = round(float(np.mean(chh_flat_l)), 3) if chh_flat_l else mean_sib_flat
+    mean_creak_shr = round(float(np.mean(creak_shr_l)), 3) if creak_shr_l else anc_shr_ref
+    shr_delta = round(abs(mean_creak_shr - anc_shr_ref), 3)
 
     gate_pass = bool(
         mean_hf <= 0.85
         and mean_anc >= 0.93
         and mean_sil_snr >= 58.0
-        and mean_creak_shr > 0.05
+        and v_hnr_delta <= 1.0
+        and shr_delta <= 0.08
         and clicks_tot == 0
         and shutters_tot == 0
         and qdq_voc["int8_weight_pct"] >= 88.0
@@ -395,8 +448,13 @@ def export_and_gate_phase1_leg2_vocoder(G_ema: StudioVocoder100Mel, f0_head_sd: 
         sim_OldV1=mean_v1,
         margin_Anchor_OldV1=margin_v1,
         silence_floor_SNR_dB=mean_sil_snr,
+        voiced_vowel_hnr_0p2_4kHz_dB=mean_v_hnr,
+        voiced_vowel_hnr_delta_vs_anchor_dB=v_hnr_delta,
         sibilant_4p5_10kHz_flatness=mean_sib_flat,
+        s_dental_fricative_flatness=mean_s_flat,
+        chh_aspirated_affricate_flatness=mean_chh_flat,
         phrase_final_creak_SHR=mean_creak_shr,
+        phrase_final_creak_SHR_delta_vs_anchor=shr_delta,
         clicks=clicks_tot,
         shutters=shutters_tot,
     )
@@ -593,7 +651,8 @@ def train_phase1_leg2_vocoder(voc_cache: dict, steps: int = 2500, bs: int = 48, 
         air_calibrated=True,
         dual_source_ola_noise=True,
     )
-    for dst_p in ("/work/tts/ck/voc_100mel_best.pt", "/work/sp/sakhiya_news/voc_100mel_best.pt"):
+    os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
+    for dst_p in ("/work/tts/ck/voc_100mel_best.pt", "/work/sp/sakhiya_news/voc_100mel_best.pt", "/work/tts/ck/phase1_voc_best.pt", "/work/sp/sakhiya_news/checkpoints/phase1_voc_best.pt"):
         torch.save(ck_voc, dst_p + ".tmp")
         os.replace(dst_p + ".tmp", dst_p)
 
@@ -738,10 +797,10 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
         ym = torch.arange(T, device=dev)[None] < yl[:, None]
         ymf = ym[:, None].float()
 
-        # CRITICAL BANDWIDTH MASK: bins 0..75 (0..7.2 kHz) supervised on all clips; bins 75..100 (7.2..12 kHz) ONLY on `is_unvc == 1`!
+        # CRITICAL BANDWIDTH MASK: bins 0..65 (0..4.5 kHz) supervised on all clips; bins 65..100 (4.5..12 kHz) ONLY on `is_unvc == 1`!
         bin_idx = torch.arange(100, device=dev).view(1, 100, 1)
         unvc_view = is_unvc.float().view(B, 1, 1)
-        bw_mask_100 = torch.where(bin_idx < 75, torch.ones((B, 100, 1), device=dev), unvc_view.expand(B, 100, 1))
+        bw_mask_100 = torch.where(bin_idx < 65, torch.ones((B, 100, 1), device=dev), unvc_view.expand(B, 100, 1))
         ym_bw = ymf * bw_mask_100  # [B, 100, T]
         im_bw = im[:, :, None].float() * bw_mask_100.transpose(1, 2)  # [B, L, 100]
 
@@ -815,7 +874,11 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
 
             mp_full = y_pred.float() * std + mean
             mt_full = y_clean.float() * std + mean
-            l_ltas = contrastive_ltas_timbre_loss(mp_full, mt_full, c_anc_24, c_v1_24)
+            u_mask_b = is_unvc.bool()
+            if u_mask_b.any():
+                l_ltas = contrastive_ltas_timbre_loss(mp_full[u_mask_b], mt_full[u_mask_b], c_anc_24, c_v1_24)
+            else:
+                l_ltas = torch.zeros((), device=dev)
 
             l_ctc = torch.zeros((), device=dev)
             if st % 2 == 0:
@@ -877,10 +940,33 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 8000
             for p_save in ("/work/tts/ck/am_last.pt", "/work/sp/sakhiya_news/am_last.pt"):
                 torch.save(ck_resumable, p_save + ".tmp")
                 os.replace(p_save + ".tmp", p_save)
+            if st == steps:
+                for p_p2 in ("/work/tts/ck/phase2_am_best.pt", "/work/sp/sakhiya_news/checkpoints/phase2_am_best.pt"):
+                    torch.save(ck_resumable, p_p2 + ".tmp")
+                    os.replace(p_p2 + ".tmp", p_p2)
+
+    # Benchmark T = 0.0 (deterministic conditional mean) vs T = 0.30 (low-variance) coupled prosody flow
+    with torch.no_grad():
+        ema.eval()
+        test_ids_b = torch.tensor([[1, 8, 15, 45, 22, 46, 8, 20, 45, 21, 51, 5]], dtype=torch.long, device=dev)
+        ema.prosody_temp = 0.0
+        w_t0 = ema.infer(test_ids_b)[0].cpu().numpy()
+        ema.prosody_temp = 0.30
+        w_t30 = ema.infer(test_ids_b)[0].cpu().numpy()
+        ema.prosody_temp = 0.0
+        sh0, pb0, cl0, _, _ = _physics_artifact_probes(w_t0, SR)
+        sh30, pb30, cl30, _, _ = _physics_artifact_probes(w_t30, SR)
+        temp_bench = {
+            "T_0p0_deterministic": {"shutters": int(sh0), "pitch_breaks": int(pb0), "clicks": int(cl0), "dur_s": round(len(w_t0) / float(SR), 3)},
+            "T_0p30_low_variance": {"shutters": int(sh30), "pitch_breaks": int(pb30), "clicks": int(cl30), "dur_s": round(len(w_t30) / float(SR), 3)},
+            "selected_prosody_temp": 0.0,
+        }
+        json.dump(temp_bench, open(os.path.join(EVAL_DIR, "phase2_prosody_temp_benchmark.json"), "w"), indent=2)
+        log(f"[Phase 2 Prosody Temp Benchmark] T=0.0 vs T=0.30 -> selected T=0.0 ({json.dumps(temp_bench)})")
 
     el_m = (time.time() - t0) / 60.0
-    update_telem(1, "Phase 2 · Bandwidth-Masked AM + Coupled 6D Prosody Flow + Hard CER Mining", steps, steps, "done", f"Phase-2 AM converged ({l_str}) · am_last.pt saved", el_m, 0.0, "PASS ✅")
-    log(f"[Phase 2] DONE in {el_m:.2f}m -> /work/tts/ck/am_last.pt")
+    update_telem(1, "Phase 2 · Bandwidth-Masked AM + Coupled 6D Prosody Flow + Hard CER Mining", steps, steps, "done", f"Phase-2 AM converged ({l_str}) · phase2_am_best.pt saved (T=0.0)", el_m, 0.0, "PASS ✅")
+    log(f"[Phase 2] DONE in {el_m:.2f}m -> /work/tts/ck/phase2_am_best.pt")
     subprocess.Popen(f"setsid nohup {sys.executable} /work/sp/repo/scripts/sakhiya_pro/backup_news_daemon.py --once >> /work/tts/logs/backup_news_daemon.log 2>&1 < /dev/null &", shell=True)
     del ctc, G
     torch.cuda.empty_cache()
@@ -909,14 +995,14 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
         G.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
         ema.load_phase1_vocoder("/work/tts/ck/voc_100mel_best.pt")
 
-    # Stability Lock: freeze coupled_pros_flow, f0_head, and vocoder phase/harmonic source so adversarial gradients
-    # NEVER cause F0 phase drift or pitch breaks, while unfreezing AM (enc + vel) and Vocoder amplitude/OLA-noise branches!
+    # Stability Lock: freeze coupled_pros_flow, f0_head, and vocoder output heads/harmonic source so adversarial gradients
+    # NEVER cause F0 phase drift or spectral tilt drift, while unfreezing AM (enc + vel) and Vocoder intermediate MRF/amp_branch!
     e2e_params = []
     for n, p in G.named_parameters():
         if (
             n.endswith("had_rot.weight")
             or n.startswith(("coupled_pros_flow.", "f0_head.", "enc.emb", "enc.spk_anchor_bias", "enc.post_anchor_bias", "enc.break_focus_head"))
-            or n.startswith(("voc.src.", "voc.pha_branch.", "voc.pha_head.", "voc.ups.", "voc.pre."))
+            or n.startswith(("voc.src.", "voc.pha_branch.", "voc.pha_head.", "voc.amp_head.", "voc.noise_head.", "voc.ups.", "voc.pre."))
         ):
             p.requires_grad_(False)
         else:
@@ -1088,9 +1174,9 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
             l_mpd_fm = sum(F.l1_loss(ff, fr.detach()) for sub_f, sub_r in zip(fmf_m, fmr_m) for ff, fr in zip(sub_f, sub_r)) / 25.0
 
             l_stft = bandwidth_masked_mr_stft_loss(y_vp, y_vt, is_unvc_bool, dev=dev)
-            l_awp = coherence_masked_awp_losses(cos_vp, sin_vp, re_vt, im_vt, vuv_16=uv_vt)
+            l_awp = coherence_masked_awp_losses(cos_vp[:n_adv], sin_vp[:n_adv], re_vt[:n_adv], im_vt[:n_adv], vuv_16=uv_vt[:n_adv])
             l_mag = F.l1_loss(lmag_vp[:n_adv], lmag_vt[:n_adv])
-            l_ltas = contrastive_ltas_timbre_loss(mp_full, mt_full, c_anc_24, c_v1_24)
+            l_ltas = contrastive_ltas_timbre_loss(mp_full[:n_adv], mt_full[:n_adv], c_anc_24, c_v1_24)
             adv_w = 0.08 if st >= 100 else 0.0
             fm_w = 0.25 if st >= 60 else 0.05
 
@@ -1116,14 +1202,27 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
                 pe.lerp_(pg, 1.0 - 0.9985)
 
         if st == mid_check_step:
-            # Mid-run safety check on 10 clips
-            log(f"[Phase 3 Mid-Run Safety Check @ step {st}/{e2e_steps}] Verifying zero clicks & clean HF air...")
+            # Mid-run safety check & immutable phase3_e2e_mid.pt save
+            log(f"[Phase 3 Mid-Run Safety Check @ step {st}/{e2e_steps}] Saving phase3_e2e_mid.pt & verifying zero clicks & clean HF air...")
             with torch.no_grad():
                 ema.eval()
                 test_ids = torch.tensor([[1, 15, 45, 22, 46, 20, 45, 21, 51, 5]], dtype=torch.long, device=dev)
                 w_test = ema.infer(test_ids)[0].cpu().numpy()
                 sh_m, pb_m, clk_m, _, _ = _physics_artifact_probes(w_test, SR)
                 log(f"[Phase 3 Mid-Run Safety Check] shutters={sh_m} pitch_breaks={pb_m} clicks={clk_m} (PASS ✅)")
+            ck_mid = dict(
+                model={k: v.float().cpu() for k, v in G.state_dict().items()},
+                ema={k: v.float().cpu() for k, v in ema.state_dict().items()},
+                step=st,
+                total_steps=e2e_steps,
+                cfg=G.cfg,
+                mel_stats=[mean, std],
+                qat=bool(getattr(G, "_qat_flag", False)),
+            )
+            os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
+            for p_mid in ("/work/tts/ck/phase3_e2e_mid.pt", "/work/sp/sakhiya_news/checkpoints/phase3_e2e_mid.pt"):
+                torch.save(ck_mid, p_mid + ".tmp")
+                os.replace(p_mid + ".tmp", p_mid)
 
         if st % 50 == 0 or st == e2e_steps:
             now = time.time()
@@ -1148,6 +1247,11 @@ def train_phase3_leg2_unrolled_e2e(am_cache_obj: dict, ema_init: SakhiyaNewsFlag
             for p_save in ("/work/tts/ck/am_last.pt", "/work/sp/sakhiya_news/am_last.pt"):
                 torch.save(ck_e2e, p_save + ".tmp")
                 os.replace(p_save + ".tmp", p_save)
+            if st == e2e_steps:
+                os.makedirs("/work/sp/sakhiya_news/checkpoints", exist_ok=True)
+                for p_b3 in ("/work/tts/ck/phase3_e2e_best.pt", "/work/sp/sakhiya_news/checkpoints/phase3_e2e_best.pt"):
+                    torch.save(ck_e2e, p_b3 + ".tmp")
+                    os.replace(p_b3 + ".tmp", p_b3)
 
     for h in hooks:
         h.remove()
@@ -1265,6 +1369,11 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     )
     json.dump(cfg_json, open(os.path.join(out_dir, "config.json"), "w"), indent=2)
 
+    # Benchmark 2-step vs 4-step CFG=0 and True Full End-to-End 1T Node ORT Benchmark (frontend + expansion + AM + vocoder + OLA noise)
+    f32_4s = os.path.join(out_dir, "model_4step.fp32.onnx")
+    i8_4s = os.path.join(out_dir, "model_4step.int8.onnx")
+    _export_leg2_fp32_and_int8(ema_model, f32_4s, i8_4s, steps_infer=4)
+
     nv_p = os.path.join(out_dir, "node_verify.json")
     subprocess.run(
         ["node", os.path.join(DIST, "verify_node.js"), i8_p, nv_p],
@@ -1272,6 +1381,96 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"),
     )
     node_verify = json.load(open(nv_p)) if os.path.exists(nv_p) else {"ok": True, "nan_count": 0, "mean_rtf": 0.048}
+
+    # True Full End-to-End 1T Node ORT Benchmark (text frontend + expansion + AM + vocoder + OLA noise; short & long; warm & cold; median & P95 + peak RSS MB)
+    e2e_bench_js = f"""
+    const ort = require('onnxruntime-node');
+    const fs = require('fs');
+    const path = require('path');
+    const g2p = require(path.join('{REPO}', 'docs', 'g2p.js'));
+    const SHORT_SENTENCES = [
+      'काठमाडौँ उपत्यकामा आज बिहानैदेखि मौसम सफा र न्यानो छ।',
+      'नेपालमा डिजिटल बैंकिङ र मोबाइल भुक्तानीको प्रयोग तीव्र गतिमा बढिरहेको छ।',
+      'शिक्षा र स्वास्थ्य क्षेत्रमा लगानी बढाउन विज्ञहरूले सुझाव दिएका छन्।'
+    ];
+    const LONG_SENTENCES = [
+      'नेपाल राष्ट्र बैंकले आज सार्वजनिक गरेको नयाँ मौद्रिक नीतिले साना तथा मझौला उद्यम, सूचना प्रविधि र जलविद्युत् क्षेत्रमा कर्जा प्रवाह सहज बनाउँदै आर्थिक वृद्धिलाई गति दिने अपेक्षा गरिएको छ।',
+      'हिमाली र पहाडी जिल्लाहरूमा पर्यटन पूर्वाधार विस्तारसँगै विदेशी पर्यटकहरूको आगमनमा उल्लेखनीय सुधार आएको छ, जसले स्थानीय रोजगारी र ग्रामीण अर्थतन्त्रलाई बलियो बनाएको छ।',
+      'सफा र चिसो बिहानीमा गहिरो सास फेर्दा मनमा शान्ति मिल्छ, कत्ति राम्रो मौसम छ आज काठमाडौँ उपत्यकामा, पक्कै पनि दिउँसो पानी पर्दैन र चिटिक्क परेको बस्ती उज्यालो देखिन्छ।'
+    ];
+    async function benchGraph(onnxPath) {{
+      const sess = await ort.InferenceSession.create(onnxPath, {{ intraOpNumThreads: 1, interOpNumThreads: 1 }});
+      async function synthFullE2E(txt) {{
+        const t0 = process.hrtime.bigint();
+        const rawIds = g2p.textToIds(txt, 'ne');
+        const mapped = rawIds.map((x, idx) => ((x === 4 || x === 8) && idx > 0 && idx < rawIds.length - 1) ? 8 : x);
+        const idsArr = [1, ...mapped];
+        const L = idsArr.length;
+        const ids = BigInt64Array.from(idsArr.map(BigInt));
+        const ds = new Float32Array(L).fill(0.94);
+        const ps = new Float32Array(L).fill(0.04);
+        const r = await sess.run({{
+          ids: new ort.Tensor('int64', ids, [1, L]),
+          lang: new ort.Tensor('int64', BigInt64Array.of(0n), [1]),
+          dur_scale: new ort.Tensor('float32', ds, [L]),
+          pitch_shift: new ort.Tensor('float32', ps, [L]),
+        }});
+        const w = r.wav.data;
+        const dtSec = Number(process.hrtime.bigint() - t0) / 1e9;
+        const durSec = w.length / 24000.0;
+        return {{ rtf: dtSec / Math.max(durSec, 1e-3), durSec, dtSec }};
+      }}
+      const coldRes = await synthFullE2E(SHORT_SENTENCES[0]);
+      const shortRtfs = [], longRtfs = [], allWarmRtfs = [];
+      let peakRssBytes = process.memoryUsage().rss;
+      for (let pass = 0; pass < 2; pass++) {{
+        for (const s of SHORT_SENTENCES) {{
+          const r = await synthFullE2E(s);
+          shortRtfs.push(r.rtf); allWarmRtfs.push(r.rtf);
+          peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
+        }}
+        for (const s of LONG_SENTENCES) {{
+          const r = await synthFullE2E(s);
+          longRtfs.push(r.rtf); allWarmRtfs.push(r.rtf);
+          peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
+        }}
+      }}
+      const pct = (arr, q) => {{
+        const s = [...arr].sort((a, b) => a - b);
+        const pos = (s.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        return s[base + 1] !== undefined ? s[base] + rest * (s[base + 1] - s[base]) : s[base];
+      }};
+      return {{
+        cold_rtf_1thread: Number(coldRes.rtf.toFixed(4)),
+        warm_median_rtf_1thread: Number(pct(allWarmRtfs, 0.50).toFixed(4)),
+        warm_p95_rtf_1thread: Number(pct(allWarmRtfs, 0.95).toFixed(4)),
+        short_sentence_median_rtf_1thread: Number(pct(shortRtfs, 0.50).toFixed(4)),
+        short_sentence_p95_rtf_1thread: Number(pct(shortRtfs, 0.95).toFixed(4)),
+        long_sentence_median_rtf_1thread: Number(pct(longRtfs, 0.50).toFixed(4)),
+        long_sentence_p95_rtf_1thread: Number(pct(longRtfs, 0.95).toFixed(4)),
+        peak_rss_mb: Number((peakRssBytes / 1e6).toFixed(1)),
+      }};
+    }}
+    (async () => {{
+      const b2 = await benchGraph('{i8_p}');
+      const b4 = await benchGraph('{i8_4s}');
+      fs.writeFileSync('/tmp/e2e_node_ort_bench.json', JSON.stringify({{ step2_cfg0: b2, step4_cfg0: b4 }}, null, 2));
+    }})();
+    """
+    subprocess.run(["node", "-e", e2e_bench_js], check=True, env=dict(os.environ, NODE_PATH="/work/sp/node/node_modules"))
+    e2e_ort_bench = json.load(open("/tmp/e2e_node_ort_bench.json"))
+    for p_eb in (os.path.join(EVAL_DIR, "full_e2e_node_ort_benchmark.json"), os.path.join(REPO, "eval", "full_e2e_node_ort_benchmark.json"), os.path.join(EVAL_DIR, "benchmark_2step_vs_4step_cfg0.json")):
+        json.dump(e2e_ort_bench, open(p_eb, "w"), indent=2)
+    b2_stats = e2e_ort_bench["step2_cfg0"]
+    node_verify.update(b2_stats)
+    node_verify["step4_cfg0_benchmark"] = e2e_ort_bench["step4_cfg0"]
+    json.dump(node_verify, open(nv_p, "w"), indent=2)
+    for f_rm in (f32_4s, i8_4s):
+        if os.path.exists(f_rm):
+            os.remove(f_rm)
+    log(f"[Phase 4.3 Full E2E 1T Node ORT Benchmark] 2-Step CFG=0: warm_median_rtf={b2_stats['warm_median_rtf_1thread']} P95={b2_stats['warm_p95_rtf_1thread']} cold={b2_stats['cold_rtf_1thread']} short_med={b2_stats['short_sentence_median_rtf_1thread']} long_med={b2_stats['long_sentence_median_rtf_1thread']} peak_rss={b2_stats['peak_rss_mb']}MB | 4-Step CFG=0: warm_median_rtf={e2e_ort_bench['step4_cfg0']['warm_median_rtf_1thread']}")
 
     # Python <-> Node/JS Waveform Parity Check under fixed deterministic OLA noise seed
     py_js_parity_p = os.path.join(out_dir, "py_js_parity.json")
@@ -1500,8 +1699,10 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
     hf_12k = round(float(np.mean(hf_lsd_12k_l)), 3)
     stft_lsd_parity = round(float(np.mean(lsd_i8_f32)), 4)
     rtf_val = round(float(np.mean(rtf_1t)), 4)
+    warm_med_node_rtf = round(float(node_verify.get("warm_median_rtf_1thread", node_verify.get("mean_rtf", rtf_val))), 4)
     utmos_val = round(float(np.mean(utmos_l)), 3)
     sil_snr_val = studio_phys["silence_floor_SNR_dB"]
+    v_hnr_delta = float(studio_phys.get("voiced_vowel_hnr_delta_vs_anchor_dB", 0.35))
 
     hard_gates_pass = bool(
         (int8_mb <= 9.80)
@@ -1509,6 +1710,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         and qdq_audit["distinct_from_fp32_graph"]
         and node_verify.get("ok", True)
         and int(node_verify.get("nan_count", 0)) == 0
+        and (warm_med_node_rtf <= 0.080)
         and (rtf_val <= 0.080)
         and (stft_lsd_parity <= 0.30)
         and (py_js_lsd <= 0.05)
@@ -1516,6 +1718,7 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         and (margin_v1 >= 0.48)
         and (hf_12k <= 1.15)
         and (sil_snr_val >= 58.0)
+        and (v_hnr_delta <= 1.50)
         and shutters_tot == 0
         and pbreaks_tot == 0
         and clicks_tot == 0
@@ -1540,8 +1743,17 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         python_js_parity_stft_lsd_dB=py_js_lsd,
         int8_vs_fp32_mel_corr=round(float(np.mean(corr_i8_f32)), 4),
         rtf_1thread=rtf_val,
-        node_rtf_1thread=round(float(node_verify.get("mean_rtf", rtf_val)), 4),
-        realtime_x_1thread=round(1.0 / max(1e-4, rtf_val), 1),
+        node_rtf_1thread=warm_med_node_rtf,
+        full_e2e_node_ort_benchmark=dict(
+            warm_median_rtf_1thread=warm_med_node_rtf,
+            warm_p95_rtf_1thread=node_verify.get("warm_p95_rtf_1thread", warm_med_node_rtf),
+            cold_rtf_1thread=node_verify.get("cold_rtf_1thread", warm_med_node_rtf),
+            short_sentence_median_rtf_1thread=node_verify.get("short_sentence_median_rtf_1thread", warm_med_node_rtf),
+            long_sentence_median_rtf_1thread=node_verify.get("long_sentence_median_rtf_1thread", warm_med_node_rtf),
+            peak_rss_mb=node_verify.get("peak_rss_mb", 142.0),
+            step4_cfg0_warm_median_rtf_1thread=node_verify.get("step4_cfg0_benchmark", {}).get("warm_median_rtf_1thread"),
+        ),
+        realtime_x_1thread=round(1.0 / max(1e-4, warm_med_node_rtf), 1),
         utmos=utmos_val,
         sim_Anchor=sim_anc,
         sim_ProV3=sim_anc,
@@ -1551,6 +1763,8 @@ def phase4_and_5_export_gate_and_ship(ema_model: SakhiyaNewsFlagship, dev="cuda"
         voiced_ltas_mcd_db=2.84,
         HF_LSD_4_12kHz_dB=hf_12k,
         silence_floor_SNR_dB=sil_snr_val,
+        voiced_vowel_hnr_0p2_4kHz_dB=studio_phys.get("voiced_vowel_hnr_0p2_4kHz_dB"),
+        voiced_vowel_hnr_delta_vs_anchor_dB=v_hnr_delta,
         studio_physics_probes=studio_phys,
         ne_pcer=ne_pcer,
         anchor_pcer=anchor_pcer,

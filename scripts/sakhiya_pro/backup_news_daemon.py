@@ -40,9 +40,17 @@ def stage_files():
         "/work/tts/ck/voc_100mel_last.pt",
         "/work/tts/ck/am_last.pt",
         "/work/tts/ck/am_best.pt",
+        "/work/tts/ck/phase1_voc_best.pt",
+        "/work/tts/ck/phase2_am_best.pt",
+        "/work/tts/ck/phase3_e2e_mid.pt",
+        "/work/tts/ck/phase3_e2e_best.pt",
         "/work/sp/sakhiya_news/voc_100mel_best.pt",
         "/work/sp/sakhiya_news/am_last.pt",
         "/work/sp/sakhiya_news/am_best.pt",
+        "/work/sp/sakhiya_news/checkpoints/phase1_voc_best.pt",
+        "/work/sp/sakhiya_news/checkpoints/phase2_am_best.pt",
+        "/work/sp/sakhiya_news/checkpoints/phase3_e2e_mid.pt",
+        "/work/sp/sakhiya_news/checkpoints/phase3_e2e_best.pt",
     ):
         if os.path.exists(ck_src):
             dst = os.path.join(STAGE_DIR, "checkpoints", os.path.basename(ck_src))

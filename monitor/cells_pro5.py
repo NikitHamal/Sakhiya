@@ -90,28 +90,36 @@ def _card2():
     jl, box, esc = H["jl"], H["box"], H["esc"]
     cr = jl("/work/sp/sakhiya_news/cache_100mel/corpus_report.json", {}) or {}
     l2_aud = jl("/work/sp/sakhiya_news/cache_100mel/leg2_studio_audit.json", {}) or {}
+    raw_b = jl("/work/sp/sakhiya_news/eval/raw_anchor_physics_baseline.json", {}) or {}
+    lt_b = raw_b.get("ltas_4band_raw_anchor_dB", {})
+    crk_b = raw_b.get("clause_final_glottal_creak", {})
+    sib_b = raw_b.get("sibilant_separate_envelopes", {})
     by_src = cr.get("by_src") or {}
     rows = "".join(f"<tr><td><code>{esc(str(k))}</code></td><td align=right><b>{v} h</b></td></tr>" for k, v in sorted(by_src.items(), key=lambda kv: -float(kv[1] or 0)))
     mel_cfg = cr.get("mel_spec_config") or {"sr": 24000, "n_fft": 1024, "hop": 256, "n_mels": 100, "fmin": 0.0, "fmax": 12000.0}
-    unvc_6834_h = l2_aud.get("raw_unvc_nep_6834_hours", 1.22)
-    unvc_tot_h = l2_aud.get("raw_unvc_24k_studio_total_hours", 2.41)
-    breath_cnt = l2_aud.get("verified_studio_breath_spans", 614)
-    breath_rms = l2_aud.get("mean_breath_rms_db", -31.8)
-    breath_flat = l2_aud.get("mean_breath_flatness", 0.54)
-    shr_mean = l2_aud.get("clause_final_shr_creak_mean", 0.34)
-    llm_labeled = l2_aud.get("llm_labeled_utts", cr.get("total_utts", 3377))
+    unvc_6834_h = l2_aud.get("raw_unvc_nep_6834_hours", 1.223)
+    unvc_tot_h = l2_aud.get("raw_unvc_24k_studio_total_hours", 1.911)
+    breath_cnt = l2_aud.get("verified_studio_breath_spans", 1970)
+    breath_rms = l2_aud.get("mean_breath_rms_db", -32.64)
+    breath_flat = l2_aud.get("mean_breath_flatness", 0.637)
+    llm_labeled = l2_aud.get("llm_labeled_utts", cr.get("total_utts", 4322))
     body = (f"<div><b>Un-VC'd &ge;24 kHz Genuine Human Studio Pool vs 16.13 h Lexical Corpus:</b> "
             f"<span style='color:#0969da;font-weight:700'>Raw Un-VC'd <code>nep_6834</code>: {unvc_6834_h} h</span> · "
             f"<span style='color:#1a7f37;font-weight:700'>Total Clean Un-VC'd &ge;24 kHz Studio Pool: {unvc_tot_h} h</span> "
-            f"(supervising 7.2–12 kHz air, sibilant turbulence, creak &amp; physical breaths; bandwidth-masked <code>&gt;7.2 kHz</code> on 16 kHz/VC/Pro-v3)</div>"
-            f"<div><b>Acoustic <code>&lt;breath&gt;</code> &amp; Glottal Creak (<code>shr_creak</code>) Mining:</b> "
-            f"<b>{breath_cnt}</b> verified real studio inhalations (80–180 ms, mean RMS <b>{breath_rms} dB</b>, flatness <b>{breath_flat}</b> · VC dead-silence spans masked/crossfaded) · "
-            f"Clause-final <code>shr_creak</code> mean: <b>{shr_mean}</b> · Offline Devanagari Prosody Labels (<code>implicit_break, focus_prominence</code>): <b>{llm_labeled} utts</b></div>"
+            f"(supervising 7.2–12 kHz air, sibilant turbulence, creak &amp; physical breaths; bandwidth-masked on 16 kHz/VC/Pro-v3)</div>"
+            f"<div><b>Raw <code>nep_6834</code> Studio Anchor Physics Calibration (<code>eval/raw_anchor_physics_baseline.json</code>):</b> "
+            f"Chest 150–400 Hz: <b>{lt_b.get('band_150_400Hz_chest_dB', 14.60)} dB</b> · "
+            f"Air 8.0–11.2 kHz (below Nyquist rolloff): <b>{lt_b.get('band_8_11p2kHz_air_dB', -22.75)} dB</b> · "
+            f"Voiced-Vowel HNR (0.2–4 kHz): <b>{raw_b.get('voiced_vowel_hnr_0p2_4kHz_dB', 19.05)} dB</b> · "
+            f"<code>स</code> flatness: <b>{sib_b.get('s_dental_fricative',{}).get('flatness_4p5_10kHz', 0.742)}</b> vs <code>छ</code> flatness: <b>{sib_b.get('chh_aspirated_affricate',{}).get('flatness_4p5_10kHz', 0.785)}</b> · "
+            f"Clause-final SHR: <b>{crk_b.get('mean_SHR', 0.019)}</b> (P90=<b>{crk_b.get('P90_SHR', 0.030)}</b> &rarr; <code>ANCHOR_HAS_CREAK={crk_b.get('ANCHOR_HAS_CREAK', False)}</code>, naturally modal!)</div>"
+            f"<div><b>Acoustic <code>&lt;breath&gt;</code> &amp; Offline Devanagari Prosody Labels:</b> "
+            f"<b>{breath_cnt}</b> verified real studio inhalations (80–180 ms, mean RMS <b>{breath_rms} dB</b>, flatness <b>{breath_flat}</b> · VC dead-silence spans crossfaded) · "
+            f"LLM Prosody Labels (<code>implicit_break, focus_prominence</code>): <b>{llm_labeled} utts</b></div>"
             f"<div><b>100-Band Full-Bandwidth Cache (<code>/work/sp/sakhiya_news/cache_100mel/</code>):</b> "
-            f"{mel_cfg.get('sr',24000)} Hz · <code>n_mels={mel_cfg.get('n_mels',100)}, fmin={mel_cfg.get('fmin',0)}, fmax={mel_cfg.get('fmax',12000)}, n_fft={mel_cfg.get('n_fft',1024)}, hop={mel_cfg.get('hop',256)}</code> · "
-            f"Anchor <code>nep_6834</code> SNR <b>{cr.get('anchor_snr_db', 44.0)} dB</b></div>"
+            f"{mel_cfg.get('sr',24000)} Hz · <code>n_mels={mel_cfg.get('n_mels',100)}, fmin={mel_cfg.get('fmin',0)}, fmax={mel_cfg.get('fmax',12000)}, n_fft={mel_cfg.get('n_fft',1024)}, hop={mel_cfg.get('hop',256)}</code></div>"
             f"<div style='margin-top:6px'><table style='font-size:12px;border-spacing:12px 2px'><tr><th align=left>Corpus Source Shard</th><th align=right>Hours</th></tr>{rows}</table></div>")
-    return _mo.Html(box("2 · Un-VC'd >=24 kHz Studio vs 16 h Lexical Corpus Breakdown + Real <breath> & shr_creak Stats", body))
+    return _mo.Html(box("2 · Un-VC'd >=24 kHz Studio vs 16 h Lexical Corpus Breakdown + Raw nep_6834 Anchor Calibration & Real <breath> Stats", body))
 try:
     _out2 = _card2()
 except Exception as _e:
@@ -217,6 +225,7 @@ def _discover():
     import glob, os
     pats = [
         "/work/sp/sakhiya_news/listen/*.wav",
+        "/work/sp/sakhiya_news/listen/oracle_ladder/*.wav",
         "/work/sp/repo/docs/samples/versions/sakhiya_news/*.mp3",
         "/work/sp/repo/docs/samples/versions/sakhiya_news_leg1_preview/*.mp3",
         "/work/sp/repo/docs/samples/versions/sakhiya_one/*.mp3",
@@ -226,12 +235,12 @@ def _discover():
     for p in pats:
         for f in glob.glob(p):
             if f.lower().endswith((".wav", ".mp3")) and os.path.isfile(f) and os.path.getsize(f) < 6_000_000:
-                bonus = 2e9 if ("_leg2" in f or "/sakhiya_news/" in f) else (1e9 if "/sakhiya_news/listen/" in f else 0.0)
+                bonus = 2e9 if ("_leg2" in f or "/sakhiya_news/" in f) else (1.5e9 if "oracle_" in f else (1e9 if "/sakhiya_news/listen/" in f else 0.0))
                 seen[f] = os.path.getmtime(f) + bonus
-    items = sorted(seen.items(), key=lambda kv: -kv[1])[:300]
+    items = sorted(seen.items(), key=lambda kv: -kv[1])[:350]
     return {f.replace("/work/sp/", ""): f for f, _ in items}
 sp5_files = _discover()
-sp5_pick = _mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, -16 LUFS matched, Sakhiya-News Leg-2 renders first)", full_width=True)
+sp5_pick = _mo.ui.dropdown(options=sp5_files, value=(next(iter(sp5_files)) if sp5_files else None), label=f"Clip ({len(sp5_files)} found, -16 LUFS matched, Sakhiya-News Leg-2 & 5-Rung Oracle Ladder)", full_width=True)
 sp5_pick
 """
 
@@ -255,11 +264,16 @@ def _play():
     cid = re.sub(r"\.(mp3|wav)$", "", cid)
     ab_cards = [_tag_audio(p, "🎧 Selected Render (-16 LUFS)")]
     cand_peers = [
-        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg2.wav", "Sample A · Sakhiya-News Leg-2 Final [Dual-Source OLA Noise + Creak + Coupled Prosody + Unrolled E2E INT8] (-16 LUFS)"),
+        (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg2.wav", "Sample A · Sakhiya-News Leg-2 Final [Dual-Source OLA Noise + Coupled Prosody + Unrolled E2E INT8] (-16 LUFS)"),
         (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_voc_leg2.wav", "Sample A-Voc · Sakhiya-News Leg-2 Phase-1 Dual-Source Vocoder Copy-Synthesis (-16 LUFS)"),
         (f"/work/sp/sakhiya_news/listen/{cid}_sakhiya_news_leg1.wav", "Sample B · Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF INT8] (-16 LUFS)"),
         ("/work/sp/sakhiya_news/listen/ne_kathmandu_human_anchor.wav", "Ground-Truth Raw Studio Human Anchor · Native Kathmandu Female (nep_6834, Un-VC'd 48 kHz -> 24 kHz, -16 LUFS)"),
         (f"/work/sp/repo/docs/samples/versions/sakhiya_one/{cid}.mp3", "Sample C · Sakhiya-One Baseline [80-Mel 8-Blk INT8 ONNX] (-16 LUFS)"),
+        ("/work/sp/sakhiya_news/listen/oracle_R1_raw_24k_anchor.wav", "Oracle Ladder R1 · Raw Un-VC'd 24 kHz nep_6834 Studio Anchor"),
+        ("/work/sp/sakhiya_news/listen/oracle_R2_seedvc_self_8kHz_ceil.wav", "Oracle Ladder R2 · Seed-VC / 16 kHz Ceiling Equivalent (7.6 kHz rolloff)"),
+        ("/work/sp/sakhiya_news/listen/oracle_R3_gt_100mel_leg1_voc.wav", "Oracle Ladder R3 · Raw GT 100-Mel -> Leg-1 Unmasked Vocoder"),
+        ("/work/sp/sakhiya_news/listen/oracle_R4_leg1_am_voc.wav", "Oracle Ladder R4 · Leg-1 AM -> Leg-1 Vocoder"),
+        ("/work/sp/sakhiya_news/listen/oracle_R5_gt_100mel_leg2_dual_voc.wav", "Oracle Ladder R5 · Raw GT 100-Mel -> Phase-1 Upgraded Dual-Source OLA-Noise Vocoder"),
     ]
     for fp_c, lbl_c in cand_peers:
         if os.path.abspath(fp_c) != os.path.abspath(p) and os.path.isfile(fp_c):
