@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s), el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
 window.$ = $;
 const tts = new SakhiyaWeb();
-const st = { lang: "auto", style: "storytelling", voice: "sakhiya", tier: "sakhiya_one", engine: "onnx" };
+const st = { lang: "auto", style: "news", voice: "sakhiya", tier: "sakhiya_news", engine: "onnx" };
 window.st = st;
 let TIERS = { tiers: [], voices: {}, styles: {} }, CFG = null;
 // v6 focused scope: Nepali + Sanskrit + Auto (Mixed) only; ONE unified female voice `sakhiya`; 3 mastered delivery modes.

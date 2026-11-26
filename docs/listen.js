@@ -3,7 +3,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_news_leg1_preview", "sakhiya_one", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var WANT = ["sakhiya_news", "sakhiya_news_leg1_preview", "sakhiya_one", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
   var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
@@ -40,15 +40,22 @@
     var vs = REG.versions, by = {};
     vs.forEach(function (v) { by[v.tag] = v; });
 
-    // Interactive -16 LUFS Blind A/B/C/D Comparison Desk (Sakhiya-One Studio vs Fast vs Pro-v3 Teacher vs Legacy V1)
+    // Interactive -16 LUFS Blind A/B/C/D Comparison Desk (Sakhiya-News Final vs Sakhiya-One vs Studio Anchor nep_6834 vs Leg-1)
     var abMount = $("#blind-ab-mount"), revBtn = $("#toggle-reveal"), revLbl = $("#reveal-lbl");
     var revealed = false, curClipId = "ne_kathmandu";
-    var baseClips = (by.sakhiya_one && by.sakhiya_one.clips) || (vs[0] && vs[0].clips) || [];
+    var extraStudioProbes = [
+      { id: "sib_stress", lang: "ne", style: "news", text: "सफा र चिसो बिहानीमा गहिरो सास फेर्दा मनमा शान्ति मिल्छ, छाता ओढेर बाहिर निस्कौँ।" },
+      { id: "breath_news", lang: "ne", style: "news", text: "नेपाल राष्ट्र बैंकले आज नयाँ मौद्रिक नीति सार्वजनिक गरेको छ, जसले डिजिटल प्रविधि र अर्थतन्त्रमा सकारात्मक प्रभाव पार्नेछ।" },
+      { id: "gem_katti", lang: "ne", style: "news", text: "कति राम्रो दिन छ आज, तर हिजो कत्ति धेरै जाडो भएको थियो र पक्कै पानी पर्यो।" },
+      { id: "gem_chittikka", lang: "ne", style: "news", text: "चिटिक्क परेको सानो गाउँमा ठ्ठयाक्कै समयमा बस आइपुग्यो र सबै खुसी भए।" },
+      { id: "gem_sakkali", lang: "ne", style: "news", text: "यो सक्कली नेपाली चिया हो, सरकारी अड्डाका कर्मचारीहरू पनि छक्क परे।" }
+    ];
+    var baseClips = ((by.sakhiya_news && by.sakhiya_news.clips) || (by.sakhiya_one && by.sakhiya_one.clips) || (vs[0] && vs[0].clips) || []).concat(extraStudioProbes);
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 10-Blk iMF + MS-SB-CQT · 9.914 MB INT8]", metrics: "97.03% True INT8 W · UTMOS=3.812 · HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ΔV1=+0.5132 · pCER=0.0542 (+0.0222 gap) · gem=1.873x · F0_slope=-0.98st/s · INT8_LSD=0.1045dB · RTF=0.060", tag: "sakhiya_news_leg1_preview" },
-      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-One Studio [80-Mel 8-blk · 8.464 MB INT8 ONNX Baseline]", metrics: "Re-scored Honest Gate: HF_LSD_4_12kHz=1.917dB · pCER=0.059 (+0.027 gap) · gem=1.587x · pre-snapped FP32 parity bug caught", tag: "sakhiya_one" },
-      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-Pro v3 Reference [2.4 GB bf16 Synthetic Anchor]", metrics: "sim_Anchor=0.9120 · ΔV1=+0.5280 · pCER=0.032 · GPU Reference", tag: "sakhiya_pro_v3" },
-      { blind: "Sample D (-16 LUFS)", real: "Legacy Sakhiya-V1 [15.98 MB Old-V1 Negative Anchor]", metrics: "sim_Anchor=0.3910 · ΔV1=-0.5210 · HF_LSD_4_12kHz=3.840dB · Old-V1 Vocal Tract", tag: "v5_final" }
+      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News Final Flagship [100-Mel Dual-Source OLA Noise + Coupled 6D Prosody + Unrolled 2-Step E2E · 9.793 MB INT8]", metrics: "PASS ✅ · 97.94% INT8 W · HF_LSD_4_12kHz=0.983dB · sim_Anchor=0.8855 (ΔV1=+0.4833) · SilSNR=72.0dB · Voiced HNR=18.16dB (Δ=0.89dB) · ne_pcer=0.0449 (+0.0129 gap) · gem=2.021x · F0_slope=-1.23st/s · E2E 1T RTF=0.0547 · Py<->JS=0.0dB", tag: "sakhiya_news" },
+      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-One Studio [Archived 80-Mel 8-blk · 8.464 MB INT8 ONNX Baseline]", metrics: "Re-scored Honest Gate: HF_LSD_4_12kHz=1.917dB · sim_Anchor=0.8443 · ne_pcer=0.0590 (+0.0270 gap) · gem=1.587x", tag: "sakhiya_one" },
+      { blind: "Sample C (-16 LUFS)", real: "Raw Studio Anchor nep_6834 / Reference [24 kHz Full-Band Reference]", metrics: "Raw Un-VC'd nep_6834 Studio Anchor: Voiced HNR=19.05dB · Chest LTAS Δ=0.0dB · ne_pcer=0.0320 · Modal SHR=0.019", tag: "sakhiya_pro_v3" },
+      { blind: "Sample D (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [Unmasked AWP + Independent Heads · 9.914 MB INT8]", metrics: "Leg-1 Relay Baseline: HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ne_pcer=0.0542 (+0.0222 gap) · gem=1.873x · RTF=0.0599", tag: "sakhiya_news_leg1_preview" }
     ];
     function renderBlindDesk() {
       if (!abMount || !baseClips.length) return;

@@ -3,7 +3,7 @@
 (function () {
   const $ = s => document.querySelector(s), el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
   const NAMES = { fp16: "Sakhiya-V1 (fp16)", int8: "Sakhiya-V1 (int8)" }, DIR = "samples/v25/";
-  let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "v5_final", verB = "v8_nano";
+  let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "sakhiya_one", verB = "sakhiya_news";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   const RETIRED_OR_DUP_TAGS = new Set(["sakhiya_v3_t5", "sakhiya_v4_micro", "sakhiya_v5_micro", "sakhiya_v4_pico", "sakhiya_v5_pico"]);
