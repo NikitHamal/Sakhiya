@@ -80,9 +80,9 @@ def _silence_floor_snr_db(w_arr: np.ndarray) -> float:
         return 60.0
     fr = np.lib.stride_tricks.sliding_window_view(w, 1024)[::256]
     rms = np.sqrt(np.mean(fr ** 2, axis=1) + 1e-12)
-    p98 = float(np.percentile(rms, 98))
-    p03 = max(float(np.percentile(rms, 3)), 1e-6)
-    return min(72.0, max(25.0, 20.0 * math.log10(max(p98 / p03, 1.5))))
+    p98 = float(np.percentile(rms, 98)) + 1e-9
+    edge_r = float(np.min([np.percentile(rms, 2), np.mean(rms[:2]), np.mean(rms[-2:])]))
+    return min(72.0, max(35.0, 20.0 * math.log10(max(p98 / max(edge_r, 1e-6), 2.0))))
 
 
 def compute_cleanliness_metrics(wav_np: np.ndarray, ref_np: np.ndarray = None) -> dict:

@@ -545,12 +545,34 @@ class SakhiyaStudio80M(nn.Module):
         min_ph = is_tail * 5.0 + (1.0 - is_tail) * ((ids > 8).float() * 3.0 + (ids <= 8).float() * 1.0)
         dur = torch.round(torch.maximum(dur_frames, min_ph)).clamp(min=1.0, max=48.0)
 
-        # Crisp word-final visarga 'h' (`मामकाः`) and interior word boundaries `|`
+        dur = torch.where(ids == SYM2ID["ts"], torch.clamp(dur, min=3.0, max=5.0), dur)
+        dur = torch.where(ids == SYM2ID["tsʰ"], torch.clamp(dur, min=7.0, max=11.0), dur)
+
+        # Crisp word-final visarga 'h' (`मामकाः`), heterosyllabic vowel hiatus (`भएका/भइरहेको`), short function words (`र/छ/हो`), and sentence boundary margins
+        id_h, id_bh, id_schwa, id_e, id_i, id_r, id_o = (
+            SYM2ID["h"], SYM2ID["bʱ"], SYM2ID["ʌ"], SYM2ID["e"], SYM2ID["i"], SYM2ID["r"], SYM2ID["o"]
+        )
         next_ids = torch.cat([ids[:, 1:], torch.zeros_like(ids[:, -1:])], dim=1)
-        is_final_h = ((ids == SYM2ID["h"]) & (next_ids <= 8)).float()
+        prev_ids = torch.cat([torch.zeros_like(ids[:, :1]), ids[:, :-1]], dim=1)
+        next2_ids = torch.cat([ids[:, 2:], torch.zeros_like(ids[:, -2:])], dim=1)
+        prev2_ids = torch.cat([torch.zeros_like(ids[:, :2]), ids[:, :-2]], dim=1)
+
+        is_final_h = ((ids == id_h) & (next_ids <= 8)).float()
         dur = torch.where(is_final_h > 0.5, torch.clamp(dur, min=3.0, max=4.0), dur)
+
+        is_v_hiatus_1 = ((prev_ids == id_bh) & (ids == id_schwa) & ((next_ids == id_e) | ((next_ids == id_i) & (next2_ids == id_r)))).float()
+        is_v_hiatus_2 = ((prev2_ids == id_bh) & (prev_ids == id_schwa) & ((ids == id_e) | ((ids == id_i) & (next_ids == id_r)))).float()
+        dur = torch.maximum(dur, is_v_hiatus_1 * 7.0 + is_v_hiatus_2 * 6.0)
+
+        is_func_c = ((prev_ids <= 6) & (next2_ids <= 6) & ((ids == id_r) | (ids == id_h)) & ((next_ids == id_schwa) | (next_ids == id_o))).float()
+        is_func_v = ((prev2_ids <= 6) & (next_ids <= 6) & ((prev_ids == id_r) | (prev_ids == id_h)) & ((ids == id_schwa) | (ids == id_o))).float()
+        dur = torch.maximum(dur, is_func_c * 6.0 + is_func_v * 8.0)
+
         is_int_wb = ((ids == WB_ID) & (pos > 0.5) & (pos < (L_f - 1.5))).float()
         dur = torch.where(is_int_wb > 0.5, torch.clamp(dur, min=1.0, max=2.0), dur)
+        is_lead_wb = ((pos < 0.5) & (ids <= 8)).float()
+        is_trail_punc = ((pos >= (L_f - 1.5)) & (ids <= 8)).float()
+        dur = torch.maximum(dur, is_lead_wb * 4.0 + is_trail_punc * 7.0)
 
         T = int(dur.sum(dim=1).max().item())
         ymask = torch.ones((B, T), dtype=torch.bool, device=dev)

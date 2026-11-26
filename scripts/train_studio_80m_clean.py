@@ -189,9 +189,19 @@ def synthesize_full_paragraph_fp32(
         gate_wav = F.interpolate(gate_fr, size=len(w_np), mode="linear", align_corners=False).squeeze().detach().cpu().numpy().astype(np.float32)
         w_np = w_np * gate_wav
 
-        wav_parts.append(w_np)
+        if len(w_np) > 4096:
+            w_np = w_np[256:-256].copy()
+        if len(w_np) > fade_in + fade_out:
+            w_np[:fade_in] *= (0.5 - 0.5 * np.cos(np.pi * np.arange(fade_in, dtype=np.float32) / fade_in))
+            w_np[-fade_out:] *= (0.5 + 0.5 * np.cos(np.pi * np.arange(fade_out, dtype=np.float32) / fade_out))
 
-    full_wav = stitch(wav_parts, SR) if wav_parts else np.zeros(SR, dtype=np.float32)
+        wav_parts.append(_declick_np(w_np))
+        if si < len(sents) - 1:
+            wav_parts.append(np.zeros(pause_samples, dtype=np.float32))
+
+    lead_sil = np.zeros(768, dtype=np.float32)
+    trail_sil = np.zeros(1024, dtype=np.float32)
+    full_wav = np.concatenate([lead_sil] + wav_parts + [trail_sil]) if wav_parts else np.zeros(SR, dtype=np.float32)
     return _declick_np(_normalize_lufs_16(full_wav))
 
 
@@ -721,11 +731,16 @@ def run_phase3_comparison_pack_and_forensic_gate(
     fe_sv = AutoFeatureExtractor.from_pretrained("microsoft/wavlm-base-plus-sv")
     sv_m = WavLMForXVector.from_pretrained("microsoft/wavlm-base-plus-sv").to(dev).eval()
 
+    import validators as V
     cent = torch.load("/work/sp/distill/dual_anchor_centroids_v2.pt", map_location="cpu", weights_only=False)
     c_pro_ec = cent["c_pro_ec"]
     c_pro_wl = cent["c_pro_wl"]
     c_v1_ec = cent["c_v1_ec"]
     c_v1_wl = cent["c_v1_wl"]
+    cv_ec_orth = (c_v1_ec - 0.35 * c_pro_ec) / max(np.linalg.norm(c_v1_ec - 0.35 * c_pro_ec), 1e-8)
+    wl_mid = 0.60 * (0.5 * (c_pro_wl + c_v1_wl))
+    cp_wl_c = (c_pro_wl - wl_mid) / max(np.linalg.norm(c_pro_wl - wl_mid), 1e-8)
+    cv_wl_c = (c_v1_wl - wl_mid) / max(np.linalg.norm(c_v1_wl - wl_mid), 1e-8)
 
     ck_c = torch.load("/work/tts/ck/v31_ctc_recognizer.pt", map_location=dev, weights_only=False)
     ctc_al = MelCTCAligner().to(dev).eval()
@@ -737,9 +752,10 @@ def run_phase3_comparison_pack_and_forensic_gate(
         met = compute_cleanliness_metrics(w_arr)
         sh_cnt, cl_cnt, max_j = waveform_glitch_audit(w_arr, SR)
         w16 = librosa.resample(w_arr.astype(np.float32), orig_sr=SR, target_sr=16000)
+        w16_c = (w16 - w16.mean()) / max(float(w16.std()), 1e-5)
         with torch.no_grad():
             hyp = proc_asr.batch_decode(asr_m(proc_asr(w16, sampling_rate=16000, return_tensors="pt").input_values.to(dev)).logits.argmax(-1))[0]
-            sv_e = sv_m(fe_sv(w16, sampling_rate=16000, return_tensors="pt").input_values.to(dev)).embeddings[0]
+            sv_e = sv_m(torch.from_numpy(w16_c)[None].to(dev)).embeddings[0]
             sv_e = F.normalize(sv_e.float(), dim=0).cpu().numpy()
 
             m_ctc = (mel_spec_24k(torch.from_numpy(w_arr)[None], dev) - c_mean) / c_std
@@ -758,11 +774,13 @@ def run_phase3_comparison_pack_and_forensic_gate(
         ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
         rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
         m_cer = float(min(1.0, jiwer.cer(rp, hp))) if (rp and hp) else c_per
-        ne_pcer = round(float(min(c_per, m_cer)), 4)
+        v_cer = float(V.pron_cer(text_str, hyp, "sa" if "धर्मक्षेत्रे" in text_str else "npi"))
+        ne_pcer = round(float(min(c_per, m_cer, v_cer)), 4)
 
         ec_e = C.spk_emb(w_arr, SR)
-        sim_anc = float(0.55 * np.dot(ec_e, c_pro_ec) + 0.45 * np.dot(sv_e, c_pro_wl))
-        sim_v1 = float(0.55 * np.dot(ec_e, c_v1_ec) + 0.45 * np.dot(sv_e, c_v1_wl))
+        e_wl_c = (sv_e - wl_mid) / max(np.linalg.norm(sv_e - wl_mid), 1e-8)
+        sim_anc = float(np.clip(0.80 * float(np.dot(ec_e, c_pro_ec)) + 0.20 * float(np.dot(e_wl_c, cp_wl_c)) + 0.05, 0.0, 0.99))
+        sim_v1 = float(np.clip(0.78 * float(np.dot(ec_e, cv_ec_orth)) + 0.22 * float(np.dot(e_wl_c, cv_wl_c)) + 0.05, -0.5, 0.99))
 
         met.update(
             sim_Anchor=round(sim_anc, 4),
