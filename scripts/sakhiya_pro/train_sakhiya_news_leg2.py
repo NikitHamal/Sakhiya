@@ -863,17 +863,21 @@ def train_phase2_leg2_am(am_cache_obj: dict, voc_ck_path: str, steps: int = 2500
         random.shuffle(xs)
         B = len(xs)
 
-        ids = pad_sequence([x["ids"].to(dev) for x in xs], batch_first=True)
-        dur = pad_sequence([x["dur"].to(dev) for x in xs], batch_first=True)
-        struct = pad_sequence([x["struct"].to(dev).float() for x in xs], batch_first=True)
-        f0_t = pad_sequence([x["f0"].to(dev).float() for x in xs], batch_first=True)
-        f0_slp_t = pad_sequence([x.get("f0_slope", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
-        eng_t = pad_sequence([x["eng"].to(dev).float() for x in xs], batch_first=True)
-        creak_t = torch.zeros_like(f0_t)
-        b_dur_t = pad_sequence([x.get("post_word_breath_dur", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)
-        syl_cnt_t = pad_sequence([x.get("syllables_since_last_breath", torch.zeros_like(x["f0"])).to(dev).float() for x in xs], batch_first=True)[:, None, :]
+        def _fit_1d(t_v, n_l):
+            t_v = t_v[:n_l]
+            return F.pad(t_v, (0, n_l - len(t_v))) if len(t_v) < n_l else t_v
 
-        mu_t = pad_sequence([x["mu"].to(dev).float() for x in xs], batch_first=True)
+        ids = pad_sequence([x["ids"].to(dev) for x in xs], batch_first=True)
+        dur = pad_sequence([_fit_1d(x["dur"].to(dev), len(x["ids"])) for x in xs], batch_first=True)
+        struct = pad_sequence([x["struct"][:len(x["ids"])].to(dev).float() for x in xs], batch_first=True)
+        f0_t = pad_sequence([_fit_1d(x["f0"].to(dev).float(), len(x["ids"])) for x in xs], batch_first=True)
+        f0_slp_t = pad_sequence([_fit_1d(x.get("f0_slope", torch.zeros_like(x["f0"])).to(dev).float(), len(x["ids"])) for x in xs], batch_first=True)
+        eng_t = pad_sequence([_fit_1d(x["eng"].to(dev).float(), len(x["ids"])) for x in xs], batch_first=True)
+        creak_t = torch.zeros_like(f0_t)
+        b_dur_t = pad_sequence([_fit_1d(x.get("post_word_breath_dur", torch.zeros_like(x["f0"])).to(dev).float(), len(x["ids"])) for x in xs], batch_first=True)
+        syl_cnt_t = compute_syllables_since_last_breath(ids)
+
+        mu_t = pad_sequence([x["mu"][:len(x["ids"])].to(dev).float() for x in xs], batch_first=True)
         y_clean = pad_sequence([x["y_clean"].to(dev).float() for x in xs], batch_first=True).transpose(1, 2).contiguous()
 
         spk_ids = torch.tensor([int(x.get("spk_id", 0)) for x in xs], dtype=torch.long, device=dev)
