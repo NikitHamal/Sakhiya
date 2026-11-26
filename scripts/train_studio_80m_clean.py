@@ -196,9 +196,10 @@ def synthesize_full_paragraph_fp32(
     return _normalize_lufs_16(full_wav)
 
 
-def build_gpu_precollated_batches(train_items: list, bs: int = 96, dev: str = "cuda") -> list:
-    """Sort `train_items` by frame length `T`, group into batches of `bs = 96` (with long paragraphs at `bs = 64`),
-    and pre-collate directly into Blackwell GPU VRAM (~40-50 GB VRAM) for zero-CPU-overhead training.
+@torch.no_grad()
+def build_gpu_precollated_batches(train_items: list, mel_mean: float, mel_std: float, bs: int = 128, dev: str = "cuda") -> list:
+    """Sort `train_items` by frame length `T`, group into batches of `bs = 128`, precompute static `log_dur_gt`,
+    per-phoneme `mu_gt_ph`, frame-to-phoneme `idx_fr`, and `prog_4d` once, and store directly in Blackwell GPU VRAM.
     """
     sorted_items = sorted(train_items, key=lambda x: x["mel"].shape[1])
     gpu_batches = []
@@ -206,7 +207,7 @@ def build_gpu_precollated_batches(train_items: list, bs: int = 96, dev: str = "c
     n_tot = len(sorted_items)
     while idx < n_tot:
         T_est = sorted_items[min(n_tot - 1, idx + bs - 1)]["mel"].shape[1]
-        cur_bs = 64 if T_est > 520 else bs
+        cur_bs = 96 if T_est > 540 else bs
         chunk = sorted_items[idx : idx + cur_bs]
         idx += cur_bs
         if len(chunk) < 16:
@@ -215,11 +216,13 @@ def build_gpu_precollated_batches(train_items: list, bs: int = 96, dev: str = "c
         ids_b = pad_sequence([x["ids"].long() for x in chunk], batch_first=True).to(dev, non_blocking=True)
         dur_b = pad_sequence([x["dur"].long() for x in chunk], batch_first=True).to(dev, non_blocking=True)
         struct_b = pad_sequence([x["struct"].float() for x in chunk], batch_first=True).to(dev, non_blocking=True)
+        L_max = ids_b.shape[1]
         il = torch.tensor([len(x["ids"]) for x in chunk], device=dev)
-        imask = torch.arange(ids_b.shape[1], device=dev)[None, :] < il[:, None]
+        imask = torch.arange(L_max, device=dev)[None, :] < il[:, None]
+        log_dur_gt = torch.log(dur_b.float().clamp(min=1.0)).half()
 
         T_max = max(x["mel"].shape[1] for x in chunk)
-        mel_b = torch.zeros((B, 100, T_max), dtype=torch.float16, device=dev)
+        y1_b = torch.zeros((B, 100, T_max), dtype=torch.float16, device=dev)
         lf0_b = torch.zeros((B, T_max), dtype=torch.float16, device=dev)
         vuv_b = torch.zeros((B, T_max), dtype=torch.float16, device=dev)
         eng_b = torch.zeros((B, T_max), dtype=torch.float16, device=dev)
@@ -227,12 +230,34 @@ def build_gpu_precollated_batches(train_items: list, bs: int = 96, dev: str = "c
         ymask = torch.arange(T_max, device=dev)[None, :] < yl[:, None]
         for i, x in enumerate(chunk):
             t_i = x["mel"].shape[1]
-            mel_b[i, :, :t_i] = x["mel"].to(dev, non_blocking=True)
+            m_norm = (x["mel"].to(dev, non_blocking=True).float() - mel_mean) / mel_std
+            y1_b[i, :, :t_i] = m_norm.half()
             lf0_b[i, :t_i] = x["lf0_fr"].to(dev, non_blocking=True)
             vuv_b[i, :t_i] = x["vuv_fr"].to(dev, non_blocking=True)
             eng_b[i, :t_i] = x["eng_fr"].to(dev, non_blocking=True)
+
+        # Precompute static `idx_fr [B, T_max]`, `prog_4d [B, 4, T_max]`, and per-phoneme `mu_gt_ph [B, L_max, 100]`
+        dur_f = dur_b.float().clamp(min=1.0)
+        ends = torch.cumsum(dur_f, dim=1)
+        starts = ends - dur_f
+        t_ar = torch.arange(T_max, device=dev, dtype=torch.float32)[None, :]
+        idx_fr = (t_ar[:, :, None] >= ends[:, None, :]).long().sum(-1).clamp(0, L_max - 1)
+        st_f = torch.gather(starts, 1, idx_fr)
+        d_f = torch.gather(dur_f, 1, idx_fr).clamp(min=1.0)
+        k_f = (t_ar - st_f).clamp(min=0.0)
+        u = ((k_f + 0.5) / d_f).clamp(0.0, 1.0)
+        prog_4d = torch.stack([u, torch.sin(u * math.pi), torch.cos(u * math.pi), torch.log1p(d_f) * 0.25], dim=1).half()
+
+        # Scatter-mean y1_b into per-phoneme mu_gt_ph [B, L_max, 100]
+        mu_gt_ph = torch.zeros((B, L_max, 100), dtype=torch.float32, device=dev)
+        cnt_ph = torch.zeros((B, L_max, 1), dtype=torch.float32, device=dev)
+        y1_t = (y1_b.float() * ymask[:, None, :].float()).transpose(1, 2)  # [B, T_max, 100]
+        mu_gt_ph.scatter_add_(1, idx_fr[:, :, None].expand(-1, -1, 100), y1_t)
+        cnt_ph.scatter_add_(1, idx_fr[:, :, None], ymask[:, :, None].float())
+        mu_gt_ph = (mu_gt_ph / cnt_ph.clamp(min=1.0)).half()
+
         lang_b = torch.tensor([x["lang"] for x in chunk], dtype=torch.long, device=dev)
-        gpu_batches.append((ids_b, struct_b, dur_b, imask, mel_b, lf0_b, vuv_b, eng_b, ymask, lang_b))
+        gpu_batches.append((ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b))
     return gpu_batches
 
 
@@ -277,7 +302,7 @@ def train_phase1_studio_80m(
         start_step = int(ck.get("step", 0))
         log(f"[Phase 1] Resumed from {resume_ckpt} at step {start_step}")
 
-    gpu_batches = build_gpu_precollated_batches(cache_obj["train"], bs=bs, dev=dev)
+    gpu_batches = build_gpu_precollated_batches(cache_obj["train"], mel_mean, mel_std, bs=bs, dev=dev)
     n_batches = len(gpu_batches)
     vram_alloc_gb = torch.cuda.memory_allocated() / 1e9
     log(f"[Phase 1] Pre-collated {n_batches} length-sorted batches (bs={bs}) into Blackwell VRAM ({vram_alloc_gb:.2f} GB resident).")
@@ -302,17 +327,39 @@ def train_phase1_studio_80m(
             pg["lr"] = cur_lr
 
         b_idx = (step * 17 + step // n_batches) % n_batches
-        ids_b, struct_b, dur_b, imask, mel_b, lf0_b, vuv_b, eng_b, ymask, lang_b = gpu_batches[b_idx]
+        ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b = gpu_batches[b_idx]
+        B_cur, _, T_max = y1_b.shape
+        W = min(T_max, 256 if (step % 8 == 0) else 144)
 
-        # Use contiguous 160-frame (~1.71s) DiT window on 85% of steps and 320-frame (~3.41s) window on 15% of steps
-        dit_w = 320 if (step % 7 == 0) else 160
+        if T_max > W:
+            max_starts = (yl - W).clamp(min=0)
+            starts = (torch.rand((B_cur,), device=dev) * (max_starts.float() + 0.99)).long()
+            idx_w = starts[:, None] + torch.arange(W, device=dev)[None, :]  # [B, W]
+            idx_w_100 = idx_w[:, None, :].expand(-1, 100, -1)
+            idx_w_4 = idx_w[:, None, :].expand(-1, 4, -1)
+
+            y_1_w = torch.gather(y1_b, 2, idx_w_100).float()
+            idx_fr_w = torch.gather(idx_fr, 1, idx_w)
+            prog_4d_w = torch.gather(prog_4d, 2, idx_w_4)
+            lf0_w = torch.gather(lf0_b, 1, idx_w)
+            vuv_w = torch.gather(vuv_b, 1, idx_w)
+            eng_w = torch.gather(eng_b, 1, idx_w)
+            ymask_w = torch.gather(ymask, 1, idx_w)
+        else:
+            y_1_w = y1_b.float()
+            idx_fr_w = idx_fr
+            prog_4d_w = prog_4d
+            lf0_w = lf0_b
+            vuv_w = vuv_b
+            eng_w = eng_b
+            ymask_w = ymask
 
         opt.zero_grad(set_to_none=True)
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
             loss, met = model.forward_loss(
-                ids_b, struct_b, dur_b, imask,
-                mel_b, lf0_b, vuv_b, eng_b, ymask,
-                lang=lang_b, cfg_drop_prob=0.10, dit_max_frames=dit_w,
+                ids_b, struct_b, log_dur_gt, mu_gt_ph, imask,
+                y_1_w, idx_fr_w, prog_4d_w, lf0_w, vuv_w, eng_w, ymask_w,
+                lang=lang_b, cfg_drop_prob=0.10,
             )
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
