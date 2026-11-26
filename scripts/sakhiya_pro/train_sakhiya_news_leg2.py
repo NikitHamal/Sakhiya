@@ -1390,6 +1390,7 @@ def export_for_cpp_handoff(ema_model: SakhiyaNewsFlagship):
 
 def _count_unpunctuated_midclause_dead_pauses_250ms(w_arr: np.ndarray, text_str: str, ctc_al, m_mean: float, m_std: float, sr: int = 24000, dev="cuda") -> int:
     """Count unpunctuated mid-clause dead pauses > 250 ms (> 23 frames) on a full-length paragraph WAV."""
+    import re
     from sakhiya.onnx_tts import _segment
     segs = _segment(text_str)
     # Every segment from _segment is a full sentence or major clause; check within-clause word-boundary '|' durations via CTC forced alignment
