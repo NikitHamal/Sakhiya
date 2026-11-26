@@ -496,16 +496,16 @@ class SakhiyaStudio80M(nn.Module):
         l_cfm = l_vel_l1 + l_vel_l2 + 0.5 * l_x1 + 0.35 * l_freq_grad + 0.20 * l_time_grad
         total_loss = l_cfm + 0.80 * l_prior + 0.50 * l_dur + 0.40 * (l_f0 + 0.5 * l_vuv + 0.5 * l_eng)
 
-        metrics = dict(
-            tot=round(float(total_loss.item()), 4),
-            cfm=round(float(l_cfm.item()), 4),
-            vel_l1=round(float(l_vel_l1.item()), 4),
-            x1=round(float(l_x1.item()), 4),
-            prior=round(float(l_prior.item()), 4),
-            dur=round(float(l_dur.item()), 4),
-            f0=round(float(l_f0.item()), 4),
-        )
-        return total_loss, metrics
+        met_7d = torch.stack([
+            total_loss.detach(),
+            l_cfm.detach(),
+            l_vel_l1.detach(),
+            l_x1.detach(),
+            l_prior.detach(),
+            l_dur.detach(),
+            l_f0.detach(),
+        ])
+        return total_loss, met_7d
 
     @torch.no_grad()
     def infer_mel(

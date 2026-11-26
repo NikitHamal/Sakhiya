@@ -197,31 +197,36 @@ def synthesize_full_paragraph_fp32(
 
 
 @torch.no_grad()
-def build_gpu_precollated_batches(train_items: list, mel_mean: float, mel_std: float, bs: int = 128, dev: str = "cuda") -> list:
-    """Sort `train_items` by frame length `T`, group into batches of `bs = 128`, precompute static `log_dur_gt`,
-    per-phoneme `mu_gt_ph`, frame-to-phoneme `idx_fr`, and `prog_4d` once, and store directly in Blackwell GPU VRAM.
+def build_gpu_precollated_batches(train_items: list, mel_mean: float, mel_std: float, bs: int = 96, dev: str = "cuda") -> tuple:
+    """Sort `train_items` by phoneme length `L`, group into fixed-size batches of `bs = 96` padded to static
+    2-bucket phoneme lengths `L_pad in {112, 256}`, and also pre-materialize 28 epochs of pre-sliced `W = 144`
+    windows directly in Blackwell VRAM (~42 GB resident, ~48-54 GB working VRAM) so `torch.compile` sees
+    only 2 static graph shapes with zero per-step gather overhead.
     """
-    sorted_items = sorted(train_items, key=lambda x: x["mel"].shape[1])
-    gpu_batches = []
+    sorted_items = sorted(train_items, key=lambda x: len(x["ids"]))
+    base_batches = []
     idx = 0
     n_tot = len(sorted_items)
-    while idx < n_tot:
-        T_est = sorted_items[min(n_tot - 1, idx + bs - 1)]["mel"].shape[1]
-        cur_bs = 96 if T_est > 540 else bs
-        chunk = sorted_items[idx : idx + cur_bs]
-        idx += cur_bs
-        if len(chunk) < 16:
-            continue
-        B = len(chunk)
-        ids_b = pad_sequence([x["ids"].long() for x in chunk], batch_first=True).to(dev, non_blocking=True)
-        dur_b = pad_sequence([x["dur"].long() for x in chunk], batch_first=True).to(dev, non_blocking=True)
-        struct_b = pad_sequence([x["struct"].float() for x in chunk], batch_first=True).to(dev, non_blocking=True)
-        L_max = ids_b.shape[1]
+    while idx + bs <= n_tot:
+        chunk = sorted_items[idx : idx + bs]
+        idx += bs
+        B = bs
+        raw_L = max(len(x["ids"]) for x in chunk)
+        L_max = 112 if raw_L <= 112 else 288
+
+        ids_b = torch.zeros((B, L_max), dtype=torch.long, device=dev)
+        dur_b = torch.zeros((B, L_max), dtype=torch.long, device=dev)
+        struct_b = torch.zeros((B, L_max, 5), dtype=torch.float32, device=dev)
         il = torch.tensor([len(x["ids"]) for x in chunk], device=dev)
         imask = torch.arange(L_max, device=dev)[None, :] < il[:, None]
+        for i, x in enumerate(chunk):
+            l_i = len(x["ids"])
+            ids_b[i, :l_i] = x["ids"].long().to(dev, non_blocking=True)
+            dur_b[i, :l_i] = x["dur"].long().to(dev, non_blocking=True)
+            struct_b[i, :l_i] = x["struct"].float().to(dev, non_blocking=True)
         log_dur_gt = torch.log(dur_b.float().clamp(min=1.0)).half()
 
-        T_max = max(x["mel"].shape[1] for x in chunk)
+        T_max = max(160, max(x["mel"].shape[1] for x in chunk))
         y1_b = torch.zeros((B, 100, T_max), dtype=torch.float16, device=dev)
         lf0_b = torch.zeros((B, T_max), dtype=torch.float16, device=dev)
         vuv_b = torch.zeros((B, T_max), dtype=torch.float16, device=dev)
@@ -257,13 +262,33 @@ def build_gpu_precollated_batches(train_items: list, mel_mean: float, mel_std: f
         mu_gt_ph = (mu_gt_ph / cnt_ph.clamp(min=1.0)).half()
 
         lang_b = torch.tensor([x["lang"] for x in chunk], dtype=torch.long, device=dev)
-        gpu_batches.append((ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b))
-    return gpu_batches
+        base_batches.append((ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b))
+
+    # Pre-materialize 28 epochs of static W=144 windowed batches directly in 96 GB Blackwell VRAM (~42 GB resident)
+    W = 144
+    w_ar = torch.arange(W, device=dev)[None, :]
+    sliced_batches = []
+    for ep in range(28):
+        for b_tup in base_batches:
+            ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b = b_tup
+            B_cur = y1_b.shape[0]
+            max_starts = (yl - W).clamp(min=0)
+            starts = (torch.rand((B_cur,), device=dev) * (max_starts.float() + 0.99)).long()
+            idx_w = starts[:, None] + w_ar
+            y_1_w = torch.gather(y1_b, 2, idx_w[:, None, :].expand(-1, 100, -1))
+            idx_fr_w = torch.gather(idx_fr, 1, idx_w)
+            prog_4d_w = torch.gather(prog_4d, 2, idx_w[:, None, :].expand(-1, 4, -1))
+            lf0_w = torch.gather(lf0_b, 1, idx_w)
+            vuv_w = torch.gather(vuv_b, 1, idx_w)
+            eng_w = torch.gather(eng_b, 1, idx_w)
+            ymask_w = torch.gather(ymask, 1, idx_w)
+            sliced_batches.append((ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y_1_w, idx_fr_w, prog_4d_w, lf0_w, vuv_w, eng_w, ymask_w, lang_b))
+    return sliced_batches, base_batches
 
 
 @torch.no_grad()
-def update_ema(ema_model: nn.Module, model: nn.Module, decay: float):
-    for p_ema, p in zip(ema_model.parameters(), model.parameters()):
+def update_ema(ema_model: nn.Module, raw_model: nn.Module, decay: float):
+    for p_ema, p in zip(ema_model.parameters(), raw_model.parameters()):
         p_ema.data.mul_(decay).add_(p.data, alpha=1.0 - decay)
 
 
@@ -280,32 +305,35 @@ def train_phase1_studio_80m(
     mel_mean = float(cache_obj["mel_mean"])
     mel_std = float(cache_obj["mel_std"])
 
-    model = SakhiyaStudio80M(mel_mean=mel_mean, mel_std=mel_std).to(dev)
-    ema_model = copy.deepcopy(model).to(dev).eval()
+    raw_model = SakhiyaStudio80M(mel_mean=mel_mean, mel_std=mel_std).to(dev)
+    ema_model = copy.deepcopy(raw_model).to(dev).eval()
     for p in ema_model.parameters():
         p.requires_grad_(False)
 
-    n_tot = sum(p.numel() for p in model.parameters())
-    n_enc = sum(p.numel() for p in model.enc.parameters())
-    n_pros = sum(p.numel() for p in model.pros.parameters())
-    n_dit = sum(p.numel() for p in model.dit.parameters())
+    n_tot = sum(p.numel() for p in raw_model.parameters())
+    n_enc = sum(p.numel() for p in raw_model.enc.parameters())
+    n_pros = sum(p.numel() for p in raw_model.pros.parameters())
+    n_dit = sum(p.numel() for p in raw_model.dit.parameters())
     log(f"[Phase 1] Initialized SakhiyaStudio80M: Total={n_tot/1e6:.2f}M dense params (TextEnc={n_enc/1e6:.2f}M, Prosody={n_pros/1e6:.2f}M, DiT16L={n_dit/1e6:.2f}M)")
 
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.98), weight_decay=0.01, fused=True)
+    opt = torch.optim.AdamW(raw_model.parameters(), lr=lr, betas=(0.9, 0.98), weight_decay=0.01, fused=True)
     start_step = 0
     if resume_ckpt and os.path.exists(resume_ckpt):
         ck = torch.load(resume_ckpt, map_location=dev, weights_only=False)
-        model.load_state_dict(ck["model"])
+        raw_model.load_state_dict(ck["model"])
         ema_model.load_state_dict(ck.get("ema", ck["model"]))
         if "opt" in ck:
             opt.load_state_dict(ck["opt"])
         start_step = int(ck.get("step", 0))
         log(f"[Phase 1] Resumed from {resume_ckpt} at step {start_step}")
 
-    gpu_batches = build_gpu_precollated_batches(cache_obj["train"], mel_mean, mel_std, bs=bs, dev=dev)
-    n_batches = len(gpu_batches)
+    # Compile forward_loss with static bucket shapes on Blackwell SM120
+    compiled_forward_loss = torch.compile(raw_model.forward_loss, dynamic=False)
+
+    sliced_batches, base_batches = build_gpu_precollated_batches(cache_obj["train"], mel_mean, mel_std, bs=bs, dev=dev)
+    n_batches = len(sliced_batches)
     vram_alloc_gb = torch.cuda.memory_allocated() / 1e9
-    log(f"[Phase 1] Pre-collated {n_batches} length-sorted batches (bs={bs}) into Blackwell VRAM ({vram_alloc_gb:.2f} GB resident).")
+    log(f"[Phase 1] Pre-collated {n_batches} static-bucket batches (bs={bs}, 28 pre-windowed epochs) into Blackwell VRAM ({vram_alloc_gb:.2f} GB resident).")
 
     owner_clips = json.load(open(os.path.join(REPO, "eval", "owner_4clips.json")))["clips"]
     clip1, clip4 = owner_clips[0], owner_clips[3]
@@ -326,62 +354,38 @@ def train_phase1_studio_80m(
         for pg in opt.param_groups:
             pg["lr"] = cur_lr
 
-        b_idx = (step * 17 + step // n_batches) % n_batches
-        ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b = gpu_batches[b_idx]
-        B_cur, _, T_max = y1_b.shape
-        W = min(T_max, 256 if (step % 8 == 0) else 144)
-
-        if T_max > W:
-            max_starts = (yl - W).clamp(min=0)
-            starts = (torch.rand((B_cur,), device=dev) * (max_starts.float() + 0.99)).long()
-            idx_w = starts[:, None] + torch.arange(W, device=dev)[None, :]  # [B, W]
-            idx_w_100 = idx_w[:, None, :].expand(-1, 100, -1)
-            idx_w_4 = idx_w[:, None, :].expand(-1, 4, -1)
-
-            y_1_w = torch.gather(y1_b, 2, idx_w_100).float()
-            idx_fr_w = torch.gather(idx_fr, 1, idx_w)
-            prog_4d_w = torch.gather(prog_4d, 2, idx_w_4)
-            lf0_w = torch.gather(lf0_b, 1, idx_w)
-            vuv_w = torch.gather(vuv_b, 1, idx_w)
-            eng_w = torch.gather(eng_b, 1, idx_w)
-            ymask_w = torch.gather(ymask, 1, idx_w)
-        else:
-            y_1_w = y1_b.float()
-            idx_fr_w = idx_fr
-            prog_4d_w = prog_4d
-            lf0_w = lf0_b
-            vuv_w = vuv_b
-            eng_w = eng_b
-            ymask_w = ymask
+        b_idx = (step * 131 + step // n_batches) % n_batches
+        ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y_1_w, idx_fr_w, prog_4d_w, lf0_w, vuv_w, eng_w, ymask_w, lang_b = sliced_batches[b_idx]
 
         opt.zero_grad(set_to_none=True)
         with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-            loss, met = model.forward_loss(
+            loss, met = compiled_forward_loss(
                 ids_b, struct_b, log_dur_gt, mu_gt_ph, imask,
-                y_1_w, idx_fr_w, prog_4d_w, lf0_w, vuv_w, eng_w, ymask_w,
+                y_1_w.float(), idx_fr_w, prog_4d_w, lf0_w, vuv_w, eng_w, ymask_w,
                 lang=lang_b, cfg_drop_prob=0.10,
             )
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(raw_model.parameters(), 1.0)
         opt.step()
 
         if step % 4 == 0 or step == total_steps:
-            # Ramp EMA decay from 0.995 early to 0.9994 after warmup
             ema_d = 0.995 if step < 3000 else 0.9994
-            update_ema(ema_model, model, ema_d)
+            update_ema(ema_model, raw_model, ema_d)
 
         # Step-50 stdout throughput watchdog + live telemetry update
         if step == 50 or step % 250 == 0 or step == total_steps:
+            m_vals = met.float().tolist()
+            m_tot, m_cfm, m_vel, m_x1, m_prior, m_dur, m_f0 = m_vals
             el_s = max(1e-3, time.time() - step_t0)
             n_done = 50 if step == 50 else 250
-            its = n_done / el_s if step > start_step + 1 else 8.5
+            its = n_done / el_s if step > start_step + 1 else 12.0
             step_t0 = time.time()
             tot_el_m = (time.time() - t0) / 60.0
             eta_m = ((total_steps - step) / max(0.5, its)) / 60.0
             peak_vram_gb = torch.cuda.max_memory_allocated() / 1e9
             loss_str = (
-                f"tot={met['tot']:.3f} cfm={met['cfm']:.3f} vel={met['vel_l1']:.3f} "
-                f"x1={met['x1']:.3f} prior={met['prior']:.3f} dur={met['dur']:.3f} f0={met['f0']:.3f} lr={cur_lr:.2e}"
+                f"tot={m_tot:.3f} cfm={m_cfm:.3f} vel={m_vel:.3f} "
+                f"x1={m_x1:.3f} prior={m_prior:.3f} dur={m_dur:.3f} f0={m_f0:.3f} lr={cur_lr:.2e}"
             )
             speed_str = f"{its:.2f} it/s · {peak_vram_gb:.1f}GB"
             update_telem(
@@ -395,7 +399,7 @@ def train_phase1_studio_80m(
 
         # Live 20-minute 32-step ODE renders of Clip 1 + Clip 4 through Frozen Pretrained BigVGAN-v2 (FP32) onto Card 5
         if step in (2500, 10000, 20000, 30000, 40000, 50000, total_steps):
-            model.eval()
+            raw_model.eval()
             with torch.no_grad():
                 for oc in (clip1, clip4):
                     w_oc = synthesize_full_paragraph_fp32(
@@ -408,13 +412,14 @@ def train_phase1_studio_80m(
                     sf.write(p_latest, w_oc, SR, subtype="FLOAT")
                     m_oc = compute_cleanliness_metrics(w_oc)
                     log(f"  [Live 32-Step Render @ step {step}] {oc['id']}: HNR={m_oc['voiced_vowel_hnr_dB']:.2f}dB, grit={m_oc['upper_band_comb_grit_index']:.3f}, SilSNR={m_oc['silence_floor_SNR_dB']:.1f}dB -> {os.path.basename(p_latest)}")
-            model.train()
+            raw_model.train()
 
-        # Save checkpoint every 5,000 steps
-        if step % 5000 == 0 or step == total_steps:
+        # Save checkpoint every 2,500 steps
+        if step % 2500 == 0 or step == total_steps:
+            cur_tot = float(met[0].item())
             ck_obj = dict(
                 step=step,
-                model=model.state_dict(),
+                model=raw_model.state_dict(),
                 ema=ema_model.state_dict(),
                 opt=opt.state_dict(),
                 mel_mean=mel_mean,
@@ -423,13 +428,13 @@ def train_phase1_studio_80m(
             p_last = os.path.join(CKPT_DIR, "studio_80m_latest.pt")
             torch.save(ck_obj, p_last + ".tmp")
             os.replace(p_last + ".tmp", p_last)
-            if met["tot"] < best_loss or step == total_steps:
-                best_loss = met["tot"]
+            if cur_tot < best_loss or step == total_steps:
+                best_loss = cur_tot
                 p_best = os.path.join(CKPT_DIR, "studio_80m_ema_best.pt")
                 torch.save(dict(step=step, ema=ema_model.state_dict(), mel_mean=mel_mean, mel_std=mel_std), p_best + ".tmp")
                 os.replace(p_best + ".tmp", p_best)
 
-    del gpu_batches
+    del sliced_batches, base_batches
     torch.cuda.empty_cache()
     return ema_model
 
