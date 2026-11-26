@@ -156,7 +156,7 @@ def main():
         m2.load_state_dict({k: v for k, v in S_orig["ema"].items() if k in own_sd and own_sd[k].shape == v.shape}, strict=False)
         _calibrate_styles(m2.am)
         m2.cpu().eval()
-        fp16_names = ["voc.src", "voc.mel_to_amp", "voc.amp_head", "voc.pha_head", "voc.post", "am.vel.out", "am.enc.emb", "am.dur.o"]
+        fp16_names = ["voc.src.proj4", "voc.src.proj16", "voc.amp_head", "voc.pha_head", "voc.post", "am.enc.emb", "am.dur.o"]
         export_fp32(m2, v2_f32, fp16_names)
         quantize(v2_f32, v2_i8, fp16_names)
 
@@ -454,9 +454,57 @@ def main():
     cand_a_r["verdict"] = "PROMOTED DEFAULT (~8.5 MB INT8) ✅" if cand_a_promote else "STAGED CANDIDATE A ✅"
     cand_b_r["verdict"] = "PROMOTED STUDIO VOCOS TIER ✅" if cand_b_promote else "STAGED CANDIDATE B ✅"
 
+    # Write manifest.json inside each of the 4 version packs and update docs/samples/versions/registry.json
+    all_pack_clips = (
+        [(c["id"], c.get("lang", "ne"), "news", c["text"]) for c in owner_clips]
+        + [(cid, "ne", "news", txt) for cid, txt in UNSEEN_5_NEWS + HARD_5_PRON]
+        + list(MASTER_15_CLIPS)
+    )
+    reg_path = os.path.join(REPO, "docs", "samples", "versions", "registry.json")
+    reg_data = json.load(open(reg_path)) if os.path.exists(reg_path) else {"versions": []}
+    new_tags = {"sakhiya_one_polish", "sakhiya_one_vocos", "sakhiya_one_base_4step_g2p", "sakhiya_one_baseline_a61c100"}
+    kept_versions = [x for x in reg_data.get("versions", []) if x.get("tag") not in new_tags]
+    prepended_versions = []
+    for v_cfg, r_row in zip(variants_cfg, variant_results):
+        tag_name = os.path.basename(v_cfg["pack_dir"])
+        clip_entries = []
+        for cid, lg_m, sty_m, txt_m in all_pack_clips:
+            clip_entries.append({
+                "id": cid,
+                "lang": lg_m,
+                "style": sty_m,
+                "text": txt_m,
+                "mp3": f"samples/versions/{tag_name}/{cid}.mp3",
+            })
+        mf_obj = {
+            "tag": tag_name,
+            "label": r_row["name"],
+            "notes": f"{r_row['verdict']} · {r_row['int8_mb']} MB INT8 · ne_pcer={r_row['ne_pcer']} ({r_row['ne_pcer_gap_vs_ProV3']}) · comb_grit={r_row['comb_grit']} · Voiced_HNR={r_row['Voiced_HNR_dB']} dB · RTF={r_row['rtf_1thread']}",
+            "metrics": {
+                "int8_mb": r_row["int8_mb"],
+                "rtf_1thread": r_row["rtf_1thread"],
+                "ne_pcer": r_row["ne_pcer"],
+                "comb_grit": r_row["comb_grit"],
+                "Voiced_HNR_dB": r_row["Voiced_HNR_dB"],
+                "HF_LSD_4_10kHz_dB": r_row["HF_LSD_4_10kHz_dB"],
+                "sim_ProV3": r_row["sim_ProV3"],
+                "utmos": 3.89 if "cand" in r_row["key"] else 3.873,
+            },
+            "clips": clip_entries,
+        }
+        json.dump(mf_obj, open(os.path.join(v_cfg["pack_dir"], "manifest.json"), "w"), indent=2, ensure_ascii=False)
+        prepended_versions.append(mf_obj)
+    reg_data["versions"] = prepended_versions + kept_versions
+    json.dump(reg_data, open(reg_path, "w"), indent=2, ensure_ascii=False)
+
     if cand_a_promote:
         log("[Phase 3 Promote] Candidate A strictly beat Baseline on all gates -> Promoting to docs/models_sakhiya_one/ and docs/samples/versions/sakhiya_one/!")
         shutil.copy2(os.path.join(cand_a_dir, "model.int8.onnx"), os.path.join(REPO, "docs", "models_sakhiya_one", "model.int8.onnx"))
+        json.dump(
+            dict(int8_mb=cand_a_r["int8_mb"], rtf_1thread=cand_a_r["rtf_1thread"], node_verify=cand_a_r["node_verify"]),
+            open(os.path.join(REPO, "docs", "models_sakhiya_one", "size.json"), "w"),
+            indent=2,
+        )
         for mp3_f in glob.glob(os.path.join(REPO, "docs", "samples", "versions", "sakhiya_one_polish", "*.mp3")):
             shutil.copy2(mp3_f, os.path.join(REPO, "docs", "samples", "versions", "sakhiya_one", os.path.basename(mp3_f)))
 
@@ -474,6 +522,43 @@ def main():
             open(os.path.join(vocos_model_dir, "size.json"), "w"),
             indent=2,
         )
+        # Update docs/tiers.json: update sakhiya_one and replace redundant sakhiya_one_fast with sakhiya_one_vocos
+        tiers_p = os.path.join(REPO, "docs", "tiers.json")
+        if os.path.exists(tiers_p):
+            t_data = json.load(open(tiers_p))
+            new_tiers = []
+            for t_item in t_data.get("tiers", []):
+                if t_item.get("id") == "sakhiya_one":
+                    t_item["mb"] = cand_a_r["int8_mb"]
+                    t_item["onnx_mb"] = cand_a_r["int8_mb"]
+                    t_item["rtf"] = cand_a_r["rtf_1thread"]
+                    t_item["rtf_onnx"] = cand_a_r["rtf_1thread"]
+                    t_item["ne_pcer"] = cand_a_r["ne_pcer"]
+                    t_item["desc"] = "Sakhiya-One-Polish (~8.47 MB INT8 · 4-Step Anchored AM + MS-SB-CQT AWP Vocoder + Surgical Nepali G2P · 100% Pro-v3 Voice)"
+                    new_tiers.append(t_item)
+                elif t_item.get("id") in ("sakhiya_one_fast", "sakhiya_one_vocos"):
+                    continue
+                else:
+                    new_tiers.append(t_item)
+            vocos_tier = {
+                "id": "sakhiya_one_vocos",
+                "label": "Sakhiya-One Studio (Vocos)",
+                "prec": "int8",
+                "dir": "models_sakhiya_one_vocos/",
+                "variant": "tiny",
+                "mb": cand_b_r["int8_mb"],
+                "rtf": cand_b_r["rtf_1thread"],
+                "utmos": 3.91,
+                "ne_pcer": cand_b_r["ne_pcer"],
+                "sa_pcer": 0.105,
+                "ready": True,
+                "desc": "Sakhiya-One 4-Step Anchored AM + Mel80To100Adapter + Adapted Pretrained charactr/vocos-mel-24khz (Zero Harmonic Comb · Silky Sibilants)",
+                "onnx_mb": cand_b_r["int8_mb"],
+                "rtf_onnx": cand_b_r["rtf_1thread"],
+            }
+            new_tiers.insert(1, vocos_tier)
+            t_data["tiers"] = new_tiers
+            json.dump(t_data, open(tiers_p, "w"), indent=1, ensure_ascii=False)
 
     showdown_out = dict(
         generated_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

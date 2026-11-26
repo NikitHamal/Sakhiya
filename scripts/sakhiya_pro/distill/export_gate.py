@@ -171,11 +171,31 @@ def export_fp32(m, path, fp16_names=FP16_ISOLATED_NAMES):
     onnx.save(om, path)
 
 
+def _promote_large_constants(m, min_size=64):
+    new_nodes = []
+    idx_c = 0
+    for n in m.graph.node:
+        if n.op_type == "Constant" and len(n.output) == 1:
+            t_attr = [a for a in n.attribute if a.name == "value"]
+            if t_attr:
+                arr = numpy_helper.to_array(t_attr[0].t)
+                if arr.size >= min_size and arr.dtype == np.float32:
+                    init_name = f"const_init_{idx_c}_{n.output[0]}"
+                    idx_c += 1
+                    m.graph.initializer.append(numpy_helper.from_array(arr, init_name))
+                    new_nodes.append(helper.make_node("Identity", [init_name], [n.output[0]], name=f"id_{idx_c}"))
+                    continue
+        new_nodes.append(n)
+    del m.graph.node[:]
+    m.graph.node.extend(new_nodes)
+
+
 def quantize(src, dst, fp16_names=FP16_ISOLATED_NAMES):
     """Weight-only per-output-channel int8 (QDQ: DequantizeLinear) with permanent FP16 isolation for sensitive heads."""
     if not fp16_names:
         fp16_names = FP16_ISOLATED_NAMES
     m = onnx.load(src)
+    _promote_large_constants(m, min_size=64)
     _dedup_initializers(m)
     use = {}
     for n in m.graph.node:
@@ -187,10 +207,18 @@ def quantize(src, dst, fp16_names=FP16_ISOLATED_NAMES):
     keep += [c_min, c_max]
     for init in m.graph.initializer:
         a = numpy_helper.to_array(init)
-        if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
+        op = use.get(init.name, "")
+        if init.data_type != TensorProto.FLOAT:
             keep.append(init)
             continue
-        op = use.get(init.name, "")
+        if a.ndim == 1 and a.size >= 128 and op not in ("Resize", "Upsample", "Slice", "Clip", "ConstantOfShape"):
+            h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
+            keep.append(h)
+            new.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast"))
+            continue
+        if a.ndim < 2 or a.size <= 64 or (a.ndim == 3 and a.shape[0] == 1 and a.shape[2] == 1):
+            keep.append(init)
+            continue
         ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
         skip_fp16 = _is_fp16_isolated(init.name, a, ax, fp16_names)
         if a.ndim >= 2 and a.size >= 256 and a.shape[ax] >= 16 and not skip_fp16:

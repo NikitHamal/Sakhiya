@@ -52,6 +52,7 @@ from sakhiya.news_vocoder_100mel import MultiScaleSubBandCQTDiscriminator
 from sakhiya.cfm import _dur_to_attn
 from sakhiya.symbols import SYM2ID
 from scripts.train_v2_voc import mr_complex_stft_loss
+from scripts.train_phase2_cand_a_cqt_awp import sibilant_and_upper_smoothness_loss
 from student import Student, compute_svara_mora_ids, compute_intra_phoneme_progress, _calibrate_styles
 from run_session75_breakthrough import FrozenMultiLayerWavLM
 from export_gate import _dedup_initializers, _strip_meta, _normalize_lufs_16, ids_of
@@ -212,8 +213,27 @@ def export_vocos_onnx_fp16_and_int8(model: SakhiyaOneVocosModel, out_dir: str):
     except TypeError:
         torch.onnx.export(_VocosWrap(m_cpu), args, f32_p, **kw)
 
-    # 1. Build FP16 ONNX (~28 MB): cast all large float32 initializers to float16 + Cast node
+    def _promote_consts(m_onnx, min_sz=64):
+        new_n = []
+        idx_c = 0
+        for n in m_onnx.graph.node:
+            if n.op_type == "Constant" and len(n.output) == 1:
+                t_attr = [a for a in n.attribute if a.name == "value"]
+                if t_attr:
+                    arr = numpy_helper.to_array(t_attr[0].t)
+                    if arr.size >= min_sz and arr.dtype == np.float32:
+                        inm = f"const_init_{idx_c}_{n.output[0]}"
+                        idx_c += 1
+                        m_onnx.graph.initializer.append(numpy_helper.from_array(arr, inm))
+                        new_n.append(helper.make_node("Identity", [inm], [n.output[0]]))
+                        continue
+            new_n.append(n)
+        del m_onnx.graph.node[:]
+        m_onnx.graph.node.extend(new_n)
+
+    # 1. Build FP16 ONNX: promote Constant buffers & cast all large float32 initializers to float16 + Cast node
     om16 = onnx.load(f32_p)
+    _promote_consts(om16)
     _dedup_initializers(om16)
     keep16, new16 = [], []
     for init in om16.graph.initializer:
@@ -232,9 +252,10 @@ def export_vocos_onnx_fp16_and_int8(model: SakhiyaOneVocosModel, out_dir: str):
     _strip_meta(om16)
     onnx.save(om16, f16_p)
 
-    # 2. Build QDQ INT8 ONNX (~16.5 MB): keep iSTFT kernel (1026,1,1024), head_out (512,1026), adapter, and embeddings in FP16;
+    # 2. Build QDQ INT8 ONNX (~18.6 MB): keep head_out (512,1026), adapter, and embeddings in FP16;
     # quantize ConvNeXt pwconv1/pwconv2 & AM velocity/encoder weights to per-channel INT8 QDQ
     om8 = onnx.load(f32_p)
+    _promote_consts(om8)
     _dedup_initializers(om8)
     use = {}
     for n in om8.graph.node:
@@ -244,17 +265,25 @@ def export_vocos_onnx_fp16_and_int8(model: SakhiyaOneVocosModel, out_dir: str):
     c_min = numpy_helper.from_array(np.array(-100.0, dtype=np.float32), "dq_clip_min")
     c_max = numpy_helper.from_array(np.array(100.0, dtype=np.float32), "dq_clip_max")
     keep8 += [c_min, c_max]
-    fp16_keep_names = ("K_istft", "head_out", "adapter", "am.enc.emb", "am.enc.svara_emb", "am.enc.mora_emb", "am.dur.o", "am.vel.prog_proj")
+    fp16_keep_names = ("head_out", "adapter", "am.enc.emb", "am.dur.o")
     for init in om8.graph.initializer:
         a = numpy_helper.to_array(init)
-        if init.data_type != TensorProto.FLOAT or a.ndim < 2 or a.size <= 64:
+        op = use.get(init.name, "")
+        if init.data_type != TensorProto.FLOAT:
             keep8.append(init)
             continue
-        op = use.get(init.name, "")
-        ax = 1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0
+        if a.ndim == 1 and a.size >= 128 and op not in ("Resize", "Upsample", "Slice", "Clip", "ConstantOfShape"):
+            h = numpy_helper.from_array(a.astype(np.float16), init.name + "_h")
+            keep8.append(h)
+            new8.append(helper.make_node("Cast", [h.name], [init.name], to=TensorProto.FLOAT, name=init.name + "_cast"))
+            continue
+        if a.ndim < 2 or a.size <= 64:
+            keep8.append(init)
+            continue
+        ax = 0 if a.shape == (1026, 1, 1024) else (1 if (op in ("ConvTranspose", "MatMul") and a.ndim >= 2 and a.shape[1] > 1) else 0)
         is_istft_or_head = (
-            a.shape in ((1026, 1, 1024), (512, 1026), (1026, 512), (100, 80, 1), (100, 20, 1))
-            or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1)  # depthwise convs kept in FP16
+            a.shape in ((512, 1026), (1026, 512), (100, 80, 1), (100, 20, 1))
+            or (a.ndim == 3 and a.shape[1] == 1 and a.shape[2] > 1 and a.shape != (1026, 1, 1024))
             or a.shape[ax] <= 8
             or any(k in init.name for k in fp16_keep_names)
         )
@@ -565,6 +594,7 @@ def main():
             l_stft = mr_complex_stft_loss(y_pred_all, w_tgt_all, dev)
             l_mel_vc = F.l1_loss(G.vocos.extract_gt_vocos_mel(y_pred_all), G.vocos.extract_gt_vocos_mel(w_tgt_all))
             l_mel_s1 = F.l1_loss(mel_spec_24k(y_pred_all, dev)[:, :, :seg_frames], torch.cat([m_s1_gt, mt_am], dim=0)[:, :, :seg_frames])
+            l_sib = sibilant_and_upper_smoothness_loss(y_pred_all, w_tgt_all, G.vocos.stft_win)
             l_cqt_adv, l_cqt_fm = d_cqt.g_adv_and_fm_loss(w_tgt_all.float(), y_pred_all.float())
             l_wlm = wavlm_fm(y_pred_all[:8], w_tgt_all[:8]) if st % 4 == 0 else torch.zeros((), device=dev)
 
@@ -574,6 +604,7 @@ def main():
                 + 12.0 * l_mel_vc
                 + 8.0 * l_mel_s1
                 + 1.5 * l_stft
+                + 1.5 * l_sib
                 + 0.25 * (l_cqt_adv + 2.0 * l_cqt_fm)
                 + 0.8 * l_wlm
             )

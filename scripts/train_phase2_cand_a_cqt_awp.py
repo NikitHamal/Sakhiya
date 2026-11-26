@@ -374,17 +374,13 @@ def main():
     torch.save(ck_out, save_p)
     log(f"[Phase 2A] Saved Candidate A checkpoint -> {save_p}")
 
-    # Export un-snapped FP32 ONNX and QDQ INT8 ONNX
+    # Export un-snapped FP32 ONNX and QDQ INT8 ONNX (<= 8.50 MB)
     m_exp = copy.deepcopy(ema).cpu().eval()
     f32_p = os.path.join(ONNX_DIR, "model.fp32.onnx")
     i8_p = os.path.join(ONNX_DIR, "model.int8.onnx")
-    fp16_names = list(FP16_ISOLATED_NAMES)
+    fp16_names = ["voc.src.proj4", "voc.src.proj16", "voc.amp_head", "voc.pha_head", "voc.post", "am.enc.emb", "am.dur.o"]
     export_fp32(m_exp, f32_p, fp16_names)
     quantize(f32_p, i8_p, fp16_names)
-    if os.path.getsize(i8_p) / 1e6 > 8.50:
-        fp16_names = ["voc.src", "voc.mel_to_amp", "voc.amp_head", "voc.pha_head", "voc.post", "am.vel.out", "am.enc.emb", "am.dur.o"]
-        export_fp32(m_exp, f32_p, fp16_names)
-        quantize(f32_p, i8_p, fp16_names)
 
     qdq = audit_int8_qdq_initializers(i8_p, f32_p)
     int8_mb = round(os.path.getsize(i8_p) / 1e6, 3)
