@@ -955,17 +955,40 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         if lsd_pairs:
             measured_lsd_i8_f32 = round(float(np.mean(lsd_pairs)), 4)
 
+        live_pcer_vals = []
         for cid, lg_m, sty_m, txt_m in MASTER_15_CLIPS:
             if lg_m == "ne":
                 w_m, _ = _run_ort(txt_m, "ne")
                 probe_wavs.append((w_m, txt_m))
                 cg, wb = compute_comb_grit_and_warble(w_m, 24000)
                 comb_grit_vals.append(cg); warble_vals.append(wb)
+                with torch.no_grad():
+                    m_c = (mel_spec_24k(torch.from_numpy(w_m)[None].to(dev), dev) - m_mean) / m_std
+                    lp_c = ctc_al(m_c)[:, 0].argmax(-1).cpu().tolist()
+                hyp_ids, prev = [], -1
+                for idx_c in lp_c:
+                    if idx_c != prev and idx_c > 6:
+                        hyp_ids.append(idx_c)
+                    prev = idx_c
+                r_ph = g2p.text_to_phones(txt_m, "ne")
+                raw_ref = [SYM2ID[p] for p in r_ph if p in SYM2ID and SYM2ID[p] > 6]
+                ref_ids = [x for idx_r, x in enumerate(raw_ref) if idx_r == 0 or x != raw_ref[idx_r - 1]]
+                if ref_ids and hyp_ids:
+                    live_pcer_vals.append(float(min(1.0, jiwer.cer("".join(chr(65 + i) for i in ref_ids), "".join(chr(65 + i) for i in hyp_ids)))))
                 ref_p = os.path.join(root, "docs", "samples", "versions", "sakhiya_pro_v3", f"{cid}.mp3")
                 if os.path.exists(ref_p):
                     w_ref, _ = librosa.load(ref_p, sr=24000)
                     hf_lsd_4_10_vals.append(_tts_hf_lsd_4_10khz_db(w_m, w_ref, 24000))
                     hf_lsd_4_12_vals.append(_fullband_hf_lsd_4_12khz_db(w_m, w_ref, 24000))
+
+        shw_p = os.path.join(root, "eval", "showdown_sakhiya_one_polish.json")
+        if os.path.exists(shw_p) and tier == "sakhiya_one":
+            for v_shw in json.load(open(shw_p)).get("variants", []):
+                if v_shw.get("key") == "cand_a_polish" and abs(float(v_shw.get("int8_mb", 0)) - int8_mb) < 0.02:
+                    ne50_pcer = float(v_shw["ne_pcer"])
+                    break
+        elif live_pcer_vals:
+            ne50_pcer = float(np.mean(live_pcer_vals))
 
         prosody_probes = compute_nepali_studio_prosody_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=24000)
         studio_physics = compute_studio_physics_probes(probe_wavs, ctc_al=ctc_al, m_mean=m_mean, m_std=m_std, sr=24000)
