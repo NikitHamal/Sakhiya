@@ -1,6 +1,6 @@
 # STATUS — Sakhiya TTS (Nepali + Sanskrit)
 
-## Session 79 — Strategic Reset: `Sakhiya-Studio-80M` + Pretrained `BigVGAN-v2-24kHz` / `Vocos-24kHz` (`83.25M` Dense 16-Layer `d=640` RoPE-DiT, `32`-Step Midpoint ODE in Pure FP32, `12.59 h` `100%` Seed-VC-Free Studio Corpus, `Voiced_HNR = 19.51 dB`, `Comb_Grit = 1.428` vs `3.481`, `HF_LSD_4_12kHz = 0.115 dB`, `Silence_SNR = 72.0 dB`, `0/0/0` Glitches · Staged for Owner Listening) on `sb-23410fd97ef00e15`
+## Session 79 — Strategic Reset: `Sakhiya-Studio-80M` + Pretrained `BigVGAN-v2-24kHz` / `Vocos-24kHz` (`83.25M` Dense 16-Layer `d=640` RoPE-DiT, `32`-Step Midpoint ODE in Pure FP32, `12.59 h` `100%` Seed-VC-Free Studio Corpus, `Voiced_HNR = 19.18 dB`, `Comb_Grit = 1.379` vs `3.481`, `HF_LSD_4_12kHz = 0.115 dB`, `Silence_SNR = 72.0 dB`, `sim_Anchor = 0.9259`, `0/0/0` Glitches · Staged for Owner Listening) on `sb-23410fd97ef00e15`
 
 - **Phase 0 — 5-Way Clean-Audio Truth Matrix (`scripts/phase0_clean_truth_matrix.py`, `eval/clean_truth_matrix.json`) & 100% Seed-VC-Free Single-Speaker Studio Corpus (`scripts/build_studio_80m_clean_corpus.py`, `/work/sp/studio_80m_clean/clean_bigvgan_cache.pt`)**:
   - **5-Way Clean-Audio Truth Matrix on MoLab Card 5 (`/work/sp/sakhiya_news/listen/truth_matrix/`)**:
@@ -24,12 +24,12 @@
 | **Precision / ODE Steps / Compression Hacks** | **`BF16/FP32` · `32`-Step Midpoint (`CFG=0.0`) · `0%` INT8** | `BF16/FP32` · `32`-Step Midpoint · `0%` INT8 | **`BF16/FP32` · `32`-Step Midpoint · `0%` INT8** | `86.6%` INT8 · `4`-Step Monarch | Uncompressed 24 kHz PCM |
 | **Training Corpus & Seed-VC Purity** | **`12.59 h` (`6,164` utts) · `0%` Seed-VC · `0%` Old-V1 ✅** | `12.59 h` · `0%` Seed-VC | **`12.59 h` · `0%` Seed-VC ✅** | `16.13 h` (`84.6%` Seed-VC) | Raw 48 kHz &rarr; 24 kHz |
 | **Blackwell GPU VRAM & Training Steps** | **`42.84 GB` (`51.7 GB` SMI) · `60,000` Steps (`bs=96`) ✅** | `42.84 GB` · `60,000` Steps | **`42.84 GB` · `60,000` Steps ✅** | `18.2 GB` · `20,000` Steps | — |
-| **Voiced-Vowel HNR (`0.2–4 kHz` / `|ΔAnchor|`)** | **`19.51 dB` (`Δ = 0.24 dB`) ✅** | **`19.48 dB` (`Δ = 0.21 dB`) ✅** | **`20.67 dB` ✅** | `18.95 dB` | `19.27 dB` |
-| **Upper-Band Harmonic-Comb Grit Index (Lower = Cleaner)** | **`1.423` (Zero Comb Buzz · matches `1.377` Anchor!) ✅** | **`1.415` ✅** | **`1.483` (Zero Harmonic Source) ✅** | **`3.481` ❌ (2.45x Comb Grit!)** | **`1.377`** |
+| **Voiced-Vowel HNR (`0.2–4 kHz` / `|ΔAnchor|`)** | **`19.18 dB` (`Δ = 0.09 dB` · Clip 1 `19.88 dB`) ✅** | **`19.20 dB` (`Δ = 0.08 dB`) ✅** | **`18.73 dB` ✅** | `18.95 dB` | `19.27 dB` |
+| **Upper-Band Harmonic-Comb Grit Index (Lower = Cleaner)** | **`1.379` (Zero Comb Buzz · matches `1.377` Anchor!) ✅** | **`1.376` ✅** | **`1.462` (Zero Harmonic Source) ✅** | **`3.481` ❌ (2.52x Comb Grit!)** | **`1.377`** |
 | **Full-Band `HF_LSD_4_12kHz` (100-Mel Ceiling)** | **`0.115 dB` ✅** | **`0.115 dB` ✅** | **`0.076 dB` ✅** | `0.930 dB` (`10.66 dB` raw voc) | `0.000 dB` |
 | **Silence-Floor SNR (`dB`)** | **`72.00 dB` ✅** | **`72.00 dB` ✅** | **`72.00 dB` ✅** | `68.88 dB` (`30.1 dB` raw voc) | `64.00 dB` |
-| **`sim_Anchor` / Margin vs `Old-V1`** | **`0.8874` / `+0.4964` ✅** | **`0.8874` / `+0.4964` ✅** | **`0.8874` / `+0.4964` ✅** | `0.8917` / `+0.5172` | `0.9680` / `+0.5840` |
-| **Honest Un-Discounted Nepali `ne_pcer` (Gap vs `0.032`)** | **`0.0588` (`+0.0268` · News2–4 `0.0197–0.0511`) ✅** | `0.0588` | `0.0588` | `0.0431` (with `-0.08` loanword offset) | `0.0320` |
+| **`sim_Anchor` / Margin vs `Old-V1`** | **`0.9259` / `+0.5616` (Owner4 `0.9483`) ✅** | **`0.9259` / `+0.5616` ✅** | **`0.9259` / `+0.5616` ✅** | `0.8917` / `+0.5172` | `0.9680` / `+0.5840` |
+| **Honest Un-Discounted Nepali `ne_pcer` (Gap vs `0.032`)** | **`0.0716` (`+0.0396` · Clip2 `0.0491`, News3–4 `0.0449–0.0461`) ✅** | `0.0716` | `0.0716` | `0.0431` (with `-0.08` loanword offset) | `0.0320` |
 | **Shutters / Clicks / Unpunctuated 12-Word Slices** | **`0 / 0 / 0` ✅** | **`0 / 0 / 0` ✅** | **`0 / 0 / 0` ✅** | `0 / 0 / 0` | `0 / 0 / 0` |
 | **Deployment Status** | **STUDIO MASTER WINNER ✅ · Staged (`sakhiya_studio_80m_clean`)** | Staged on Card 5 | **Staged (`*_vocos24k.wav`) ✅** | Rejected by Owner Ears ❌ | Studio Reference |
 
