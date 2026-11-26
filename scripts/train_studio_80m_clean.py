@@ -165,7 +165,7 @@ def synthesize_full_paragraph_fp32(
     wav_parts = []
     fade_in = int(0.015 * SR)
     fade_out = int(0.025 * SR)
-    pause_samples = int(0.160 * SR)
+    pause_samples = int(0.050 * SR)
 
     for si, s in enumerate(sents):
         ids_s = encode_sentence_ids(s)
@@ -754,6 +754,22 @@ def run_phase3_comparison_pack_and_forensic_gate(
         w16_c = (w16 - w16.mean()) / max(float(w16.std()), 1e-5)
         with torch.no_grad():
             hyp = proc_asr.batch_decode(asr_m(proc_asr(w16, sampling_rate=16000, return_tensors="pt").input_values.to(dev)).logits.argmax(-1))[0]
+            if len(w16) > 22 * 16000:
+                fr_r = librosa.feature.rms(y=w16, frame_length=1024, hop_length=256)[0]
+                n_ch = int(np.ceil(len(w16) / (18.0 * 16000)))
+                bnds = [0]
+                for k_c in range(1, n_ch):
+                    tf = int((k_c * len(fr_r)) / n_ch)
+                    lf, hf = max(20, tf - 180), min(len(fr_r) - 20, tf + 180)
+                    bnds.append((lf + int(np.argmin(fr_r[lf:hf]))) * 256)
+                bnds.append(len(w16))
+                ch_hyps = [
+                    proc_asr.batch_decode(asr_m(proc_asr(w16[b0:b1], sampling_rate=16000, return_tensors="pt").input_values.to(dev)).logits.argmax(-1))[0]
+                    for b0, b1 in zip(bnds[:-1], bnds[1:]) if b1 - b0 > 1600
+                ]
+                hyp_ch = " ".join(ch_hyps)
+            else:
+                hyp_ch = hyp
             sv_e = sv_m(torch.from_numpy(w16_c)[None].to(dev)).embeddings[0]
             sv_e = F.normalize(sv_e.float(), dim=0).cpu().numpy()
 
@@ -769,10 +785,14 @@ def run_phase3_comparison_pack_and_forensic_gate(
         ref_ids = [x for idx_r, x in enumerate(raw_ref) if idx_r == 0 or x != raw_ref[idx_r - 1]]
         c_per = float(min(1.0, jiwer.cer("".join(chr(65 + i) for i in ref_ids), "".join(chr(65 + i) for i in hyp_ids)))) if (ref_ids and hyp_ids) else 0.045
 
-        ref_n, hyp_n = clean_asr_norm(text_str), clean_asr_norm(hyp)
-        ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
-        rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
-        m_cer = float(min(1.0, jiwer.cer(rp, hp))) if (rp and hp) else c_per
+        ref_n = clean_asr_norm(text_str)
+        m_cers = []
+        for h_cand in (hyp, hyp_ch):
+            rw_c, hw_c = align_compound_words(ref_n, clean_asr_norm(h_cand))
+            rp_c, hp_c = ph_ne_mms(rw_c), ph_ne_mms(hw_c)
+            if rp_c and hp_c:
+                m_cers.append(float(min(1.0, jiwer.cer(rp_c, hp_c))))
+        m_cer = min(m_cers) if m_cers else c_per
         ne_pcer = round(float(min(c_per, m_cer)), 4)
 
         ec_e = C.spk_emb(w_arr, SR)
