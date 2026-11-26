@@ -35,13 +35,21 @@ def stage_files():
             if not os.path.exists(dst) or os.path.getmtime(ck_src) > os.path.getmtime(dst):
                 shutil.copy2(ck_src, dst)
 
-    for ev_src in glob.glob("/work/sp/sakhiya_news/eval/*.json") + glob.glob("/work/sp/repo/eval/*.json"):
+    for ev_src in (
+        glob.glob("/work/sp/sakhiya_news/eval/*.json")
+        + glob.glob("/work/sp/repo/eval/*.json")
+        + glob.glob("/work/Sakhiya/eval/*studio_80m*.json")
+        + glob.glob("/work/Sakhiya/eval/clean_truth_matrix.json")
+    ):
         try:
             shutil.copy2(ev_src, os.path.join(STAGE_DIR, "eval", os.path.basename(ev_src)))
         except Exception:
             pass
 
-    for wav_src in glob.glob("/work/sp/repo/docs/samples/versions/sakhiya_studio_80m_clean/*"):
+    for wav_src in (
+        glob.glob("/work/sp/repo/docs/samples/versions/sakhiya_studio_80m_clean/*")
+        + glob.glob("/work/Sakhiya/docs/samples/versions/sakhiya_studio_80m_clean/*")
+    ):
         if os.path.isfile(wav_src):
             dst = os.path.join(STAGE_DIR, "samples", os.path.basename(wav_src))
             if not os.path.exists(dst) or os.path.getmtime(wav_src) > os.path.getmtime(dst):
