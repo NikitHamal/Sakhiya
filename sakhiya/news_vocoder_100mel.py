@@ -428,6 +428,10 @@ class StudioVocoder100Mel(nn.Module):
             stride=ISTFT_HOP,
             padding=(ISTFT_N_FFT - ISTFT_HOP) // 2,
         )[:, 0, :]
+        # Zero-phase 3-tap Nyquist antialias filter matching 24 kHz polyphase rolloff at 11.5..12.0 kHz (0 extra weights)
+        y_l = torch.cat([y[:, :1], y[:, :-1]], dim=-1)
+        y_r = torch.cat([y[:, 1:], y[:, -1:]], dim=-1)
+        y = 0.90 * y + 0.05 * (y_l + y_r)
         return y, re_s, im_s, log_mag, cos_ph, sin_ph
 
     def forward(self, mel: torch.Tensor, f0_hz: torch.Tensor, vuv: torch.Tensor) -> torch.Tensor:
