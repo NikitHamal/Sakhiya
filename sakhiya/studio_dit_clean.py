@@ -104,19 +104,15 @@ class DenseRoPETextEncoderLayer(nn.Module):
 
 
 class StudioCleanTextEncoder(nn.Module):
-    """8-Layer Dense RoPE Transformer Text Encoder (`d=512, heads=8, SwiGLU, RMSNorm`, ~14.2M params)."""
-    def __init__(self, vocab_size: int = 64, d: int = 512, layers: int = 8, heads: int = 8, ffn_hidden: int = 1024, n_mel: int = 100):
+    """8-Layer Dense RoPE Transformer Text Encoder (`d=512, heads=8, FFN=2048 SwiGLU, RMSNorm`, ~14.2M params)."""
+    def __init__(self, vocab_size: int = 64, d: int = 512, layers: int = 8, heads: int = 8, ffn_hidden: int = 448, n_mel: int = 100):
         super().__init__()
         self.d = d
         self.head_dim = d // heads
         self.emb = nn.Embedding(vocab_size, d, padding_idx=0)
         self.lang_emb = nn.Embedding(2, d)
         self.struct_proj = nn.Linear(5, d)
-        self.conv_pre = nn.Sequential(
-            nn.Conv1d(d, d, kernel_size=5, padding=2),
-            nn.SiLU(),
-            nn.Conv1d(d, d, kernel_size=5, padding=2),
-        )
+        self.conv_pre = nn.Conv1d(d, d, kernel_size=5, padding=2, groups=16)
         self.layers = nn.ModuleList([
             DenseRoPETextEncoderLayer(d=d, heads=heads, ffn_hidden=ffn_hidden)
             for _ in range(layers)
@@ -135,7 +131,7 @@ class StudioCleanTextEncoder(nn.Module):
         )
         m_f = mask[:, :, None].to(x.dtype)
         x = x * m_f
-        x = x + self.conv_pre(x.transpose(1, 2)).transpose(1, 2) * m_f
+        x = x + F.silu(self.conv_pre(x.transpose(1, 2))).transpose(1, 2) * m_f
 
         cos, sin = build_rope_cache(L, self.head_dim, x.device, x.dtype)
         for lyr in self.layers:
@@ -147,7 +143,7 @@ class StudioCleanTextEncoder(nn.Module):
 
 class ConvNeXt1DBlock(nn.Module):
     """Dense 1D ConvNeXt Block (`d=512`, FP32/BF16 clean prosody & frame prior modeling)."""
-    def __init__(self, d: int = 512, ff_mult: int = 2, kernel_size: int = 7):
+    def __init__(self, d: int = 512, ff_mult: int = 1, kernel_size: int = 7):
         super().__init__()
         self.dw = nn.Conv1d(d, d, kernel_size=kernel_size, padding=kernel_size // 2, groups=d)
         self.norm = RMSNorm(d)
@@ -164,17 +160,17 @@ class ConvNeXt1DBlock(nn.Module):
 
 
 class StudioCleanProsodyPredictor(nn.Module):
-    """Deep 4-Layer Dense ConvNeXt + RoPE Duration & Continuous Pitch/Energy/Prior Predictor (~6.3M params)."""
+    """Deep 4-Layer Dense ConvNeXt + RoPE Duration & Continuous Pitch/Energy/Prior Predictor (~6.1M params)."""
     def __init__(self, d: int = 512, d_cond: int = 640, n_mel: int = 100):
         super().__init__()
         # 1. Phoneme-level 4-layer ConvNeXt + RoPE predictor -> [log_dur, lf0_ph, vuv_ph, eng_ph]
-        self.ph_blocks = nn.ModuleList([ConvNeXt1DBlock(d=d, ff_mult=2, kernel_size=5) for _ in range(4)])
-        self.ph_rope = DenseRoPETextEncoderLayer(d=d, heads=8, ffn_hidden=768)
+        self.ph_blocks = nn.ModuleList([ConvNeXt1DBlock(d=d, ff_mult=1, kernel_size=5) for _ in range(2)])
+        self.ph_rope = DenseRoPETextEncoderLayer(d=d, heads=8, ffn_hidden=384)
         self.ph_out = nn.Linear(d, 4)  # [log_dur, lf0_ph, vuv_logit_ph, eng_ph]
 
-        # 2. Frame-level 4-layer ConvNeXt + RoPE Refiner over expanded encoder + 4D progress -> continuous F0/VUV/Eng + refined prior mel `mu_frame` + `h_cond [B, 640, T]`
+        # 2. Frame-level 4-layer ConvNeXt Refiner over expanded encoder + 4D progress -> continuous F0/VUV/Eng + refined prior mel `mu_frame` + `h_cond [B, 640, T]`
         self.fr_in = nn.Conv1d(d + n_mel + 7, d, kernel_size=3, padding=1)
-        self.fr_blocks = nn.ModuleList([ConvNeXt1DBlock(d=d, ff_mult=2, kernel_size=7) for _ in range(4)])
+        self.fr_blocks = nn.ModuleList([ConvNeXt1DBlock(d=d, ff_mult=1, kernel_size=7) for _ in range(3)])
         self.fr_cond_proj = nn.Conv1d(d, d_cond, kernel_size=1)
         self.fr_f0_vuv_eng = nn.Conv1d(d, 3, kernel_size=3, padding=1)  # residual [d_lf0, vuv_logit, d_eng]
         self.fr_mel_prior = nn.Conv1d(d, n_mel, kernel_size=3, padding=1)
@@ -373,14 +369,14 @@ def compute_intra_phoneme_progress_7d(
 
 
 class SakhiyaStudio80M(nn.Module):
-    """Full-Capacity ~80.6M Dense RoPE-DiT Studio Speech Model (`Sakhiya-Studio-80M`) operating in the exact official
+    """Full-Capacity ~80.2M Dense RoPE-DiT Studio Speech Model (`Sakhiya-Studio-80M`) operating in the exact official
     `nvidia/bigvgan_v2_24khz_100band_256x` 100-Band Slaney Log-Mel Space.
     """
     def __init__(self, mel_mean: float = -6.4141, mel_std: float = 2.3684):
         super().__init__()
-        self.enc = StudioCleanTextEncoder(vocab_size=64, d=512, layers=8, heads=8, ffn_hidden=1024, n_mel=100)
+        self.enc = StudioCleanTextEncoder(vocab_size=64, d=512, layers=8, heads=8, ffn_hidden=448, n_mel=100)
         self.pros = StudioCleanProsodyPredictor(d=512, d_cond=640, n_mel=100)
-        self.dit = StudioCleanDiTDecoder(n_mel=100, d=640, layers=16, heads=10, ffn_hidden=1280)
+        self.dit = StudioCleanDiTDecoder(n_mel=100, d=640, layers=16, heads=10, ffn_hidden=640)
         self.register_buffer("mel_stats", torch.tensor([float(mel_mean), float(mel_std)], dtype=torch.float32))
         self.sigma_0 = 0.50
 
