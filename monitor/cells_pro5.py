@@ -222,12 +222,25 @@ sp5_pick
 
 C5_PLAY = r"""
 def _play():
-    import marimo as _mo, base64, os, time
-    def _tag_audio(fp, label):
+    import marimo as _mo, base64, hashlib, os, subprocess, time
+    os.makedirs("/tmp/sp5_mp3_cache", exist_ok=True)
+    def _to_compact_mp3(fp):
         if not fp or not os.path.isfile(fp):
+            return None
+        st = os.stat(fp)
+        if fp.lower().endswith(".mp3") and st.st_size <= 280_000:
+            return fp
+        h = hashlib.md5(f"{fp}:{st.st_mtime}:{st.st_size}".encode()).hexdigest()[:12]
+        out_mp3 = f"/tmp/sp5_mp3_cache/{os.path.basename(fp)}_{h}.mp3"
+        if not os.path.isfile(out_mp3):
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", fp, "-ac", "1", "-ar", "24000", "-b:a", "48k", out_mp3], check=False)
+        return out_mp3 if os.path.isfile(out_mp3) else fp
+    def _tag_audio(fp, label):
+        mp3_f = _to_compact_mp3(fp)
+        if not mp3_f or not os.path.isfile(mp3_f):
             return ""
-        mime = "audio/mpeg" if fp.lower().endswith(".mp3") else "audio/wav"
-        b = base64.b64encode(open(fp, "rb").read()).decode()
+        mime = "audio/mpeg" if mp3_f.lower().endswith(".mp3") else "audio/wav"
+        b = base64.b64encode(open(mp3_f, "rb").read()).decode()
         st = os.stat(fp)
         return (f"<div style='border:1px solid #e1e4e8;border-radius:8px;padding:8px 10px;margin-top:6px'>"
                 f"<div><b>{label}</b> · <code>{os.path.basename(fp)}</code> · {st.st_size/1024:.0f} KB · {time.strftime('%H:%M:%S', time.gmtime(st.st_mtime))} UTC</div>"
@@ -241,14 +254,10 @@ def _play():
     ]
     for cid, title in owner_clips:
         cands = [
-            (f"/work/sp/polish/listen/{cid}_candA_polish_int8.wav", "Variant 3 · Candidate A (Sakhiya-One-Polish ~8.5 MB INT8 · Anchored AM + MS-SB-CQT AWP · 4-Step)"),
-            (f"/work/sp/polish/listen/{cid}_candB_vocos_int8.wav", "Variant 4 · Candidate B (Sakhiya-One-Vocos ~16 MB INT8/FP16 · Anchored AM + Adapted Pretrained Vocos-24kHz · 4-Step)"),
-            (f"/work/sp/polish/listen/{cid}_phase1_am_polish.wav", "Phase 1 · Anchored Full-Utterance AM Polish + Fixed G2P (4-Step)"),
-            (f"/work/sp/polish/listen/{cid}_base_4step_g2p.wav", "Variant 2 · Baseline Sakhiya-One + Fixed Phase-1 G2P + 4-Step MeanFlow"),
-            (f"/work/sp/polish/listen/{cid}_base_4step.wav", "Phase 0 Ablation · Untouched Sakhiya-One (4-Step MeanFlow)"),
-            (f"/work/sp/polish/listen/{cid}_base_8step.wav", "Phase 0 Ablation · Untouched Sakhiya-One (8-Step MeanFlow)"),
-            (f"/work/sp/polish/listen/{cid}_base_2step.wav", "Variant 1 · Baseline Sakhiya-One (Untouched a61c100 · 2-Step · 8.46 MB INT8)"),
-            (f"/work/Sakhiya/docs/samples/versions/sakhiya_one/{cid}.mp3", "Shipped Pack · Sakhiya-One (docs/samples/versions/sakhiya_one/)"),
+            (f"/work/Sakhiya/docs/samples/versions/sakhiya_one_polish/{cid}.mp3", "Variant 3 · Candidate A: Sakhiya-One-Polish (8.487 MB INT8 · Anchored AM + MS-SB-CQT AWP · 4-Step · PROMOTED DEFAULT ✅)"),
+            (f"/work/Sakhiya/docs/samples/versions/sakhiya_one_vocos/{cid}.mp3", "Variant 4 · Candidate B: Sakhiya-One Studio Vocos (19.70 MB INT8 · Mel80To100Adapter + Pretrained Vocos-24kHz · 4-Step · PROMOTED TIER ✅)"),
+            (f"/work/Sakhiya/docs/samples/versions/sakhiya_one_base_4step_g2p/{cid}.mp3", "Variant 2 · Baseline Sakhiya-One + Fixed Phase-1 G2P + 4-Step MeanFlow (0 Extra Bytes)"),
+            (f"/work/Sakhiya/docs/samples/versions/sakhiya_one_baseline_a61c100/{cid}.mp3", "Variant 1 · Original Baseline Sakhiya-One (Untouched a61c100 · 2-Step · 8.464 MB INT8)"),
         ]
         rendered = [ _tag_audio(fp, lbl) for fp, lbl in cands if os.path.isfile(fp) ]
         if rendered:

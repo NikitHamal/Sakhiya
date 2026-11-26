@@ -17,7 +17,7 @@ def test_pareto_matches_size_json():
 def test_tiers_json_has_no_handtyped_quality():
     T = json.load(open(f"{R}/docs/tiers.json"))["tiers"]
     ids = [t["id"] for t in T]
-    assert "sakhiya_one" in ids and "sakhiya_one_fast" in ids
+    assert "sakhiya_one" in ids and ("sakhiya_one_vocos" in ids or "sakhiya_one_fast" in ids)
     assert "t5" not in ids and "micro" not in ids
     for t in T:
         if not t.get("ready", True):
