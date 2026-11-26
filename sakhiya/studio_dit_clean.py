@@ -369,14 +369,14 @@ def compute_intra_phoneme_progress_7d(
 
 
 class SakhiyaStudio80M(nn.Module):
-    """Full-Capacity ~80.2M Dense RoPE-DiT Studio Speech Model (`Sakhiya-Studio-80M`) operating in the exact official
+    """Full-Capacity ~81.6M Dense RoPE-DiT Studio Speech Model (`Sakhiya-Studio-80M`) operating in the exact official
     `nvidia/bigvgan_v2_24khz_100band_256x` 100-Band Slaney Log-Mel Space.
     """
     def __init__(self, mel_mean: float = -6.4141, mel_std: float = 2.3684):
         super().__init__()
         self.enc = StudioCleanTextEncoder(vocab_size=64, d=512, layers=8, heads=8, ffn_hidden=448, n_mel=100)
         self.pros = StudioCleanProsodyPredictor(d=512, d_cond=640, n_mel=100)
-        self.dit = StudioCleanDiTDecoder(n_mel=100, d=640, layers=16, heads=10, ffn_hidden=640)
+        self.dit = StudioCleanDiTDecoder(n_mel=100, d=640, layers=16, heads=10, ffn_hidden=480)
         self.register_buffer("mel_stats", torch.tensor([float(mel_mean), float(mel_std)], dtype=torch.float32))
         self.sigma_0 = 0.50
 
@@ -445,7 +445,8 @@ class SakhiyaStudio80M(nn.Module):
         t_view = t[:, None, None]
 
         eps = torch.randn_like(y_1) * m_1d
-        x_0 = (mu_frame.detach() + self.sigma_0 * eps) * m_1d
+        temp_scale = (0.05 + 0.85 * torch.rand((B, 1, 1), device=mel_gt.device, dtype=torch.float32))
+        x_0 = (mu_frame.detach() + (self.sigma_0 * temp_scale) * eps) * m_1d
         x_t = ((1.0 - t_view) * x_0 + t_view * y_1) * m_1d
         v_target = (y_1 - x_0) * m_1d
 
@@ -467,7 +468,7 @@ class SakhiyaStudio80M(nn.Module):
         l_x1 = F.l1_loss(x_1_hat, y_1, reduction="sum") / ym_mel_denom
         df_pred = x_1_hat[:, 1:, :] - x_1_hat[:, :-1, :]
         df_gt = y_1[:, 1:, :] - y_1[:, :-1, :]
-        l_freq_grad = F.l1_loss(df_pred * m_1d, df_gt * m_1d, reduction="sum") / ym_mel_denom
+        l_freq_grad = F.l1_loss(df_pred * m_1d, df_gt * m_1d, reduction="sum") / (ym_denom * 99.0).clamp(min=1.0)
         if T > 2:
             dt_pred = x_1_hat[:, :, 1:] - x_1_hat[:, :, :-1]
             dt_gt = y_1[:, :, 1:] - y_1[:, :, :-1]
