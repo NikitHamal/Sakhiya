@@ -366,7 +366,7 @@ def main():
     rng = random.Random(2026)
     stitched_paragraphs = []
 
-    for p_idx in range(1600):
+    for p_idx in range(3200):
         n_cl = 2 if (p_idx % 3 != 0) else 3
         chosen = rng.sample(ne_base, n_cl)
         tot_frames = sum(c["mel"].shape[1] for c in chosen) + (n_cl - 1) * 12
