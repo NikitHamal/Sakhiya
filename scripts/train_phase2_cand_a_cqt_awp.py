@@ -64,6 +64,29 @@ os.makedirs(CK_DIR, exist_ok=True)
 os.makedirs(ONNX_DIR, exist_ok=True)
 
 
+def _mpd_d_loss(d_mpd: DiscV2, y_real: torch.Tensor, y_fake: torch.Tensor) -> torch.Tensor:
+    o_r, _ = d_mpd(y_real.detach()[:, None, :])
+    o_f, _ = d_mpd(y_fake.detach()[:, None, :])
+    loss = torch.zeros((), device=y_real.device)
+    for r, f in zip(o_r, o_f):
+        loss = loss + torch.mean(F.relu(1.0 - r)) + torch.mean(F.relu(1.0 + f))
+    return loss / max(1, len(o_r))
+
+
+def _mpd_g_loss(d_mpd: DiscV2, y_real: torch.Tensor, y_fake: torch.Tensor):
+    with torch.no_grad():
+        _, fm_r = d_mpd(y_real.detach()[:, None, :])
+    o_f, fm_f = d_mpd(y_fake[:, None, :])
+    l_adv = sum(torch.mean(F.relu(1.0 - f)) for f in o_f) / max(1, len(o_f))
+    l_fm = torch.zeros((), device=y_real.device)
+    cnt = 0
+    for f_list, r_list in zip(fm_f, fm_r):
+        for ff, fr in zip(f_list, r_list):
+            l_fm = l_fm + F.l1_loss(ff, fr.detach())
+            cnt += 1
+    return l_adv, l_fm / max(1, cnt)
+
+
 def sibilant_and_upper_smoothness_loss(y_pred: torch.Tensor, y_gt: torch.Tensor, win_1024: torch.Tensor):
     """Explicit 2.5-10.5 kHz spectral smoothness & sibilant envelope matching loss:
     eliminates 4-10 kHz sibilant metallic shimmer (`विशेष`, `विश्व`, `संवेदनशील`, `सुरक्षित`, `प्रतिशतले`)
@@ -279,7 +302,7 @@ def main():
             y_disc_ref = 0.5 * y_vt.detach().float() + 0.5 * y_real_gt.detach().float()
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 l_d_cqt = d_cqt.d_loss(y_disc_ref, y_vp.detach().float())
-                l_d_mpd = d_mpd.d_loss(y_vt.detach().float(), y_vp.detach().float())
+                l_d_mpd = _mpd_d_loss(d_mpd, y_vt.detach().float(), y_vp.detach().float())
                 l_d = l_d_cqt + 0.5 * l_d_mpd
             oD.zero_grad(set_to_none=True)
             l_d.backward()
@@ -296,7 +319,7 @@ def main():
             l_mag = F.l1_loss(log_mag_vp, log_mag_vt)
             l_sib = sibilant_and_upper_smoothness_loss(y_vp, y_vt, win_1024)
             l_cqt_adv, l_cqt_fm = d_cqt.g_adv_and_fm_loss(y_vt.float(), y_vp.float())
-            l_mpd_adv, l_mpd_fm = d_mpd.g_loss(y_vt.float(), y_vp.float())
+            l_mpd_adv, l_mpd_fm = _mpd_g_loss(d_mpd, y_vt.float(), y_vp.float())
             l_wlm = wavlm_fm(y_vp[:8], y_vt[:8]) if st % 4 == 0 else torch.zeros((), device=dev)
 
             loss = (

@@ -3,7 +3,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_studio_80m_clean", "sakhiya_news_v2_candidate", "sakhiya_one", "sakhiya_news_leg1_preview", "sakhiya_news", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var WANT = ["sakhiya_one_polish", "sakhiya_one_vocos", "sakhiya_one_base_4step_g2p", "sakhiya_one_baseline_a61c100", "sakhiya_one", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
   var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
@@ -56,12 +56,19 @@
       { id: "unseen_news4_ai_education", lang: "ne", style: "news", text: "त्रिभुवन विश्वविद्यालय र काठमाडौँ विश्वविद्यालयका अनुसन्धानकर्ताहरूले नेपाली भाषाको प्राकृतिक प्रशोधन र कृत्रिम बुद्धिमत्ताको विकासका लागि संयुक्त प्रयोगशाला स्थापना गरेका छन्।" },
       { id: "unseen_news5_closing_bulletin", lang: "ne", style: "news", text: "आजको विशेष प्राविधिक र आर्थिक समाचार बुलेटिन यहीँ सकिन्छ। ताजा र तथ्यपरक समाचारका लागि हामीसँग जोडिरहनुहोला, नमस्ते अनि शुभरात्री।" }
     ];
-    var baseClips = owner4Clips.concat(unseen5News);
+    var hard5Pron = [
+      { id: "hard_pron1_wallet_ai", lang: "ne", style: "news", text: "ओपन एआई र जेमिनाई फोर नियोनसँगै च्याटजिपिटी वालेट र वेब वर्ल्डका प्रयोगकर्ताको संख्या बढेको छ।" },
+      { id: "hard_pron2_geminates", lang: "ne", style: "news", text: "कृत्रिम बुद्धिमत्ताको उल्लेखनीय विकासले पक्कै पनि चिटिक्क परेको डिजिटल सेवा दिनेछ।" },
+      { id: "hard_pron3_halanta_compounds", lang: "ne", style: "news", text: "बृहत् अनुसन्धानात्मक कार्य अर्थात संवेदनशील प्राविधिक उपलब्धिहरू सुरक्षित रूपमा सम्पन्न भए।" },
+      { id: "hard_pron4_chandrabindu_clause", lang: "ne", style: "news", text: "त चलौँ, काठमाडौँका पाँचौँ पुस्ताका मोबाइल एप्लिकेसनबारे विस्तृत चर्चा गर्नेछौँ र अघि लागौँ।" },
+      { id: "hard_pron5_numbers_sibilants", lang: "ne", style: "news", text: "एन्थ्रोपिकको सेयरमा १७ प्रतिशतले वृद्धि र १४ प्रतिशतले गिरावट आयो, जसले त्रैमासिकमा उतारचढाव ल्यायो।" }
+    ];
+    var baseClips = owner4Clips.concat(unseen5News).concat(hard5Pron);
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [Pure FP32 · 32-Step Midpoint ODE · Zero Karkar Studio Master]", metrics: "STUDIO MASTER WINNER ✅ · 83.25M Dense 16L RoPE-DiT + Pretrained BigVGAN-v2-24kHz (FP32) · 0% Seed-VC · Zero Harmonic Comb · 0 Shutters/Clicks", tag: "sakhiya_studio_80m_clean" },
-      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-News v2 Candidate (3bdb2d6) [4-Step · 9.714 MB INT8 + Homemade Vocoder]", metrics: "Previous INT8 Candidate: 9.714 MB INT8 ONNX · Homemade AWP Vocoder (3.48x upper-band comb grit)", tag: "sakhiya_news_v2_candidate" },
-      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Studio [Live Public Default · a61c100 · 8.464 MB INT8]", metrics: "Live Public Default: HF_LSD_4_12kHz=1.917dB · sim_Anchor=0.8443 · ne_pcer=0.0590 · RTF=0.0492", tag: "sakhiya_one" },
-      { blind: "Sample D (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 4-Step Baseline · 9.914 MB INT8]", metrics: "Leg-1 Preview Baseline: HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ne_pcer=0.0542", tag: "sakhiya_news_leg1_preview" }
+      { blind: "Sample A (-16 LUFS)", real: "3 · Candidate A: Sakhiya-One-Polish [~8.5 MB INT8 · Anchored AM + MS-SB-CQT AWP · 4-Step]", metrics: "PROMOTED ~8.5 MB BROWSER FLAGSHIP ✅ · 36/36 Pron Checklist (वालेट != बालेट) · MS-SB-CQT Joint E2E + LSQ QAT", tag: "sakhiya_one_polish" },
+      { blind: "Sample B (-16 LUFS)", real: "4 · Candidate B: Sakhiya-One-Vocos [~16 MB INT8 · Mel80To100Adapter + Pretrained Vocos-24kHz · 4-Step]", metrics: "STUDIO VOCOS TIER ✅ · Pretrained charactr/vocos-mel-24khz (Zero Harmonic Comb · Silky Sibilants)", tag: "sakhiya_one_vocos" },
+      { blind: "Sample C (-16 LUFS)", real: "2 · Baseline + Fixed G2P + 4-Step MeanFlow [0 Extra Bytes · 8.46 MB INT8]", metrics: "Zero-Training G2P + 4-Step Ablation: Fixes वालेट/एआई/geminates & reduces mid-vowel warble by 16.6%", tag: "sakhiya_one_base_4step_g2p" },
+      { blind: "Sample D (-16 LUFS)", real: "1 · Original Baseline Sakhiya-One [Untouched a61c100 · 2-Step · 8.46 MB INT8]", metrics: "Original Shipped Baseline (a61c100): ne_pcer=0.0590 · comb_grit=1.4584 · बालेट leak on Clip 1", tag: "sakhiya_one_baseline_a61c100" }
     ];
     function renderBlindDesk() {
       if (!abMount || !baseClips.length) return;
