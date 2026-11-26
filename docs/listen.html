@@ -34,44 +34,48 @@
   <div class="card" id="owner-4clips-desk" style="margin-bottom:24px;border:2px solid var(--md-primary)">
     <div class="card-h" style="flex-wrap:wrap;gap:10px">
       <span class="ms">verified</span>
-      <h2>Exact 4 Full-Length Owner Clips · -16 LUFS Side-by-Side Comparison Desk (<code>Sakhiya-News v2 Candidate</code> vs <code>Leg-1 Preview</code> vs <code>Sakhiya-One [Live Default]</code> vs <code>Broken Leg-2 425bb6f</code>)</h2>
+      <h2>Pure FP32 Studio Voice Comparison Desk · -16 LUFS (<code>Sakhiya-Studio-80M + Pretrained BigVGAN-v2 / Vocos-24kHz</code> vs <code>Raw Studio Reference WAV</code> vs <code>Previous Sakhiya-News v2 9.7 MB INT8</code>)</h2>
     </div>
-    <p class="muted" style="margin-bottom:12px">Staging candidate only (<code>docs/samples/versions/sakhiya_news_v2_candidate/</code> · public default remains <b>Sakhiya-One</b> until owner listening approval). Compares <b>Sakhiya-News v2 Candidate</b> (4-Step <code>CFG = 0</code>, True FP16 Vocoder Heads, Fixed Nepali G2P Schwa Deletion / Hiatus / <code>बृहत</code> / <code>वालेट</code> / <code>मामकाः</code> &amp; Clause Chunker) against <b>Leg-1 Preview</b>, <b>Sakhiya-One</b>, and <b>Broken Leg-2 (<code>425bb6f</code>)</b> across all 4 full-length 36–43s scripts.</p>
+    <p class="muted" style="margin-bottom:12px">Uncompressed 24 kHz Pure FP32 renders staged under <code>docs/samples/versions/sakhiya_studio_80m_clean/</code> (public browser default remains untouched on <b>Sakhiya-One</b>). Trained on 100% pure single-speaker 24 kHz studio audio (<b>0% Seed-VC</b>, <b>0% Old-V1</b>) with an uncompressed <b>83.25M Dense 16-Layer RoPE-DiT</b> (<code>d=640</code>, FlashAttention-2, SwiGLU) decoded at <b>32 Midpoint ODE steps</b> through <b>Pretrained <code>nvidia/bigvgan_v2_24khz_100band_256x</code> (FP32)</b> and <b>Pretrained <code>charactr/vocos-mel-24khz</code> (FP32)</b>.</p>
+    <div class="card sm" style="padding:10px 14px;margin-bottom:14px">
+      <b>0 · Raw Studio Human Reference Anchor (Un-VC'd <code>nep_6834</code> · 48 kHz &rarr; 24 kHz Uncompressed PCM · -16 LUFS)</b>
+      <div style="margin-top:6px"><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/raw_studio_anchor_nep6834.wav" style="width:100%;height:36px"></audio></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr;gap:14px">
       <div class="card sm" style="padding:12px 14px">
         <b>Clip 1 · Episode-01 AI Models (Gemini 4 Neon &amp; ChatGPT Wallet — <code>मोडेल, कोड, भएका, कामहरू छिटो, ओपन, पोइन्ट, संस्करणहरू ल्याउँदै, अनलाइन, किनमेल, वालेट सुविधा सुरु</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>A · Sakhiya-News v2 Candidate [4-Step CFG=0 · FP16 Heads]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>B · Sakhiya-News Leg-1 Preview [4-Step Baseline]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_leg1_preview/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>C · Sakhiya-One [Live Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>D · Broken Leg-2 (425bb6f · Reverted)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>A · Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip1_ai_models.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>B · Sakhiya-Studio-80M + Pretrained Vocos-24kHz-13.5M [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip1_ai_models_vocos24k.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>C · Previous Sakhiya-News v2 (3bdb2d6 · 9.7 MB INT8 + Homemade Voc)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>D · Sakhiya-One [Live Public Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
         </div>
       </div>
       <div class="card sm" style="padding:12px 14px">
         <b>Clip 2 · Episode-01 AI &amp; Global Share Market (Anthropic — <code>बृहत, सेयर, बजार, कारोबार, दिनमै, भएको, दिन, करिब, गिरावट, समेत, उतारचढाव, अनुसार, भइरहेको, डलर</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>A · Sakhiya-News v2 Candidate [4-Step CFG=0 · FP16 Heads]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>B · Sakhiya-News Leg-1 Preview [4-Step Baseline]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_leg1_preview/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>C · Sakhiya-One [Live Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>D · Broken Leg-2 (425bb6f · Reverted)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>A · Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip2_share_market.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>B · Sakhiya-Studio-80M + Pretrained Vocos-24kHz-13.5M [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip2_share_market_vocos24k.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>C · Previous Sakhiya-News v2 (3bdb2d6 · 9.7 MB INT8 + Homemade Voc)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>D · Sakhiya-One [Live Public Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
         </div>
       </div>
       <div class="card sm" style="padding:12px 14px">
         <b>Clip 3 · Episode-01 Tech Bulletin Intro (<code>भइरहेका, अर्थात, मोबाइल, एप्लिकेसन, नयाँ परिवर्तनहरूबारे, हरेक, दिन, प्रभाव हाम्रो, दैनिक, जीवन</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>A · Sakhiya-News v2 Candidate [4-Step CFG=0 · FP16 Heads]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>B · Sakhiya-News Leg-1 Preview [4-Step Baseline]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_leg1_preview/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>C · Sakhiya-One [Live Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>D · Broken Leg-2 (425bb6f · Reverted)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>A · Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip3_intro_bulletin.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>B · Sakhiya-Studio-80M + Pretrained Vocos-24kHz-13.5M [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip3_intro_bulletin_vocos24k.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>C · Previous Sakhiya-News v2 (3bdb2d6 · 9.7 MB INT8 + Homemade Voc)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>D · Sakhiya-One [Live Public Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
         </div>
       </div>
       <div class="card sm" style="padding:12px 14px">
         <b>Clip 4 · Sakhiya Intro &amp; Bhagavad Gita 1.1 (<code>बनाउनुभएको, स्पष्ट, धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय।</code>)</b>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>A · Sakhiya-News v2 Candidate [4-Step CFG=0 · FP16 Heads]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>B · Sakhiya-News Leg-1 Preview [4-Step Baseline]</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_leg1_preview/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>C · Sakhiya-One [Live Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>D · Broken Leg-2 (425bb6f · Reverted)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>A · Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip4_sanskrit_gita.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>B · Sakhiya-Studio-80M + Pretrained Vocos-24kHz-13.5M [FP32 · 32-Step WAV]</b></small><audio controls preload="none" src="samples/versions/sakhiya_studio_80m_clean/owner_clip4_sanskrit_gita_vocos24k.wav" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>C · Previous Sakhiya-News v2 (3bdb2d6 · 9.7 MB INT8 + Homemade Voc)</b></small><audio controls preload="none" src="samples/versions/sakhiya_news_v2_candidate/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
+          <div><small class="muted"><b>D · Sakhiya-One [Live Public Default · a61c100]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one/owner_clip4_sanskrit_gita.mp3" style="width:100%;height:36px"></audio></div>
         </div>
       </div>
     </div>

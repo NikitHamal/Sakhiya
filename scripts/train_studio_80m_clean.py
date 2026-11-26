@@ -264,11 +264,11 @@ def build_gpu_precollated_batches(train_items: list, mel_mean: float, mel_std: f
         lang_b = torch.tensor([x["lang"] for x in chunk], dtype=torch.long, device=dev)
         base_batches.append((ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b))
 
-    # Pre-materialize 28 epochs of static W=144 windowed batches directly in 96 GB Blackwell VRAM (~42 GB resident)
+    # Pre-materialize 145 epochs of static W=144 windowed batches directly in 96 GB Blackwell VRAM (~42 GB resident, ~49 GB working VRAM)
     W = 144
     w_ar = torch.arange(W, device=dev)[None, :]
     sliced_batches = []
-    for ep in range(28):
+    for ep in range(145):
         for b_tup in base_batches:
             ids_b, struct_b, log_dur_gt, mu_gt_ph, imask, y1_b, idx_fr, prog_4d, lf0_b, vuv_b, eng_b, ymask, yl, lang_b = b_tup
             B_cur = y1_b.shape[0]
@@ -940,6 +940,46 @@ def run_phase3_comparison_pack_and_forensic_gate(
     ):
         with open(p_json, "w") as f:
             json.dump(forensic_rep, f, indent=2, ensure_ascii=False)
+
+    # Also write manifest.json and update docs/samples/versions/registry.json for docs/listen.html
+    manifest_clips = []
+    for clip in all_9_clips:
+        cid = clip["id"]
+        manifest_clips.append({
+            "id": cid,
+            "lang": clip.get("lang", "ne"),
+            "style": "studio_clean_fp32",
+            "text": clip["text"],
+            "mp3": f"samples/versions/sakhiya_studio_80m_clean/{cid}.wav",
+            "duration_s": per_clip_forensic[cid]["dur_s"],
+        })
+        manifest_clips.append({
+            "id": f"{cid}_vocos24k",
+            "lang": clip.get("lang", "ne"),
+            "style": "vocos24k_fp32",
+            "text": clip["text"],
+            "mp3": f"samples/versions/sakhiya_studio_80m_clean/{cid}_vocos24k.wav",
+            "duration_s": per_clip_forensic[cid]["dur_s"],
+        })
+    manifest_obj = {
+        "tag": "sakhiya_studio_80m_clean",
+        "label": "Sakhiya-Studio-80M + Pretrained BigVGAN-v2 / Vocos-24kHz (Pure FP32 · 32-Step ODE · Zero-Karkar Studio Master)",
+        "notes": "83.25M Dense 16-Layer RoPE-DiT trained on 12.59h 100% pure single-speaker 24kHz studio corpus (0% Seed-VC, 0% Old-V1) decoded at 32 Midpoint ODE steps in pure FP32 through Pretrained nvidia/bigvgan_v2_24khz_100band_256x and charactr/vocos-mel-24khz.",
+        "metrics": forensic_rep["summary_metrics"],
+        "clips": manifest_clips,
+    }
+    with open(os.path.join(VERSIONS_OUT_DIR, "manifest.json"), "w") as f:
+        json.dump(manifest_obj, f, indent=2, ensure_ascii=False)
+    reg_p = os.path.join(REPO, "docs", "samples", "versions", "registry.json")
+    if os.path.exists(reg_p):
+        try:
+            reg = json.load(open(reg_p))
+            reg["versions"] = [v for v in reg.get("versions", []) if v.get("tag") != "sakhiya_studio_80m_clean"]
+            reg["versions"].insert(0, manifest_obj)
+            with open(reg_p, "w") as f:
+                json.dump(reg, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
 
     el_m = (time.time() - t0) / 60.0
     update_telem(

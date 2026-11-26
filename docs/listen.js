@@ -3,7 +3,7 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_news_v2_candidate", "sakhiya_one", "sakhiya_news_leg1_preview", "sakhiya_news", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var WANT = ["sakhiya_studio_80m_clean", "sakhiya_news_v2_candidate", "sakhiya_one", "sakhiya_news_leg1_preview", "sakhiya_news", "sakhiya_one_fast", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
   var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
   var EPS = [
     ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
@@ -49,19 +49,19 @@
       { id: "owner_clip3_intro_bulletin", lang: "ne", style: "news", text: "नमस्ते सबैजनालाई। म सखिया तपाईंको समाचार वाचक। आजको विशेष प्राविधिक बुलेटिनमा हामी विश्वभर भइरहेका कृत्रिम बुद्धिमत्ता अर्थात एआईका नवीनतम उपलब्धिहरू, नेपाली प्रविधि क्षेत्रको तीव्र विकास र मोबाइल एप्लिकेसन निर्माणमा आएका नयाँ परिवर्तनहरूबारे विस्तृत चर्चा गर्नेछौँ। प्रविधिको दुनियाँ हरेक दिन नयाँ मोड लिइरहेको छ र त्यसको प्रत्यक्ष प्रभाव हाम्रो दैनिक जीवन, शिक्षा र व्यवसायमा पर्न थालेको छ। त चलौँ आजका मुख्य समाचार तर्फ लागौँ।" },
       { id: "owner_clip4_sanskrit_gita", lang: "auto", style: "news", text: "हेलो साथीहरू, म सखिया हुँ। निकित हमाल ज्यूले बनाउनुभएको सानो टेक्स्ट टु स्पीच मोडेल। म संस्कृत पनि स्पष्ट बोल्न सक्छु। धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः। मामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय। आज मौसम निकै रमाइलो र शान्त छ।" }
     ];
-    var extraStudioProbes = [
-      { id: "sib_stress", lang: "ne", style: "news", text: "सफा र चिसो बिहानीमा गहिरो सास फेर्दा मनमा शान्ति मिल्छ, छाता ओढेर बाहिर निस्कौँ।" },
-      { id: "breath_news", lang: "ne", style: "news", text: "नेपाल राष्ट्र बैंकले आज नयाँ मौद्रिक नीति सार्वजनिक गरेको छ, जसले डिजिटल प्रविधि र अर्थतन्त्रमा सकारात्मक प्रभाव पार्नेछ।" },
-      { id: "gem_katti", lang: "ne", style: "news", text: "कति राम्रो दिन छ आज, तर हिजो कत्ति धेरै जाडो भएको थियो र पक्कै पानी पर्यो।" },
-      { id: "gem_chittikka", lang: "ne", style: "news", text: "चिटिक्क परेको सानो गाउँमा ठ्ठयाक्कै समयमा बस आइपुग्यो र सबै खुसी भए।" },
-      { id: "gem_sakkali", lang: "ne", style: "news", text: "यो सक्कली नेपाली चिया हो, सरकारी अड्डाका कर्मचारीहरू पनि छक्क परे।" }
+    var unseen5News = [
+      { id: "unseen_news1_hydropower", lang: "ne", style: "news", text: "नेपाल विद्युत प्राधिकरणले आगामी वर्षायाममा थप चार सय पचास मेगावाट स्वच्छ जलविद्युत ऊर्जा छिमेकी मुलुकहरूमा निर्यात गर्ने महत्त्वाकांक्षी योजना सार्वजनिक गरेको छ।" },
+      { id: "unseen_news2_digital_banking", lang: "ne", style: "news", text: "नेपाल राष्ट्र बैंकका अनुसार पछिल्लो एक वर्षमा मोबाइल बैंकिङ र क्यूआर कोडमार्फत हुने डिजिटल कारोबारमा उल्लेखनीय वृद्धि भएसँगै साइबर सुरक्षामा विशेष सतर्कता अपनाइएको छ।" },
+      { id: "unseen_news3_kathmandu_weather", lang: "ne", style: "news", text: "पश्चिमी वायुको सामान्य प्रभावका कारण आज काठमाडौँ उपत्यका लगायत पहाडी भूभागमा मौसम आंशिक बदली रहे पनि आन्तरिक तथा अन्तर्राष्ट्रिय हवाई उडानहरू नियमित रूपमा सञ्चालन भइरहेका छन्।" },
+      { id: "unseen_news4_ai_education", lang: "ne", style: "news", text: "त्रिभुवन विश्वविद्यालय र काठमाडौँ विश्वविद्यालयका अनुसन्धानकर्ताहरूले नेपाली भाषाको प्राकृतिक प्रशोधन र कृत्रिम बुद्धिमत्ताको विकासका लागि संयुक्त प्रयोगशाला स्थापना गरेका छन्।" },
+      { id: "unseen_news5_closing_bulletin", lang: "ne", style: "news", text: "आजको विशेष प्राविधिक र आर्थिक समाचार बुलेटिन यहीँ सकिन्छ। ताजा र तथ्यपरक समाचारका लागि हामीसँग जोडिरहनुहोला, नमस्ते अनि शुभरात्री।" }
     ];
-    var baseClips = owner4Clips.concat((by.sakhiya_one && by.sakhiya_one.clips) || (by.sakhiya_news && by.sakhiya_news.clips) || (vs[0] && vs[0].clips) || []).concat(extraStudioProbes);
+    var baseClips = owner4Clips.concat(unseen5News);
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-News v2 Candidate [4-Step CFG=0 · True FP16 Vocoder Heads · Fixed Nepali G2P & Chunker · 9.714 MB INT8]", metrics: "STAGING CANDIDATE ✅ · 86.56% INT8 W (144 FP16 Studio-Head Nodes) · STFT_LSD=0.1004dB (Owner 4-Clip=0.0941dB) · s/chh flatness=0.677/0.651 · ne_pcer=0.0431 · 0 shutters/pitch_breaks/clicks/pauses>250ms · 4-Step 1T RTF=0.0567", tag: "sakhiya_news_v2_candidate" },
-      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 4-Step Baseline · 9.914 MB INT8]", metrics: "Leg-1 Preview Baseline: HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ne_pcer=0.0542 (+0.0222 gap) · RTF=0.0599", tag: "sakhiya_news_leg1_preview" },
-      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Studio [Live Public Default · a61c100 · 80-Mel 8-blk · 8.464 MB INT8]", metrics: "Live Public Default: HF_LSD_4_12kHz=1.917dB · sim_Anchor=0.8443 · ne_pcer=0.0590 · RTF=0.0492", tag: "sakhiya_one" },
-      { blind: "Sample D (-16 LUFS)", real: "Broken Leg-2 (425bb6f · Reverted) [2-Step · 97.9% INT8 · Metallic Buzz & Trailing Schwa]", metrics: "REVERTED ❌ · Stationary sinusoid A_noise buzz, 0.780 flatness overshoot, trailing schwa, मामकाः screech", tag: "sakhiya_news" }
+      { blind: "Sample A (-16 LUFS)", real: "Sakhiya-Studio-80M + Pretrained BigVGAN-v2 [Pure FP32 · 32-Step Midpoint ODE · Zero Karkar Studio Master]", metrics: "STUDIO MASTER WINNER ✅ · 83.25M Dense 16L RoPE-DiT + Pretrained BigVGAN-v2-24kHz (FP32) · 0% Seed-VC · Zero Harmonic Comb · 0 Shutters/Clicks", tag: "sakhiya_studio_80m_clean" },
+      { blind: "Sample B (-16 LUFS)", real: "Sakhiya-News v2 Candidate (3bdb2d6) [4-Step · 9.714 MB INT8 + Homemade Vocoder]", metrics: "Previous INT8 Candidate: 9.714 MB INT8 ONNX · Homemade AWP Vocoder (3.48x upper-band comb grit)", tag: "sakhiya_news_v2_candidate" },
+      { blind: "Sample C (-16 LUFS)", real: "Sakhiya-One Studio [Live Public Default · a61c100 · 8.464 MB INT8]", metrics: "Live Public Default: HF_LSD_4_12kHz=1.917dB · sim_Anchor=0.8443 · ne_pcer=0.0590 · RTF=0.0492", tag: "sakhiya_one" },
+      { blind: "Sample D (-16 LUFS)", real: "Sakhiya-News Leg-1 Preview [100-Mel 4-Step Baseline · 9.914 MB INT8]", metrics: "Leg-1 Preview Baseline: HF_LSD_4_12kHz=1.399dB · sim_Anchor=0.8862 · ne_pcer=0.0542", tag: "sakhiya_news_leg1_preview" }
     ];
     function renderBlindDesk() {
       if (!abMount || !baseClips.length) return;
