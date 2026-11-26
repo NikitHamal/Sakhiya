@@ -127,12 +127,15 @@ def _calibrate_styles(am, pre_baked=False):
             w_e = am.enc.emb.weight
             id_l, id_r = SYM2ID["l"], SYM2ID["ɽ"]
             w_e[id_r].copy_(0.60 * w_e[id_l] + 0.40 * w_e[id_r])
-            # Orthogonalize labio-velar approximant 'w' away from bilabial stop 'b' toward rounded glide 'u'
-            # so 'वालेट' -> ['w','a','l','e','ʈ'] never leaks into 'बालेट'!
+            # Idempotent labio-velar/labiodental approximant 'w' calibration:
+            # orthogonalize away from bilabial stop 'b' with gentle rounded glide 'u' so 'वालेट' -> 'वालेट'
+            # while 'विकास', 'विश्वभर', 'विस्तृत', 'व्यवसायमा' stay crisp!
             id_w, id_u, id_b = SYM2ID["w"], SYM2ID["u"], SYM2ID["b"]
-            orig_w = w_e[id_w].clone()
-            v_w = 0.55 * orig_w + 0.45 * w_e[id_u] - 0.25 * w_e[id_b]
-            w_e[id_w].copy_(v_w * (orig_w.norm() / v_w.norm().clamp(min=1e-6)))
+            cos_wu = F.cosine_similarity(w_e[id_w][None].float(), w_e[id_u][None].float()).item()
+            if cos_wu < 0.12:
+                orig_w = w_e[id_w].float().clone()
+                v_w = 0.78 * orig_w + 0.22 * w_e[id_u].float() - 0.16 * w_e[id_b].float()
+                w_e[id_w].copy_((v_w * (orig_w.norm() / v_w.norm().clamp(min=1e-6))).to(w_e.dtype))
         w_l = am.enc.lang.weight
         if w_l.shape[0] > 4:
             w_l[4].copy_(0.94 * w_l[0] + 0.06 * w_l[4])
@@ -432,10 +435,15 @@ class Student(nn.Module):
         is_gem_half = ((ids > 8) & ((ids == next_ids) | (ids == prev_ids))).float()
         dur = torch.maximum(dur, is_gem_half * 5.0)
 
-        # Word-final halanta dental stop release (बृहत्, अर्थात्) + clean inter-word separation
-        is_word_final_t = ((ids == id_t) & (next_ids <= 6) & (prev_ids > 8)).float()
-        is_post_stop_wb = ((ids == id_wb) & (prev_ids == id_t)).float()
-        dur = torch.maximum(dur, is_word_final_t * 5.0 + is_post_stop_wb * 3.0)
+        # Word-final halanta dental/retroflex stop release (बृहत्, अर्थात्, पोइन्ट टु, गिरावट आयो) + clean inter-word separation
+        id_retro_t, id_l_c, id_sh_c = SYM2ID["ʈ"], SYM2ID["l"], SYM2ID["ʃ"]
+        is_word_final_stop = (((ids == id_t) | (ids == id_retro_t)) & (next_ids <= 6) & (prev_ids > 8)).float()
+        is_post_stop_wb = ((ids == id_wb) & ((prev_ids == id_t) | (prev_ids == id_retro_t))).float()
+        dur = torch.maximum(dur, is_word_final_stop * 5.0 + is_post_stop_wb * 4.0)
+
+        # Post-sibilant liquid floor (विश्लेषकहरूका: ʃ + l -> l >= 5 frames so l is never dropped)
+        is_post_sib_l = ((ids == id_l_c) & (prev_ids == id_sh_c)).float()
+        dur = torch.maximum(dur, is_post_sib_l * 5.0)
 
         # Strong chandrabindu nasal diphthong floor (गर्नेछौँ, लागौँ, चलौँ, पाँचौँ, काठमाडौँ, अर्बौँ)
         is_nas_vow = (ids >= 58).float()

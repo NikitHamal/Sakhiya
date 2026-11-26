@@ -126,8 +126,13 @@ class FullBandHarmonicExcitation(nn.Module):
         nyq_aa = nyq_aa * nyq_aa * (3.0 - 2.0 * nyq_aa)
         amp_u = (1.0 / torch.sqrt(ks_u)) * nyq_aa * uv_16
         ph_u = (ks_u * 0.125) * ph
-        t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=torch.float32).view(1, 1, -1)
-        noise_exc = (1.0 - 0.80 * uv_16) * torch.sin(t_idx * 12.9898 + ph * 1.73) * torch.cos(t_idx * 78.233 - ph * 2.19)
+        if self.training:
+            raw_noise = torch.randn_like(uv_16)
+        else:
+            t_idx = torch.arange(ph.shape[-1], device=ph.device, dtype=torch.float32).view(1, 1, -1)
+            raw_hash = torch.sin(t_idx * 12.9898 + 78.233) * 43758.5453
+            raw_noise = ((raw_hash - torch.floor(raw_hash)) * 2.0 - 1.0).expand_as(uv_16)
+        noise_exc = ((1.0 - uv_16) ** 2) * raw_noise
         har_u = torch.cat([torch.sin(ph_u) * amp_u, torch.cos(ph_u) * amp_u, uv_16, noise_exc], dim=1)
 
         s4 = self.proj4(har_b) + self.upper_proj4(har_u)

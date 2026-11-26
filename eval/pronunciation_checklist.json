@@ -1,0 +1,191 @@
+i k k ʌ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Geminate closure >=10f (>=1.85x singleton)",
+      "pass": true
+    },
+    {
+      "word": "बृहत्",
+      "category": "Halanta final stop release",
+      "py_phones": "b r i h ʌ t̪",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Soft 5f dental stop release + 3f boundary",
+      "pass": true
+    },
+    {
+      "word": "अर्थात्",
+      "category": "Halanta final stop release",
+      "py_phones": "ʌ r t̪ʰ a t̪",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Soft 5f dental stop release + 3f boundary",
+      "pass": true
+    },
+    {
+      "word": "गर्नेछौँ",
+      "category": "Chandrabindu diphthong (ʌ̃ũ)",
+      "py_phones": "g ʌ r n e tsʰ ʌ̃ ũ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Full 10f nasal diphthong (ʌ̃ + ũ)",
+      "pass": true
+    },
+    {
+      "word": "लागौँ",
+      "category": "Chandrabindu diphthong (ʌ̃ũ)",
+      "py_phones": "l a g ʌ̃ ũ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Full 10f nasal diphthong (ʌ̃ + ũ)",
+      "pass": true
+    },
+    {
+      "word": "चलौँ",
+      "category": "Chandrabindu diphthong (ʌ̃ũ)",
+      "py_phones": "ts ʌ l ʌ̃ ũ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Full 10f nasal diphthong (ʌ̃ + ũ)",
+      "pass": true
+    },
+    {
+      "word": "पाँचौँ",
+      "category": "Chandrabindu diphthong (ã..ʌ̃ũ)",
+      "py_phones": "p ã ts ʌ̃ ũ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Full 10f nasal diphthong (ʌ̃ + ũ)",
+      "pass": true
+    },
+    {
+      "word": "काठमाडौँ",
+      "category": "Chandrabindu diphthong (ʌ̃ũ)",
+      "py_phones": "k a ʈʰ m a ɖ ʌ̃ ũ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Full 10f nasal diphthong (ʌ̃ + ũ)",
+      "pass": true
+    },
+    {
+      "word": "अनुसन्धानात्मक",
+      "category": "Long compound conjuncts",
+      "py_phones": "ʌ n u s ʌ n d̪ʱ a n a t̪ m ʌ k",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "प्रयोगकर्ताको",
+      "category": "Long compound conjuncts",
+      "py_phones": "p r ʌ j o g k ʌ r t̪ a k o",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "उतारचढाव",
+      "category": "Long compound conjuncts",
+      "py_phones": "u t̪ a r ts ʌ ɖʱ a w",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "त्रैमासिकमा",
+      "category": "Long compound conjuncts",
+      "py_phones": "t̪ r ʌ i m a s i k m a",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "गिरावट",
+      "category": "Compound glide w",
+      "py_phones": "g i r a w ʌ ʈ",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "उपलब्धिहरू",
+      "category": "Long compound + suffix",
+      "py_phones": "u p ʌ l ʌ b d̪ʱ i h ʌ r u",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "सुरक्षित",
+      "category": "Sibilant + cluster kʃ",
+      "py_phones": "s u r ʌ k ʃ i t̪",
+      "js_parity": "100% ✅",
+      "acoustic_note": "Clean syllable/schwa retention",
+      "pass": true
+    },
+    {
+      "word": "च्याटजिपिटी वालेट",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "ts j a ʈ dz i p i ʈ i | w a l e ʈ .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "त चलौँ",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "t̪ ʌ | ts ʌ l ʌ̃ ũ .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "गिरावट आयो",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "g i r a w ʌ ʈ | a j o .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "१७ प्रतिशतले",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "s ʌ t̪ r ʌ | p r ʌ t̪ i ʃ ʌ t̪ l e .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "१४ प्रतिशतले",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "ts ʌ u d̪ʱ ʌ | p r ʌ t̪ i ʃ ʌ t̪ l e .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "जेमिनाई फोर नियोन",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "dz e m i n a i | pʰ o r | n i j o n .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "जिपिटी सिक्स पोइन्ट टु",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "dz i p i ʈ i | s i k s | p o i n ʈ | ʈ u .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "ओपन एआई",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "o p ʌ n | e | a i .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    },
+    {
+      "word": "मोबाइल एप्लिकेसन",
+      "category": "Phrase / Loanword / Number / Clause Onset",
+      "py_phones": "m o b a i l | e p l i k e s ʌ n .",
+      "js_parity": "100% ✅",
+      "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+      "pass": true
+    }
+  ]
+}

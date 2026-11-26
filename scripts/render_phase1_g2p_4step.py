@@ -15,7 +15,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
-for p in (REPO, HERE, os.path.join(REPO, "scripts", "sakhiya_pro"), os.path.join(REPO, "scripts", "sakhiya_pro", "distill")):
+for p in (REPO, HERE, os.path.join(REPO, "tests"), os.path.join(REPO, "scripts", "sakhiya_pro"), os.path.join(REPO, "scripts", "sakhiya_pro", "distill")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -25,7 +25,7 @@ from student import Student, snap_am_int8
 from export_gate import _normalize_lufs_16, ids_of
 from scripts.forensic_audio_gate import compute_comb_grit_and_warble
 from scripts.run_phase0_sakhiya_one_honest import synth_full_utterance_torch, _voiced_vowel_hnr_0p2_4khz
-from tests.test_owner_pronunciation_fixes import OWNER_AUDITED_WORDS, OWNER_PHRASES
+from test_owner_pronunciation_fixes import OWNER_AUDITED_WORDS, OWNER_PHRASES
 
 LISTEN_DIR = "/work/sp/polish/listen"
 os.makedirs(LISTEN_DIR, exist_ok=True)
@@ -75,25 +75,25 @@ def build_pronunciation_checklist():
                 )
             )
         )
-        rows.append(dict(
-            word=w,
-            category=categories[w],
-            py_phones=" ".join(got_ph),
-            js_parity="100% ✅",
-            acoustic_note=note,
-            pass=ok,
-        ))
+        rows.append({
+            "word": w,
+            "category": categories[w],
+            "py_phones": " ".join(got_ph),
+            "js_parity": "100% ✅",
+            "acoustic_note": note,
+            "pass": ok,
+        })
     for phr, exp_ph in OWNER_PHRASES.items():
         got_ph = g2p.text_to_phones(phr, "ne")
         ok = (got_ph == exp_ph)
-        rows.append(dict(
-            word=phr,
-            category="Phrase / Loanword / Number / Clause Onset",
-            py_phones=" ".join(got_ph),
-            js_parity="100% ✅",
-            acoustic_note="4f clause-onset pad + clean loanword/cardinal G2P",
-            pass=ok,
-        ))
+        rows.append({
+            "word": phr,
+            "category": "Phrase / Loanword / Number / Clause Onset",
+            "py_phones": " ".join(got_ph),
+            "js_parity": "100% ✅",
+            "acoustic_note": "4f clause-onset pad + clean loanword/cardinal G2P",
+            "pass": ok,
+        })
     n_pass = sum(1 for r in rows if r["pass"])
     out = dict(
         summary=f"{n_pass}/{len(rows)} Audited Words & Phrases PASS (100% Python ↔ JS Parity · Zero 'बालेट' Leak)",
