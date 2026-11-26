@@ -228,12 +228,12 @@ def _play():
         if not fp or not os.path.isfile(fp):
             return None
         st = os.stat(fp)
-        if fp.lower().endswith(".mp3") and st.st_size <= 280_000:
+        if fp.lower().endswith(".mp3") and st.st_size <= 140_000:
             return fp
-        h = hashlib.md5(f"{fp}:{st.st_mtime}:{st.st_size}".encode()).hexdigest()[:12]
+        h = hashlib.md5(f"{fp}:{st.st_mtime}:{st.st_size}:24k".encode()).hexdigest()[:12]
         out_mp3 = f"/tmp/sp5_mp3_cache/{os.path.basename(fp)}_{h}.mp3"
         if not os.path.isfile(out_mp3):
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", fp, "-ac", "1", "-ar", "24000", "-b:a", "48k", out_mp3], check=False)
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", fp, "-ac", "1", "-ar", "24000", "-b:a", "24k", out_mp3], check=False)
         return out_mp3 if os.path.isfile(out_mp3) else fp
     def _tag_audio(fp, label):
         mp3_f = _to_compact_mp3(fp)
@@ -268,7 +268,8 @@ def _play():
         blocks.insert(0, _tag_audio(p, "🎧 Currently Selected Dropdown Clip (-16 LUFS)"))
     if not blocks:
         return _mo.md("_Rendering Phase 0 2-step vs 4-step vs 8-step Owner Clips now — click Rescan in a few seconds._")
-    return _mo.Html("<div style='font-family:system-ui;font-size:13px'>" + "".join(blocks) + "</div>")
+    html_ascii = ("<div style='font-family:system-ui;font-size:13px'>" + "".join(blocks) + "</div>").encode("ascii", "xmlcharrefreplace").decode("ascii")
+    return _mo.Html(html_ascii)
 try:
     _out5 = _play()
 except Exception as _e:
