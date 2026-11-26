@@ -2104,7 +2104,7 @@ def main():
     ap.add_argument("--skip_phase2", action="store_true")
     ap.add_argument("--skip_phase3", action="store_true")
     ap.add_argument("--skip_phase4", action="store_true")
-    ap.add_argument("--resume_am", default="/work/tts/ck/am_best.pt")
+    ap.add_argument("--resume_am", default="/work/tts/ck/v2_am_pre_refine.pt")
     a = ap.parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = True

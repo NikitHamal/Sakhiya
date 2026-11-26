@@ -84,7 +84,8 @@ def stitch(wavs, sr, xf_ms=25, edge_ms=90):
         if n_fr > 4:
             fr = w[:n_fr * hop].reshape(n_fr, hop)
             rms = np.sqrt(np.mean(fr * fr, axis=1))
-            idx = np.where(rms > 5e-4)[0]
+            thr = max(float(rms.max()) * 0.08, 0.012)
+            idx = np.where(rms > thr)[0]
             if idx.size:
                 keep = int(edge_ms * sr / 1000)
                 st = max(0, int(idx[0]) * hop - keep)
