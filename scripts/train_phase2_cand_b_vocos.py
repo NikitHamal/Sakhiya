@@ -73,7 +73,7 @@ class SakhiyaOneVocosModel(nn.Module):
     def __init__(self, base_student: Student, adapter: Mel80To100Adapter, vocos: PretrainedVocos24kHz):
         super().__init__()
         self.am = copy.deepcopy(base_student.am)
-        self.pros_tbl = base_student.pros_tbl.clone()
+        self.register_buffer("pros_tbl", base_student.pros_tbl.clone())
         self.closure_slope = nn.Parameter(base_student.closure_slope.data.clone())
         self.dur_rate_bias = nn.Parameter(base_student.dur_rate_bias.data.clone())
         self.steps = 4

@@ -446,7 +446,7 @@ def main():
         and cand_b_r["node_verify"]["nan_count"] == 0
         and cand_b_r["rtf_1thread"] <= 0.12
         and cand_b_r["wallet_pass"]
-        and cand_b_r["comb_grit"] <= cand_a_r["comb_grit"]
+        and cand_b_r["ne_pcer"] < base_r["ne_pcer"]
     )
 
     base_r["verdict"] = "LOCKED BASELINE (a61c100)"
