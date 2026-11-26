@@ -31,15 +31,18 @@ class RMSNorm(nn.Module):
         self.weight = nn.Parameter(torch.ones(dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out_dtype = torch.bfloat16 if torch.is_autocast_enabled() else x.dtype
         norm = x.float().pow(2).mean(-1, keepdim=True).add(self.eps).rsqrt()
-        return (x.float() * norm).to(x.dtype) * self.weight.to(x.dtype)
+        return (x.float() * norm * self.weight.float()).to(out_dtype)
 
 
 def apply_rope_1d(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
-    """Apply 1D Rotary Position Embedding to `x` of shape `[B, H, T, D_h]`."""
+    """Apply 1D Rotary Position Embedding to `x` of shape `[B, H, T, D_h]` preserving `x.dtype`."""
     d_half = x.shape[-1] // 2
+    c = cos.to(x.dtype)
+    s = sin.to(x.dtype)
     x1, x2 = x[..., :d_half], x[..., d_half:]
-    return torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
+    return torch.cat([x1 * c - x2 * s, x1 * s + x2 * c], dim=-1)
 
 
 def build_rope_cache(seq_len: int, head_dim: int, device: torch.device, dtype: torch.dtype, base: float = 10000.0):
