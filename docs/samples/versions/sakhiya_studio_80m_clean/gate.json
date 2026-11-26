@@ -1,0 +1,594 @@
+{
+  "timestamp_utc": "2026-11-26T13:03:30Z",
+  "model_name": "Sakhiya-Studio-80M + Pretrained BigVGAN-v2-24kHz / Vocos-24kHz (Pure FP32)",
+  "architecture": {
+    "total_dense_params_M": 83.25,
+    "text_encoder": "8-layer Dense RoPE Transformer (d=512, heads=8, SwiGLU, RMSNorm, 14.07M params)",
+    "prosody_and_prior": "4-layer Dense ConvNeXt + RoPE Duration & Continuous F0/VUV/Energy/Prior Predictor (d=512, 5.73M params)",
+    "acoustic_dit_decoder": "16-layer Dense Flow-Matching DiT (d=640, heads=10, SwiGLU, AdaLN-Zero, FlashAttention-2 SDPA, 63.45M params)",
+    "primary_vocoder": "nvidia/bigvgan_v2_24khz_100band_256x (112.4M params, MIT, Pure FP32)",
+    "secondary_vocoder": "charactr/vocos-mel-24khz (13.5M params, MIT, Pure FP32)",
+    "compression_hacks": "NONE (0% INT8, 0% Monarch, 0% Walsh-Hadamard, 0% Homemade Harmonic-Comb Vocoder)"
+  },
+  "training_telemetry": {
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition (96 GB)",
+    "peak_vram_gb": 42.84,
+    "nvidia_smi_vram_gb": 51.11,
+    "training_steps": 20000,
+    "batch_size": 96,
+    "precision": "bf16 mixed precision + torch.compile training + pure FP32 32-step Midpoint ODE inference",
+    "corpus_hours": 12.59,
+    "corpus_utterances": 6164,
+    "seedvc_kept": 0,
+    "old_v1_kept": 0
+  },
+  "summary_metrics": {
+    "voiced_vowel_hnr_dB": 19.255,
+    "upper_band_comb_grit_index": 1.4572,
+    "HF_LSD_4_12kHz_dB": 0.1152,
+    "silence_floor_SNR_dB": 44.9,
+    "sim_Anchor": 0.8945,
+    "margin_Anchor_OldV1": 0.2025,
+    "ne_pcer": 0.0661,
+    "ne_pcer_gap_vs_anchor": 0.0341,
+    "f0_shutters": 0,
+    "clicks": 0,
+    "unpunctuated_12word_slices": 0
+  },
+  "comparison_table": [
+    {
+      "name": "Sakhiya-Studio-80M + Frozen Pretrained BigVGAN-v2 (FP32, 32-Step)",
+      "params_or_size": "83.25M AM + 112.4M Voc (FP32)",
+      "precision_steps": "BF16/FP32 · 32-Step Midpoint (CFG=0.0)",
+      "voiced_vowel_hnr_dB": 19.282,
+      "comb_grit_index": 1.4434,
+      "HF_LSD_4_12kHz_dB": 0.1152,
+      "silence_floor_SNR_dB": 47.37,
+      "sim_Anchor": 0.8945,
+      "ne_pcer": 0.0661,
+      "glitches": "0/0/0",
+      "verdict": "STUDIO MASTER WINNER ✅ (Zero Karkar, Zero Comb Buzz, Staged for Owner Listening)"
+    },
+    {
+      "name": "Sakhiya-Studio-80M + Gently Adapted BigVGAN-v2 (FP32, 32-Step)",
+      "params_or_size": "83.25M AM + 112.4M Voc (FP32)",
+      "precision_steps": "BF16/FP32 · 32-Step Midpoint (CFG=0.0)",
+      "voiced_vowel_hnr_dB": 19.269,
+      "comb_grit_index": 1.4349,
+      "HF_LSD_4_12kHz_dB": 0.1152,
+      "silence_floor_SNR_dB": 47.09,
+      "sim_Anchor": 0.8945,
+      "ne_pcer": 0.0661,
+      "glitches": "0/0/0",
+      "verdict": "PASS ✅ (Low-LR 1e-5 Adapted Pretrained BigVGAN-v2)"
+    },
+    {
+      "name": "Sakhiya-Studio-80M + Pretrained Vocos-24kHz-13.5M (FP32, 32-Step)",
+      "params_or_size": "83.25M AM + 13.5M Voc (FP32)",
+      "precision_steps": "BF16/FP32 · 32-Step Midpoint (CFG=0.0)",
+      "voiced_vowel_hnr_dB": 19.797,
+      "comb_grit_index": 1.5194,
+      "HF_LSD_4_12kHz_dB": 0.0759,
+      "silence_floor_SNR_dB": 53.36,
+      "sim_Anchor": 0.8945,
+      "ne_pcer": 0.0661,
+      "glitches": "0/0/0",
+      "verdict": "PASS ✅ (Zero Harmonic Comb · ConvNeXt-iSTFT Pretrained on 100k+ Hours)"
+    },
+    {
+      "name": "Previous Sakhiya-News v2 (3bdb2d6 · 9.7 MB INT8 + Homemade Vocoder)",
+      "params_or_size": "9.714 MB INT8 ONNX",
+      "precision_steps": "86.6% INT8 · 4-Step Monarch + Homemade Voc",
+      "voiced_vowel_hnr_dB": 18.95,
+      "comb_grit_index": 3.4814,
+      "HF_LSD_4_12kHz_dB": 0.93,
+      "silence_floor_SNR_dB": 68.88,
+      "sim_Anchor": 0.8917,
+      "ne_pcer": 0.0431,
+      "glitches": "0/0/0",
+      "verdict": "REJECTED BY OWNER EARS ❌ (3.48x Comb Grit & +15 dB 7.5-11kHz Metallic Buzz)"
+    },
+    {
+      "name": "Raw Un-VC'd Studio Human Reference (nep_6834 · 48kHz -> 24kHz)",
+      "params_or_size": "Ground-Truth Studio WAV",
+      "precision_steps": "Uncompressed 24 kHz PCM",
+      "voiced_vowel_hnr_dB": 19.274,
+      "comb_grit_index": 1.3773,
+      "HF_LSD_4_12kHz_dB": 0.0,
+      "silence_floor_SNR_dB": 64.0,
+      "sim_Anchor": 0.968,
+      "ne_pcer": 0.032,
+      "glitches": "0/0/0",
+      "verdict": "Studio Human Reference Anchor"
+    }
+  ],
+  "per_clip": {
+    "owner_clip1_ai_models": {
+      "voiced_vowel_hnr_dB": 19.319,
+      "silence_floor_SNR_dB": 44.26,
+      "upper_band_comb_grit_index": 1.4678,
+      "upper_band_temporal_buzz_jitter": 1.0243,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.536,
+      "sim_Anchor": 0.8987,
+      "sim_OldV1": 0.7107,
+      "margin_Anchor_OldV1": 0.188,
+      "ne_pcer": 0.1196,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.4,
+      "dur_s": 40.47
+    },
+    "owner_clip2_share_market": {
+      "voiced_vowel_hnr_dB": 19.409,
+      "silence_floor_SNR_dB": 45.63,
+      "upper_band_comb_grit_index": 1.4503,
+      "upper_band_temporal_buzz_jitter": 0.9388,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.096,
+      "sim_Anchor": 0.9056,
+      "sim_OldV1": 0.7039,
+      "margin_Anchor_OldV1": 0.2017,
+      "ne_pcer": 0.0379,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.5,
+      "dur_s": 44.46
+    },
+    "owner_clip3_intro_bulletin": {
+      "voiced_vowel_hnr_dB": 19.246,
+      "silence_floor_SNR_dB": 46.13,
+      "upper_band_comb_grit_index": 1.4687,
+      "upper_band_temporal_buzz_jitter": 0.9525,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.34,
+      "sim_Anchor": 0.9088,
+      "sim_OldV1": 0.7086,
+      "margin_Anchor_OldV1": 0.2003,
+      "ne_pcer": 0.0241,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.5,
+      "dur_s": 37.63
+    },
+    "owner_clip4_sanskrit_gita": {
+      "voiced_vowel_hnr_dB": 19.153,
+      "silence_floor_SNR_dB": 53.44,
+      "upper_band_comb_grit_index": 1.3867,
+      "upper_band_temporal_buzz_jitter": 1.137,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.306,
+      "sim_Anchor": 0.9287,
+      "sim_OldV1": 0.6919,
+      "margin_Anchor_OldV1": 0.2368,
+      "ne_pcer": 0.0904,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.5,
+      "dur_s": 19.53
+    },
+    "unseen_news1_hydropower": {
+      "voiced_vowel_hnr_dB": 19.631,
+      "silence_floor_SNR_dB": 46.78,
+      "upper_band_comb_grit_index": 1.4886,
+      "upper_band_temporal_buzz_jitter": 0.9331,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.703,
+      "sim_Anchor": 0.8726,
+      "sim_OldV1": 0.6641,
+      "margin_Anchor_OldV1": 0.2085,
+      "ne_pcer": 0.1301,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.5,
+      "dur_s": 14.07
+    },
+    "unseen_news2_digital_banking": {
+      "voiced_vowel_hnr_dB": 19.642,
+      "silence_floor_SNR_dB": 38.67,
+      "upper_band_comb_grit_index": 1.5137,
+      "upper_band_temporal_buzz_jitter": 0.952,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.455,
+      "sim_Anchor": 0.8545,
+      "sim_OldV1": 0.6932,
+      "margin_Anchor_OldV1": 0.1613,
+      "ne_pcer": 0.0511,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.6,
+      "dur_s": 15.06
+    },
+    "unseen_news3_kathmandu_weather": {
+      "voiced_vowel_hnr_dB": 18.771,
+      "silence_floor_SNR_dB": 39.18,
+      "upper_band_comb_grit_index": 1.4634,
+      "upper_band_temporal_buzz_jitter": 0.8623,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.864,
+      "sim_Anchor": 0.8653,
+      "sim_OldV1": 0.6726,
+      "margin_Anchor_OldV1": 0.1927,
+      "ne_pcer": 0.0592,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.5,
+      "dur_s": 15.7
+    },
+    "unseen_news4_ai_education": {
+      "voiced_vowel_hnr_dB": 19.339,
+      "silence_floor_SNR_dB": 45.06,
+      "upper_band_comb_grit_index": 1.483,
+      "upper_band_temporal_buzz_jitter": 0.8774,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.729,
+      "sim_Anchor": 0.8877,
+      "sim_OldV1": 0.6906,
+      "margin_Anchor_OldV1": 0.1971,
+      "ne_pcer": 0.0321,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.4,
+      "dur_s": 15.58
+    },
+    "unseen_news5_closing_bulletin": {
+      "voiced_vowel_hnr_dB": 18.783,
+      "silence_floor_SNR_dB": 44.96,
+      "upper_band_comb_grit_index": 1.3922,
+      "upper_band_temporal_buzz_jitter": 1.0491,
+      "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.252,
+      "sim_Anchor": 0.9287,
+      "sim_OldV1": 0.693,
+      "margin_Anchor_OldV1": 0.2357,
+      "ne_pcer": 0.0508,
+      "shutters": 0,
+      "clicks": 0,
+      "max_pitch_jump_st": 0.4,
+      "dur_s": 11.6
+    }
+  },
+  "phase2_sweep": {
+    "winning_ode_config": "step32_cfg0p0",
+    "winning_steps": 32,
+    "winning_cfg_scale": 0.0,
+    "winning_vocoder_pipeline": "A_studio_80m_bigvgan_frozen",
+    "ode_sweep": {
+      "step16_cfg0p0": {
+        "steps": 16,
+        "cfg_scale": 0.0,
+        "mean_voiced_vowel_hnr_dB": 19.276,
+        "mean_upper_band_comb_grit": 1.4411,
+        "mean_silence_floor_SNR_dB": 47.37,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.5112,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.316,
+            "silence_floor_SNR_dB": 44.27,
+            "upper_band_comb_grit_index": 1.4622,
+            "upper_band_temporal_buzz_jitter": 1.0199,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.534,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.405,
+            "silence_floor_SNR_dB": 45.56,
+            "upper_band_comb_grit_index": 1.4532,
+            "upper_band_temporal_buzz_jitter": 0.935,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.131,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.239,
+            "silence_floor_SNR_dB": 46.14,
+            "upper_band_comb_grit_index": 1.4683,
+            "upper_band_temporal_buzz_jitter": 0.9553,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.438,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.143,
+            "silence_floor_SNR_dB": 53.49,
+            "upper_band_comb_grit_index": 1.3809,
+            "upper_band_temporal_buzz_jitter": 1.134,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.357,
+            "shutters": 0,
+            "clicks": 0
+          }
+        ]
+      },
+      "step16_cfg1p15": {
+        "steps": 16,
+        "cfg_scale": 1.15,
+        "mean_voiced_vowel_hnr_dB": 19.23,
+        "mean_upper_band_comb_grit": 1.4332,
+        "mean_silence_floor_SNR_dB": 47.27,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.4976,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.348,
+            "silence_floor_SNR_dB": 44.19,
+            "upper_band_comb_grit_index": 1.4494,
+            "upper_band_temporal_buzz_jitter": 1.0035,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.573,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.376,
+            "silence_floor_SNR_dB": 45.24,
+            "upper_band_comb_grit_index": 1.4444,
+            "upper_band_temporal_buzz_jitter": 0.9286,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.145,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.132,
+            "silence_floor_SNR_dB": 46.13,
+            "upper_band_comb_grit_index": 1.4753,
+            "upper_band_temporal_buzz_jitter": 0.9674,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.474,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.065,
+            "silence_floor_SNR_dB": 53.52,
+            "upper_band_comb_grit_index": 1.3636,
+            "upper_band_temporal_buzz_jitter": 1.1123,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.452,
+            "shutters": 0,
+            "clicks": 0
+          }
+        ]
+      },
+      "step32_cfg0p0": {
+        "steps": 32,
+        "cfg_scale": 0.0,
+        "mean_voiced_vowel_hnr_dB": 19.282,
+        "mean_upper_band_comb_grit": 1.4434,
+        "mean_silence_floor_SNR_dB": 47.37,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.5882,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.319,
+            "silence_floor_SNR_dB": 44.26,
+            "upper_band_comb_grit_index": 1.4678,
+            "upper_band_temporal_buzz_jitter": 1.0243,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.536,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.409,
+            "silence_floor_SNR_dB": 45.63,
+            "upper_band_comb_grit_index": 1.4503,
+            "upper_band_temporal_buzz_jitter": 0.9388,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.096,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.246,
+            "silence_floor_SNR_dB": 46.13,
+            "upper_band_comb_grit_index": 1.4687,
+            "upper_band_temporal_buzz_jitter": 0.9525,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.34,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.153,
+            "silence_floor_SNR_dB": 53.44,
+            "upper_band_comb_grit_index": 1.3867,
+            "upper_band_temporal_buzz_jitter": 1.137,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.306,
+            "shutters": 0,
+            "clicks": 0
+          }
+        ]
+      },
+      "step32_cfg1p15": {
+        "steps": 32,
+        "cfg_scale": 1.15,
+        "mean_voiced_vowel_hnr_dB": 19.243,
+        "mean_upper_band_comb_grit": 1.4353,
+        "mean_silence_floor_SNR_dB": 47.28,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.5819,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.347,
+            "silence_floor_SNR_dB": 44.21,
+            "upper_band_comb_grit_index": 1.4596,
+            "upper_band_temporal_buzz_jitter": 1.0126,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.555,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.374,
+            "silence_floor_SNR_dB": 45.34,
+            "upper_band_comb_grit_index": 1.4461,
+            "upper_band_temporal_buzz_jitter": 0.9259,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.122,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.193,
+            "silence_floor_SNR_dB": 46.12,
+            "upper_band_comb_grit_index": 1.473,
+            "upper_band_temporal_buzz_jitter": 0.9669,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.467,
+            "shutters": 0,
+            "clicks": 0
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.059,
+            "silence_floor_SNR_dB": 53.45,
+            "upper_band_comb_grit_index": 1.3626,
+            "upper_band_temporal_buzz_jitter": 1.1144,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.456,
+            "shutters": 0,
+            "clicks": 0
+          }
+        ]
+      }
+    },
+    "vocoder_abc_comparison": {
+      "A_studio_80m_bigvgan_frozen": {
+        "mean_voiced_vowel_hnr_dB": 19.282,
+        "mean_upper_band_comb_grit": 1.4434,
+        "mean_silence_floor_SNR_dB": 47.37,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.5082,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.319,
+            "silence_floor_SNR_dB": 44.26,
+            "upper_band_comb_grit_index": 1.4678,
+            "upper_band_temporal_buzz_jitter": 1.0243,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.536,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip1_ai_models_studio_80m_bigvgan_frozen.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.409,
+            "silence_floor_SNR_dB": 45.63,
+            "upper_band_comb_grit_index": 1.4503,
+            "upper_band_temporal_buzz_jitter": 0.9388,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.096,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip2_share_market_studio_80m_bigvgan_frozen.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.246,
+            "silence_floor_SNR_dB": 46.13,
+            "upper_band_comb_grit_index": 1.4687,
+            "upper_band_temporal_buzz_jitter": 0.9525,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.34,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip3_intro_bulletin_studio_80m_bigvgan_frozen.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.153,
+            "silence_floor_SNR_dB": 53.44,
+            "upper_band_comb_grit_index": 1.3867,
+            "upper_band_temporal_buzz_jitter": 1.137,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.306,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip4_sanskrit_gita_studio_80m_bigvgan_frozen.wav"
+          }
+        ]
+      },
+      "B_studio_80m_bigvgan_adapted": {
+        "mean_voiced_vowel_hnr_dB": 19.269,
+        "mean_upper_band_comb_grit": 1.4349,
+        "mean_silence_floor_SNR_dB": 47.09,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.5293,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 19.337,
+            "silence_floor_SNR_dB": 44.42,
+            "upper_band_comb_grit_index": 1.4723,
+            "upper_band_temporal_buzz_jitter": 1.0211,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -22.413,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip1_ai_models_studio_80m_bigvgan_adapted.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.39,
+            "silence_floor_SNR_dB": 45.51,
+            "upper_band_comb_grit_index": 1.4432,
+            "upper_band_temporal_buzz_jitter": 0.9359,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -19.967,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip2_share_market_studio_80m_bigvgan_adapted.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.244,
+            "silence_floor_SNR_dB": 46.13,
+            "upper_band_comb_grit_index": 1.4596,
+            "upper_band_temporal_buzz_jitter": 0.9538,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.276,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip3_intro_bulletin_studio_80m_bigvgan_adapted.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.105,
+            "silence_floor_SNR_dB": 52.29,
+            "upper_band_comb_grit_index": 1.3646,
+            "upper_band_temporal_buzz_jitter": 1.126,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.218,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip4_sanskrit_gita_studio_80m_bigvgan_adapted.wav"
+          }
+        ]
+      },
+      "C_studio_80m_vocos_24khz": {
+        "mean_voiced_vowel_hnr_dB": 19.797,
+        "mean_upper_band_comb_grit": 1.5194,
+        "mean_silence_floor_SNR_dB": 53.36,
+        "total_shutters": 0,
+        "total_clicks": 0,
+        "cleanliness_score": 13.7191,
+        "per_clip": [
+          {
+            "voiced_vowel_hnr_dB": 20.519,
+            "silence_floor_SNR_dB": 49.15,
+            "upper_band_comb_grit_index": 1.5386,
+            "upper_band_temporal_buzz_jitter": 0.9205,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -23.13,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip1_ai_models_studio_80m_vocos.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.906,
+            "silence_floor_SNR_dB": 52.24,
+            "upper_band_comb_grit_index": 1.5311,
+            "upper_band_temporal_buzz_jitter": 0.8943,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.497,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip2_share_market_studio_80m_vocos.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.529,
+            "silence_floor_SNR_dB": 51.94,
+            "upper_band_comb_grit_index": 1.5064,
+            "upper_band_temporal_buzz_jitter": 0.8958,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -21.817,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip3_intro_bulletin_studio_80m_vocos.wav"
+          },
+          {
+            "voiced_vowel_hnr_dB": 19.233,
+            "silence_floor_SNR_dB": 60.13,
+            "upper_band_comb_grit_index": 1.5015,
+            "upper_band_temporal_buzz_jitter": 1.0031,
+            "hi_band_7p5_11kHz_rel_1_4kHz_dB": -20.685,
+            "shutters": 0,
+            "clicks": 0,
+            "wav_path": "/work/sp/studio_80m_clean/listen/owner_clip4_sanskrit_gita_studio_80m_vocos.wav"
+          }
+        ]
+      }
+    }
+  }
+}
