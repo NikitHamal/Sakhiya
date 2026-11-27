@@ -907,7 +907,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
                     break
 
     anchor_pcer = 0.032
-    ne50_pcer = float(base_g.get("ne_pcer", base_g.get("cer_ne", base_g.get("summary", {}).get("cer_ne", 0.059))))
+    ne50_pcer = float(base_g.get("ne_pcer", base_g.get("cer_ne", base_g.get("summary", {}).get("cer_ne", float("nan")))))
     sa25_ctc_gap = float(base_g.get("sa_ctc_ll_gap", base_g.get("summary", {}).get("sa_ctc_ll_gap", 0.0403)))
     sa25_gl_ratio = None
     sa25_svara_r = float(base_g.get("sa_svara_corr", base_g.get("summary", {}).get("sa_svara_corr", 0.78)))
@@ -1035,16 +1035,16 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
     s_sum = base_g.get("summary", base_g)
     layers = base_g.get("layers", {})
     l1 = dict(layers.get("layer1_timbre", {
-        "sim_ProV3": s_sum.get("sim_Anchor", s_sum.get("sim_ProV3", 0.8443)),
-        "sim_OldV1": s_sum.get("sim_OldV1", 0.406),
-        "margin_ProV3_OldV1": s_sum.get("margin_Anchor_OldV1", s_sum.get("margin_ProV3_OldV1", 0.4383)),
-        "voiced_ltas_mcd_db": 2.912 if tier == "sakhiya_news" else (3.004 if tier == "sakhiya_one" else 3.041),
+        "sim_ProV3": s_sum.get("sim_Anchor", s_sum.get("sim_ProV3")),
+        "sim_OldV1": s_sum.get("sim_OldV1"),
+        "margin_ProV3_OldV1": s_sum.get("margin_Anchor_OldV1", s_sum.get("margin_ProV3_OldV1")),
+        "voiced_ltas_mcd_db": s_sum.get("voiced_ltas_mcd_db"),
         "voiced_ltas_mcd_ratio": s_sum.get("voiced_ltas_mcd_ratio", 0.4697 if tier == "sakhiya_news" else 0.4845),
     }))
     hf_4_10_db = round(float(np.mean(hf_lsd_4_10_vals)), 3) if hf_lsd_4_10_vals else round(float(s_sum.get("HF_LSD_4_10kHz_dB", 1.65)), 3)
-    hf_4_12_db = round(float(np.mean(hf_lsd_4_12_vals)), 3) if hf_lsd_4_12_vals else round(hf_4_10_db * 1.12, 3)
-    comb_grit_val = round(float(np.mean(comb_grit_vals)), 4) if comb_grit_vals else round(float(s_sum.get("comb_grit", 2.45)), 4)
-    warble_st_val = round(float(np.mean(warble_vals)), 4) if warble_vals else round(float(s_sum.get("mid_vowel_warble_st", 0.085)), 4)
+    hf_4_12_db = round(float(np.mean(hf_lsd_4_12_vals)), 3) if hf_lsd_4_12_vals else None
+    comb_grit_val = round(float(np.mean(comb_grit_vals)), 4) if comb_grit_vals else None
+    warble_st_val = round(float(np.mean(warble_vals)), 4) if warble_vals else None
     l2 = dict(layers.get("layer2_physics", {
         "HF_LSD_4_10kHz_dB": hf_4_10_db,
         "upper_band_HNR_anomaly_dB": s_sum.get("upper_band_HNR_anomaly_dB", 1.087),
@@ -1085,20 +1085,20 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         dequantize_linear_nodes=qdq_audit["dequantize_linear_nodes"],
         distinct_from_fp32_graph=qdq_audit["distinct_from_fp32_graph"],
         mean_weight_quant_diff=qdq_audit["mean_weight_quant_diff"],
-        stft_lsd_int8_fp32_dB=measured_lsd_i8_f32 if measured_lsd_i8_f32 is not None else s_sum.get("stft_lsd_int8_fp32_dB", 0.0009),
-        sim_ProV3_fp32_minus_int8=s_sum.get("sim_ProV3_drop_int8", 0.0),
+        stft_lsd_int8_fp32_dB=measured_lsd_i8_f32 if measured_lsd_i8_f32 is not None else s_sum.get("stft_lsd_int8_fp32_dB"),
+        sim_ProV3_fp32_minus_int8=s_sum.get("sim_ProV3_drop_int8"),
         int8_vs_fp32_mel_corr=base_g.get("int8_vs_fp32_mel_corr", 1.0),
-        utmos22=s_sum.get("utmos", 3.873 if tier == "sakhiya_one" else 3.751),
+        utmos22=s_sum.get("utmos"),
         bad_ops=bad_ops,
         nan_count=int(node_verify.get("nan_count", 0)),
-        rtf_1thread=base_g.get("rtf_1thread", node_verify.get("rtf_1thread", 0.0507)),
+        rtf_1thread=base_g.get("rtf_1thread", node_verify.get("rtf_1thread")),
         node_verify=node_verify,
         lufs_target=-16.0,
     )
 
     if "studio_physics" not in locals():
         studio_physics = {}
-    sil_snr_db = float(studio_physics.get("silence_floor_SNR_dB", base_g.get("silence_floor_SNR_dB", 60.5)))
+    sil_snr_db = float(studio_physics.get("silence_floor_SNR_dB", base_g.get("silence_floor_SNR_dB", float("nan"))))
     l2["silence_floor_SNR_dB"] = sil_snr_db
     l2["studio_physics_probes"] = studio_physics
 
@@ -1137,10 +1137,15 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         and (sz_min <= int8_mb <= sz_max)
         and l4["int8_weight_pct"] >= req_int8_pct
         and l4["distinct_from_fp32_graph"]
+        and l4["rtf_1thread"] is not None
         and float(l4["rtf_1thread"]) <= req_rtf
+        and l1["sim_ProV3"] is not None
         and l1["sim_ProV3"] >= req_sim
+        and l1["margin_ProV3_OldV1"] is not None
         and l1["margin_ProV3_OldV1"] >= req_margin_v1
+        and l1["voiced_ltas_mcd_db"] is not None
         and l1["voiced_ltas_mcd_db"] <= req_ltas_mcd
+        and l2["HF_LSD_4_12kHz_dB"] is not None
         and l2["HF_LSD_4_12kHz_dB"] <= req_hf_12k
         and sil_snr_db >= req_sil_snr
         and l2["mid_vowel_shutters"] == 0
@@ -1152,6 +1157,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         and l3["stutter_count"] == 0
         and gem_r >= 1.45
         and (f0_sl is not None and f0_sl <= -0.50)
+        and l4["stft_lsd_int8_fp32_dB"] is not None
         and (0.002 <= l4["stft_lsd_int8_fp32_dB"] <= req_lsd_parity)
     )
 
@@ -1172,7 +1178,7 @@ def run_4layer_sakhiya_one_gate(model_dir, tier="sakhiya_one", out_json="eval/fo
         HF_LSD_4_12kHz_dB=hf_4_12_db,
         comb_grit=comb_grit_val,
         mid_vowel_warble_st=warble_st_val,
-        Voiced_HNR_dB=studio_physics.get("voiced_vowel_hnr_0p2_4kHz_dB", 16.90),
+        Voiced_HNR_dB=studio_physics.get("voiced_vowel_hnr_0p2_4kHz_dB"),
         stft_lsd_int8_fp32_dB=l4["stft_lsd_int8_fp32_dB"],
         silence_floor_SNR_dB=sil_snr_db,
         studio_physics_probes=studio_physics,
