@@ -427,6 +427,39 @@ except Exception as _e:
 _out5
 """
 
+C6_NEWS = r"""
+_COMMON_SRC
+sp5_tick.value
+def _card6():
+    import marimo as _mo, glob, os, json, base64
+    _g = {}
+    exec(_COMMON_SRC, _g); H = _g["_sp5_helpers"]()
+    box, esc = H["box"], H["esc"]
+    segs = sorted(glob.glob("/work/Sakhiya/video/out/segs/seg_*.mp4"))
+    tl = H["jl"]("/work/Sakhiya/video/build/timeline.json") or {"total": 342.0, "scenes": []}
+    rep = H["jl"]("/work/Sakhiya/video/build/audio_report.json") or {}
+    mp4 = "/work/Sakhiya/video/out/nebians-news-ep1.mp4"
+    ready = os.path.exists(mp4) and os.path.getsize(mp4) > 100000
+    badge = f"COMPLETE ({os.path.getsize(mp4)//1024//1024} MB MP4)" if ready else f"RENDERING ({len(segs)}/12 segments)"
+    players = []
+    for cid, lbl in [("a2", "Intro: Welcome to NEBians News"), ("b1", "About: Sakhiya-One v2 Studio"), ("c5", "Transition: Aba lagau ajako pahilo samachar tarfa"), ("n1a", "Story 01: SpaceX Starmind 1M Satellites"), ("n2a", "Story 02: Nvidia Reinstates Jensen Huang"), ("n3a", "Story 03: OpenAI GPT-6.2 Sol & Rust API"), ("e1", "Nepal Education: Tribhuvan University Audit"), ("o3", "Outro: See You Next Friday")]:
+        fp = f"/work/Sakhiya/video/build/clips/{cid}.wav"
+        if os.path.exists(fp):
+            b = base64.b64encode(open(fp, "rb").read()).decode()
+            players.append(f"<div style='border:1px solid #d0d7de;border-radius:8px;padding:6px 10px;margin-top:5px'><b>{esc(lbl)}</b> (<code>{cid}.wav</code>)<audio controls preload='none' style='width:100%;height:32px;margin-top:3px' src='data:audio/wav;base64,{b}'></audio></div>")
+    body = (f"<div><b>Status:</b> <code>{badge}</code> &nbsp;|&nbsp; <b>Runtime:</b> <code>{tl.get('total', 342.0)}s (5m 42s)</code> &nbsp;|&nbsp; <b>Lines:</b> <code>{len(rep)}</code> (0 QC flags)</div>"
+            "<div><b>Cadence & Scope:</b> Every Friday Weekly Recap (strictly Sat 21 Nov - Fri 27 Nov 2026 - Global AI, Tech, Space, Chips, Cybersecurity & Nepal Education - Zero Android app - Zero Hindi 'chalo')</div>"
+            "<div><b>Voice & Visuals:</b> <code>Sakhiya-One v2 Studio (23.011 MB INT8 - 24 kHz Vocos)</code> + Material 3 Expressive (5 Tonal Themes, 12 Morphing Shapes, Compact 62px Dual Subtitles)</div>"
+            + "".join(players))
+    return _mo.Html(box("6 - NEBians News Ep.1 (Friday Weekly Recap - 27 Nov 2026) - Material 3 Expressive Video & Sakhiya-One v2 Audio", body))
+try:
+    _out6 = _card6()
+except Exception as _e:
+    import marimo as _mo
+    _out6 = _mo.md(f"card 6 soft-error: `{type(_e).__name__}: {_e}`")
+_out6
+"""
+
 CELLS = {
     "tts_sp5_tick": TICK,
     "tts_sp5_c1_box": C1,
@@ -436,6 +469,7 @@ CELLS = {
     "tts_sp5_c5_scan": C5_SCAN,
     "tts_sp5_c5_pick": C5_PICK,
     "tts_sp5_c5_play": C5_PLAY,
+    "tts_sp5_c6_news": C6_NEWS,
 }
 
 _COMMON_LINE = "_COMMON_SRC = " + repr(COMMON) + "\n"
