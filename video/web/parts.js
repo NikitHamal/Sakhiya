@@ -22,10 +22,9 @@ function bg(c, p, T) {
   shape(c, mixc(p.bg, p.cont, .55), 30, 1050, 430, 'flower', 'sunny', .5 + .5 * Math.sin(T * .25 + 1), -T * .06);
 }
 function logo(c, x, y, s, T = 0, a = 1) {
-  // official NEBians mark on a soft tonal plate
-  c.save(); c.globalAlpha *= a; c.shadowColor = 'rgba(10,30,90,.22)'; c.shadowBlur = s * .22; c.shadowOffsetY = s * .06;
-  box(c, x, y, s, s, s * .3, [247, 249, 255], null); c.shadowColor = 'transparent';
-  if (window.LOGO && LOGO.complete) c.drawImage(LOGO, x + s * .1, y + s * .1 + Math.sin(T * 1.6) * s * .008, s * .8, s * .8);
+  // official NEBians mark (neb-logo.png already has its rounded squircle plate)
+  c.save(); c.globalAlpha *= a; c.shadowColor = 'rgba(10,30,90,.24)'; c.shadowBlur = s * .22; c.shadowOffsetY = s * .06;
+  if (window.LOGO && LOGO.complete) c.drawImage(LOGO, x, y + Math.sin(T * 1.6) * s * .008, s, s);
   c.restore();
 }
 function chip(c, x, y, label, o = {}) {

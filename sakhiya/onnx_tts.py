@@ -34,7 +34,8 @@ def _segment(text):
         cur = []
         for i, w in enumerate(ws):
             cur.append(w)
-            if (w.endswith((",", ";")) and len(cur) >= 14 and len(ws) - i - 1 >= 6) or (w in FINITE and len(cur) >= 18 and len(ws) - i - 1 >= 8):
+            is_num_chha = (w == "छ" and i + 1 < len(ws) and ws[i + 1].startswith(g2p.NUM_FOLLOWERS))
+            if (w.endswith((",", ";")) and len(cur) >= 14 and len(ws) - i - 1 >= 6) or (w in FINITE and not is_num_chha and len(cur) >= 18 and len(ws) - i - 1 >= 8):
                 out.append(" ".join(cur)); cur = []
         if cur:
             if out and len(cur) < 5: out[-1] += " " + " ".join(cur)
@@ -177,7 +178,11 @@ class SakhiyaONNX:
                     raw_ids = [(8 if (x in (4, 8) and 0 < idx_x < len(raw_list) - 1) else x) for idx_x, x in enumerate(raw_list)]
                 else:
                     raw_ids = [5 if x == 8 else x for x in raw_list if not (lang == "sa" and x == 4)]
-                ids_s = ([1] + raw_ids) if (not raw_ids or raw_ids[0] != 1) else raw_ids
+                ph_valid_single = [p for p, i in zip(ph, sid) if i >= 0]
+                first_ph = next((p for p in ph_valid_single if p not in ("|", ",", ".", "?", "!", ";")), "")
+                unvoiced_ons = {"k", "kʰ", "ts", "tsʰ", "ʈ", "ʈʰ", "t̪", "t̪ʰ", "p", "pʰ", "ʃ", "s", "f"}
+                lead_toks = [5, 1] if (lang != "sa" and first_ph in unvoiced_ons) else [1]
+                ids_s = (lead_toks + (raw_ids[1:] if (raw_ids and raw_ids[0] == 1) else raw_ids)) if (not raw_ids or raw_ids[0] not in (1, 5)) else raw_ids
                 ids_in = np.array([ids_s], dtype=np.int64)
                 has_vm = bool(chandas_info and chandas_info.get("has_vedic_marks"))
                 rate_val = max(float(k.get("rate", 1.0)), 0.5)
@@ -193,14 +198,56 @@ class SakhiyaONNX:
                         ds_in = np.full(len(ids_s), 0.88 / rate_val, dtype=np.float32)
                         ps_in = np.full(len(ids_s), base_ps + 0.15, dtype=np.float32)
                 else:
-                    ds_in = np.full(len(ids_s), 0.94 / rate_val, dtype=np.float32)
+                    base_ds = 0.94 / rate_val
+                    ds_in = np.full(len(ids_s), base_ds, dtype=np.float32)
                     ps_in = np.full(len(ids_s), base_ps + 0.04, dtype=np.float32)
+                    off_valid = [float(o) for o, i in zip(off, sid) if i >= 0]
+                    pad_lead = len(ids_s) - len(off_valid)
+                    if pad_lead >= 0:
+                        for idx_o, o_val in enumerate(off_valid):
+                            ps_in[pad_lead + idx_o] = base_ps + 0.04 + o_val * 0.22
+                    # Brisk unvoiced sibilant/stop duration & cliticized numeral 'छ' prosody guard
+                    sib_ids = {S.SYM2ID[p] for p in ("s", "ʃ", "tsʰ", "ts", "t̪", "t̪ʰ", "ʈ", "ʈʰ") if p in S.SYM2ID}
+                    vow_ids = {S.SYM2ID[p] for p in S.VOW + S.NASV if p in S.SYM2ID}
+                    id_chha = S.SYM2ID.get("tsʰ", -1)
+                    id_schwa = S.SYM2ID.get("ʌ", -1)
+                    for idx_tok, tok_id in enumerate(ids_s):
+                        if tok_id in sib_ids:
+                            ds_in[idx_tok] = base_ds * 0.84
+                        elif tok_id == 4:  # interior clause comma
+                            ds_in[idx_tok] = base_ds * 1.22
+                        # Short syllable separator '|' inside acronyms (e.g. सीईओ, आईओएस, एलएलएमको)
+                        if tok_id == 1 and 1 <= idx_tok < len(ids_s) - 1:
+                            prev_v = ids_s[idx_tok - 1] in vow_ids or (idx_tok >= 2 and ids_s[idx_tok - 2] in vow_ids and ( idx_tok == 2 or ids_s[idx_tok - 3] == 1))
+                            next_v = ids_s[idx_tok + 1] in vow_ids
+                            if prev_v and next_v:
+                                ds_in[idx_tok] = base_ds * 0.48
+                        # Cliticized numeral 'छ' (tsʰ ʌ followed directly by consonant, no '|')
+                        if tok_id == id_chha and idx_tok + 2 < len(ids_s) and ids_s[idx_tok + 1] == id_schwa and ids_s[idx_tok + 2] not in (1, 4, 5, 6, 7, 8):
+                            ds_in[idx_tok] = base_ds * 0.70
+                            ds_in[idx_tok + 1] = base_ds * 0.64
+                            ps_in[idx_tok] = base_ps + 0.16
+                            ps_in[idx_tok + 1] = base_ps + 0.22
                 w = self.single.run(None, {
                     "ids": ids_in,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),
                     "dur_scale": ds_in,
                     "pitch_shift": ps_in,
                 })[0][0].astype(np.float32)
+                # Strip any prothetic voiced vowel (zcr < 0.20) before word-initial sibilant+consonant clusters (स्ट, स्प, स्क, स्न, स्व)
+                if lang != "sa" and len(ph_valid_single) >= 2 and ph_valid_single[0] in ("s", "ʃ") and ph_valid_single[1] not in S.VOW and ph_valid_single[1] not in S.NASV:
+                    sr_cur = int(self.cfg.get("sample_rate", 24000))
+                    hop_c = max(1, sr_cur // 200)  # 5 ms
+                    for k_c in range(min(len(w) // hop_c - 2, int(0.42 * sr_cur) // hop_c)):
+                        seg_c = w[k_c * hop_c : (k_c + 2) * hop_c]
+                        r_c = float(np.sqrt((seg_c ** 2).mean()))
+                        zcr_c = float(((seg_c[:-1] * seg_c[1:]) < 0).mean())
+                        if r_c > 0.014 and zcr_c >= 0.24:
+                            w = w[k_c * hop_c :]
+                            fade_n = min(len(w), int(0.008 * sr_cur))
+                            if fade_n > 1:
+                                w[:fade_n] *= np.linspace(0.0, 1.0, fade_n, dtype=np.float32)
+                            break
                 n_fr = max(len(w) // 256, ids.shape[1] * 5)
                 if chandas_info and "dur_frames" in chandas_info:
                     df_keep = np.array([d for d, i in zip(chandas_info["dur_frames"], sid) if i >= 0], dtype=np.float32)
@@ -322,11 +369,16 @@ class SakhiyaONNX:
                 k["rate"] = k["rate"] * 0.90; k["pitch_scale"] = 1.00; k["pause_scale"] = k["pause_scale"] * 1.00
         sr = 24000 if use_sa else self.cfg["sample_rate"]
         sa_segs = _segment(text)
-        is_single = (self.single is not None and self.dec is None)
-        chunks = [str(text).strip()] if ((lang == "sa" or is_single) and len(str(text).split()) <= 45 and len(sa_segs) <= 2) else sa_segs
+        chunks = [str(text).strip()] if (lang == "sa" and len(str(text).split()) <= 45 and len(sa_segs) <= 2) else sa_segs
         if len(chunks) == 1:
             return _declick_np(self._say_one(chunks[0], spk, lang, k, True)), sr
-        wavs = [self._say_one(c, spk, lang, k, i == len(chunks) - 1) for i, c in enumerate(chunks)]
+        wavs = []
+        sent_pause = np.zeros(int(0.28 * sr * float(k.get("pause_scale", 1.0))), dtype=np.float32) if lang != "sa" else np.zeros(0, dtype=np.float32)
+        for i, c in enumerate(chunks):
+            w_c = self._say_one(c, spk, lang, k, i == len(chunks) - 1)
+            wavs.append(w_c)
+            if i + 1 < len(chunks) and sent_pause.size:
+                wavs.append(sent_pause)
         return _declick_np(np.concatenate(wavs)), sr
 
     def _ola(self, spec, n_fft=1024, hop=256):

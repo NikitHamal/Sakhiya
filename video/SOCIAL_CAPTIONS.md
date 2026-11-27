@@ -22,7 +22,7 @@ Episode 1 is a full recap of Sat 21 to Fri 27 Nov 2026, in about 6 minutes:
 
 Every story is in simple Nepali with English tech words, and the video has compact Nepali + English subtitles, so you never lose the context.
 
-Now, the host. Sakhiya is a small text-to-speech model that speaks Nepali. It is only about 23 MB, needs no big server and runs on ordinary devices. It is in phase one, so it is not perfect yet and a word may slip here and there, but it will keep getting better with every episode.
+Now, the host. Sakhiya is a small text-to-speech model that speaks Nepali. It is only about 23 MB, needs no big server and runs on ordinary devices. It is in phase one, so it is not perfect yet and a word may slip here and there, but her creators hope she will keep getting better with every episode.
 
 New episode every Friday. Tech, AI and Nepal education, one recap, zero confusion.
 
