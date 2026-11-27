@@ -1,62 +1,22 @@
-// Material 3 Expressive Timeline Driver: render(T) draws one deterministic 1920x1080 frame
-
-const SCT = {
-  hello: 'blue',
-  about: 'light',
-  series: 'dark',
-  n1: 'teal',
-  n2: 'light',
-  n3: 'dark',
-  n4: 'teal',
-  n5: 'light',
-  edu: 'plum',
-  fast: 'blue',
-  outro: 'blue'
-};
-
-const WIPE = ['flower', 'sunny', 'clover', 'cookie12', 'burst', 'pebble', 'squircle', 'gem'];
-
-const lt = (sc, id) => {
-  for (const l of sc.lines) if (l.id === id) return l.t - sc.t0;
-  return 0;
-};
-const ld = (sc, id) => {
-  for (const l of sc.lines) if (l.id === id) return l.d;
-  return 1;
-};
-
+// NEBians News — timeline driver: render(T) draws one deterministic 1920x1080 frame
+const KIND = { hello: 'hello', about: 'about', series: 'series', story: 'story', fast: 'fast', outro: 'outro' };
+const WIPE_SHAPES = ['cookie12', 'flower', 'sunny', 'clover', 'burst', 'cookie9', 'pebble', 'penta'];
+const ORIGIN = [[.5, .5], [.3, .62], [.72, .4], [.5, .55]];
+const PAL = {};
+const palOf = sc => PAL[sc.id] || (PAL[sc.id] = palette(sc.hue, sc.dark));
 function drawScene(c, i, T) {
-  const sc = TL.scenes[i];
-  const th = TH[SCT[sc.id] || 'light'];
-  c.save();
-  shell(c, th, sc, T - sc.t0, T);
-  if (SC[sc.id]) SC[sc.id](c, T - sc.t0, sc, th, T);
-  c.restore();
-  return th;
+  const sc = TL.scenes[i], p = palOf(sc); c.save(); SC[KIND[sc.kind]](c, T - sc.t0, sc, p, T); c.restore(); return p;
 }
-
-window.render = (T) => {
-  const c = window.ctx, TLs = TL.scenes;
-  let i = TLs.findIndex(s => T >= s.t0 && T < s.t1);
-  if (i < 0) i = TLs.length - 1;
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.clearRect(0, 0, W, H);
-
-  if (i > 0 && T - TLs[i].t0 < .88) {
+window.render = T => {
+  const c = window.ctx, S = TL.scenes; let i = S.findIndex(s => T >= s.t0 && T < s.t1); if (i < 0) i = S.length - 1;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, W, H); const WD = .9, dt = T - S[i].t0;
+  if (i > 0 && dt < WD) {
     drawScene(c, i - 1, T);
-    const ox = [W / 2, W * .28, W * .72, W / 2][i % 4];
-    const oy = [H / 2, H * .65, H * .35, H * .55][i % 4];
-    if (wipe(c, T, TLs[i].t0 - .04, '', .88, ox, oy, WIPE[i % WIPE.length])) {
-      drawScene(c, i, T);
-      c.restore();
-    } else {
-      drawScene(c, i, T);
-    }
-  } else {
-    drawScene(c, i, T);
-  }
-
-  const th = TH[SCT[TLs[i].id] || 'light'];
-  chrome(c, th, T, TL, i === 0);
+    const q = eio(dt / WD), o = ORIGIN[i % 4], pn = palOf(S[i]), sh = WIPE_SHAPES[i % WIPE_SHAPES.length];
+    c.save(); shapePath(c, W * o[0], H * o[1], 60 + q * 1900, sh, 'circle', 0, q * 1.3); c.clip(); drawScene(c, i, T); c.restore();
+    shapeLine(c, pn.pri, 16 * (1 - q), W * o[0], H * o[1], 60 + q * 1900, sh, 'circle', 0, q * 1.3);
+  } else drawScene(c, i, T);
+  const p = palOf(S[i]); chrome(c, T, i, p);
+  const fo = P(T, TL.total - 1.0, TL.total - .1); if (fo > 0) { c.fillStyle = C(p.bg, fo); c.fillRect(0, 0, W, H); }
   return i;
 };
