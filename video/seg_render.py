@@ -17,7 +17,7 @@ def rel():
 def main():
     R.prep(); tl = json.load(open(R.B + "/timeline.json")); n = int(tl["total"] * FPS) + 1
     S = R.V + "/out/segs"; os.makedirs(S, exist_ok=True); r = rel(); have = {a["name"]: a for a in r.get("assets", [])}
-    wk = int(os.environ.get("WORKERS", 12))
+    wk = int(os.environ.get("WORKERS", 4))
     for s in range(math.ceil(n / SEG)):
         name = f"seg_{s:02d}.mp4"; path = f"{S}/{name}"; a0, a1 = s * SEG, min(n, (s + 1) * SEG)
         if os.path.exists(path) and os.path.getsize(path) > 10000:
@@ -28,7 +28,7 @@ def main():
         chunks = [[(i - a0, round(i / FPS, 4)) for i in range(a0 + k, a1, wk)] for k in range(wk)]
         with Pool(wk) as p: errs = p.map(R.work, [(c, k) for k, c in enumerate(chunks)])
         print("seg", s, "errors:", [e for e in errs if e][:2], flush=True)
-        subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", R.FR + "/%05d.jpg", "-c:v", "libx264", "-preset", "medium", "-crf", "16",
+        subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", R.FR + "/%05d.jpg", "-c:v", "libx264", "-preset", "fast", "-crf", "16",
             "-pix_fmt", "yuv420p", "-g", "30", "-r", str(FPS), path])
         if "id" in r:
             up = curl("-X", "POST", "-H", "Content-Type: application/octet-stream", "--data-binary", "@" + path, f"https://uploads.github.com/repos/{REPO}/releases/{r['id']}/assets?name={name}")

@@ -16,8 +16,9 @@ ffmpeg -y -loglevel error -i $B/voice.wav -c:a libmp3lame -b:a 160k $O/sakhiya-v
 ffmpeg -y -loglevel error -ss 4 -i $O/nebians-news-ep1.mp4 -frames:v 1 $O/poster.jpg
 NOTES="NEBians News, Episode 1 (Friday weekly recap, 27 Nov 2026). Covers Sat 21 Nov to Fri 27 Nov 2026. Voice-only mix (no background music), 1080p30, bilingual compact subtitles. Draft: not published yet."
 API=https://api.github.com/repos/$REPO/releases
-OLD=$(curl -s -H "Authorization: token $TOK" "$API/tags/$TAG" | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))")
-[ -n "$OLD" ] && curl -s -X DELETE -H "Authorization: token $TOK" "$API/$OLD" >/dev/null
+for OLD in $(curl -s -H "Authorization: token $TOK" "$API?per_page=100" | python3 -c "import sys,json;[print(r['id']) for r in json.load(sys.stdin) if r.get('tag_name')=='$TAG']"); do
+  curl -s -X DELETE -H "Authorization: token $TOK" "$API/$OLD" >/dev/null
+done
 curl -s -X DELETE -H "Authorization: token $TOK" "https://api.github.com/repos/$REPO/git/refs/tags/$TAG" >/dev/null || true
 ID=$(curl -s -X POST -H "Authorization: token $TOK" $API -d "$(python3 -c "import json,sys;print(json.dumps(dict(tag_name='$TAG',name='NEBians News Ep.1 (draft)',body=sys.argv[1],target_commitish='main',draft=True)))" "$NOTES")" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
 for f in nebians-news-ep1.mp4 nebians-news-ep1.srt sakhiya-voice-only.mp3 poster.jpg; do
