@@ -186,8 +186,8 @@ SC.outro = (c, t, sc, th, T) => {
     ['DESIGN SYSTEM', 'Material 3 Expressive · 1080p30 Canvas + Playwright + FFmpeg', 'मटेरियल थ्री एक्सप्रेसिभ डाइनामिक मोसन ग्राफिक्स']
   ];
   credits.forEach(([kicker, en, ne], i) => {
-    const q = sp(t, Math.max(0.4, o2 - 0.2 + i * 0.22), 0.72);
-    const cy = 435 + i * 142 + (1 - q) * 30;
+    const q = sp(t, 0.35 + i * 0.18, 0.68);
+    const cy = 435 + i * 142 + (1 - q) * 26;
     c.save();
     c.globalAlpha = clamp(q);
     box(c, 820, cy, 940, 122, 28, C.blueCont, '#3570e6', 1.5);

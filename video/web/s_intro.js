@@ -306,8 +306,8 @@ SC.about = (c, t, sc, th, T) => {
       ['Next Phases', 'Richer Prosody, Zero-Error Expressive Flow', 'In Progress', 'spark', C.aquac, C.aquad]
     ];
     steps.forEach(([ti, sub, status, ic, bg, fg], i) => {
-      const p = sp(dt, 0.2 + i * 0.25, 0.7);
-      const sx = X + 56 + i * 356, sy = Y + 275 + (1 - p) * 40;
+      const p = sp(dt, 0.1 + i * 0.14, 0.6);
+      const sx = X + 56 + i * 356, sy = Y + 275 + (1 - p) * 32;
       c.save();
       c.globalAlpha = clamp(p);
       box(c, sx, sy, 332, 460, 36, bg, i === 1 ? th.acc : th.line, i === 1 ? 2.5 : 1.5);

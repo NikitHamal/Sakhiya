@@ -26,9 +26,9 @@ function story(c, t, sc, th, T, o) {
   chip(c, o.dateTag, 218, 152, { sz: 18, fill: th.soft, col: th.acc, ic: 'calendar', h: 36 });
   chip(c, o.catTag, 218, 196, { sz: 17, fill: th.accc, col: th.onacc, ic: o.ic || 'bolt', h: 34 });
 
-  // Main Story Title & Nepali Subtitle
-  words(c, o.title, 108, 310, t - .15, { sz: 58, w: 700, col: th.fg, maxW: 680, lh: 68 });
-  txt(c, o.neTitle, 108, 415, { sz: 29, w: 600, col: th.acc });
+  // Main Story Title & Nepali Subtitle (guaranteed 2-line fit with dynamic bottom offset)
+  const titleBot = words(c, o.title, 108, 298, t - .15, { sz: 50, w: 700, col: th.fg, maxW: 680, lh: 58 });
+  txt(c, o.neTitle, 108, Math.min(418, titleBot + 44), { sz: 26, w: 600, col: th.acc });
 
   // 4-Beat Live Context Tracker (highlights active spoken sentence beat)
   o.beats.forEach(([bTitle, bSub], i) => {
@@ -125,15 +125,15 @@ SC.n1 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
     const cards = [
       ['100% Solar', 'Zero Earth Grid Load', 'सौर्य ऊर्जाबाट सञ्चालन', C.aquac, C.aquad, beat === 1],
       ['Laser Mesh', 'Starlink Optical Link', 'लेजर डाटा आदानप्रदान', C.pc, C.blue, beat === 2],
-      ['Debris Alert', 'Astronomers & Rivals Object', 'अन्तरिक्ष फोहोरको चिन्ता', C.errc, C.err, beat === 3]
+      ['Debris Alert', 'Astronomers Raise Concern', 'अन्तरिक्ष फोहोरको चिन्ता', C.errc, C.err, beat === 3]
     ];
     cards.forEach(([big, s1, s2, bg, fg, hi], i) => {
       const bx = 36 + i * 314, by = 536;
       box(c, bx, by, 292, 276, 32, hi ? bg : th.soft, hi ? fg : th.line, hi ? 3 : 1.5);
-      txt(c, big, bx + 28, by + 95, { sz: 44, w: 700, col: hi ? fg : th.fg });
-      txt(c, s1, bx + 28, by + 150, { sz: 22, w: 700, col: hi ? C.ink : th.fg });
-      txt(c, s2, bx + 28, by + 190, { sz: 21, w: 600, col: hi ? fg : th.mu });
-      chip(c, hi ? 'ACTIVE FOCUS' : `STEP 0${i + 2}`, bx + 28, by + 216, { sz: 16, fill: C.white, col: fg, h: 36 });
+      txt(c, big, bx + 24, by + 92, { sz: 40, w: 700, col: hi ? fg : th.fg });
+      txt(c, s1, bx + 24, by + 146, { sz: 20, w: 700, col: hi ? C.ink : th.fg });
+      txt(c, s2, bx + 24, by + 186, { sz: 20, w: 600, col: hi ? fg : th.mu });
+      chip(c, hi ? 'ACTIVE FOCUS' : `STEP 0${i + 2}`, bx + 24, by + 216, { sz: 16, fill: C.white, col: fg, h: 36 });
     });
   }
 });
@@ -229,18 +229,18 @@ SC.n3 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
     box(c, 36, 36, 920, 372, 34, beat <= 1 ? th.accc : th.soft, beat <= 1 ? th.acc : th.line, beat <= 1 ? 2.5 : 1.5);
     txt(c, 'OPENAI RELEASES  ·  NOV 23–26, 2026', 68, 78, { sz: 18, w: 700, col: th.acc, ls: 1.8 });
     const oCards = [
-      ['GPT-6.2 Sol', 'Live in ChatGPT Tab', 'मुख्य च्याट ट्याबमा उपलब्ध', 'spark', C.blue, C.white],
-      ['Private Inference', 'Encrypted Enterprise Enclave', 'गोप्य डाटा प्रोसेसिङ', 'lock', C.aquad, C.aquac],
-      ['GPT-6 Bio', 'Protein Design via Reasoning', 'प्रोटिन संरचना डिजाइन', 'globe', C.violet, C.violetc]
+      ['GPT-6.2 Sol', 'Live in ChatGPT Tab', 'मुख्य च्याट ट्याबमा उपलब्ध', 'spark', C.blue, C.pc],
+      ['Private Cloud', 'Encrypted AI Enclave', 'गोप्य डाटा प्रोसेसिङ', 'lock', C.aquad, C.aquac],
+      ['GPT-6 Bio', 'AI Protein Folding', 'प्रोटिन संरचना डिजाइन', 'globe', C.violet, C.violetc]
     ];
     oCards.forEach(([ti, s1, s2, ic, col, bg], i) => {
       const cx = 64 + i * 294, cy = 104;
       box(c, cx, cy, 276, 274, 28, C.white, th.line, 1.5);
       box(c, cx + 24, cy + 24, 58, 58, 18, bg, null);
       icon(c, ic, cx + 53, cy + 53, 30, col, 2.3);
-      txt(c, ti, cx + 24, cy + 132, { sz: 30, w: 700, col: C.ink });
-      txt(c, s1, cx + 24, cy + 172, { sz: 20, w: 600, col: C.mute });
-      txt(c, s2, cx + 24, cy + 212, { sz: 20, w: 600, col: col });
+      txt(c, ti, cx + 24, cy + 132, { sz: 28, w: 700, col: C.ink });
+      txt(c, s1, cx + 24, cy + 172, { sz: 19, w: 600, col: C.mute });
+      txt(c, s2, cx + 24, cy + 212, { sz: 19, w: 600, col: col });
     });
 
     // Bottom Half: Anthropic Claude Ship + Python-to-Rust CPU Reduction (-70%)
@@ -297,14 +297,14 @@ SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
       const col = i % 2, row = Math.floor(i / 2);
       const qx = 36 + col * 468, qy = 36 + row * 398;
       box(c, qx, qy, 452, 378, 36, hi ? bg : th.soft, hi ? fg : th.line, hi ? 3.2 : 1.5);
-      txt(c, kicker, qx + 32, qy + 46, { sz: 16, w: 700, col: hi ? fg : th.mu, ls: 1.5 });
-      shape(c, hi ? fg : th.accc, qx + 76, qy + 128, 44, seq8[i * 2], 'sunny', 0.4, T * 0.3);
-      icon(c, ic, qx + 76, qy + 128, 34, hi ? C.white : th.onacc, 2.4);
-      txt(c, big, qx + 138, qy + 122, { sz: 32, w: 700, col: hi ? C.ink : th.fg });
-      txt(c, ne, qx + 138, qy + 160, { sz: 22, w: 600, col: hi ? fg : th.acc });
-      box(c, qx + 32, qy + 206, 388, 136, 22, th.card, th.line);
-      const ls = wrap(c, sub, 22, 600, 340);
-      ls.forEach((l, li) => txt(c, l, qx + 54, qy + 256 + li * 34, { sz: 22, w: 600, col: th.fg }));
+      txt(c, kicker, qx + 28, qy + 44, { sz: 15, w: 700, col: hi ? fg : th.mu, ls: 1.4 });
+      shape(c, hi ? fg : th.accc, qx + 68, qy + 124, 40, seq8[i * 2], 'sunny', 0.4, T * 0.3);
+      icon(c, ic, qx + 68, qy + 124, 30, hi ? C.white : th.onacc, 2.4);
+      txt(c, big, qx + 122, qy + 118, { sz: 25, w: 700, col: hi ? C.ink : th.fg });
+      txt(c, ne, qx + 122, qy + 154, { sz: 19.5, w: 600, col: hi ? fg : th.acc });
+      box(c, qx + 28, qy + 198, 396, 144, 22, th.card, th.line);
+      const ls = wrap(c, sub, 21, 600, 348);
+      ls.forEach((l, li) => txt(c, l, qx + 48, qy + 252 + li * 34, { sz: 21, w: 600, col: th.fg }));
     });
   }
 });
