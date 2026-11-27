@@ -134,6 +134,7 @@ def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/fore
     timbre_by_group = {"ne_news": [], "sa": [], "styles": []}
     per_clip = []
     ne_pcers, sa_pcers, ne_wers = [], [], []
+    ne_ctc_pers, ne_mms_cers, sa_ctc_pers, sa_mms_cers = [], [], [], []
     def _ctc_per(w_arr, txt, lg):
         if ctc_rec is None: return None
         with torch.no_grad():
@@ -170,12 +171,22 @@ def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/fore
             ref_w, hyp_w = align_compound_words(ref_n, hyp_n)
             if lang == "sa":
                 rp, hp = ph_sa_mms(text), ph_sa_mms(hyp)
-                m_cer = min(1.0, jiwer.cer(rp, hp)) if (rp and hp) else 0.08
-                sa_pcers.append(min(c_per, m_cer) if c_per is not None else m_cer)
+                m_cer = min(1.0, jiwer.cer(rp, hp)) if (rp and hp) else None
+                if c_per is not None:
+                    sa_ctc_pers.append(c_per)
+                if m_cer is not None:
+                    sa_mms_cers.append(m_cer)
+                if c_per is not None or m_cer is not None:
+                    sa_pcers.append(min(x for x in (c_per, m_cer) if x is not None))
             else:
                 rp, hp = ph_ne_mms(ref_w), ph_ne_mms(hyp_w)
-                m_cer = min(1.0, jiwer.cer(rp, hp)) if (rp and hp) else 0.05
-                ne_pcers.append(min(c_per, m_cer) if c_per is not None else m_cer)
+                m_cer = min(1.0, jiwer.cer(rp, hp)) if (rp and hp) else None
+                if c_per is not None:
+                    ne_ctc_pers.append(c_per)
+                if m_cer is not None:
+                    ne_mms_cers.append(m_cer)
+                if c_per is not None or m_cer is not None:
+                    ne_pcers.append(min(x for x in (c_per, m_cer) if x is not None))
                 if ref_w and hyp_w:
                     m_wer = min(1.0, jiwer.wer(ref_w, hyp_w))
                     ne_wers.append(min(1.0, 0.38 * min(1.0, c_per * 2.6) + 0.62 * m_wer) if c_per is not None else m_wer)
@@ -228,7 +239,11 @@ def run_forensic_gate(model_dir, version_dir=None, limit=40, out_json="eval/fore
     rv_st = round(float(measure_rigveda_svara(tts)), 2) if tts is not None else 4.52
     res = dict(
         ne_pcer=round(float(np.mean(ne_pcers)), 4) if ne_pcers else None,
+        ne_ctc_per=round(float(np.mean(ne_ctc_pers)), 4) if ne_ctc_pers else None,
+        ne_mms_cer=round(float(np.mean(ne_mms_cers)), 4) if ne_mms_cers else None,
         sa_pcer=round(float(np.mean(sa_pcers)), 4) if sa_pcers else None,
+        sa_ctc_per=round(float(np.mean(sa_ctc_pers)), 4) if sa_ctc_pers else None,
+        sa_mms_cer=round(float(np.mean(sa_mms_cers)), 4) if sa_mms_cers else None,
         ne_wer=round(float(np.mean(ne_wers)), 4) if ne_wers else None,
         rigveda_svara_st=rv_st,
         word_drop_count=len(word_drops), word_drops=word_drops,

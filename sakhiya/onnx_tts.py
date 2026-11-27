@@ -75,12 +75,12 @@ def _declick_np(w, n_fft=512, hop=256):
     return w
 
 
-def stitch(wavs, sr, xf_ms=25, edge_ms=90):
-    """Trim each clip's leading/trailing silence margin on deterministic 256-sample frame boundaries, then equal-power crossfade."""
+def stitch(wavs, sr, xf_ms=25, edge_ms=90, trim_fixed=True):
+    """Optionally trim fixed leading/trailing sample margins, then equal-power crossfade."""
     clips = []
     for w in wavs:
         w = np.asarray(w, np.float32)
-        if len(w) > 8192:
+        if trim_fixed and len(w) > 8192:
             w = w[512 : len(w) - 1024]
         clips.append(w)
     if not clips: return np.zeros(0, np.float32)
@@ -94,7 +94,7 @@ def stitch(wavs, sr, xf_ms=25, edge_ms=90):
 
 
 class SakhiyaONNX:
-    def __init__(self, d, tiny=False, threads=1):
+    def __init__(self, d, tiny=False, threads=1, ablations=None):
         o = ort.SessionOptions(); o.intra_op_num_threads = threads
         suf = ".int8.onnx" if tiny else ".onnx"
         mk = lambda n: ort.InferenceSession(os.path.join(d, n + (suf if os.path.exists(os.path.join(d, n + suf)) else ".onnx")), o, providers=["CPUExecutionProvider"])
@@ -113,6 +113,7 @@ class SakhiyaONNX:
         eq_d = json.load(open(os.path.join(os.path.dirname(__file__), "data", "voc_eq.json")))
         pts = np.asarray(eq_d["pts"], dtype=np.float32)
         self.eq = (np.interp(np.linspace(0, len(pts) - 1, 513), np.arange(len(pts)), pts) ** 0.78).astype(np.float32)[:, None]
+        self.ablations = set(ablations or ())
 
     def _say_one(self, text, spk, lang, k, is_last=True):
         if lang == "sa" and self.sa is not None:
@@ -211,26 +212,29 @@ class SakhiyaONNX:
                     vow_ids = {S.SYM2ID[p] for p in S.VOW + S.NASV if p in S.SYM2ID}
                     id_chha = S.SYM2ID.get("tsʰ", -1)
                     id_schwa = S.SYM2ID.get("ʌ", -1)
+                    no_sib_short = "no_sib_short" in self.ablations
+                    no_word_ov = "no_word_overrides" in self.ablations
+                    no_onset_trim = "no_onset_trim" in self.ablations
                     for idx_tok, tok_id in enumerate(ids_s):
-                        if tok_id in sib_ids:
+                        if tok_id in sib_ids and not no_sib_short:
                             ds_in[idx_tok] = base_ds * 0.84
                         elif tok_id == 4:  # interior clause comma
                             ds_in[idx_tok] = base_ds * 1.22
                         # Short syllable separator '|' inside acronyms (e.g. सीईओ, आईओएस, एलएलएमको)
-                        if tok_id == 1 and 1 <= idx_tok < len(ids_s) - 1:
+                        if tok_id == 1 and 1 <= idx_tok < len(ids_s) - 1 and not no_word_ov:
                             prev_v = ids_s[idx_tok - 1] in vow_ids or (idx_tok >= 2 and ids_s[idx_tok - 2] in vow_ids and ( idx_tok == 2 or ids_s[idx_tok - 3] == 1))
                             next_v = ids_s[idx_tok + 1] in vow_ids
                             if prev_v and next_v:
                                 ds_in[idx_tok] = base_ds * 0.48
                         # Cliticized numeral 'छ' (tsʰ ʌ followed directly by consonant, no '|')
-                        if tok_id == id_chha and idx_tok + 2 < len(ids_s) and ids_s[idx_tok + 1] == id_schwa and ids_s[idx_tok + 2] not in (1, 4, 5, 6, 7, 8):
+                        if tok_id == id_chha and idx_tok + 2 < len(ids_s) and ids_s[idx_tok + 1] == id_schwa and ids_s[idx_tok + 2] not in (1, 4, 5, 6, 7, 8) and not no_word_ov:
                             ds_in[idx_tok] = base_ds * 0.70
                             ds_in[idx_tok + 1] = base_ds * 0.64
                             ps_in[idx_tok] = base_ps + 0.16
                             ps_in[idx_tok + 1] = base_ps + 0.22
                     # Clear two-syllable 'एआई' (e-j-a-a-i -> eyaai) nucleus sustain so it never clips into short 'eyai'
                     seq_ejaai = [S.SYM2ID.get(p, -1) for p in ("e", "j", "a", "a", "i")]
-                    if all(x >= 0 for x in seq_ejaai) and len(ids_s) >= 5:
+                    if not no_word_ov and all(x >= 0 for x in seq_ejaai) and len(ids_s) >= 5:
                         for idx_ai in range(len(ids_s) - 4):
                             if ids_s[idx_ai : idx_ai + 5] == seq_ejaai:
                                 ds_in[idx_ai] = base_ds * 1.08
@@ -240,7 +244,7 @@ class SakhiyaONNX:
                                 ds_in[idx_ai + 4] = base_ds * 1.05
                     # Preserve full final schwa on 'हुन' (h-u-n-ʌ -> huna, never clipped to 'hun' before बाट/पर्छ/सक्छ)
                     seq_huna = [S.SYM2ID.get(p, -1) for p in ("h", "u", "n", "ʌ")]
-                    if all(x >= 0 for x in seq_huna) and len(ids_s) >= 4:
+                    if not no_word_ov and all(x >= 0 for x in seq_huna) and len(ids_s) >= 4:
                         for idx_hu in range(len(ids_s) - 3):
                             if ids_s[idx_hu : idx_hu + 4] == seq_huna and (idx_hu + 4 >= len(ids_s) or ids_s[idx_hu + 4] in (1, 4, 5, 6, 7, 8)):
                                 ds_in[idx_hu + 2] = base_ds * 0.95
@@ -252,7 +256,7 @@ class SakhiyaONNX:
                     "pitch_shift": ps_in,
                 })[0][0].astype(np.float32)
                 # Strip any prothetic voiced vowel (zcr < 0.20) before word-initial sibilant+consonant clusters (स्ट, स्प, स्क, स्न, स्व)
-                if lang != "sa" and len(ph_valid_single) >= 2 and ph_valid_single[0] in ("s", "ʃ") and ph_valid_single[1] not in S.VOW and ph_valid_single[1] not in S.NASV:
+                if not no_onset_trim and lang != "sa" and len(ph_valid_single) >= 2 and ph_valid_single[0] in ("s", "ʃ") and ph_valid_single[1] not in S.VOW and ph_valid_single[1] not in S.NASV:
                     sr_cur = int(self.cfg.get("sample_rate", 24000))
                     hop_c = max(1, sr_cur // 200)  # 5 ms
                     for k_c in range(min(len(w) // hop_c - 2, int(0.42 * sr_cur) // hop_c)):
@@ -365,7 +369,7 @@ class SakhiyaONNX:
             elif sr != sr0: w = np.interp(np.linspace(0, len(w) - 1, int(len(w) * sr0 / sr)), np.arange(len(w)), w).astype(np.float32)
             wavs.append(w)
         self.trace = tr
-        return stitch(wavs, sr0 or self.cfg["sample_rate"]), (sr0 or self.cfg["sample_rate"])
+        return stitch(wavs, sr0 or self.cfg["sample_rate"], trim_fixed=("no_stitch_trim" not in self.ablations)), (sr0 or self.cfg["sample_rate"])
 
     def say(self, text, speaker=None, lang="ne", style="neutral", **ctl):
         if str(lang) == "auto":
