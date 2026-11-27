@@ -5,7 +5,7 @@ import json, math, os, shutil, subprocess, sys
 from multiprocessing import Pool
 sys.path.insert(0, os.path.dirname(__file__))
 import render as R
-REPO, TAG, SEG, FPS = "NikitHamal/Sakhiya", "news-ep1-wip", 900, 30
+REPO, TAG, SEG, FPS = "NikitHamal/Sakhiya", os.environ.get("WIP_TAG", "news-ep1-v2-wip"), 900, 30
 TOK = subprocess.check_output([os.environ.get("GIT_ASKPASS", "/tmp/gitenv.sh")]).decode().strip()
 H = ["-H", f"Authorization: token {TOK}"]
 def curl(*a): return subprocess.check_output(["curl", "-s", "-L", *H, *a])

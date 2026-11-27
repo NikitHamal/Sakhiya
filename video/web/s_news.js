@@ -1,63 +1,384 @@
-// scenes: series, n1..n5 (stories), fast
-function story(c, t, sc, th, T, o) {  // left: number + title + source ; right: visual panel
-  dotgrid(c, th, T, .5); const p = sp(t, .15, .8);
-  txt(c, o.num, 110, 330, { sz: 260, w: 700, col: th.accc, a: p }); words(c, o.title, 118, 470, t - .3, { sz: 76, w: 700, col: th.fg, maxW: 780, lh: 86 });
-  const q = sp(t, 1.0, .6); c.globalAlpha = q; chip(c, o.src, 118, 640 + (1 - q) * 20, { sz: 26, fill: th.soft, col: th.mu, line: th.line, ic: 'globe' }); c.globalAlpha = 1;
-  c.save(); c.translate(1000, 150); const s = .9 + .1 * p; c.globalAlpha = clamp(p * 1.5); c.translate(410 * (1 - s), 310 * (1 - s)); c.scale(s, s);
-  box(c, 0, 0, 820, 620, 44, th.card, th.line); c.save(); rr(c, 0, 0, 820, 620, 44); c.clip(); o.draw(c, t); c.restore(); c.restore(); }
-SC.series = (c, t, sc, th, T) => {
-  const v = V(T), c1 = lt(sc, 'c1'), c2 = lt(sc, 'c2'), c3 = lt(sc, 'c3'), c4 = lt(sc, 'c4'); dotgrid(c, th, T, .8);
-  const up = eio3(P(t, c4 - .1, c4 + .6)); c.save(); c.translate(0, -up * 900);
-  words(c, 'NEBians', 110, 300, t - c1 + .3, { sz: 230, w: 700, col: th.fg }); words(c, 'News', 110, 480, t - c1 + .1, { sz: 230, w: 700, col: th.acc, st: .1 });
-  sakhiya(c, th, 1470, 330, 210 * sp(t, c1, .8), T, v, { fill: th.acc, glyphCol: th.bg, k: T * .3 });
-  const cards = [['Tech & AI news', 'globe', c2, 'from around the world'], ['NEBians Android', 'phone', c3, 'what we are building'], ['Voiced by Sakhiya', 'play', c3 + 2.2, 'our own TTS model']];
-  cards.forEach(([ti, ic, st, sub], i) => { const p = sp(t, st, .8), x = 110 + i * 590, y = 520 + (1 - p) * 160; c.globalAlpha = clamp(p * 1.5);
-    box(c, x, y, 560, 262, 44, th.card, th.line); box(c, x + 40, y + 40, 96, 96, 32, i === 1 ? C.aquac : th.accc, null); icon(c, ic, x + 88, y + 88, 52, i === 1 ? C.aquad : th.onacc, 2.4);
-    txt(c, ti, x + 40, y + 192, { sz: 46, w: 700, col: th.fg }); txt(c, sub, x + 40, y + 236, { sz: 28, w: 500, col: th.mu }); c.globalAlpha = 1; });
+// Material 3 Expressive News Scenes: n1..n5 (Global AI & Tech Weekly Recap) + fast (Quick Tech Roundup)
+
+function activeBeat(sc, t) {
+  let idx = 0;
+  sc.lines.forEach((l, i) => {
+    if (t >= (l.t - sc.t0) - 0.15) idx = i;
+  });
+  return idx;
+}
+
+// Upgraded M3 Expressive Split Story Layout: Left Narrative & Beat Tracker + Right Dynamic Multi-Stage Bento Canvas
+function story(c, t, sc, th, T, o) {
+  const v = V(T);
+  dotgrid(c, th, T, .55);
+  const p = sp(t, .1, .75);
+  const beat = activeBeat(sc, t);
+
+  // Left Column: Story Badge, Date Stamp, Headline, and 4-Beat Progress Cards
+  c.save();
+  c.globalAlpha = clamp(p * 1.3);
+  bento(c, 68, 106, 760, 848, 44, th, { wmShape: o.shape || 'cookie12', wmR: 190 });
+
+  // Number & Date Stamp Header
+  shape(c, th.accc, 146, 186, 52 * p, o.shape || 'cookie12', 'sunny', Math.sin(T) * .5 + .5, T * 0.25);
+  txt(c, o.num, 146, 202, { sz: 42, w: 700, col: th.onacc, al: 'center' });
+  chip(c, o.dateTag, 218, 152, { sz: 18, fill: th.soft, col: th.acc, ic: 'calendar', h: 36 });
+  chip(c, o.catTag, 218, 196, { sz: 17, fill: th.accc, col: th.onacc, ic: o.ic || 'bolt', h: 34 });
+
+  // Main Story Title & Nepali Subtitle
+  words(c, o.title, 108, 310, t - .15, { sz: 58, w: 700, col: th.fg, maxW: 680, lh: 68 });
+  txt(c, o.neTitle, 108, 415, { sz: 29, w: 600, col: th.acc });
+
+  // 4-Beat Live Context Tracker (highlights active spoken sentence beat)
+  o.beats.forEach(([bTitle, bSub], i) => {
+    const isCur = beat === i;
+    const isDone = beat > i;
+    const bp = sp(t, 0.3 + i * 0.14, 0.65);
+    const by = 452 + i * 102 + (1 - bp) * 24;
+    c.save();
+    c.globalAlpha = clamp(bp);
+    box(c, 104, by, 688, 88, 24, isCur ? th.accc : th.soft, isCur ? th.acc : th.line, isCur ? 2.5 : 1.2);
+    box(c, 124, by + 18, 52, 52, 18, isCur ? th.acc : (isDone ? th.sec : th.card), null);
+    if (isDone) {
+      icon(c, 'check', 150, by + 44, 24, C.white, 2.5);
+    } else {
+      txt(c, `0${i + 1}`, 150, by + 53, { sz: 22, w: 700, col: isCur ? th.bg : th.mu, al: 'center' });
+    }
+    txt(c, bTitle, 194, by + 40, { sz: 24, w: 700, col: isCur ? th.onacc : th.fg });
+    txt(c, bSub, 194, by + 69, { sz: 19, w: 500, col: isCur ? th.acc : th.mu });
+    c.restore();
+  });
+
+  // Verified Source Footer Chip
+  chip(c, 'SOURCE · ' + o.src, 104, 878, { sz: 18, fill: th.soft, col: th.mu, line: th.line, ic: 'globe', h: 42 });
   c.restore();
-  if (t > c4 - .1) { txt(c, 'TODAY', W / 2, 300 + (1 - sp(t, c4, .6)) * 60, { sz: 34, w: 600, col: th.mu, al: 'center', ls: 6, a: sp(t, c4, .5) }); words(c, 'Top stories', W / 2, 440, t - c4 - .1, { sz: 150, w: 700, al: 'center', col: th.fg });
-    for (let i = 0; i < 5; i++) { const p = sp(t, c4 + .4 + i * .14, .6), x = W / 2 + (i - 2) * 190, y = 620; shape(c, i === 0 ? th.acc : th.gr2 || th.soft, x, y, 74 * p, seq7[i], seq7[i], 0, T * .3);
-      txt(c, '0' + (i + 1), x, y + 17, { sz: 50, w: 700, col: i === 0 ? th.bg : th.fg, al: 'center', a: p }); } }
-};
-SC.n1 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '01', title: 'Anthropic IPO', src: 'CNBC, Yahoo Finance reports', draw: (c, t) => {
-  const pts = [0, .06, .03, .1, .08, .15, .17, .16, .1, .03, -.02, .006], x0 = 70, x1 = 750, yb = 400, ys = 1100; const p = P(t, .8, 4.2);
-  for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(60, 160 + i * 100); c.lineTo(760, 160 + i * 100); c.lineWidth = 1.5; c.strokeStyle = C.line; c.stroke(); }
-  c.beginPath(); const n = (pts.length - 1) * eo3(p); for (let i = 0; i <= Math.floor(n); i++) c.lineTo(x0 + (x1 - x0) * i / 11, yb - pts[i] * ys);
-  const f = n % 1, i0 = Math.floor(n); if (i0 < 11) c.lineTo(x0 + (x1 - x0) * (i0 + f) / 11, yb - lerp(pts[i0], pts[i0 + 1], f) * ys);
-  c.lineWidth = 9; c.lineCap = c.lineJoin = 'round'; c.strokeStyle = C.blue; c.stroke();
-  const a = sp(t, 2.3, .6), b = sp(t, 4.2, .6); c.globalAlpha = a; chip(c, '+17%  IPO day', 240, 90, { sz: 38, fill: C.aquac, col: C.aquad, ic: 'bolt' }); c.globalAlpha = b; chip(c, '-14%  next day', 420, 440, { sz: 38, fill: C.errc, col: C.err, ic: 'warn' }); c.globalAlpha = 1;
-  txt(c, 'Tech stocks slid with it', 60, 590, { sz: 28, w: 500, col: C.mute, a: b }); } });
-SC.n2 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '02', title: 'Gemini 4 Neon', src: 'Indian Express reports', draw: (c, t) => {
-  txt(c, 'MULTI-STEP TASK', 56, 90, { sz: 26, col: th.mu, ls: 4 }); const ic = ['doc', 'search', 'compass', 'bolt', 'check'], lb = ['Read', 'Search', 'Plan', 'Act', 'Done'];
-  c.beginPath(); c.moveTo(110, 330); c.lineTo(710, 330); c.lineWidth = 8; c.strokeStyle = th.soft; c.lineCap = 'round'; c.stroke();
-  const pr = P(t, 1, 5); c.beginPath(); c.moveTo(110, 330); c.lineTo(110 + 600 * eo3(pr), 330); c.strokeStyle = C.aqua; c.stroke();
-  ic.forEach((n, i) => { const on = pr >= i / 4 - .001, q = sp(t, .6 + i * .15, .6), cx = 110 + i * 150; shape(c, on ? C.aqua : th.soft, cx, 330, 54 * q, 'cookie', 'sunny', Math.sin(T * 2 + i) * .5 + .5, T * .3);
-    icon(c, n, cx, 330, 38, on ? C.gr : th.mu, 2.6); txt(c, lb[i], cx, 440, { sz: 26, w: 600, col: on ? th.fg : th.mu, al: 'center' }); });
-  const e = sp(t, 5, .6); c.globalAlpha = e; chip(c, 'faster end-to-end', 56, 520, { sz: 34, fill: th.soft, col: C.aqua, ic: 'bolt' }); c.globalAlpha = 1; } });
-SC.n3 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '03', title: 'Nvidia: Huang steps down', src: 'Indian Express, FT reports', draw: (c, t) => {
-  const p = sp(t, .5, .8); box(c, 50, 70, 360, 150, 32, C.white, null); txt(c, 'Jensen Huang', 80, 150, { sz: 38, w: 700, col: C.ink }); txt(c, 'Nvidia CEO', 80, 195, { sz: 26, w: 500, col: C.mute });
-  const s = sp(t, 1.6, .6); c.save(); c.translate(500, 130); c.rotate(-.12); c.globalAlpha = s; box(c, 0, 0, 260, 76, 38, C.errc, null); txt(c, 'STEPS DOWN', 130, 49, { sz: 28, w: 700, col: C.err, al: 'center', ls: 2 }); c.restore();
-  const r = P(t, 3.2, 5.2); shape(c, C.white, 150, 440, 100 * sp(t, 3, .6), 'squircle', 'squircle', 0, 0); icon(c, 'chip', 150, 440, 90, C.blue, 3);
-  c.beginPath(); c.moveTo(260, 440); c.lineTo(260 + 330 * eo3(r), 440); c.lineWidth = 8; c.setLineDash([22, 18]); c.lineDashOffset = -T * 60; c.strokeStyle = C.white; c.stroke(); c.setLineDash([]);
-  box(c, 600, 395, 170, 90, 30, 'rgba(255,255,255,.18)', null); txt(c, 'CHINA', 685, 452, { sz: 32, w: 700, col: C.white, al: 'center' });
-  const q = sp(t, 5.4, .6); c.save(); c.globalAlpha = q; c.translate(430, 440); shape(c, C.amber, 0, 0, 46 * q, 'cookie', 'cookie', 0, 0); icon(c, 'pause', 0, 0, 36, C.amberd, 3.2); c.restore(); chip(c, 'shipments paused (reported)', 50, 520, { sz: 28, fill: C.white, col: C.blue, a: q }); } });
-SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '04', title: 'OpenAI: GPT-6.2 + wallet', src: 'AI news roundups', draw: (c, t) => {
-  ['Astra', 'Sol'].forEach((n, i) => { const p = sp(t, .5 + i * .3, .8), x = 50 + i * 370; c.save(); c.globalAlpha = clamp(p * 1.5); box(c, x, 60 + (1 - p) * 80, 340, 210, 36, i ? C.aquac : C.pc, null);
-    txt(c, 'GPT-6.2', x + 34, 140 + (1 - p) * 80, { sz: 28, w: 600, col: C.mute }); txt(c, n, x + 34, 210 + (1 - p) * 80, { sz: 64, w: 700, col: i ? C.aquad : C.onpc }); c.restore(); });
-  const w = sp(t, 3.4, .8); c.save(); c.globalAlpha = clamp(w * 1.5); box(c, 50, 330 + (1 - w) * 60, 720, 230, 36, C.cont, C.line); icon(c, 'wallet', 140, 445 + (1 - w) * 60, 84, C.blue, 2.6);
-  txt(c, 'ChatGPT Wallet', 220, 430 + (1 - w) * 60, { sz: 44, w: 700, col: C.ink }); txt(c, 'agents can shop for you', 220, 480 + (1 - w) * 60, { sz: 28, w: 500, col: C.mute });
-  const k = P(t, 4.6, 6.4); shape(c, C.blue, lerp(560, 700, eio3(k)), 445 + (1 - w) * 60, 30 * (1 - k * .3), 'cookie', 'flower', k, T); c.restore(); } });
-SC.n5 = (c, t, sc, th, T) => story(c, t, sc, th, T, { num: '05', title: 'OpenRouter drops 3 providers', src: 'AI Weekly reports', draw: (c, t) => {
-  const cx = 410, cy = 330, nm = ['', '', '', '', '', ''], bad = [0, 2, 4];
-  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU - 1.2, b = bad.includes(i), k = b ? P(t, 3.4 + bad.indexOf(i) * .5, 4.2 + bad.indexOf(i) * .5) : 0, r = 220 * (1 - eo3(k) * .0) + eo3(k) * 120, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * .86, p = sp(t, .4 + i * .1, .6);
-    c.globalAlpha = (1 - k) * clamp(p); c.beginPath(); c.moveTo(cx, cy); c.lineTo(x, y); c.lineWidth = 4; c.strokeStyle = b && t > 3.2 ? C.err : th.line; c.stroke();
-    shape(c, b && t > 3.2 ? C.errc : th.soft, x, y, 56 * p * (1 - eo3(k) * .6), 'cookie', 'cookie', 0, i); icon(c, b && t > 3.2 ? 'x' : 'globe', x, y, 34, b && t > 3.2 ? C.err : th.mu, 2.6); }
-  c.globalAlpha = 1; shape(c, th.acc, cx, cy, 80 * sp(t, 0, .7), 'flower', 'sunny', Math.sin(T) * .5 + .5, T * .4); icon(c, 'bolt', cx, cy, 56, th.bg, 2.8);
-  const q = sp(t, 5.4, .6); c.globalAlpha = q; chip(c, 'prompt leaks found', 56, 560, { sz: 30, fill: C.errc, col: C.err, ic: 'lock' }); c.globalAlpha = 1; } });
-SC.fast = (c, t, sc, th, T) => { dotgrid(c, th, T, .8); const f1 = lt(sc, 'f1'), f2 = lt(sc, 'f2');
-  for (let r = 0; r < 2; r++) { const y = r ? 190 : 100, dir = r ? 1 : -1, s = 'AI NEWS   -   TECH   -   NEBIANS   -   '; const L = tw(c, s, 44, 700); c.globalAlpha = .55;
-    for (let k = -1; k < 4; k++) txt(c, s, ((T * 140 * dir) % L) + k * L, y + 40, { sz: 44, w: 700, col: '#c9d7ff' }); c.globalAlpha = 1; }
-  [[f1, 'Microsoft', 'cheaper, task-specific AI models', 'bolt', 290], [f2, 'Google DeepMind', 'AI used to test Signal encryption', 'lock', 520]].forEach(([s0, a, b, ic, y], i) => { const p = sp(t, s0 + .2 - sc.t0 * 0 - (sc.t0 ? 0 : 0), .8), q = p; const lx = lerp(i ? 2000 : -1700, 160, clamp(sp(t, s0, .9)));
-    box(c, lx, y, 1600, 200, 56, C.white, null); shape(c, C.pc, lx + 120, y + 100, 74, seq7[i + 3], seq7[i + 3], 0, T * .4); icon(c, ic, lx + 120, y + 100, 56, C.blue, 3);
-    txt(c, a, lx + 240, y + 88, { sz: 40, w: 600, col: C.mute }); txt(c, b, lx + 240, y + 154, { sz: 62, w: 700, col: C.ink }); });
+
+  // Right Column: Dynamic 996 x 848 Interactive Bento Canvas
+  c.save();
+  c.translate(860, 106);
+  const s = .94 + .06 * p;
+  c.globalAlpha = clamp(p * 1.4);
+  c.translate(498 * (1 - s), 424 * (1 - s));
+  c.scale(s, s);
+  bento(c, 0, 0, 992, 848, 44, th, { fill: th.card, stroke: th.line });
+  c.save();
+  rr(c, 0, 0, 992, 848, 44);
+  c.clip();
+  o.draw(c, t, beat, v, th, T);
+  c.restore();
+  c.restore();
+}
+
+// STORY 01: SpaceX Starmind — 1 Million Orbital AI Data Center Satellites (Nov 25–26, 2026)
+SC.n1 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
+  num: '01',
+  dateTag: '25–26 NOV 2026',
+  catTag: 'SPACE & AI CLOUD',
+  ic: 'sat',
+  shape: 'sunny',
+  title: 'SpaceX Starmind: 1M Orbital AI Satellites',
+  neTitle: 'अन्तरिक्षमा दस लाख एआई डाटा सेन्टर भूउपग्रह',
+  src: 'CNBC · The Verge · FCC Filing (25–26 Nov 2026)',
+  beats: [
+    ['FCC Approves 1,000,000 Satellites', 'एफसीसीद्वारा दस लाख भूउपग्रह पठाउन अनुमति'],
+    ['Solar-Powered Orbital AI Compute', 'अन्तरिक्षमै सौर्य ऊर्जाबाट एआई चिप सञ्चालन'],
+    ['Starlink Optical Laser Downlink', 'पृथ्वीमा बिजुली अभाव टार्न लेजर नेटवर्क'],
+    ['Orbital Debris & Astronomy Debate', 'खगोलविद् र प्रतिस्पर्धीहरूको वातावरणीय चिन्ता']
+  ],
+  draw: (c, t, beat, v, th, T) => {
+    // Top Orbital Visualization Card
+    box(c, 36, 36, 920, 470, 34, '#07142b', '#1e3a6e', 2);
+    txt(c, 'STARMIND ORBITAL CONSTELLATION  ·  SOLAR + LASER MESH', 68, 82, { sz: 19, w: 700, col: C.aqua, ls: 2 });
+
+    // Earth Curve & Atmosphere
+    const cx = 496, cy = 580;
+    c.beginPath(); c.arc(cx, cy, 310, Math.PI * 1.12, Math.PI * 1.88);
+    c.fillStyle = '#0c3b87'; c.fill();
+    c.lineWidth = 6; c.strokeStyle = C.sky; c.stroke();
+    txt(c, 'EARTH · STARLINK GROUND GATEWAYS', cx, 475, { sz: 18, w: 700, col: '#9ec5ff', al: 'center', ls: 1.5 });
+
+    // Orbiting AI Satellites with Solar Wings & Laser Links
+    const nSats = 7;
+    for (let i = 0; i < nSats; i++) {
+      const ang = Math.PI * 1.2 + (i / (nSats - 1)) * Math.PI * 0.6 + Math.sin(T * 0.6 + i) * 0.02;
+      const rad = 405 + (i % 2) * 34;
+      const sx = cx + Math.cos(ang) * rad, sy = cy + Math.sin(ang) * rad;
+      // Laser beam to Earth & neighbor
+      if (beat >= 1) {
+        c.beginPath(); c.moveTo(sx, sy); c.lineTo(cx + Math.cos(ang) * 305, cy + Math.sin(ang) * 305);
+        c.strokeStyle = beat === 3 ? C.amber : C.aqua; c.lineWidth = 2; c.setLineDash([6, 6]); c.lineDashOffset = -T * 30; c.stroke(); c.setLineDash([]);
+      }
+      shape(c, i % 2 === 0 ? C.amber : C.aqua, sx, sy, 18, 'squircle', 'gem', 0.5, T * 0.5);
+      box(c, sx - 32, sy - 5, 12, 10, 3, C.sky);
+      box(c, sx + 20, sy - 5, 12, 10, 3, C.sky);
+    }
+
+    // Animated Counter Overlay inside Space Card
+    const countP = eo3(P(t, 0.2, 2.4));
+    const numStr = Math.round(1000000 * countP).toLocaleString('en-US');
+    box(c, 68, 110, 410, 125, 24, 'rgba(13,34,74,0.88)', '#2b549e');
+    txt(c, numStr, 92, 182, { sz: 62, w: 700, col: C.white });
+    txt(c, 'FCC Authorized Orbital AI Nodes (2033–2040)', 92, 216, { sz: 18, w: 500, col: '#9ec5ff' });
+
+    // Bottom 3 Metric Bento Sub-Cards
+    const cards = [
+      ['100% Solar', 'Zero Earth Grid Load', 'सौर्य ऊर्जाबाट सञ्चालन', C.aquac, C.aquad, beat === 1],
+      ['Laser Mesh', 'Starlink Optical Link', 'लेजर डाटा आदानप्रदान', C.pc, C.blue, beat === 2],
+      ['Debris Alert', 'Astronomers & Rivals Object', 'अन्तरिक्ष फोहोरको चिन्ता', C.errc, C.err, beat === 3]
+    ];
+    cards.forEach(([big, s1, s2, bg, fg, hi], i) => {
+      const bx = 36 + i * 314, by = 536;
+      box(c, bx, by, 292, 276, 32, hi ? bg : th.soft, hi ? fg : th.line, hi ? 3 : 1.5);
+      txt(c, big, bx + 28, by + 95, { sz: 44, w: 700, col: hi ? fg : th.fg });
+      txt(c, s1, bx + 28, by + 150, { sz: 22, w: 700, col: hi ? C.ink : th.fg });
+      txt(c, s2, bx + 28, by + 190, { sz: 21, w: 600, col: hi ? fg : th.mu });
+      chip(c, hi ? 'ACTIVE FOCUS' : `STEP 0${i + 2}`, bx + 28, by + 216, { sz: 16, fill: C.white, col: fg, h: 36 });
+    });
+  }
+});
+
+// STORY 02: Nvidia Reinstates Jensen Huang, Stock Swing, Export Curbs & Huawei HBM (Nov 23–27, 2026)
+SC.n2 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
+  num: '02',
+  dateTag: '23–27 NOV 2026',
+  catTag: 'CHIPS & SEMICONDUCTORS',
+  ic: 'chip',
+  shape: 'cookie12',
+  title: 'Nvidia Reinstates Huang & Tightens Exports',
+  neTitle: 'जेन्सेन हुआङको पुनरागमन र चिप निर्यातमा कडाइ',
+  src: 'CNBC · Reuters · Bloomberg (23–27 Nov 2026)',
+  beats: [
+    ['Jensen Huang Reinstated as CEO', 'सोमबार पुनः प्रमुख कार्यकारी पदमा फिर्ती'],
+    ['Stock Surges +30%, Then Dips -6%', 'सेयर मूल्य ३०% बढेर मंगलबार ६% घट्यो'],
+    ['Server Halts to 4 SE Asian Nations', 'मलेसिया, सिङ्गापुर, थाइल्यान्ड र इन्डोनेसियामा रोक'],
+    ['Huawei Teases Next-Gen HBM Chip', 'हुवावेद्वारा नयाँ हाई ब्यान्डविथ मेमोरी चिपको तयारी']
+  ],
+  draw: (c, t, beat, v, th, T) => {
+    // Top-Left: Stock Chart Card (Mon +30% Surge -> Tue -6% Dip)
+    box(c, 36, 36, 560, 440, 34, th.soft, beat <= 1 ? th.acc : th.line, beat <= 1 ? 2.8 : 1.5);
+    txt(c, 'NVIDIA (NVDA) WEEKLY VOLATILITY  ·  MON 23 – TUE 24 NOV', 64, 78, { sz: 17, w: 700, col: th.mu, ls: 1.5 });
+    const pts = [0.15, 0.18, 0.42, 0.78, 0.92, 0.88, 0.74, 0.68, 0.70];
+    const pChart = eo3(P(t, 0.4, 3.5));
+    for (let g = 0; g < 4; g++) {
+      c.beginPath(); c.moveTo(64, 130 + g * 80); c.lineTo(564, 130 + g * 80);
+      c.strokeStyle = th.line; c.lineWidth = 1; c.stroke();
+    }
+    c.beginPath();
+    const maxI = (pts.length - 1) * pChart;
+    for (let i = 0; i <= Math.floor(maxI); i++) {
+      const px = 64 + (500 * i) / (pts.length - 1), py = 400 - pts[i] * 250;
+      if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.strokeStyle = C.aqua; c.lineWidth = 7; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke();
+    chip(c, 'MON: +30% CEO RETURN', 74, 110, { sz: 18, fill: C.aquac, col: C.aquad, ic: 'chart' });
+    if (beat >= 2) chip(c, 'TUE: -6% NO SUCCESSION PLAN', 210, 395, { sz: 18, fill: C.errc, col: C.err, ic: 'warn' });
+
+    // Top-Right: CEO Governance Card
+    box(c, 616, 36, 340, 440, 34, th.accc, th.acc, 2);
+    shape(c, th.acc, 786, 155, 68, 'squircle', 'cookie12', 0.4, T * 0.25);
+    icon(c, 'chip', 786, 155, 52, th.bg, 2.5);
+    txt(c, 'Jensen Huang', 786, 268, { sz: 34, w: 700, col: th.onacc, al: 'center' });
+    txt(c, 'Reinstated CEO & Director', 786, 305, { sz: 20, w: 600, col: th.acc, al: 'center' });
+    box(c, 644, 336, 284, 110, 22, th.card, null);
+    txt(c, 'Moody’s Outlook:', 668, 376, { sz: 19, w: 600, col: th.mu });
+    txt(c, 'Positive → Stable', 668, 414, { sz: 24, w: 700, col: C.amber });
+
+    // Bottom-Left: Southeast Asia Server Shipment Halt (4 Countries)
+    box(c, 36, 500, 450, 312, 34, beat === 2 ? C.amberc : th.soft, beat === 2 ? C.amber : th.line, beat === 2 ? 2.8 : 1.5);
+    txt(c, 'US EXPORT CURBS · SERVER SHIPMENT HALT', 64, 544, { sz: 17, w: 700, col: beat === 2 ? C.amberd : th.mu, ls: 1.2 });
+    ['Malaysia', 'Singapore', 'Thailand', 'Indonesia'].forEach((cnt, idx) => {
+      const cx = 64 + (idx % 2) * 204, cy = 572 + Math.floor(idx / 2) * 104;
+      box(c, cx, cy, 188, 86, 20, th.card, th.line);
+      icon(c, 'pause', cx + 32, cy + 43, 24, C.amber, 2.5);
+      txt(c, cnt, cx + 56, cy + 51, { sz: 22, w: 700, col: th.fg });
+    });
+
+    // Bottom-Right: Huawei Next-Gen HBM Memory Rivalry
+    box(c, 506, 500, 450, 312, 34, beat === 3 ? C.aquac : th.soft, beat === 3 ? C.aquad : th.line, beat === 3 ? 2.8 : 1.5);
+    txt(c, 'DOMESTIC AI MEMORY · HUAWEI HBM CHIP', 534, 544, { sz: 17, w: 700, col: beat === 3 ? C.aquad : th.mu, ls: 1.2 });
+    // 3D Stacked HBM Dies Diagram
+    for (let s = 0; s < 4; s++) {
+      box(c, 536, 710 - s * 36, 170, 28, 8, s === 3 ? C.aquad : C.blue, C.white, 1.5);
+      txt(c, `HBM DIE ${s + 1}`, 621, 730 - s * 36, { sz: 14, w: 700, col: C.white, al: 'center' });
+    }
+    txt(c, 'Huawei HBM', 734, 615, { sz: 32, w: 700, col: beat === 3 ? C.aquad : th.fg });
+    txt(c, 'Challenges Samsung', 734, 655, { sz: 22, w: 600, col: beat === 3 ? C.ink : th.mu });
+    txt(c, '& SK Hynix in AI RAM', 734, 688, { sz: 22, w: 600, col: beat === 3 ? C.ink : th.mu });
+  }
+});
+
+// STORY 03: OpenAI GPT-6.2 Sol & Private Inference + Anthropic Claude Ship & Rust API (Nov 23–26, 2026)
+SC.n3 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
+  num: '03',
+  dateTag: '23–26 NOV 2026',
+  catTag: 'AI MODELS & RUST',
+  ic: 'code',
+  shape: 'flower',
+  title: 'GPT-6.2 Sol, Claude Ship & 70% Rust Gain',
+  neTitle: 'जिपिटी ६.२ सोल, क्लाउड सिप र रस्ट माइग्रेसन',
+  src: 'The Decoder · SiliconReport · Anthropic (23–26 Nov 2026)',
+  beats: [
+    ['GPT-6.2 Sol in Main ChatGPT Tab', 'च्याटजिपिटीको मुख्य ट्याबमा जिपिटी ६.२ सोल'],
+    ['OpenAI Private Inference & Proteins', 'गोप्य डाटा प्रोसेसिङ र प्रोटिन डिजाइन क्षमता'],
+    ['Anthropic Claude Ship PR Agent', 'कोड परीक्षण र पुल रिक्वेस्ट स्वीकृत गर्ने टुल'],
+    ['API Migrated Python → Rust (-70% CPU)', 'पाइथनबाट रस्टमा सार्दा ७०% सिपियु बचत']
+  ],
+  draw: (c, t, beat, v, th, T) => {
+    // Top Half: OpenAI Ecosystem (GPT-6.2 Sol + Private Inference + Protein Design)
+    box(c, 36, 36, 920, 372, 34, beat <= 1 ? th.accc : th.soft, beat <= 1 ? th.acc : th.line, beat <= 1 ? 2.5 : 1.5);
+    txt(c, 'OPENAI RELEASES  ·  NOV 23–26, 2026', 68, 78, { sz: 18, w: 700, col: th.acc, ls: 1.8 });
+    const oCards = [
+      ['GPT-6.2 Sol', 'Live in ChatGPT Tab', 'मुख्य च्याट ट्याबमा उपलब्ध', 'spark', C.blue, C.white],
+      ['Private Inference', 'Encrypted Enterprise Enclave', 'गोप्य डाटा प्रोसेसिङ', 'lock', C.aquad, C.aquac],
+      ['GPT-6 Bio', 'Protein Design via Reasoning', 'प्रोटिन संरचना डिजाइन', 'globe', C.violet, C.violetc]
+    ];
+    oCards.forEach(([ti, s1, s2, ic, col, bg], i) => {
+      const cx = 64 + i * 294, cy = 104;
+      box(c, cx, cy, 276, 274, 28, C.white, th.line, 1.5);
+      box(c, cx + 24, cy + 24, 58, 58, 18, bg, null);
+      icon(c, ic, cx + 53, cy + 53, 30, col, 2.3);
+      txt(c, ti, cx + 24, cy + 132, { sz: 30, w: 700, col: C.ink });
+      txt(c, s1, cx + 24, cy + 172, { sz: 20, w: 600, col: C.mute });
+      txt(c, s2, cx + 24, cy + 212, { sz: 20, w: 600, col: col });
+    });
+
+    // Bottom Half: Anthropic Claude Ship + Python-to-Rust CPU Reduction (-70%)
+    box(c, 36, 436, 920, 376, 34, beat >= 2 ? C.aquac : th.soft, beat >= 2 ? C.aquad : th.line, beat >= 2 ? 2.5 : 1.5);
+    txt(c, 'ANTHROPIC ENGINEERING  ·  CLAUDE SHIP & PYTHON → RUST MIGRATION', 68, 478, { sz: 18, w: 700, col: C.aquad, ls: 1.8 });
+
+    // Left Sub-Box: Claude Ship Autonomous PR Pipeline
+    box(c, 64, 504, 420, 278, 28, C.white, th.line);
+    txt(c, 'Claude Ship Agent', 92, 552, { sz: 30, w: 700, col: C.ink });
+    ['Review Code', 'Fix Bugs', 'Approve PR'].forEach((st, idx) => {
+      const sy = 578 + idx * 62;
+      box(c, 92, sy, 364, 48, 16, C.aquac, null);
+      icon(c, 'check', 120, sy + 24, 22, C.aquad, 2.5);
+      txt(c, st, 152, sy + 32, { sz: 22, w: 700, col: C.aquad });
+    });
+
+    // Right Sub-Box: Python vs Rust CPU Load Gauge (-70% CPU)
+    box(c, 508, 504, 420, 278, 28, C.white, th.line);
+    txt(c, 'API Rebuilt in Rust', 536, 552, { sz: 30, w: 700, col: C.ink });
+    txt(c, 'Python CPU Load (100%)', 536, 598, { sz: 19, w: 600, col: C.mute });
+    box(c, 536, 610, 364, 26, 13, C.errc, null);
+    box(c, 536, 610, 364, 26, 13, C.err, null);
+    txt(c, 'Rust CPU Load (-70% Reduction!)', 536, 676, { sz: 19, w: 700, col: C.aquad });
+    box(c, 536, 688, 364, 26, 13, C.aquac, null);
+    box(c, 536, 688, 364 * 0.30, 26, 13, C.aquad, null);
+    txt(c, '700M+ Monthly MCP SDK Downloads', 536, 755, { sz: 20, w: 700, col: C.blue });
+  }
+});
+
+// STORY 04: Cybersecurity, Linux Shirudo, 3.5B Leak & NY 5-Year AI Toy Ban (Nov 23–26, 2026)
+SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
+  num: '04',
+  dateTag: '23–26 NOV 2026',
+  catTag: 'CYBERSECURITY & LAW',
+  ic: 'shield',
+  shape: 'shieldShape',
+  title: 'Shirudo Linux Defense, 3.5B Leak & NY Toy Ban',
+  neTitle: 'लिनक्स सुरक्षा सिरुडो, डाटा चुहावट र एआई खेलौना प्रतिबन्ध',
+  src: 'Wired · The Hacker News · TechCrunch (23–26 Nov 2026)',
+  beats: [
+    ['OpenAI & Cisco Launch "Shirudo"', 'चलिरहेका लिनक्स सर्भर जोगाउन सिरुडो प्रणाली'],
+    ['3.5B Records Exposed & FinCEN Offline', 'साढे तीन अर्ब पासवर्ड चुहावट र फिनसेन बन्द'],
+    ['New York Bans AI Chatbot Toys (5 Yrs)', 'न्युयोर्कमा एआई खेलौनामा ५ वर्षको प्रतिबन्ध'],
+    ['42 States Block Character.AI Chat Sale', '४२ राज्यद्वारा २.१ करोड निजी च्याट लिलामीमा रोक']
+  ],
+  draw: (c, t, beat, v, th, T) => {
+    const quads = [
+      ['01 · LINUX & CLOUD DEFENSE', 'OpenAI + Cisco Shirudo', 'लिनक्स सर्भर र एडब्लुएस सुरक्षा', 'Real-time Linux protection + AWS Nitro isolation', 'shield', C.aquac, C.aquad, beat === 0],
+      ['02 · DATA BREACHES', '3.5 Billion Records', 'साढे तीन अर्ब विवरण बाहिरियो', 'Two exposed DBs + US Treasury FinCEN intrusion', 'warn', C.errc, C.err, beat === 1],
+      ['03 · CHILD SAFETY LAW', 'NY 5-Year AI Toy Ban', 'एआई खेलौनामा ५ वर्ष प्रतिबन्ध', 'Signed by Gov. Hochul · $15,000/day penalty', 'lock', C.amberc, C.amberd, beat === 2],
+      ['04 · PRIVACY COALITION', '42 State AGs Object', 'निजी च्याट लिलामी रोक्न निवेदन', 'Blocks Character.AI auction of 21M user chats', 'doc', C.pc, C.blue, beat === 3]
+    ];
+    quads.forEach(([kicker, big, ne, sub, ic, bg, fg, hi], i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const qx = 36 + col * 468, qy = 36 + row * 398;
+      box(c, qx, qy, 452, 378, 36, hi ? bg : th.soft, hi ? fg : th.line, hi ? 3.2 : 1.5);
+      txt(c, kicker, qx + 32, qy + 46, { sz: 16, w: 700, col: hi ? fg : th.mu, ls: 1.5 });
+      shape(c, hi ? fg : th.accc, qx + 76, qy + 128, 44, seq8[i * 2], 'sunny', 0.4, T * 0.3);
+      icon(c, ic, qx + 76, qy + 128, 34, hi ? C.white : th.onacc, 2.4);
+      txt(c, big, qx + 138, qy + 122, { sz: 32, w: 700, col: hi ? C.ink : th.fg });
+      txt(c, ne, qx + 138, qy + 160, { sz: 22, w: 600, col: hi ? fg : th.acc });
+      box(c, qx + 32, qy + 206, 388, 136, 22, th.card, th.line);
+      const ls = wrap(c, sub, 22, 600, 340);
+      ls.forEach((l, li) => txt(c, l, qx + 54, qy + 256 + li * 34, { sz: 22, w: 600, col: th.fg }));
+    });
+  }
+});
+
+// STORY 05: Autonomous Mobility, iOS 27.3, Nothing Ear Note, Firefox 161 & Agent Commerce (Nov 22–26, 2026)
+SC.n5 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
+  num: '05',
+  dateTag: '22–26 NOV 2026',
+  catTag: 'MOBILITY & CONSUMER TECH',
+  ic: 'car',
+  shape: 'clover',
+  title: 'Tesla FSD v15, iOS 27.3, Firefox 161 & Muse',
+  neTitle: 'स्वचालित सवारी, आइओएस २७.३, फायरफक्स १६१ र म्युज',
+  src: 'TechCrunch · The Verge · SiliconReport (22–26 Nov 2026)',
+  beats: [
+    ['Tesla FSD v15 & Bay Area Robotaxis', 'टेस्ला एफएसडी १५ र उबर-लुसिड-नुरो परीक्षण'],
+    ['iOS 27.3 & Nothing Ear Note Case', 'आइओएस २७.३ र आवाज रेकर्ड गर्ने इयर नोट'],
+    ['Firefox 161 Auto Per-Site VPN', 'फायरफक्स १६१ मा स्वचालित प्रति-साइट भिपिएन'],
+    ['Walmart & Amazon Meta Muse Talks', 'वालमार्टमा म्युज शपिङ र अमेजनसँग वार्ता']
+  ],
+  draw: (c, t, beat, v, th, T) => {
+    const items = [
+      ['AUTONOMOUS DRIVING', 'Tesla FSD v15 + Uber · Lucid · Nuro', 'सान फ्रान्सिस्कोमा रोबोट्याक्सी र टेस्लाको नयाँ संस्करण', 'car', C.pc, C.blue, '22–24 NOV'],
+      ['MOBILE & AUDIO GEAR', 'Apple iOS 27.3 + Nothing Ear Note', 'छ वटा आइफोन एपमा अपडेट र एआई रेकर्डिङ इयरबड्स', 'phone', C.aquac, C.aquad, '23 NOV'],
+      ['PRIVACY BROWSER', 'Mozilla Firefox 161 + GrapheneOS RCS', 'हरेक वेबसाइटका लागि स्वचालित भिपिएन सुरक्षा', 'globe', C.violetc, C.violet, '23–24 NOV'],
+      ['AI AGENT COMMERCE', 'Meta Muse × Walmart & Amazon Talks', 'ब्ल्याक फ्राइडे किनमेलमा एआई एजेन्टको प्रयोग', 'wallet', C.amberc, C.amberd, '23–26 NOV']
+    ];
+    items.forEach(([tag, title, ne, ic, bg, fg, dt], i) => {
+      const hi = beat === i;
+      const by = 36 + i * 198;
+      box(c, 36, by, 920, 180, 32, hi ? bg : th.soft, hi ? fg : th.line, hi ? 3 : 1.5);
+      box(c, 66, by + 34, 112, 112, 28, hi ? fg : th.accc, null);
+      icon(c, ic, 122, by + 90, 52, hi ? C.white : th.onacc, 2.5);
+      txt(c, tag, 206, by + 54, { sz: 17, w: 700, col: hi ? fg : th.mu, ls: 1.5 });
+      chip(c, dt, 780, by + 28, { sz: 16, fill: C.white, col: fg, h: 34 });
+      txt(c, title, 206, by + 102, { sz: 34, w: 700, col: hi ? C.ink : th.fg });
+      txt(c, ne, 206, by + 146, { sz: 23, w: 600, col: hi ? fg : th.mu });
+    });
+  }
+});
+
+// QUICK WEEKLY TECH ROUNDUP (fast: f1..f4)
+SC.fast = (c, t, sc, th, T) => {
+  const v = V(T);
+  dotgrid(c, th, T, .8);
+  const f1 = lt(sc, 'f1'), f2 = lt(sc, 'f2'), f3 = lt(sc, 'f3'), f4 = lt(sc, 'f4');
+  const beat = activeBeat(sc, t);
+
+  // Header Banner
+  bento(c, 68, 102, 1784, 130, 36, th, { fill: C.blueDark, stroke: '#3570e6' });
+  chip(c, 'RAPID ROUNDUP · छोटकरीमा प्रविधि', 104, 138, { sz: 22, fill: C.aquac, col: C.aquad, ic: 'bolt' });
+  txt(c, 'Local AI Compression, SSD Model Streaming, Open-Source Speedups & Music Policy', 540, 178, { sz: 28, w: 600, col: C.white });
+
+  const cards = [
+    [f1, 'PrismML Ternary Bonsai 27B', '54 GB → 5.9 GB', 'चौवन्न जिबीको मोडेल पाँच दशमलव नौ जिबीमा', 'Runs on laptops, iPhones & iPads with -1, 0, +1 weights', 'chip', C.pc, C.blue],
+    [f2, 'Magnitude SSD Inference', '66 GB Model on SSD', 'एसएसडी स्टोरेजबाटै ठूला मोडेल सञ्चालन', '41 tokens/sec on a 24 GB GPU by streaming from SSD', 'server', C.aquac, C.aquad],
+    [f3, 'Tencent DFly2 & Canada Fund', '+81% Speed · $1B Fund', 'डिफ्लाई टु ओपन सोर्स र क्यानडाको एआई कोष', '81% faster DeepSeek throughput + Canada $1B compute fund', 'bolt', C.amberc, C.amberd],
+    [f4, 'Tidal AI Music Policy', 'Dec 9 Removal', 'टाइडलबाट पूर्ण एआई गीतहरू हटाइने', 'Removes 100% AI-generated tracks starting December 9', 'music', C.rosec, C.rosed]
+  ];
+
+  cards.forEach(([trig, title, metric, ne, sub, ic, bg, fg], i) => {
+    const p = sp(t, Math.max(0.1, trig - 0.15), 0.75);
+    const hi = beat === i;
+    const col = i % 2, row = Math.floor(i / 2);
+    const cx = 68 + col * 904, cy = 256 + row * 354 + (1 - p) * 40;
+    c.save();
+    c.globalAlpha = clamp(p * 1.3);
+    box(c, cx, cy, 880, 330, 40, hi ? C.white : C.blueCont, hi ? C.aqua : '#3570e6', hi ? 3.5 : 1.8);
+    box(c, cx + 38, cy + 38, 88, 88, 28, bg, null);
+    icon(c, ic, cx + 82, cy + 82, 46, fg, 2.5);
+    chip(c, metric, cx + 560, cy + 44, { sz: 24, fill: bg, col: fg, h: 48 });
+    txt(c, title, cx + 152, cy + 88, { sz: 36, w: 700, col: hi ? C.ink : C.white });
+    txt(c, ne, cx + 38, cy + 190, { sz: 28, w: 600, col: hi ? fg : '#d8e4ff' });
+    txt(c, sub, cx + 38, cy + 245, { sz: 22, w: 500, col: hi ? C.mute : '#b5cbff' });
+    c.restore();
+  });
 };

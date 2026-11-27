@@ -14,7 +14,7 @@ open("out/nebians-news-ep1.srt", "w").write("\n".join(out))
 EOF
 ffmpeg -y -loglevel error -i $B/voice.wav -c:a libmp3lame -b:a 160k $O/sakhiya-voice-only.mp3
 ffmpeg -y -loglevel error -ss 4 -i $O/nebians-news-ep1.mp4 -frames:v 1 $O/poster.jpg
-NOTES="NEBians News, episode 01: Meet Sakhiya. 3:47, 1080p30. Voice: Sakhiya V1 int8 (docs/models_v2), default news style only, no other styles. Early phase model, trained for a few days. News as reported on 23 Nov 2026 (CNBC, Yahoo Finance, Indian Express, FT, AI Weekly). Source: video/ in this repo. Rendered on MoLab (canvas + Playwright + ffmpeg)."
+NOTES="NEBians News, Episode 01 (Friday Weekly Recap · 27 Nov 2026): Meet Sakhiya-One v2 + Global AI, Tech & Nepal Education Weekly Recap (strictly covering Sat 21 Nov – Fri 27 Nov 2026). 5:42 (342s), 1080p30. Voice: Sakhiya-One v2 Studio INT8 ONNX (docs/models_sakhiya_one_vocos, 23 MB, 24 kHz Vocos), news style. Visuals: Upgraded Material 3 Expressive motion graphics with compact bilingual subtitles. Rendered on MoLab (HTML5 Canvas + Playwright + FFmpeg)."
 API=https://api.github.com/repos/$REPO/releases
 OLD=$(curl -s -H "Authorization: token $TOK" "$API/tags/$TAG" | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))")
 [ -n "$OLD" ] && curl -s -X DELETE -H "Authorization: token $TOK" "$API/$OLD" >/dev/null
