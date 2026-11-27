@@ -18,8 +18,43 @@ def _init():
     model_dir = os.environ.get("SAKHIYA_MODEL_DIR", os.path.join(ROOT, "docs", "models_sakhiya_one_vocos"))
     _m = SakhiyaONNX(model_dir, tiny=True, threads=2)
 
+PRON = S.get("pron", {})
+def tts_text(t):
+    for a, b in PRON.items(): t = t.replace(a, b)
+    return t
+
+def clean(w, sr=48000):
+    """Voice clean-up (code only): high-pass, split-band de-esser, tame the 3.5-4.5k 'metal' band, roll off hiss/air, tiny room."""
+    from scipy.signal import stft, istft, sosfiltfilt
+    w = sosfiltfilt(butter(2, 75, "hp", fs=sr, output="sos"), w).astype(np.float32)
+    f, _, Z = stft(w, sr, nperseg=1024, noverlap=768)
+    P = np.abs(Z) ** 2
+    sib = (f >= 4800) & (f <= 11500); ref = (f >= 200) & (f <= 3500)
+    Es = P[sib].mean(0); Er = P[ref].mean(0) + 1e-9; r = Es / Er
+    voiced = Er > 0.02 * Er.max()
+    thr = 1.25 * np.median(r[voiced]) if voiced.any() else 1.0
+    red = np.clip(10 * np.log10(np.maximum(r, 1e-9) / thr), 0, 11)      # dB to pull down per frame
+    red = np.maximum(red, np.convolve(red, np.ones(3) / 3, "same"))
+    red = np.convolve(red, np.ones(3) / 3, "same")
+    G = np.ones_like(P)
+    bw = np.clip((f - 4000) / 1500, 0, 1) * np.clip((13500 - f) / 1500, 0, 1)   # soft band edges
+    G = 10 ** (-(bw[:, None] * red[None, :]) / 20)
+    # static tone shaping: dip metallic 3.4-4.6k (-2.2 dB), air shelf above 7k (-4 dB), steep lowpass ~10.5k
+    G *= 10 ** ((-2.2 * np.exp(-((f - 3900) / 650) ** 2) - 4.0 * np.clip((f - 7000) / 2500, 0, 1))[:, None] / 20)
+    G *= (1 / (1 + (f / 10500) ** 8))[:, None]
+    _, y = istft(Z * G, sr, nperseg=1024, noverlap=768); y = y[:len(w)].astype(np.float32)
+    if len(y) < len(w): y = np.pad(y, (0, len(w) - len(y)))
+    # gentle body: +1.2 dB around 180 Hz so the voice sounds less thin/robotic
+    y = y + 0.14 * sosfiltfilt(butter(2, [130, 260], "bp", fs=sr, output="sos"), y).astype(np.float32)
+    rng = np.random.default_rng(7); n = int(0.16 * sr); t = np.arange(n) / sr
+    ir = rng.standard_normal(n) * np.exp(-t / 0.045); ir[0] = 0; ir = sosfilt(butter(2, 5500, "lp", fs=sr, output="sos"), ir)
+    ir /= np.abs(ir).sum() + 1e-9
+    wet = fftconvolve(y, ir * 3.0)[:len(y)]
+    return (y + 0.07 * wet).astype(np.float32)
+
 def _synth(job):
     lid, text = job
+    text = tts_text(text)
     w, sr = _m.say(text, lang="ne", style="news")
     return lid, np.asarray(w, dtype=np.float32), int(sr)
 
@@ -45,6 +80,7 @@ def main():
     clips, rep = {}, {}
     for lid, w, sr in res:
         w = trim(w.copy(), sr); w = resample_poly(w, SR, sr).astype(np.float32) if sr != SR else w
+        w = trim(clean(w, SR), SR)
         r = float(np.sqrt((w ** 2).mean()) + 1e-9); w = w * (0.095 / r)
         pk = float(np.abs(w).max()); w = w * (0.89 / pk) if pk > 0.89 else w
         clips[lid] = w; txt = dict(lines)[lid]; rep[lid] = check(w, SR, txt)
@@ -69,7 +105,7 @@ def main():
 
 def master(B):
     import subprocess
-    subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-i", B + "/voice.wav", "-af", "loudnorm=I=-16:TP=-1.5:LRA=7,aresample=48000", "-ac", "2", B + "/mix.wav"])
+    subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-i", B + "/voice.wav", "-af", "acompressor=threshold=-20dB:ratio=2.2:attack=8:release=140:makeup=1,loudnorm=I=-16:TP=-1.5:LRA=7,aresample=48000", "-ac", "2", B + "/mix.wav"])
 
 def env(v, total):
     n = int(total * FPS) + 2; hop = SR // FPS; win = 2048; out = []

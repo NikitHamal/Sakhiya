@@ -13,18 +13,33 @@ function stageText(c, cx, cy, R, l, a, dy, p, ink) {
 }
 SC.story = (c, t, sc, p, T) => {
   bg(c, p, T); const b = .35; headerChips(c, t, sc, p, b);
-  const sz = wrap(c, sc.h, 68, 700, 800).length > 3 ? 58 : 68, hd = kinetic(c, sc.h, 120, 330, t - b - .1, { sz, w: 700, maxW: 800, col: p.ink, lh: sz * 1.16 });
-  const na = sp(t, b + .55, .6), nl = wrap(c, sc.hn, 32, 500, 800);
-  nl.forEach((s, i) => txt(c, s, 120, hd.last + 66 + i * 46 + (1 - na) * 24, { sz: 32, w: 500, col: p.mute, a: clamp(na) }));
-  // stepper
-  const k = Math.max(0, cur(sc, t)), n = sc.lines.length; let sx = 120;
-  for (let i = 0; i < n; i++) {
-    const act = i === k ? ss(t, i ? lt(sc, i) : b, .4) : (i === k - 1 ? 1 - ss(t, lt(sc, k), .4) : 0), w = lerp(24, 84, act);
-    box(c, sx, 826, w, 14, 7, mixc(p.high, p.pri, i <= k ? 1 : 0), null); sx += w + 10;
+  const sz = wrap(c, sc.h, 72, 700, 820).length > 3 ? 60 : 72, hd = kinetic(c, sc.h, 120, 336, t - b - .1, { sz, w: 700, maxW: 820, col: p.ink, lh: sz * 1.14 });
+  const na = sp(t, b + .55, .6), nl = wrap(c, sc.hn, 34, 500, 820);
+  nl.forEach((s, i) => txt(c, s, 120, hd.last + 64 + i * 48 + (1 - na) * 24, { sz: 34, w: 500, col: p.mute, a: clamp(na) }));
+  const k = Math.max(0, cur(sc, t)), n = sc.lines.length, yEnd = hd.last + 64 + (nl.length - 1) * 48;
+  if (n <= 4) {
+    // recap rail: each point appears as it is covered (tonal list rows)
+    const ry = Math.max(yEnd + 56, 628);
+    sc.lines.forEach((l, j) => {
+      const e = sp(t, lt(sc, j) + .1, .6); if (e <= .001) return;
+      const act = j === k ? 1 : 0, y = ry + j * 64 + (1 - e) * 30, w = 760;
+      c.save(); c.globalAlpha *= clamp(e * 1.4);
+      box(c, 120, y, w, 56, 28, act ? p.priC : p.cont, null);
+      shape(c, act ? p.pri : p.high, 152, y + 28, 19, SHAPES6[j % 6], 'circle', 0, T * .3 * act);
+      if (j < k) icon(c, 'check', 152, y + 28, 22, p.pri, 2.6); else txt(c, String(j + 1), 152, y + 37, { sz: 22, w: 700, col: p.onPri, al: 'center' });
+      txt(c, l.label, 190, y + 37, { sz: 27, w: act ? 700 : 500, col: act ? p.onPriC : p.mute });
+      c.restore();
+    });
+  } else {
+    let sx = 120;
+    for (let i = 0; i < n; i++) {
+      const act = i === k ? ss(t, i ? lt(sc, i) : b, .4) : (i === k - 1 ? 1 - ss(t, lt(sc, k), .4) : 0), w = lerp(24, 84, act);
+      box(c, sx, 826, w, 14, 7, mixc(p.high, p.pri, i <= k ? 1 : 0), null); sx += w + 10;
+    }
+    txt(c, String(k + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0'), sx + 14, 840, { sz: 24, w: 600, col: p.mute });
   }
-  txt(c, String(k + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0'), sx + 14, 840, { sz: 22, w: 600, col: p.mute });
   // stage
-  const cx = 1385, cy = 472, R = 288, ent = sp(t, b, .9), kk = Math.max(0, cur(sc, t));
+  const cx = 1400, cy = 452, R = 292, ent = sp(t, b, .9), kk = Math.max(0, cur(sc, t));
   const A = STAGE[(kk + 5) % 6], B = STAGE[kk % 6], m = kk ? ss(t, lt(sc, kk), .8) : 1;
   c.save(); c.globalAlpha *= clamp(ent * 1.5);
   shape(c, p.secC, cx + 34, cy + 26, R * ent, B, A, 1 - m, -T * .16 + 1);
@@ -46,6 +61,7 @@ SC.hello = (c, t, sc, p, T) => {
   bg(c, p, T); const cx = 1400, cy = 478, R = 250, ent = sp(t, 1.0, .9);
   for (let i = 0; i < 3; i++) { const q = P(t, 1.0 + i * .28, 2.6); if (q > 0 && q < 1) shapeLine(c, p.pri, 5 * (1 - q) + 1, cx, cy, R + eio(q) * 520, 'cookie12', 'circle', q, T * .3 + i); }
   txt(c, '', 0, 0);
+  logo(c, 120, 118, 148, T, sp(t, .1, .8));
   kinetic(c, 'NEBians', 120, 440, t - .25, { sz: 172, w: 700, maxW: 1000, col: p.ink, st: .08 });
   kinetic(c, 'News', 120, 610, t - .45, { sz: 172, w: 700, maxW: 1000, col: p.pri, st: .08 });
   const a = sp(t, 1.0, .6);
@@ -139,6 +155,7 @@ SC.fast = (c, t, sc, p, T) => {
 
 SC.outro = (c, t, sc, p, T) => {
   bg(c, p, T); const cx = 1400, cy = 478, R = 250, ent = sp(t, .3, .9), b = .25;
+  logo(c, 120, 112, 128, T, sp(t, .1, .8));
   kinetic(c, 'See you', 120, 400, t - b, { sz: 150, w: 700, maxW: 1000, col: p.ink });
   kinetic(c, 'next Friday', 120, 560, t - b - .25, { sz: 150, w: 700, maxW: 1100, col: p.pri });
   const a = sp(t, 1.0, .6); let x = 124;

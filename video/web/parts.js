@@ -21,8 +21,15 @@ function bg(c, p, T) {
   shape(c, mixc(p.bg, p.cont, .75), 1840, 130, 540, 'cookie12', 'cookie9', .5 + .5 * Math.sin(T * .3), T * .05);
   shape(c, mixc(p.bg, p.cont, .55), 30, 1050, 430, 'flower', 'sunny', .5 + .5 * Math.sin(T * .25 + 1), -T * .06);
 }
+function logo(c, x, y, s, T = 0, a = 1) {
+  // official NEBians mark on a soft tonal plate
+  c.save(); c.globalAlpha *= a; c.shadowColor = 'rgba(10,30,90,.22)'; c.shadowBlur = s * .22; c.shadowOffsetY = s * .06;
+  box(c, x, y, s, s, s * .3, [247, 249, 255], null); c.shadowColor = 'transparent';
+  if (window.LOGO && LOGO.complete) c.drawImage(LOGO, x + s * .1, y + s * .1 + Math.sin(T * 1.6) * s * .008, s * .8, s * .8);
+  c.restore();
+}
 function chip(c, x, y, label, o = {}) {
-  const h = o.h || 50, sz = o.sz || 22, pad = 22, iw = o.icon ? h * .5 + 10 : 0, w = tw(c, label, sz, 600) + (o.ls || 0) * label.length + pad * 2 + iw, a = o.a ?? 1, s = o.s ?? 1;
+  const h = o.h || 56, sz = o.sz || 25, pad = 22, iw = o.icon ? h * .5 + 10 : 0, w = tw(c, label, sz, 600) + (o.ls || 0) * label.length + pad * 2 + iw, a = o.a ?? 1, s = o.s ?? 1;
   if (a <= .01) return w;
   c.save(); c.globalAlpha *= a; c.translate(x + w / 2, y + h / 2); c.scale(s, s); c.translate(-(x + w / 2), -(y + h / 2));
   box(c, x, y, w, h, h / 2, o.fill, o.stroke, 2);
@@ -77,13 +84,13 @@ function caption(c, T, p, sc) {
   if (a <= .01) return;
   const pg = pagesOf(best), fr = clamp((T - best.t) / best.d); let k = pg.cuts.findIndex(x => fr < x); if (k < 0) k = pg.ne.length - 1;
   const ne = pg.ne[k], en = pg.en[Math.min(k, pg.en.length - 1)];
-  const w = Math.max(tw(c, ne, 30, 600), tw(c, en, 21, 500)) + 64 + 86, h = 90, x0 = W / 2 - w / 2, y0 = 946, lift = (1 - a) * 14;
+  const w = Math.max(tw(c, ne, 33, 600), tw(c, en, 23, 500)) + 64 + 92, h = 100, x0 = W / 2 - w / 2, y0 = 938, lift = (1 - a) * 14;
   c.save(); c.globalAlpha *= a;
-  box(c, x0, y0 + lift, w, h, 30, C(p.surf, .94), C(p.line, .8), 1.5);
-  avatar(c, x0 + 52, y0 + lift + h / 2, 28, T, p, ampAt(T) * 1.1, {});
-  const tx = x0 + 86 + (w - 86) / 2;
-  txt(c, ne, tx, y0 + lift + 40, { sz: 30, w: 600, col: p.ink, al: 'center' });
-  txt(c, en, tx, y0 + lift + 70, { sz: 21, w: 500, col: p.mute, al: 'center' });
+  box(c, x0, y0 + lift, w, h, 34, C(p.surf, .94), C(p.line, .8), 1.5);
+  avatar(c, x0 + 56, y0 + lift + h / 2, 30, T, p, ampAt(T) * 1.1, {});
+  const tx = x0 + 92 + (w - 92) / 2;
+  txt(c, ne, tx, y0 + lift + 44, { sz: 33, w: 600, col: p.ink, al: 'center' });
+  txt(c, en, tx, y0 + lift + 78, { sz: 23, w: 500, col: p.mute, al: 'center' });
   c.restore();
 }
 function wavy(c, x0, x1, y, prog, T, p) {
@@ -98,10 +105,10 @@ function chrome(c, T, i, p) {
   const sc = TL.scenes[i], a = i === 0 ? ss(T, 2.6, .5) : 1;
   if (a > .01) {
     c.save(); c.globalAlpha *= a;
-    shape(c, p.pri, 150, 66, 22, 'cookie12', 'cookie9', .5, T * .4); txt(c, 'N', 150, 74, { sz: 22, w: 700, col: p.onPri, al: 'center' });
-    txt(c, 'NEBians News', 186, 75, { sz: 28, w: 700, col: p.ink, ls: .2 });
-    const lab = 'Episode 1  ·  Fri 27 Nov 2026', ww = tw(c, lab, 20, 600) + 40;
-    box(c, W - 120 - ww, 44, ww, 44, 22, C(p.surf, .9), C(p.line, .8), 1.5); txt(c, lab, W - 120 - ww / 2, 73, { sz: 20, w: 600, col: p.mute, al: 'center' });
+    logo(c, 120, 36, 64, T);
+    txt(c, 'NEBians News', 198, 78, { sz: 31, w: 700, col: p.ink, ls: .2 });
+    const lab = 'Episode 1  ·  Fri 27 Nov 2026', ww = tw(c, lab, 23, 600) + 48;
+    box(c, W - 120 - ww, 44, ww, 52, 26, C(p.surf, .9), C(p.line, .8), 1.5); txt(c, lab, W - 120 - ww / 2, 78, { sz: 23, w: 600, col: p.mute, al: 'center' });
     c.restore();
   }
   caption(c, T, p, sc);

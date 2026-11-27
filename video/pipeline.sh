@@ -3,6 +3,6 @@
 set -e; cd "$(dirname "$0")/.."
 mkdir -p /work/fonts && (cd /work/fonts && [ -d node_modules/@fontsource/poppins ] || (npm init -y >/dev/null && npm i @fontsource/poppins @fontsource/noto-sans-devanagari >/dev/null 2>&1))
 echo "[1/4] audio"; python3 video/gen_audio.py
-echo "[2/4] render"; WORKERS=${WORKERS:-12} nice -n 10 python3 video/seg_render.py
+echo "[2/4] render"; python3 video/render.py --workers ${WORKERS:-18}
 echo "[3/4] release"; bash video/release.sh
 echo "[4/4] done"

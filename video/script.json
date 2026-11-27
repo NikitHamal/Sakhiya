@@ -107,7 +107,7 @@
     },
     {
      "id": "c2",
-     "ne": "यसमा हामी विश्वभरका ठूला एआई र प्रविधिका खबर ल्याउँछौँ, जसमा चिप, स्पेस, साइबर सुरक्षा र गजेट पनि पर्छन्।",
+     "ne": "यसमा हामी विश्वभरका ठूला एआई र टेक खबर ल्याउँछौँ, जसमा चिप, स्पेस, साइबर सिक्युरिटी र ग्याजेट पनि पर्छन्।",
      "en": "We cover major global AI and tech news, including chips, space, cybersecurity and gadgets.",
      "big": "AI & Tech",
      "label": "Chips · Space · Security · Gadgets"
@@ -150,28 +150,28 @@
    "lines": [
     {
      "id": "n1a",
-     "ne": "पहिलो समाचार। अमेरिकी नियामक एफसीसीले स्पेसएक्सलाई अन्तरिक्षमा दस लाख एआई डाटा सेन्टर स्याटेलाइट पठाउन अनुमति दिएको छ।",
-     "en": "The US regulator FCC approved SpaceX to deploy up to one million orbital AI data center satellites.",
+     "ne": "पहिलो समाचार, र सुरुमै ठूलो खबर। अमेरिकी नियामक एफसीसीले स्पेसएक्सलाई अन्तरिक्षमा दस लाख एआई डाटा सेन्टर स्याटेलाइट पठाउन अनुमति दिएको छ।",
+     "en": "First story, and a big one. The US regulator FCC approved SpaceX to deploy up to one million orbital AI data center satellites.",
      "big": "1,000,000",
      "label": "AI satellites approved by the FCC"
     },
     {
      "id": "n1b",
-     "ne": "स्टारमाइन्ड नामको यो योजनामा स्याटेलाइटहरूले अन्तरिक्षमै सौर्य ऊर्जाबाट एआई चिप चलाउनेछन्।",
+     "ne": "स्टारमाइन्ड नामको यो प्रोजेक्टमा स्याटेलाइटहरूले अन्तरिक्षमै सोलार पावरबाट एआई चिप चलाउनेछन्।",
      "en": "Named Starmind, the satellites will run AI chips in orbit on solar power.",
      "big": "Starmind",
      "label": "Solar-powered AI chips in orbit"
     },
     {
      "id": "n1c",
-     "ne": "पृथ्वीमा बिजुली र जमिनको अभाव बढेपछि यो योजना आएको हो, र यी स्याटेलाइट लेजरमार्फत स्टारलिङ्कसँग जोडिनेछन्।",
+     "ne": "पृथ्वीमा बिजुली र जग्गाको अभाव बढेपछि यो योजना आएको हो, र यी स्याटेलाइट लेजरमार्फत स्टारलिङ्कसँग कनेक्ट हुनेछन्।",
      "en": "It comes as power and land on Earth run short, and the satellites will link to Starlink with lasers.",
      "big": "Laser links",
      "label": "Connected to Starlink"
     },
     {
      "id": "n1d",
-     "ne": "तर खगोलविद्हरूले अन्तरिक्षमा फोहोर बढ्ने र आकाशका तारा हेर्न असर पर्ने चिन्ता व्यक्त गरेका छन्।",
+     "ne": "तर वैज्ञानिकहरूले अन्तरिक्षमा फोहोर बढ्ने र रातमा तारा हेर्न गाह्रो हुने चिन्ता व्यक्त गरेका छन्।",
      "en": "But astronomers warned about more space debris and interference with stargazing.",
      "big": "Concerns",
      "label": "Space debris and sky views"
@@ -193,28 +193,28 @@
    "lines": [
     {
      "id": "n2a",
-     "ne": "दोस्रो समाचार। एनभिडियाको बोर्डले जेन्सेन हुआङलाई सोमबार फेरि सीईओ पदमा फर्काएको छ।",
-     "en": "Nvidia's board reinstated Jensen Huang as CEO on Monday.",
+     "ne": "दोस्रो समाचार, चिपको दुनियाँबाट। एनभिडियाको बोर्डले जेन्सेन हुआङलाई सोमबार फेरि सीईओ बनाएको छ।",
+     "en": "Second story, from the chip world. Nvidia's board reinstated Jensen Huang as CEO on Monday.",
      "big": "CEO",
      "label": "Jensen Huang reinstated"
     },
     {
      "id": "n2b",
-     "ne": "उनको फिर्तीसँगै सोमबार एनभिडियाको सेयर मूल्य तीस प्रतिशतभन्दा बढीले उकालो लाग्यो।",
+     "ne": "उनको कमब्याकसँगै सोमबार एनभिडियाको शेयर तीस प्रतिशतभन्दा बढीले उक्लियो।",
      "en": "Nvidia shares surged over 30 percent on Monday after his return.",
      "big": "+30%",
      "label": "Shares jumped on Monday"
     },
     {
      "id": "n2c",
-     "ne": "तर उत्तराधिकारी योजना नचाहिने उनको भनाइपछि मंगलबार सेयर मूल्य छ प्रतिशतले घट्यो।",
+     "ne": "तर सक्सेसन प्लान चाहिँदैन भनेपछि मंगलबार शेयर छ प्रतिशतले खस्यो।",
      "en": "But shares fell 6 percent on Tuesday after he said no formal succession plan is needed.",
      "big": "−6%",
      "label": "Dip after succession remarks"
     },
     {
      "id": "n2d",
-     "ne": "यसै साता एनभिडियाले चार दक्षिणपूर्वी एसियाली देशमा एआई सर्भर पठाउन रोकेको छ भने हुवावेले नयाँ मेमोरी चिपको संकेत दिएको छ।",
+     "ne": "यसै साता एनभिडियाले चार दक्षिणपूर्वी एसियाली देशमा एआई सर्भर पठाउन रोकेको छ, भने हुवावेले नयाँ मेमोरी चिपको टिजर दिएको छ।",
      "en": "This week Nvidia also halted AI server shipments to four Southeast Asian countries, while Huawei teased a new memory chip.",
      "big": "4 countries",
      "label": "AI server shipments halted"
@@ -236,28 +236,28 @@
    "lines": [
     {
      "id": "n3a",
-     "ne": "तेस्रो समाचार। ओपन एआईले जिपिटी सिक्स पोइन्ट टु सोल मोडेल मुख्य च्याट ट्याबमा ल्याएको छ।",
+     "ne": "तेस्रो समाचार, एआई मोडेलहरूबाट। ओपन एआईले जिपिटी सिक्स पोइन्ट टु सोल मोडेल च्याटजिपिटीको मुख्य ट्याबमा ल्याएको छ।",
      "en": "OpenAI brought its GPT-6.2 Sol model into the main ChatGPT tab.",
      "big": "GPT-6.2 Sol",
      "label": "Now in the main ChatGPT tab"
     },
     {
      "id": "n3b",
-     "ne": "साथै डाटा सुरक्षित राख्ने प्राइभेट इन्फरेन्स परीक्षण र प्रोटिन डिजाइन क्षमता पनि देखाइएको छ।",
+     "ne": "साथै इन्क्रिप्टेड प्राइभेट इन्फरेन्स टेस्ट गर्न थालेको छ, र प्रोटिन डिजाइन गर्ने क्षमता पनि देखाएको छ।",
      "en": "It also began testing encrypted Private Inference and showed protein design.",
      "big": "Private Inference",
      "label": "Encrypted AI, now in testing"
     },
     {
      "id": "n3c",
-     "ne": "उता एन्थ्रोपिकले कोड जाँच गर्ने र सुधार गर्ने क्लाउड सिप नामको टुल ल्याएको छ।",
+     "ne": "उता एन्थ्रोपिकले कोड रिभ्यु गर्ने र बग फिक्स गर्ने क्लाउड सिप नामको टुल लन्च गरेको छ।",
      "en": "Meanwhile Anthropic launched Claude Ship, a tool that reviews and fixes code.",
      "big": "Claude Ship",
      "label": "Reviews and fixes pull requests"
     },
     {
      "id": "n3d",
-     "ne": "एन्थ्रोपिकले आफ्नो एपिआई पाइथनबाट रस्ट भाषामा सार्दा सर्भरको सिपियु खपत सत्तरी प्रतिशतले घटेको छ।",
+     "ne": "अनि एन्थ्रोपिकले आफ्नो एपिआई पाइथनबाट रस्टमा सार्दा सर्भरको सिपियु युज सत्तरी प्रतिशतले घटेको छ। सानो कुरा होइन!",
      "en": "Anthropic moved its API from Python to Rust, cutting server CPU use by 70 percent.",
      "big": "−70% CPU",
      "label": "API moved from Python to Rust"
@@ -275,32 +275,32 @@
    "tag": "Security & Policy",
    "dates": "23–26 Nov",
    "h": "Cyber attacks and new AI rules in the US",
-   "hn": "साइबर सुरक्षा र अमेरिकामा नयाँ एआई नियम",
+   "hn": "साइबर सिक्युरिटी र अमेरिकामा नयाँ एआई नियम",
    "lines": [
     {
      "id": "n4a",
-     "ne": "चौथो समाचार, साइबर सुरक्षाबाट। ओपन एआई र सिस्कोले चलिरहेका लिनक्स सर्भर जोगाउन सिरुडो नामको प्रणाली ल्याएका छन्।",
+     "ne": "चौथो समाचार, साइबर सिक्युरिटीबाट। ओपन एआई र सिस्कोले चलिरहेका लिनक्स सर्भरलाई ह्याक हुनबाट जोगाउन सिरुडो नामको सिस्टम ल्याएका छन्।",
      "en": "OpenAI and Cisco launched Shirudo to protect running Linux servers from attacks.",
      "big": "Shirudo",
      "label": "Protects live Linux servers"
     },
     {
      "id": "n4b",
-     "ne": "तर यसै साता साढे तीन अर्ब रेकर्ड चुहिएको फेला परेको छ, र अमेरिकी वित्तीय निकाय फिनसेनका केही प्रणाली बन्द भएका छन्।",
-     "en": "But 3.5 billion records were found exposed this week, and some US FinCEN systems went offline.",
+     "ne": "तर यसै साता साढे तीन अर्ब रेकर्डको डाटा लिक भएको फेला परेको छ, र अमेरिकी वित्तीय निकाय फिनसेनका केही सिस्टम अफलाइन भएका छन्।",
+     "en": "But a data leak exposing 3.5 billion records was found this week, and some US FinCEN systems went offline.",
      "big": "3.5 billion",
-     "label": "Records exposed"
+     "label": "Records in a data leak"
     },
     {
      "id": "n4c",
-     "ne": "बालबालिकाको सुरक्षाका लागि न्युयोर्कले एआई च्याटबट खेलौनामा पाँच वर्षको प्रतिबन्ध लगाएको छ।",
+     "ne": "बालबालिकाको सुरक्षाका लागि न्युयोर्कले एआई च्याटबट भएका खेलौनामा पाँच वर्षको ब्यान लगाएको छ।",
      "en": "To protect children, New York banned AI chatbot toys for five years.",
      "big": "5-year ban",
      "label": "New York: AI chatbot toys"
     },
     {
      "id": "n4d",
-     "ne": "अनि बयालीस अमेरिकी राज्यले क्यारेक्टर एआईका एक्काइस मिलियन निजी च्याट लिलामी हुनबाट रोक्न अदालतमा निवेदन दिएका छन्।",
+     "ne": "अनि बयालीस अमेरिकी राज्यले क्यारेक्टर एआईका एक्काइस मिलियन प्राइभेट च्याट अक्सन हुनबाट रोक्न अदालतमा निवेदन दिएका छन्।",
      "en": "And 42 US states went to court to stop Character.AI from auctioning 21 million private chats.",
      "big": "42 states",
      "label": "Against the Character.AI chat auction"
@@ -322,28 +322,28 @@
    "lines": [
     {
      "id": "n5a",
-     "ne": "पाँचौँ समाचार, गाडी र हार्डवेयरबाट। टेस्लाले फुल सेल्फ ड्राइभिङ पन्ध्रौँ भर्सन सुरु गरेको छ, र उबर, लुसिड र नुरोले रोबोटैक्सी परीक्षण थालेका छन्।",
+     "ne": "पाँचौँ समाचार, गाडी र ग्याजेटको दुनियाँबाट। टेस्लाले फुल सेल्फ ड्राइभिङ भर्सन पन्ध्र रोलआउट गर्न थालेको छ, र उबर, लुसिड र नुरोले रोबोट्याक्सी टेस्ट सुरु गरेका छन्।",
      "en": "Tesla began rolling out Full Self-Driving v15, while Uber, Lucid and Nuro started robotaxi tests.",
      "big": "FSD v15",
      "label": "Tesla rollout · robotaxi tests"
     },
     {
      "id": "n5b",
-     "ne": "एप्पलले आईओएस सत्ताइस दशमलव तीन ल्याएको छ भने नथिङले आवाज रेकर्ड गर्ने इयर नोट इयरबड्स सार्वजनिक गरेको छ।",
+     "ne": "एप्पलले आईओएस सत्ताइस दशमलव तीन रिलिज गरेको छ भने नथिङले आवाज रेकर्ड गर्ने इयर नोट इयरबड्स लन्च गरेको छ।",
      "en": "Apple released iOS 27.3, and Nothing unveiled its Ear Note recording earbuds.",
      "big": "iOS 27.3",
      "label": "Apple update · Nothing Ear Note"
     },
     {
      "id": "n5c",
-     "ne": "मोजिलाले हरेक साइटमा स्वचालित भिपिएन चल्ने फायरफक्स एक सय एकसट्ठी ब्राउजर ल्याएको छ।",
+     "ne": "मोजिलाले हरेक साइटमा अटोमेटिक भिपिएन चल्ने फायरफक्स एक सय एकसट्ठी ब्राउजर ल्याएको छ।",
      "en": "Mozilla released Firefox 161 with automatic per-site VPN protection.",
      "big": "Firefox 161",
      "label": "Automatic per-site VPN"
     },
     {
      "id": "n5d",
-     "ne": "अनि वालमार्टले मेटाको म्युज एजेन्टलाई किनमेलमा जोडेको छ र अमेजनसँग पनि वार्ता सुरु भएको छ।",
+     "ne": "अनि वालमार्टले मेटाको म्युज एजेन्टलाई सपिङमा जोडेको छ, र अमेजनसँग पनि कुराकानी सुरु भएको छ।",
      "en": "And Walmart connected Meta's Muse agent to shopping, while Amazon and Meta began talks.",
      "big": "Muse agent",
      "label": "Walmart on board · Amazon in talks"
@@ -366,7 +366,7 @@
    "lines": [
     {
      "id": "e1",
-     "ne": "अब नेपालको शिक्षा क्षेत्रका मुख्य खबर। त्रिभुवन विश्वविद्यालयले आफ्ना सम्बन्धन प्राप्त कलेजहरूलाई आफ्नो विवरण बुझाउन निर्देशन दिएको छ।",
+     "ne": "अब नेपालको शिक्षा क्षेत्रका मुख्य खबर। त्रिभुवन विश्वविद्यालयले आफ्नो अन्तर्गतका कलेजहरूलाई आफ्नो विवरण बुझाउन निर्देशन दिएको छ।",
      "en": "Now, Nepal's education news. Tribhuvan University directed affiliated colleges to submit their details.",
      "big": "TU",
      "label": "Colleges must submit self-declarations"
@@ -422,28 +422,28 @@
    "lines": [
     {
      "id": "f1",
-     "ne": "अब छोटकरीमा। प्रिज्म एमएलले चौवन्न जिबीको मोडेललाई घटाएर पाँच दशमलव नौ जिबीमा झारेको छ।",
+     "ne": "अब छोटकरीमा। प्रिज्म एमएलले चौवन्न जिबीको एआई मोडेललाई घटाएर पाँच दशमलव नौ जिबीमा झारेको छ।",
      "en": "In brief: PrismML shrank a 54 GB model down to 5.9 GB.",
      "big": "54 → 5.9 GB",
      "label": "PrismML · smaller local model"
     },
     {
      "id": "f2",
-     "ne": "म्याग्निच्युडले ठूला एआई मोडेललाई सिधै एसएसडी स्टोरेजबाट छिटो चलाउने प्रविधि देखाएको छ।",
+     "ne": "म्याग्निच्युडले ठूला एआई मोडेललाई सिधै एसएसडीबाट छिटो चलाउने टेक्निक देखाएको छ।",
      "en": "Magnitude showed a way to run large AI models quickly straight from SSD storage.",
      "big": "66 GB",
      "label": "Magnitude · models run from SSD"
     },
     {
      "id": "f3",
-     "ne": "टेन्सेन्टले एलएलएम मोडेलको गति एकासी प्रतिशतसम्म बढाउने डिफ्लाई टु नामको टुल ओपन सोर्स गरेको छ।",
+     "ne": "टेन्सेन्टले एलएलएमको स्पिड एकासी प्रतिशतसम्म बढाउने डिफ्लाई टु नामको टुल ओपन सोर्स गरेको छ।",
      "en": "Tencent open-sourced DFly2, a tool that speeds up LLMs by up to 81 percent.",
      "big": "+81%",
      "label": "Tencent DFly2 · faster LLMs"
     },
     {
      "id": "f4",
-     "ne": "अनि टाइडलले डिसेम्बर नौ तारिखदेखि पूर्ण रूपमा एआईले बनाएका गीतहरू हटाउने भएको छ।",
+     "ne": "अनि टाइडलले डिसेम्बर नौ तारिखदेखि पूर्ण रूपमा एआईले बनाएका गीत हटाउने भएको छ।",
      "en": "And Tidal will remove fully AI-generated songs starting December 9.",
      "big": "Dec 9",
      "label": "Tidal removes AI-made music"
@@ -461,14 +461,14 @@
    "lines": [
     {
      "id": "o1",
-     "ne": "यो साताको नेबियन्स न्युजको साप्ताहिक संकलन यहीँ सकिन्छ।",
+     "ne": "यो साताको नेबियन्स न्युजको रिक्याप यहीँ सकियो।",
      "en": "That wraps up this week's NEBians News recap.",
      "big": "That's a wrap",
      "label": "Episode 1"
     },
     {
      "id": "o2",
-     "ne": "प्रविधि, एआई र नेपालको शिक्षाका खबरसहित हामी अर्को शुक्रबार फेरि भेट्नेछौँ।",
+     "ne": "टेक, एआई र नेपालको शिक्षाका खबरसहित हामी अर्को शुक्रबार फेरि भेट्नेछौँ।",
      "en": "We will be back next Friday with tech, AI and Nepal education news.",
      "big": "Next Friday",
      "label": "Tech · AI · Education"
@@ -482,5 +482,9 @@
     }
    ]
   }
- ]
+ ],
+ "pron": {
+  "गजेट": "ग्याजेट",
+  "सेयर": "शेयर"
+ }
 }

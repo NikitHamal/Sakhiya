@@ -15,5 +15,5 @@ html,body{margin:0;background:#000}canvas{display:block}
 window.ctx = document.getElementById('cv').getContext('2d');
 window.ready = (async () => { const f = ['400','500','600','700'];
   for (const w of f) { await document.fonts.load(w + ' 40px Poppins'); await document.fonts.load(w + " 40px 'Noto Sans Devanagari'", 'नमस्ते सखिया'); }
-  await document.fonts.ready; return true; })();
+  await document.fonts.ready; window.LOGO = new Image(); window.LOGO.src = 'neb-logo.png'; await window.LOGO.decode(); return true; })();
 </script></body></html>
