@@ -5,15 +5,15 @@ import json, math, os, shutil, subprocess, sys
 from multiprocessing import Pool
 sys.path.insert(0, os.path.dirname(__file__))
 import render as R
-REPO, TAG, SEG, FPS = "NikitHamal/Sakhiya", os.environ.get("WIP_TAG", "news-ep1-v2-wip"), 900, 30
+REPO, TAG, SEG, FPS = "NikitHamal/Sakhiya", os.environ.get("WIP_TAG", "news-ep1-v5-wip"), 900, 30
 TOK = subprocess.check_output([os.environ.get("GIT_ASKPASS", "/tmp/gitenv.sh"), "Password"]).decode().strip()
 H = ["-H", f"Authorization: token {TOK}"]
 def curl(*a): return subprocess.check_output(["curl", "-s", "-L", *H, *a])
 def rel():
-    r = json.loads(curl(f"https://api.github.com/repos/{REPO}/releases/tags/{TAG}") or b"{}")
-    if "id" not in r:
-        r = json.loads(curl("-X", "POST", f"https://api.github.com/repos/{REPO}/releases", "-d", json.dumps(dict(tag_name=TAG, name="NEBians News Ep.1 work in progress", prerelease=True, target_commitish="main"))))
-    return r
+    # private DRAFT release (never public); drafts are not returned by /tags/, so list and match
+    for r in json.loads(curl(f"https://api.github.com/repos/{REPO}/releases?per_page=100") or b"[]"):
+        if r.get("tag_name") == TAG: return r
+    return json.loads(curl("-X", "POST", f"https://api.github.com/repos/{REPO}/releases", "-d", json.dumps(dict(tag_name=TAG, name="NEBians News Ep.1 work in progress (draft)", draft=True, target_commitish="main"))))
 def main():
     R.prep(); tl = json.load(open(R.B + "/timeline.json")); n = int(tl["total"] * FPS) + 1
     S = R.V + "/out/segs"; os.makedirs(S, exist_ok=True); r = rel(); have = {a["name"]: a for a in r.get("assets", [])}
