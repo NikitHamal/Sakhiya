@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""NEBians News Ep.1 audio: Sakhiya V1 int8 (docs/models_v2), default `news` style only.
-Outputs (video/build/): clips/*.wav, timeline.json, env.json, voice.wav, mix.wav, audio_report.json"""
+"""NEBians News Ep.1 audio: Sakhiya TTS (docs/models_sakhiya_one_vocos), `news` style. Voice only, no music.
+Outputs (video/build/): clips/*.wav, timeline.json, env.json, voice.wav, mix.wav (-16 LUFS), audio_report.json"""
 import json, os, sys, wave
 from multiprocessing import Pool
 import numpy as np
@@ -54,9 +54,9 @@ def main():
     for sc in S["scenes"]:
         t0 = t; t += sc["pre"]; ls = []
         for l in sc["lines"]:
-            d = len(clips[l["id"]]) / SR; ls.append(dict(id=l["id"], ne=l["ne"], en=l["en"], t=round(t, 3), d=round(d, 3)))
+            d = len(clips[l["id"]]) / SR; ls.append(dict(l, t=round(t, 3), d=round(d, 3)))
             t += d + (0.42 if l["ne"].count("।") > 1 else 0.3)
-        t = t - 0.3 + sc["post"]; scenes.append(dict(id=sc["id"], t0=round(t0, 3), t1=round(t, 3), lines=ls))
+        t = t - 0.3 + sc["post"]; scenes.append(dict({k: v for k, v in sc.items() if k != "lines"}, t0=round(t0, 3), t1=round(t, 3), lines=ls))
     total = t; tl = dict(total=round(total, 3), fps=FPS, scenes=scenes, title=S["title"], date=S["date"])
     json.dump(tl, open(B + "/timeline.json", "w"), ensure_ascii=False, indent=1)
     voice = np.zeros(int(total * SR) + SR, np.float32)
@@ -64,8 +64,12 @@ def main():
         for l in sc["lines"]:
             i = int(l["t"] * SR); c = clips[l["id"]]; voice[i:i + len(c)] += c
     wav(B + "/voice.wav", voice)
-    env(voice, total); import music; music.mix(voice, tl, B, SR)
+    env(voice, total); master(B)
     print("TOTAL", round(total, 1), "s", "flags:", {k: v for k, v in rep.items() if v["max_pause_s"] > 0.9 or v["clip_frac"] > 0.001 or v["words_per_s"] < 1.2 or v["words_per_s"] > 4.2})
+
+def master(B):
+    import subprocess
+    subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-i", B + "/voice.wav", "-af", "loudnorm=I=-16:TP=-1.5:LRA=7,aresample=48000", "-ac", "2", B + "/mix.wav"])
 
 def env(v, total):
     n = int(total * FPS) + 2; hop = SR // FPS; win = 2048; out = []

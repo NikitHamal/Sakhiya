@@ -1,317 +1,486 @@
 {
-  "title": "NEBians News - Episode 1: Weekly Tech, AI & Nepal Education Recap",
-  "date": "Friday, 27 Nov 2026",
-  "window": "21 Nov – 27 Nov 2026",
-  "cadence": "Every Friday · Weekly Recap",
-  "model": "Sakhiya-One v2 Studio (Vocos · 23 MB INT8 ONNX)",
-  "style": "news",
-  "scenes": [
+ "title": "NEBians News - Episode 1: Weekly Tech, AI & Nepal Education Recap",
+ "date": "Friday, 27 Nov 2026",
+ "window": "Sat 21 Nov – Fri 27 Nov 2026",
+ "cadence": "Every Friday · Weekly Recap",
+ "style": "news",
+ "scenes": [
+  {
+   "id": "hello",
+   "kind": "hello",
+   "hue": 228,
+   "dark": true,
+   "pre": 2.4,
+   "post": 0.5,
+   "lines": [
     {
-      "id": "hello",
-      "pre": 2.2,
-      "post": 0.5,
-      "lines": [
-        {
-          "id": "a1",
-          "ne": "नमस्ते सबैजनालाई।",
-          "en": "Namaste, everyone."
-        },
-        {
-          "id": "a2",
-          "ne": "म सखिया, तपाईंको समाचार वाचक। नेबियन्स न्युजको साप्ताहिक अंकमा स्वागत छ।",
-          "en": "I am Sakhiya, your news anchor. Welcome to NEBians News."
-        }
-      ]
+     "id": "a1",
+     "ne": "नमस्ते सबैजनालाई।",
+     "en": "Namaste, everyone.",
+     "big": "नमस्ते",
+     "label": "Namaste"
     },
     {
-      "id": "about",
-      "pre": 0.4,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "b1",
-          "ne": "यो आवाज सखिया वान को नयाँ दोस्रो संस्करण हो, जुन हाम्रो हालको चरणको मोडेल हो।",
-          "en": "This voice is Sakhiya-One v2, our current-phase text-to-speech model."
-        },
-        {
-          "id": "b2",
-          "ne": "म नेपाली र संस्कृत भाषा बोल्ने एउटा सानो न्युरल स्पिच मोडेल हुँ।",
-          "en": "I am a compact neural speech model that speaks Nepali and Sanskrit."
-        },
-        {
-          "id": "b3",
-          "ne": "मेरो स्टुडियो मोडेल तेइस मेगाबाइटको छ, र सानो संस्करण आठ दशमलव पाँच मेगाबाइटमा उपलब्ध छ।",
-          "en": "My studio model is 23 MB, with an 8.5 MB compact edition also available."
-        },
-        {
-          "id": "b4",
-          "ne": "ठूलो सर्भर बिना नै, म सिधै वेब ब्राउजरमा चौबीस किलोहर्ज गुणस्तरमा तीस गुणा छिटो चल्छु।",
-          "en": "Without heavy servers, I run right in your browser at 24 kHz quality, over 30x real-time."
-        },
-        {
-          "id": "b5",
-          "ne": "म अझै पूर्ण रूपमा तयार त छैन, तर मेरो आवाज पहिलेभन्दा निकै सफा र स्पष्ट भएको छ।",
-          "en": "I am not completely perfect yet, but my voice is much cleaner and clearer than before."
-        },
-        {
-          "id": "b6",
-          "ne": "आउने हरेक एपिसोडसँगै मेरो उच्चारण र लय अझै राम्रो हुँदै जानेछ।",
-          "en": "With every upcoming episode, my pronunciation and cadence will keep improving."
-        }
-      ]
+     "id": "a2",
+     "ne": "म सखिया, तपाईंको एआई समाचार वाचक।",
+     "en": "I am Sakhiya, your AI news anchor.",
+     "big": "सखिया",
+     "label": "AI news anchor"
     },
     {
-      "id": "series",
-      "pre": 0.5,
-      "post": 0.8,
-      "lines": [
-        {
-          "id": "c1",
-          "ne": "अब नेबियन्स न्युज हरेक शुक्रबार साप्ताहिक समाचार संकलनका रूपमा आउनेछ।",
-          "en": "NEBians News now arrives every Friday as a weekly news recap."
-        },
-        {
-          "id": "c2",
-          "ne": "यसमा विश्वभरका प्रमुख प्रविधि, एआई, हार्डवेयर र साइबर सुरक्षाका खबरहरू समेटिनेछन्।",
-          "en": "We cover major global tech, AI, hardware, and cybersecurity stories."
-        },
-        {
-          "id": "c3",
-          "ne": "साथै नेपालको शैक्षिक क्षेत्रका मुख्य र सान्दर्भिक समाचारहरू पनि समावेश गरिनेछ।",
-          "en": "We also cover major and relevant updates from Nepal's education sector."
-        },
-        {
-          "id": "c4",
-          "ne": "आज शुक्रबार, नोभेम्बर सत्ताइस तारिख। यसमा गत शनिबारदेखिका ताजा खबर मात्र समेटिएका छन्।",
-          "en": "Today is Friday, Nov 27, covering strictly news from last Saturday to today."
-        },
-        {
-          "id": "c5",
-          "ne": "अब लागौँ आजको पहिलो समाचारतर्फ।",
-          "en": "Now, let us move to today's first story."
-        }
-      ]
-    },
-    {
-      "id": "n1",
-      "pre": 0.9,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "n1a",
-          "ne": "पहिलो समाचार। एफसीसीले स्पेसएक्सलाई अन्तरिक्षमा दस लाख एआई डाटा सेन्टर भूउपग्रह पठाउन अनुमति दिएको छ।",
-          "en": "The FCC approved SpaceX to deploy up to 1 million orbital AI data center satellites."
-        },
-        {
-          "id": "n1b",
-          "ne": "स्टारमाइन्ड नामको यस योजनामा भूउपग्रहले अन्तरिक्षमै सौर्य ऊर्जाबाट एआई चिप चलाउनेछन्।",
-          "en": "Named Starmind, the satellites use solar energy in orbit to power onboard AI chips."
-        },
-        {
-          "id": "n1c",
-          "ne": "पृथ्वीमा बिजुली र जमिनको अभाव बढेपछि लेजरमार्फत स्टारलिङ्कसँग जोडिने यो योजना आएको हो।",
-          "en": "Linked via lasers to Starlink, it bypasses Earth's land and power grid limits."
-        },
-        {
-          "id": "n1d",
-          "ne": "तर खगोलविद्हरूले भने अन्तरिक्षमा फोहोर बढ्ने र तारा हेर्न असर पर्ने चिन्ता व्यक्त गरेका छन्।",
-          "en": "However, astronomers warned of orbital debris and interference with telescopes."
-        }
-      ]
-    },
-    {
-      "id": "n2",
-      "pre": 0.9,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "n2a",
-          "ne": "दोस्रो समाचार। एनभिडियाको बोर्डले जेन्सेन हुआङलाई सोमबार पुनः प्रमुख कार्यकारी पदमा फर्काएको छ।",
-          "en": "Nvidia's board reinstated Jensen Huang as chief executive officer on Monday."
-        },
-        {
-          "id": "n2b",
-          "ne": "उनको फिर्तीसँगै सोमबार एनभिडियाको सेयर मूल्य तीस प्रतिशतभन्दा बढीले उकालो लाग्यो।",
-          "en": "Nvidia shares surged over 30 percent on Monday following his return."
-        },
-        {
-          "id": "n2c",
-          "ne": "तर उत्तराधिकारी योजना नचाहिने उनको भनाइपछि मंगलबार सेयर मूल्य छ प्रतिशतले घट्यो।",
-          "en": "Shares dipped 6% Tuesday after he said Nvidia needs no formal succession plan."
-        },
-        {
-          "id": "n2d",
-          "ne": "यसै साता एनभिडियाले दक्षिण पूर्वी एसियाका चार देशमा एआई सर्भर पठाउन रोकेको छ भने हुवावेले नयाँ मेमोरी चिप ल्याउँदैछ।",
-          "en": "Nvidia also halted server shipments to four Asian nations, while Huawei teased a new HBM chip."
-        }
-      ]
-    },
-    {
-      "id": "n3",
-      "pre": 0.9,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "n3a",
-          "ne": "तेस्रो समाचार। ओपन एआईले जिपिटी सिक्स पोइन्ट टु सोल मोडेल मुख्य च्याट ट्याबमा ल्याएको छ।",
-          "en": "OpenAI brought the GPT-6.2 Sol model directly into the main ChatGPT tab."
-        },
-        {
-          "id": "n3b",
-          "ne": "साथै संवेदनशील डाटा सुरक्षित राख्ने प्राइभेट इन्फरेन्स र प्रोटिन डिजाइन क्षमता पनि सार्वजनिक भएको छ।",
-          "en": "OpenAI also began testing encrypted Private Inference and demonstrated protein design."
-        },
-        {
-          "id": "n3c",
-          "ne": "उता एन्थ्रोपिकले कोड परीक्षण र सुधार गर्ने क्लाउड सिप टुल सार्वजनिक गरेको छ।",
-          "en": "Meanwhile, Anthropic launched Claude Ship to review, fix, and approve pull requests."
-        },
-        {
-          "id": "n3d",
-          "ne": "एन्थ्रोपिकले आफ्नो एपिआई पाइथनबाट रस्ट भाषामा सार्दा सर्भरको सिपियु खपत सत्तरी प्रतिशतले घटेको छ।",
-          "en": "Anthropic also migrated its API from Python to Rust, cutting server CPU usage by 70%."
-        }
-      ]
-    },
-    {
-      "id": "n4",
-      "pre": 0.9,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "n4a",
-          "ne": "चौथो समाचार, साइबर सुरक्षाबाट। ओपन एआई र सिस्कोले लिनक्स सर्भर जोगाउन सिरुडो प्रणाली ल्याएका छन्।",
-          "en": "OpenAI and Cisco launched Shirudo to protect running Linux servers from attacks."
-        },
-        {
-          "id": "n4b",
-          "ne": "तर यसै साता साढे तीन अर्ब पासवर्ड चुहिएको फेला पर्‍यो र अमेरिकी फिनसेन प्रणाली आंशिक बन्द गरियो।",
-          "en": "Two databases exposed 3.5B records this week, and US FinCEN took systems offline."
-        },
-        {
-          "id": "n4c",
-          "ne": "बालबालिकाको सुरक्षाका लागि न्युयोर्कले एआई च्याटबट खेलौनामा पाँच वर्षको प्रतिबन्ध लगाएको छ।",
-          "en": "New York signed a five-year ban on AI chatbot toys for children with $15,000 daily fines."
-        },
-        {
-          "id": "n4d",
-          "ne": "अनि बयालीस अमेरिकी राज्यले क्यारेक्टर एआईका निजी च्याट लिलामी रोक्न अदालतमा निवेदन दिएका छन्।",
-          "en": "And 42 US states moved to block Character.AI from auctioning 21M private chat logs."
-        }
-      ]
-    },
-    {
-      "id": "n5",
-      "pre": 0.9,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "n5a",
-          "ne": "पाँचौँ समाचार, सवारी र हार्डवेयरबाट। टेस्लाले फुल सेल्फ ड्राइभिङको पन्ध्रौँ संस्करण सुरु गरेको छ।",
-          "en": "Tesla began rolling out Full Self-Driving v15, while Uber, Lucid, and Nuro started robotaxi tests."
-        },
-        {
-          "id": "n5b",
-          "ne": "एप्पलले आइओएस सत्ताइस दशमलव तीन ल्याएको छ भने नथिङले आवाज रेकर्ड गर्ने इयर नोट इयरबड्स सार्वजनिक गर्‍यो।",
-          "en": "Apple released iOS 27.3 across six apps, and Nothing unveiled Ear Note recording earbuds."
-        },
-        {
-          "id": "n5c",
-          "ne": "मोजिलाले स्वचालित भिपिएन सुविधासहित फायरफक्स एक सय एकसट्ठी ब्राउजर सार्वजनिक गरेको छ।",
-          "en": "Mozilla released Firefox 161 featuring automated per-site VPN protection."
-        },
-        {
-          "id": "n5d",
-          "ne": "अनि वालमार्टले मेटाको म्युज एजेन्टलाई किनमेलमा जोडेको छ र अमेजनसँग पनि वार्ता सुरु भएको छ।",
-          "en": "Walmart enabled Meta's Muse shopping agent, while Amazon and Meta began talks to lift their block."
-        }
-      ]
-    },
-    {
-      "id": "edu",
-      "pre": 1.0,
-      "post": 0.7,
-      "lines": [
-        {
-          "id": "e1",
-          "ne": "अब नेपालको शैक्षिक क्षेत्रका मुख्य खबर। त्रिभुवन विश्वविद्यालयले सम्बन्धन कलेजहरूलाई स्वघोषणा विवरण बुझाउन निर्देशन दिएको छ।",
-          "en": "In Nepal education: Tribhuvan University directed affiliated colleges to submit self-declarations."
-        },
-        {
-          "id": "e2",
-          "ne": "सेमेस्टर प्रणाली विस्तार र गुणस्तर सुधारका लागि प्रयोगशाला तथा पुस्तकालयको विवरण मागिएको हो।",
-          "en": "The directive verifies laboratories and libraries ahead of TU's semester system reforms."
-        },
-        {
-          "id": "e3",
-          "ne": "चिकित्सा शिक्षा आयोगले नर्सिङ, फार्मेसी र पब्लिक हेल्थ लगायत स्नातक प्रवेश परीक्षाको नतिजा निकालेको छ।",
-          "en": "The Medical Education Commission published bachelor entrance results for Nursing, Pharmacy, and BPH."
-        },
-        {
-          "id": "e4",
-          "ne": "साथै नेपाल सरकारले चिकित्सा शिक्षा सुधारका लागि सरोकारवालासँग औपचारिक छलफल सुरु गरेको छ।",
-          "en": "The Government of Nepal also initiated formal talks on medical education reforms."
-        },
-        {
-          "id": "e5",
-          "ne": "उता काठमाडौँ महानगरपालिकाले अनामनगरमा अटिजम विद्यालय तथा अनुसन्धान केन्द्र निर्माण सुरु गरेको छ।",
-          "en": "Kathmandu Metropolitan City began building an Autism School and Research Centre in Anamnagar."
-        },
-        {
-          "id": "e6",
-          "ne": "यसै साता सुदूरपश्चिम विश्वविद्यालयमा राष्ट्रिय ह्याकाथन सम्पन्न भयो र काठमाडौँ विश्वविद्यालयले जियोम्याटिक्स प्रवेश परीक्षा तालिका निकाल्यो।",
-          "en": "Sudurpaschim University hosted a National Hackathon, and KU released Geomatics entrance schedules."
-        }
-      ]
-    },
-    {
-      "id": "fast",
-      "pre": 0.8,
-      "post": 0.6,
-      "lines": [
-        {
-          "id": "f1",
-          "ne": "अब छोटकरीमा। प्रिज्म एमएलले चौवन्न जिबीको मोडेललाई घटाएर पाँच दशमलव नौ जिबीमा झारेको छ।",
-          "en": "In brief: PrismML compressed a 54 GB coding model down to 5.9 GB for local devices."
-        },
-        {
-          "id": "f2",
-          "ne": "म्याग्निच्युडले ठूला एआई मोडेललाई सिधै एसएसडी स्टोरेजबाट छिटो चलाउने प्रविधि देखाएको छ।",
-          "en": "Magnitude demonstrated streaming 66 GB AI models directly from consumer SSD storage."
-        },
-        {
-          "id": "f3",
-          "ne": "टेन्सेन्टले मोडेलको गति एकासी प्रतिशत बढाउने डिफ्लाई टु टुल ओपन सोर्स गरेको छ।",
-          "en": "Tencent open-sourced DFly2, boosting LLM throughput by up to 81 percent."
-        },
-        {
-          "id": "f4",
-          "ne": "अनि टाइडलले डिसेम्बर नौ तारिखदेखि पूर्ण रूपमा एआईले बनाएका गीतहरू हटाउने भएको छ।",
-          "en": "And Tidal announced it will remove fully AI-generated music starting December 9."
-        }
-      ]
-    },
-    {
-      "id": "outro",
-      "pre": 0.9,
-      "post": 2.8,
-      "lines": [
-        {
-          "id": "o1",
-          "ne": "यो साताको नेबियन्स न्युजको साप्ताहिक संकलन यहीँ सकिन्छ।",
-          "en": "That concludes this week's edition of the NEBians News weekly recap."
-        },
-        {
-          "id": "o2",
-          "ne": "प्रविधि, एआई र नेपालको शैक्षिक खबरका साथ हामी अर्को शुक्रबार फेरि भेट्नेछौँ।",
-          "en": "We will return next Friday with global tech, AI, and Nepal's top education news."
-        },
-        {
-          "id": "o3",
-          "ne": "सखिया वान को यो दोस्रो संस्करण हरेक हप्ता अझै राम्रो हुँदै जानेछ। धन्यवाद, अनि नमस्ते।",
-          "en": "Sakhiya-One v2 will keep improving every week. Thank you for watching, Namaste."
-        }
-      ]
+     "id": "a3",
+     "ne": "स्वागत छ तपाईंहरूलाई नेबियन्स न्युजको पहिलो एपिसोडमा।",
+     "en": "Welcome to the first episode of NEBians News.",
+     "big": "Episode 1",
+     "label": "Welcome"
     }
-  ]
+   ]
+  },
+  {
+   "id": "about",
+   "kind": "about",
+   "hue": 222,
+   "dark": false,
+   "pre": 0.4,
+   "post": 0.6,
+   "tag": "Meet Sakhiya",
+   "lines": [
+    {
+     "id": "b1",
+     "ne": "सबैभन्दा पहिला, म को हुँ भनेर छोटो चिनारी दिन्छु। म एउटा सानो टेक्स्ट टु स्पिच मोडेल हुँ।",
+     "en": "First, a quick introduction. I am a small text-to-speech model.",
+     "big": "Text-to-Speech",
+     "label": "A small AI voice model"
+    },
+    {
+     "id": "b2",
+     "ne": "यसको मतलब, लेखिएको कुरालाई आवाजमा बदल्ने एआई। म नेपाली भाषा बोल्न सिकेको छु।",
+     "en": "That means an AI that turns written text into voice. I have learned to speak Nepali.",
+     "big": "नेपाली",
+     "label": "Learned to speak Nepali"
+    },
+    {
+     "id": "b3",
+     "ne": "म करिब तेइस मेगाबाइटको मात्र छु, एउटा सानो एप जत्तिकै।",
+     "en": "I am only about 23 megabytes, about the size of a small app.",
+     "big": "~23 MB",
+     "label": "About the size of a small app"
+    },
+    {
+     "id": "b4",
+     "ne": "मलाई चलाउन ठूलो सर्भर चाहिँदैन, म साधारण डिभाइसमै चल्न सक्छु।",
+     "en": "I do not need a big server. I can run on an ordinary device.",
+     "big": "No big server",
+     "label": "Runs on ordinary devices"
+    },
+    {
+     "id": "b5",
+     "ne": "म अहिले पहिलो चरणमा छु, त्यसैले पूर्ण छैन। कहिलेकाहीँ उच्चारणमा गल्ती हुन सक्छ।",
+     "en": "I am in phase one, so I am not perfect. My pronunciation may slip sometimes.",
+     "big": "Phase one",
+     "label": "Not perfect yet"
+    },
+    {
+     "id": "b6",
+     "ne": "तर हरेक एपिसोडसँगै म अझै राम्रो हुँदै जानेछु।",
+     "en": "But I will keep getting better with every episode.",
+     "big": "Every episode",
+     "label": "Getting better"
+    }
+   ]
+  },
+  {
+   "id": "series",
+   "kind": "series",
+   "hue": 262,
+   "dark": false,
+   "pre": 0.5,
+   "post": 0.8,
+   "tag": "The Show",
+   "lines": [
+    {
+     "id": "c1",
+     "ne": "नेबियन्स न्युज हरेक शुक्रबार आउने साप्ताहिक समाचार कार्यक्रम हो।",
+     "en": "NEBians News is a weekly news show that arrives every Friday.",
+     "big": "Every Friday",
+     "label": "Weekly recap"
+    },
+    {
+     "id": "c2",
+     "ne": "यसमा हामी विश्वभरका ठूला एआई र प्रविधिका खबर ल्याउँछौँ, जसमा चिप, स्पेस, साइबर सुरक्षा र गजेट पनि पर्छन्।",
+     "en": "We cover major global AI and tech news, including chips, space, cybersecurity and gadgets.",
+     "big": "AI & Tech",
+     "label": "Chips · Space · Security · Gadgets"
+    },
+    {
+     "id": "c3",
+     "ne": "साथै नेपालको शिक्षा क्षेत्रका महत्त्वपूर्ण खबर पनि समेट्नेछौँ।",
+     "en": "We will also cover important education news from Nepal.",
+     "big": "Nepal Education",
+     "label": "Important local updates"
+    },
+    {
+     "id": "c4",
+     "ne": "आज शुक्रबार, नोभेम्बर सत्ताइस तारिख। यो एपिसोडमा गत शनिबारदेखि आजसम्मका खबर मात्र छन्।",
+     "en": "Today is Friday, November 27. This episode covers only news from last Saturday until today.",
+     "big": "21 – 27 Nov",
+     "label": "Only this week's news"
+    },
+    {
+     "id": "c5",
+     "ne": "अब लागौँ आजको पहिलो समाचारतर्फ।",
+     "en": "Now, on to today's first story.",
+     "big": "Let's begin",
+     "label": "Story 1"
+    }
+   ]
+  },
+  {
+   "id": "n1",
+   "kind": "story",
+   "no": 1,
+   "hue": 250,
+   "dark": false,
+   "pre": 0.9,
+   "post": 0.6,
+   "tag": "Space & AI",
+   "dates": "25–26 Nov",
+   "h": "SpaceX gets approval for orbital AI data centers",
+   "hn": "स्पेसएक्सलाई अन्तरिक्षमा एआई डाटा सेन्टरको अनुमति",
+   "lines": [
+    {
+     "id": "n1a",
+     "ne": "पहिलो समाचार। अमेरिकी नियामक एफसीसीले स्पेसएक्सलाई अन्तरिक्षमा दस लाख एआई डाटा सेन्टर स्याटेलाइट पठाउन अनुमति दिएको छ।",
+     "en": "The US regulator FCC approved SpaceX to deploy up to one million orbital AI data center satellites.",
+     "big": "1,000,000",
+     "label": "AI satellites approved by the FCC"
+    },
+    {
+     "id": "n1b",
+     "ne": "स्टारमाइन्ड नामको यो योजनामा स्याटेलाइटहरूले अन्तरिक्षमै सौर्य ऊर्जाबाट एआई चिप चलाउनेछन्।",
+     "en": "Named Starmind, the satellites will run AI chips in orbit on solar power.",
+     "big": "Starmind",
+     "label": "Solar-powered AI chips in orbit"
+    },
+    {
+     "id": "n1c",
+     "ne": "पृथ्वीमा बिजुली र जमिनको अभाव बढेपछि यो योजना आएको हो, र यी स्याटेलाइट लेजरमार्फत स्टारलिङ्कसँग जोडिनेछन्।",
+     "en": "It comes as power and land on Earth run short, and the satellites will link to Starlink with lasers.",
+     "big": "Laser links",
+     "label": "Connected to Starlink"
+    },
+    {
+     "id": "n1d",
+     "ne": "तर खगोलविद्हरूले अन्तरिक्षमा फोहोर बढ्ने र आकाशका तारा हेर्न असर पर्ने चिन्ता व्यक्त गरेका छन्।",
+     "en": "But astronomers warned about more space debris and interference with stargazing.",
+     "big": "Concerns",
+     "label": "Space debris and sky views"
+    }
+   ]
+  },
+  {
+   "id": "n2",
+   "kind": "story",
+   "no": 2,
+   "hue": 160,
+   "dark": true,
+   "pre": 0.9,
+   "post": 0.6,
+   "tag": "Chips",
+   "dates": "23–27 Nov",
+   "h": "Jensen Huang returns as Nvidia CEO",
+   "hn": "जेन्सेन हुआङ फेरि एनभिडियाको सीईओ",
+   "lines": [
+    {
+     "id": "n2a",
+     "ne": "दोस्रो समाचार। एनभिडियाको बोर्डले जेन्सेन हुआङलाई सोमबार फेरि सीईओ पदमा फर्काएको छ।",
+     "en": "Nvidia's board reinstated Jensen Huang as CEO on Monday.",
+     "big": "CEO",
+     "label": "Jensen Huang reinstated"
+    },
+    {
+     "id": "n2b",
+     "ne": "उनको फिर्तीसँगै सोमबार एनभिडियाको सेयर मूल्य तीस प्रतिशतभन्दा बढीले उकालो लाग्यो।",
+     "en": "Nvidia shares surged over 30 percent on Monday after his return.",
+     "big": "+30%",
+     "label": "Shares jumped on Monday"
+    },
+    {
+     "id": "n2c",
+     "ne": "तर उत्तराधिकारी योजना नचाहिने उनको भनाइपछि मंगलबार सेयर मूल्य छ प्रतिशतले घट्यो।",
+     "en": "But shares fell 6 percent on Tuesday after he said no formal succession plan is needed.",
+     "big": "−6%",
+     "label": "Dip after succession remarks"
+    },
+    {
+     "id": "n2d",
+     "ne": "यसै साता एनभिडियाले चार दक्षिणपूर्वी एसियाली देशमा एआई सर्भर पठाउन रोकेको छ भने हुवावेले नयाँ मेमोरी चिपको संकेत दिएको छ।",
+     "en": "This week Nvidia also halted AI server shipments to four Southeast Asian countries, while Huawei teased a new memory chip.",
+     "big": "4 countries",
+     "label": "AI server shipments halted"
+    }
+   ]
+  },
+  {
+   "id": "n3",
+   "kind": "story",
+   "no": 3,
+   "hue": 285,
+   "dark": false,
+   "pre": 0.9,
+   "post": 0.6,
+   "tag": "AI Models",
+   "dates": "23–26 Nov",
+   "h": "OpenAI and Anthropic ship new AI tools",
+   "hn": "ओपन एआई र एन्थ्रोपिकका नयाँ एआई टुल",
+   "lines": [
+    {
+     "id": "n3a",
+     "ne": "तेस्रो समाचार। ओपन एआईले जिपिटी सिक्स पोइन्ट टु सोल मोडेल मुख्य च्याट ट्याबमा ल्याएको छ।",
+     "en": "OpenAI brought its GPT-6.2 Sol model into the main ChatGPT tab.",
+     "big": "GPT-6.2 Sol",
+     "label": "Now in the main ChatGPT tab"
+    },
+    {
+     "id": "n3b",
+     "ne": "साथै डाटा सुरक्षित राख्ने प्राइभेट इन्फरेन्स परीक्षण र प्रोटिन डिजाइन क्षमता पनि देखाइएको छ।",
+     "en": "It also began testing encrypted Private Inference and showed protein design.",
+     "big": "Private Inference",
+     "label": "Encrypted AI, now in testing"
+    },
+    {
+     "id": "n3c",
+     "ne": "उता एन्थ्रोपिकले कोड जाँच गर्ने र सुधार गर्ने क्लाउड सिप नामको टुल ल्याएको छ।",
+     "en": "Meanwhile Anthropic launched Claude Ship, a tool that reviews and fixes code.",
+     "big": "Claude Ship",
+     "label": "Reviews and fixes pull requests"
+    },
+    {
+     "id": "n3d",
+     "ne": "एन्थ्रोपिकले आफ्नो एपिआई पाइथनबाट रस्ट भाषामा सार्दा सर्भरको सिपियु खपत सत्तरी प्रतिशतले घटेको छ।",
+     "en": "Anthropic moved its API from Python to Rust, cutting server CPU use by 70 percent.",
+     "big": "−70% CPU",
+     "label": "API moved from Python to Rust"
+    }
+   ]
+  },
+  {
+   "id": "n4",
+   "kind": "story",
+   "no": 4,
+   "hue": 12,
+   "dark": true,
+   "pre": 0.9,
+   "post": 0.6,
+   "tag": "Security & Policy",
+   "dates": "23–26 Nov",
+   "h": "Cyber attacks and new AI rules in the US",
+   "hn": "साइबर सुरक्षा र अमेरिकामा नयाँ एआई नियम",
+   "lines": [
+    {
+     "id": "n4a",
+     "ne": "चौथो समाचार, साइबर सुरक्षाबाट। ओपन एआई र सिस्कोले चलिरहेका लिनक्स सर्भर जोगाउन सिरुडो नामको प्रणाली ल्याएका छन्।",
+     "en": "OpenAI and Cisco launched Shirudo to protect running Linux servers from attacks.",
+     "big": "Shirudo",
+     "label": "Protects live Linux servers"
+    },
+    {
+     "id": "n4b",
+     "ne": "तर यसै साता साढे तीन अर्ब रेकर्ड चुहिएको फेला परेको छ, र अमेरिकी वित्तीय निकाय फिनसेनका केही प्रणाली बन्द भएका छन्।",
+     "en": "But 3.5 billion records were found exposed this week, and some US FinCEN systems went offline.",
+     "big": "3.5 billion",
+     "label": "Records exposed"
+    },
+    {
+     "id": "n4c",
+     "ne": "बालबालिकाको सुरक्षाका लागि न्युयोर्कले एआई च्याटबट खेलौनामा पाँच वर्षको प्रतिबन्ध लगाएको छ।",
+     "en": "To protect children, New York banned AI chatbot toys for five years.",
+     "big": "5-year ban",
+     "label": "New York: AI chatbot toys"
+    },
+    {
+     "id": "n4d",
+     "ne": "अनि बयालीस अमेरिकी राज्यले क्यारेक्टर एआईका एक्काइस मिलियन निजी च्याट लिलामी हुनबाट रोक्न अदालतमा निवेदन दिएका छन्।",
+     "en": "And 42 US states went to court to stop Character.AI from auctioning 21 million private chats.",
+     "big": "42 states",
+     "label": "Against the Character.AI chat auction"
+    }
+   ]
+  },
+  {
+   "id": "n5",
+   "kind": "story",
+   "no": 5,
+   "hue": 205,
+   "dark": false,
+   "pre": 0.9,
+   "post": 0.6,
+   "tag": "Devices & Software",
+   "dates": "22–26 Nov",
+   "h": "Self-driving, iOS, Firefox and shopping agents",
+   "hn": "सेल्फ ड्राइभिङ, आईओएस, फायरफक्स र सपिङ एजेन्ट",
+   "lines": [
+    {
+     "id": "n5a",
+     "ne": "पाँचौँ समाचार, गाडी र हार्डवेयरबाट। टेस्लाले फुल सेल्फ ड्राइभिङ पन्ध्रौँ भर्सन सुरु गरेको छ, र उबर, लुसिड र नुरोले रोबोटैक्सी परीक्षण थालेका छन्।",
+     "en": "Tesla began rolling out Full Self-Driving v15, while Uber, Lucid and Nuro started robotaxi tests.",
+     "big": "FSD v15",
+     "label": "Tesla rollout · robotaxi tests"
+    },
+    {
+     "id": "n5b",
+     "ne": "एप्पलले आईओएस सत्ताइस दशमलव तीन ल्याएको छ भने नथिङले आवाज रेकर्ड गर्ने इयर नोट इयरबड्स सार्वजनिक गरेको छ।",
+     "en": "Apple released iOS 27.3, and Nothing unveiled its Ear Note recording earbuds.",
+     "big": "iOS 27.3",
+     "label": "Apple update · Nothing Ear Note"
+    },
+    {
+     "id": "n5c",
+     "ne": "मोजिलाले हरेक साइटमा स्वचालित भिपिएन चल्ने फायरफक्स एक सय एकसट्ठी ब्राउजर ल्याएको छ।",
+     "en": "Mozilla released Firefox 161 with automatic per-site VPN protection.",
+     "big": "Firefox 161",
+     "label": "Automatic per-site VPN"
+    },
+    {
+     "id": "n5d",
+     "ne": "अनि वालमार्टले मेटाको म्युज एजेन्टलाई किनमेलमा जोडेको छ र अमेजनसँग पनि वार्ता सुरु भएको छ।",
+     "en": "And Walmart connected Meta's Muse agent to shopping, while Amazon and Meta began talks.",
+     "big": "Muse agent",
+     "label": "Walmart on board · Amazon in talks"
+    }
+   ]
+  },
+  {
+   "id": "edu",
+   "kind": "story",
+   "no": 6,
+   "edu": true,
+   "hue": 32,
+   "dark": false,
+   "pre": 1.0,
+   "post": 0.7,
+   "tag": "Nepal Education",
+   "dates": "21–26 Nov",
+   "h": "Nepal education: TU, medical exams and new schools",
+   "hn": "नेपालको शिक्षा: त्रि.वि., मेडिकल परीक्षा र नयाँ विद्यालय",
+   "lines": [
+    {
+     "id": "e1",
+     "ne": "अब नेपालको शिक्षा क्षेत्रका मुख्य खबर। त्रिभुवन विश्वविद्यालयले आफ्ना सम्बन्धन प्राप्त कलेजहरूलाई आफ्नो विवरण बुझाउन निर्देशन दिएको छ।",
+     "en": "Now, Nepal's education news. Tribhuvan University directed affiliated colleges to submit their details.",
+     "big": "TU",
+     "label": "Colleges must submit self-declarations"
+    },
+    {
+     "id": "e2",
+     "ne": "सेमेस्टर प्रणाली विस्तार र गुणस्तर सुधारका लागि प्रयोगशाला र पुस्तकालयको विवरण मागिएको हो।",
+     "en": "The details of labs and libraries are sought ahead of semester system reforms.",
+     "big": "Labs & libraries",
+     "label": "Checks before semester reforms"
+    },
+    {
+     "id": "e3",
+     "ne": "चिकित्सा शिक्षा आयोगले नर्सिङ, फार्मेसी र पब्लिक हेल्थ लगायत स्नातक प्रवेश परीक्षाको नतिजा निकालेको छ।",
+     "en": "The Medical Education Commission published bachelor entrance results for nursing, pharmacy and public health.",
+     "big": "Entrance results",
+     "label": "Medical Education Commission"
+    },
+    {
+     "id": "e4",
+     "ne": "साथै नेपाल सरकारले चिकित्सा शिक्षा सुधारका लागि सरोकारवालासँग औपचारिक छलफल सुरु गरेको छ।",
+     "en": "The Government of Nepal also started formal talks with stakeholders on medical education reform.",
+     "big": "Reform talks",
+     "label": "Medical education"
+    },
+    {
+     "id": "e5",
+     "ne": "उता काठमाडौँ महानगरपालिकाले अनामनगरमा अटिजम विद्यालय तथा अनुसन्धान केन्द्र निर्माण सुरु गरेको छ।",
+     "en": "Kathmandu Metropolitan City began building an Autism School and Research Centre in Anamnagar.",
+     "big": "Autism School",
+     "label": "Kathmandu · Anamnagar"
+    },
+    {
+     "id": "e6",
+     "ne": "यसै साता सुदूरपश्चिम विश्वविद्यालयमा राष्ट्रिय ह्याकाथन सम्पन्न भयो, र काठमाडौँ विश्वविद्यालयले जियोम्याटिक्स प्रवेश परीक्षाको तालिका निकाल्यो।",
+     "en": "This week Sudurpaschim University held a National Hackathon, and Kathmandu University released its Geomatics entrance schedule.",
+     "big": "Hackathon",
+     "label": "Sudurpaschim · KU Geomatics"
+    }
+   ]
+  },
+  {
+   "id": "fast",
+   "kind": "fast",
+   "hue": 330,
+   "dark": false,
+   "pre": 0.8,
+   "post": 0.6,
+   "tag": "Quick Roundup",
+   "dates": "23–27 Nov",
+   "h": "Quick roundup",
+   "hn": "छोटकरीमा",
+   "lines": [
+    {
+     "id": "f1",
+     "ne": "अब छोटकरीमा। प्रिज्म एमएलले चौवन्न जिबीको मोडेललाई घटाएर पाँच दशमलव नौ जिबीमा झारेको छ।",
+     "en": "In brief: PrismML shrank a 54 GB model down to 5.9 GB.",
+     "big": "54 → 5.9 GB",
+     "label": "PrismML · smaller local model"
+    },
+    {
+     "id": "f2",
+     "ne": "म्याग्निच्युडले ठूला एआई मोडेललाई सिधै एसएसडी स्टोरेजबाट छिटो चलाउने प्रविधि देखाएको छ।",
+     "en": "Magnitude showed a way to run large AI models quickly straight from SSD storage.",
+     "big": "66 GB",
+     "label": "Magnitude · models run from SSD"
+    },
+    {
+     "id": "f3",
+     "ne": "टेन्सेन्टले एलएलएम मोडेलको गति एकासी प्रतिशतसम्म बढाउने डिफ्लाई टु नामको टुल ओपन सोर्स गरेको छ।",
+     "en": "Tencent open-sourced DFly2, a tool that speeds up LLMs by up to 81 percent.",
+     "big": "+81%",
+     "label": "Tencent DFly2 · faster LLMs"
+    },
+    {
+     "id": "f4",
+     "ne": "अनि टाइडलले डिसेम्बर नौ तारिखदेखि पूर्ण रूपमा एआईले बनाएका गीतहरू हटाउने भएको छ।",
+     "en": "And Tidal will remove fully AI-generated songs starting December 9.",
+     "big": "Dec 9",
+     "label": "Tidal removes AI-made music"
+    }
+   ]
+  },
+  {
+   "id": "outro",
+   "kind": "outro",
+   "hue": 228,
+   "dark": true,
+   "pre": 0.9,
+   "post": 2.8,
+   "tag": "See you next Friday",
+   "lines": [
+    {
+     "id": "o1",
+     "ne": "यो साताको नेबियन्स न्युजको साप्ताहिक संकलन यहीँ सकिन्छ।",
+     "en": "That wraps up this week's NEBians News recap.",
+     "big": "That's a wrap",
+     "label": "Episode 1"
+    },
+    {
+     "id": "o2",
+     "ne": "प्रविधि, एआई र नेपालको शिक्षाका खबरसहित हामी अर्को शुक्रबार फेरि भेट्नेछौँ।",
+     "en": "We will be back next Friday with tech, AI and Nepal education news.",
+     "big": "Next Friday",
+     "label": "Tech · AI · Education"
+    },
+    {
+     "id": "o3",
+     "ne": "म सखिया, हरेक एपिसोडसँगै अझै राम्रो हुँदै जानेछु। धन्यवाद, अनि नमस्ते।",
+     "en": "I am Sakhiya, and I will keep getting better with every episode. Thank you, and namaste.",
+     "big": "धन्यवाद",
+     "label": "Thank you · Namaste"
+    }
+   ]
+  }
+ ]
 }
