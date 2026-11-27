@@ -60,7 +60,7 @@ function pagesOf(l) {
   if (_pg[l.id]) return _pg[l.id];
   const neS = l.ne.split(/(?<=।)\s*/).filter(Boolean), enS = l.en.split(/(?<=[.!?])\s+/).filter(Boolean); let ne = [], en = [];
   if (neS.length === enS.length) {
-    neS.forEach((x, i) => { const a = splitBal(x, Math.max(1, Math.ceil(x.length / 62))), b = splitBal(enS[i], a.length); a.forEach((q, j) => { ne.push(q); en.push(b[j] ?? b[b.length - 1] ?? ''); }); });
+    neS.forEach((x, i) => { const a = splitBal(x, Math.max(1, Math.ceil(x.length / 62))); a.forEach(q => { ne.push(q); en.push(enS[i]); }); });
   } else { ne = splitBal(l.ne, Math.max(1, Math.ceil(l.ne.length / 56))); en = splitBal(l.en, ne.length); }
   const tot = l.ne.length; let a = 0; const cuts = ne.map(x => (a += x.length + 1) / (tot + ne.length));
   return _pg[l.id] = { ne, en, cuts };
