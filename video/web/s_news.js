@@ -355,28 +355,28 @@ SC.fast = (c, t, sc, th, T) => {
 
   // Header Banner
   bento(c, 68, 102, 1784, 130, 36, th, { fill: C.blueDark, stroke: '#3570e6' });
-  chip(c, 'RAPID ROUNDUP · छोटकरीमा प्रविधि', 104, 138, { sz: 22, fill: C.aquac, col: C.aquad, ic: 'bolt' });
-  txt(c, 'Local AI Compression, SSD Model Streaming, Open-Source Speedups & Music Policy', 540, 178, { sz: 28, w: 600, col: C.white });
+  chip(c, 'RAPID ROUNDUP · छोटकरीमा प्रविधि', 104, 138, { sz: 21, fill: C.aquac, col: C.aquad, ic: 'bolt' });
+  txt(c, 'Local AI Compression, SSD Model Streaming, Open-Source Speedups & Music Policy', 610, 176, { sz: 25, w: 600, col: C.white });
 
   const cards = [
-    [f1, 'PrismML Ternary Bonsai 27B', '54 GB → 5.9 GB', 'चौवन्न जिबीको मोडेल पाँच दशमलव नौ जिबीमा', 'Runs on laptops, iPhones & iPads with -1, 0, +1 weights', 'chip', C.pc, C.blue],
-    [f2, 'Magnitude SSD Inference', '66 GB Model on SSD', 'एसएसडी स्टोरेजबाटै ठूला मोडेल सञ्चालन', '41 tokens/sec on a 24 GB GPU by streaming from SSD', 'server', C.aquac, C.aquad],
-    [f3, 'Tencent DFly2 & Canada Fund', '+81% Speed · $1B Fund', 'डिफ्लाई टु ओपन सोर्स र क्यानडाको एआई कोष', '81% faster DeepSeek throughput + Canada $1B compute fund', 'bolt', C.amberc, C.amberd],
+    [f1, 'PrismML Ternary 27B', '54 GB → 5.9 GB', 'चौवन्न जिबीको मोडेल पाँच दशमलव नौ जिबीमा', 'Runs on laptops, iPhones & iPads with -1, 0, +1 weights', 'chip', C.pc, C.blue],
+    [f2, 'Magnitude SSD Stream', '66 GB on SSD', 'एसएसडी स्टोरेजबाटै ठूला मोडेल सञ्चालन', '41 tokens/sec on a 24 GB GPU by streaming from SSD', 'server', C.aquac, C.aquad],
+    [f3, 'Tencent DFly2 & Canada', '+81% · $1B Fund', 'डिफ्लाई टु ओपन सोर्स र क्यानडाको एआई कोष', '81% faster DeepSeek throughput + Canada $1B compute fund', 'bolt', C.amberc, C.amberd],
     [f4, 'Tidal AI Music Policy', 'Dec 9 Removal', 'टाइडलबाट पूर्ण एआई गीतहरू हटाइने', 'Removes 100% AI-generated tracks starting December 9', 'music', C.rosec, C.rosed]
   ];
 
   cards.forEach(([trig, title, metric, ne, sub, ic, bg, fg], i) => {
-    const p = sp(t, Math.max(0.1, trig - 0.15), 0.75);
+    const p = sp(t, 0.15 + i * 0.12, 0.68);
     const hi = beat === i;
     const col = i % 2, row = Math.floor(i / 2);
-    const cx = 68 + col * 904, cy = 256 + row * 354 + (1 - p) * 40;
+    const cx = 68 + col * 904, cy = 256 + row * 354 + (1 - p) * 35;
     c.save();
     c.globalAlpha = clamp(p * 1.3);
     box(c, cx, cy, 880, 330, 40, hi ? C.white : C.blueCont, hi ? C.aqua : '#3570e6', hi ? 3.5 : 1.8);
     box(c, cx + 38, cy + 38, 88, 88, 28, bg, null);
     icon(c, ic, cx + 82, cy + 82, 46, fg, 2.5);
-    chip(c, metric, cx + 560, cy + 44, { sz: 24, fill: bg, col: fg, h: 48 });
-    txt(c, title, cx + 152, cy + 88, { sz: 36, w: 700, col: hi ? C.ink : C.white });
+    chip(c, metric, cx + 595, cy + 44, { sz: 21, fill: bg, col: fg, h: 46 });
+    txt(c, title, cx + 148, cy + 92, { sz: 32, w: 700, col: hi ? C.ink : C.white });
     txt(c, ne, cx + 38, cy + 190, { sz: 28, w: 600, col: hi ? fg : '#d8e4ff' });
     txt(c, sub, cx + 38, cy + 245, { sz: 22, w: 500, col: hi ? C.mute : '#b5cbff' });
     c.restore();
