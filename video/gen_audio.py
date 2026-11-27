@@ -32,15 +32,15 @@ def clean(w, sr=48000):
     sib = (f >= 4800) & (f <= 11500); ref = (f >= 200) & (f <= 3500)
     Es = P[sib].mean(0); Er = P[ref].mean(0) + 1e-9; r = Es / Er
     voiced = Er > 0.02 * Er.max()
-    thr = 1.25 * np.median(r[voiced]) if voiced.any() else 1.0
-    red = np.clip(10 * np.log10(np.maximum(r, 1e-9) / thr), 0, 11)      # dB to pull down per frame
+    thr = 1.5 * np.median(r[voiced]) if voiced.any() else 1.0
+    red = np.clip(10 * np.log10(np.maximum(r, 1e-9) / thr), 0, 9)      # dB to pull down per frame
     red = np.maximum(red, np.convolve(red, np.ones(3) / 3, "same"))
     red = np.convolve(red, np.ones(3) / 3, "same")
     G = np.ones_like(P)
     bw = np.clip((f - 4000) / 1500, 0, 1) * np.clip((13500 - f) / 1500, 0, 1)   # soft band edges
     G = 10 ** (-(bw[:, None] * red[None, :]) / 20)
     # static tone shaping: dip metallic 3.4-4.6k (-2.2 dB), air shelf above 7k (-4 dB), steep lowpass ~10.5k
-    G *= 10 ** ((-2.2 * np.exp(-((f - 3900) / 650) ** 2) - 4.0 * np.clip((f - 7000) / 2500, 0, 1))[:, None] / 20)
+    G *= 10 ** ((-2.2 * np.exp(-((f - 3900) / 650) ** 2) - 2.5 * np.clip((f - 7000) / 2500, 0, 1))[:, None] / 20)
     G *= (1 / (1 + (f / 10500) ** 8))[:, None]
     _, y = istft(Z * G, sr, nperseg=1024, noverlap=768); y = y[:len(w)].astype(np.float32)
     if len(y) < len(w): y = np.pad(y, (0, len(w) - len(y)))
