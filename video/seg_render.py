@@ -6,7 +6,7 @@ from multiprocessing import Pool
 sys.path.insert(0, os.path.dirname(__file__))
 import render as R
 REPO, TAG, SEG, FPS = "NikitHamal/Sakhiya", os.environ.get("WIP_TAG", "news-ep1-v2-wip"), 900, 30
-TOK = subprocess.check_output([os.environ.get("GIT_ASKPASS", "/tmp/gitenv.sh")]).decode().strip()
+TOK = subprocess.check_output([os.environ.get("GIT_ASKPASS", "/tmp/gitenv.sh"), "Password"]).decode().strip()
 H = ["-H", f"Authorization: token {TOK}"]
 def curl(*a): return subprocess.check_output(["curl", "-s", "-L", *H, *a])
 def rel():
@@ -20,6 +20,8 @@ def main():
     wk = int(os.environ.get("WORKERS", 12))
     for s in range(math.ceil(n / SEG)):
         name = f"seg_{s:02d}.mp4"; path = f"{S}/{name}"; a0, a1 = s * SEG, min(n, (s + 1) * SEG)
+        if os.path.exists(path) and os.path.getsize(path) > 10000:
+            print("cached local", name, os.path.getsize(path), flush=True); continue
         if name in have:
             open(path, "wb").write(curl("-H", "Accept: application/octet-stream", have[name]["url"])); print("downloaded", name, flush=True); continue
         shutil.rmtree(R.FR, ignore_errors=True); os.makedirs(R.FR)
@@ -28,8 +30,9 @@ def main():
         print("seg", s, "errors:", [e for e in errs if e][:2], flush=True)
         subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", R.FR + "/%05d.jpg", "-c:v", "libx264", "-preset", "medium", "-crf", "16",
             "-pix_fmt", "yuv420p", "-g", "30", "-r", str(FPS), path])
-        up = curl("-X", "POST", "-H", "Content-Type: application/octet-stream", "--data-binary", "@" + path, f"https://uploads.github.com/repos/{REPO}/releases/{r['id']}/assets?name={name}")
-        print("uploaded", name, len(up), flush=True)
+        if "id" in r:
+            up = curl("-X", "POST", "-H", "Content-Type: application/octet-stream", "--data-binary", "@" + path, f"https://uploads.github.com/repos/{REPO}/releases/{r['id']}/assets?name={name}")
+            print("uploaded", name, len(up), flush=True)
     open(S + "/list.txt", "w").write("".join(f"file '{S}/seg_{s:02d}.mp4'\n" for s in range(math.ceil(n / SEG))))
     os.makedirs(R.V + "/out", exist_ok=True)
     subprocess.check_call(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", S + "/list.txt", "-i", R.B + "/mix.wav", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",

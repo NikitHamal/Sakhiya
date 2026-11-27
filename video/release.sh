@@ -2,7 +2,7 @@
 # Publish NEBians News Ep.1 as a GitHub release of NikitHamal/Sakhiya. Token is read from the GIT_ASKPASS helper, never stored.
 set -e
 cd "$(dirname "$0")"; TAG=${TAG:-news-ep1}; REPO=NikitHamal/Sakhiya
-TOK=$(${GIT_ASKPASS:-/tmp/gitenv.sh}); B=build; O=out
+TOK=$(${GIT_ASKPASS:-/tmp/gitenv.sh} Password); B=build; O=out
 python3 - <<'EOF'
 import json
 tl = json.load(open("build/timeline.json")); f = lambda t: "%02d:%02d:%02d,%03d" % (t // 3600, t % 3600 // 60, t % 60, int(t % 1 * 1000))
