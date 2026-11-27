@@ -228,6 +228,16 @@ class SakhiyaONNX:
                             ds_in[idx_tok + 1] = base_ds * 0.64
                             ps_in[idx_tok] = base_ps + 0.16
                             ps_in[idx_tok + 1] = base_ps + 0.22
+                    # Clear two-syllable 'एआई' (e-j-a-a-i -> eyaai) nucleus sustain so it never clips into short 'eyai'
+                    seq_ejaai = [S.SYM2ID.get(p, -1) for p in ("e", "j", "a", "a", "i")]
+                    if all(x >= 0 for x in seq_ejaai) and len(ids_s) >= 5:
+                        for idx_ai in range(len(ids_s) - 4):
+                            if ids_s[idx_ai : idx_ai + 5] == seq_ejaai:
+                                ds_in[idx_ai] = base_ds * 1.08
+                                ds_in[idx_ai + 1] = base_ds * 0.95
+                                ds_in[idx_ai + 2] = base_ds * 1.22
+                                ds_in[idx_ai + 3] = base_ds * 1.22
+                                ds_in[idx_ai + 4] = base_ds * 1.05
                 w = self.single.run(None, {
                     "ids": ids_in,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),

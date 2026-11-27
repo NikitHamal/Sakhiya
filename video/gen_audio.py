@@ -23,65 +23,64 @@ def tts_text(t):
     for a, b in PRON.items(): t = t.replace(a, b)
     return t
 
+def _peaking_sos(f0, gain_db, q, sr):
+    A = 10.0 ** (gain_db / 40.0)
+    w0 = 2.0 * np.pi * f0 / sr
+    alpha = np.sin(w0) / (2.0 * q)
+    cw = np.cos(w0)
+    b0, b1, b2 = 1.0 + alpha * A, -2.0 * cw, 1.0 - alpha * A
+    a0, a1, a2 = 1.0 + alpha / A, -2.0 * cw, 1.0 - alpha / A
+    return np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]], dtype=np.float64)
+
+def _highshelf_sos(f0, gain_db, q, sr):
+    A = 10.0 ** (gain_db / 40.0)
+    w0 = 2.0 * np.pi * f0 / sr
+    cw, sw = np.cos(w0), np.sin(w0)
+    sqA = 2.0 * np.sqrt(A) * (sw / (2.0 * q))
+    b0 = A * ((A + 1.0) + (A - 1.0) * cw + sqA)
+    b1 = -2.0 * A * ((A - 1.0) + (A + 1.0) * cw)
+    b2 = A * ((A + 1.0) + (A - 1.0) * cw - sqA)
+    a0 = (A + 1.0) - (A - 1.0) * cw + sqA
+    a1 = 2.0 * ((A - 1.0) - (A + 1.0) * cw)
+    a2 = (A + 1.0) - (A - 1.0) * cw - sqA
+    return np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]], dtype=np.float64)
+
 def clean(w, sr=48000):
-    """Studio voice clean-up (code only): high-pass, narrowband whistle-spike suppressor, split-band de-esser & burst tamer,
-    unvoiced sibilant phase dispersion above 4.5 kHz, smooth 7-9 kHz shelf/low-pass, warm chest body, zero comb reverb."""
-    from scipy.signal import stft, istft, sosfiltfilt
-    from scipy.ndimage import uniform_filter1d, median_filter
-    w = sosfiltfilt(butter(2, 80, "hp", fs=sr, output="sos"), w).astype(np.float32)
-    f, _, Z = stft(w, sr, nperseg=1024, noverlap=768)
-    mag = np.abs(Z).astype(np.float32)
-    ph = np.angle(Z).astype(np.float32)
-    P = mag ** 2
+    """Phase-clean broadcast studio chain: HPF, time-domain crossover de-esser/burst tamer, zero-phase EQ, subtle tube warmth & studio early reflection."""
+    from scipy.signal import sosfiltfilt
+    from scipy.ndimage import uniform_filter1d
+    w = sosfiltfilt(butter(2, 75, "hp", fs=sr, output="sos"), w).astype(np.float32)
 
-    # 1. Frequency-axis narrowband spike suppressor in 2.4k-10.5k (removes metallic whistle bins on स/श/छ/त)
-    log_mag = 20.0 * np.log10(np.maximum(mag, 1e-7))
-    smooth_log = uniform_filter1d(median_filter(log_mag, size=(9, 1)), size=5, axis=0)
-    spike_db = np.maximum(0.0, log_mag - smooth_log - 1.0)
-    bw_spike = np.clip((f - 2300.0) / 700.0, 0.0, 1.0) * np.clip((11000.0 - f) / 1000.0, 0.0, 1.0)
-    G_spike = 10.0 ** (-(bw_spike[:, None] * spike_db * 0.82) / 20.0)
+    # 1. Time-domain 4th-order split-band de-esser & dental burst tamer (zero STFT random-phase fuzz)
+    hi = sosfiltfilt(butter(4, 4100, "hp", fs=sr, output="sos"), w).astype(np.float32)
+    ref = sosfiltfilt(butter(2, [140, 1800], "bp", fs=sr, output="sos"), w).astype(np.float32)
+    e_hi = np.sqrt(uniform_filter1d(hi * hi, max(1, int(0.004 * sr))) + 1e-10)
+    e_ref = np.sqrt(uniform_filter1d(ref * ref, max(1, int(0.012 * sr))) + 1e-10)
+    voiced = e_ref > 0.04 * float(np.max(e_ref))
+    ratio_base = float(np.median(e_hi[voiced] / np.maximum(e_ref[voiced], 1e-6))) if voiced.any() else 0.18
+    excess = uniform_filter1d(np.maximum(1.0, e_hi / np.maximum(e_ref * max(ratio_base * 1.45, 0.16), 0.012)), max(1, int(0.008 * sr)))
+    g_hi = np.clip(1.0 / (1.0 + 0.68 * np.maximum(0.0, excess - 1.0) ** 1.15), 0.46, 1.0).astype(np.float32)
+    y = w - hi * (1.0 - g_hi)
 
-    # 2. Dual-band dynamic de-esser & dental-burst glare tamer referenced to low-vowel band (150-1800 Hz)
-    ref_band = (f >= 150) & (f <= 1800)
-    glare_band = (f >= 2600) & (f <= 5200)   # त/थ/छ/च burst & affricate glare
-    sib_band = (f >= 5000) & (f <= 10200)    # स/श/छ high sibilant whistle/hiss
-    Er = P[ref_band].mean(0) + 1e-9
-    Eg = P[glare_band].mean(0)
-    Es = P[sib_band].mean(0)
-    voiced = Er > 0.015 * Er.max()
+    # 2. Zero-phase parametric broadcast EQ (removes boxy 1k & metallic 3.45k/5.6k glare, preserves warm body & natural air)
+    eq_sos = np.vstack([
+        _peaking_sos(195.0, +1.8, 0.85, sr),
+        _peaking_sos(1050.0, -1.6, 1.25, sr),
+        _peaking_sos(3450.0, -3.1, 1.15, sr),
+        _peaking_sos(5600.0, -2.2, 1.30, sr),
+        _highshelf_sos(6800.0, -3.5, 0.70, sr),
+    ])
+    y = sosfiltfilt(eq_sos, y).astype(np.float32)
 
-    rg = Eg / Er
-    thr_g = 1.12 * np.median(rg[voiced]) if voiced.any() else 0.5
-    red_g = np.clip(10.0 * np.log10(np.maximum(rg, 1e-9) / max(thr_g, 1e-6)), 0.0, 6.8)
-    red_g = uniform_filter1d(np.maximum(red_g, uniform_filter1d(red_g, 3)), 3)
-
-    rs = Es / Er
-    thr_s = 1.08 * np.median(rs[voiced]) if voiced.any() else 0.3
-    red_s = np.clip(10.0 * np.log10(np.maximum(rs, 1e-9) / max(thr_s, 1e-6)), 0.0, 9.5)
-    red_s = uniform_filter1d(np.maximum(red_s, uniform_filter1d(red_s, 3)), 3)
-
-    bw_g = np.clip((f - 2200.0) / 700.0, 0.0, 1.0) * np.clip((5600.0 - f) / 700.0, 0.0, 1.0)
-    bw_s = np.clip((f - 4300.0) / 900.0, 0.0, 1.0) * np.clip((11500.0 - f) / 1000.0, 0.0, 1.0)
-    G_dyn = 10.0 ** (-(bw_g[:, None] * red_g[None, :] + bw_s[:, None] * red_s[None, :]) / 20.0)
-
-    # 3. Static broadcast EQ: dip metallic 3.2-4.8k (-3.2 dB), smooth shelf above 6.2k (-5.5 dB), 8th-order lowpass at 9.2k
-    G_eq = 10.0 ** ((-3.2 * np.exp(-((f - 3850.0) / 750.0) ** 2) - 5.5 * np.clip((f - 6200.0) / 2600.0, 0.0, 1.0))[:, None] / 20.0)
-    G_eq *= (1.0 / (1.0 + (f / 9200.0) ** 8))[:, None]
-
-    # 4. Unvoiced sibilant phase dispersion above 4.5 kHz (replaces periodic vocoder buzz on स/श/छ with silky air)
-    unvoiced_sib = np.clip((rs / max(thr_s * 1.2, 1e-6) - 0.8) / 1.5, 0.0, 1.0) * np.clip(1.0 - Er / (0.12 * Er.max() + 1e-9), 0.0, 1.0)
-    rng = np.random.default_rng(42)
-    rand_ph = rng.uniform(-np.pi, np.pi, size=ph.shape).astype(np.float32)
-    f_mask = np.clip((f - 4500.0) / 1500.0, 0.0, 1.0)[:, None]
-    alpha_ph = 0.35 * f_mask * unvoiced_sib[None, :]
-    Z_out = (mag * G_spike * G_dyn * G_eq) * np.exp(1j * (ph + alpha_ph * rand_ph))
-
-    _, y = istft(Z_out, sr, nperseg=1024, noverlap=768)
-    y = y[:len(w)].astype(np.float32)
-    if len(y) < len(w): y = np.pad(y, (0, len(w) - len(y)))
-    # Gentle warm body around 130-260 Hz (+1.4 dB); no artificial noise-reverb comb filtering
-    y = y + 0.16 * sosfiltfilt(butter(2, [130, 260], "bp", fs=sr, output="sos"), y).astype(np.float32)
-    return y.astype(np.float32)
+    # 3. Subtle analog soft saturation + decorrelated studio-booth early-reflection tail (2-22 ms, -33 dB, 220-4800 Hz)
+    y = (0.82 * y + 0.18 * (np.tanh(y * 1.35) / 1.35)).astype(np.float32)
+    rng = np.random.default_rng(7)
+    ir_len = int(0.022 * sr)
+    ir = rng.standard_normal(ir_len).astype(np.float32) * np.exp(-(np.arange(ir_len, dtype=np.float32) / sr) / 0.0055)
+    ir[:int(0.002 * sr)] = 0.0
+    ir = sosfiltfilt(butter(2, [220, 4800], "bp", fs=sr, output="sos"), ir).astype(np.float32)
+    ir *= (0.022 / max(float(np.sqrt((ir * ir).sum())), 1e-6))
+    return (y + fftconvolve(y, ir, mode="full")[:len(y)].astype(np.float32)).astype(np.float32)
 
 def trim_sent(w, sr):
     """Onset-safe & tail-safe trimmer: preserves quiet final syllables (तर्फ, नमस्ते) with a 28 ms raised-cosine fade-out and 65 ms silence tail."""
