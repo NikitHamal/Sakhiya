@@ -14,12 +14,12 @@ open("out/nebians-news-ep1.srt", "w").write("\n".join(out))
 EOF
 ffmpeg -y -loglevel error -i $B/voice.wav -c:a libmp3lame -b:a 160k $O/sakhiya-voice-only.mp3
 ffmpeg -y -loglevel error -ss 4 -i $O/nebians-news-ep1.mp4 -frames:v 1 $O/poster.jpg
-NOTES="NEBians News, Episode 01 (Friday Weekly Recap · 27 Nov 2026): Meet Sakhiya-One v2 + Global AI, Tech & Nepal Education Weekly Recap (strictly covering Sat 21 Nov – Fri 27 Nov 2026). 5:42 (342s), 1080p30. Voice: Sakhiya-One v2 Studio INT8 ONNX (docs/models_sakhiya_one_vocos, 23 MB, 24 kHz Vocos), news style. Visuals: Upgraded Material 3 Expressive motion graphics with compact bilingual subtitles. Rendered on MoLab (HTML5 Canvas + Playwright + FFmpeg)."
+NOTES="NEBians News, Episode 1 (Friday weekly recap, 27 Nov 2026). Covers Sat 21 Nov to Fri 27 Nov 2026. Voice-only mix (no background music), 1080p30, bilingual compact subtitles. Draft: not published yet."
 API=https://api.github.com/repos/$REPO/releases
 OLD=$(curl -s -H "Authorization: token $TOK" "$API/tags/$TAG" | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))")
 [ -n "$OLD" ] && curl -s -X DELETE -H "Authorization: token $TOK" "$API/$OLD" >/dev/null
 curl -s -X DELETE -H "Authorization: token $TOK" "https://api.github.com/repos/$REPO/git/refs/tags/$TAG" >/dev/null || true
-ID=$(curl -s -X POST -H "Authorization: token $TOK" $API -d "$(python3 -c "import json,sys;print(json.dumps(dict(tag_name='$TAG',name='NEBians News Ep.1: Meet Sakhiya',body=sys.argv[1],target_commitish='main')))" "$NOTES")" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+ID=$(curl -s -X POST -H "Authorization: token $TOK" $API -d "$(python3 -c "import json,sys;print(json.dumps(dict(tag_name='$TAG',name='NEBians News Ep.1 (draft)',body=sys.argv[1],target_commitish='main',draft=True)))" "$NOTES")" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
 for f in nebians-news-ep1.mp4 nebians-news-ep1.srt sakhiya-voice-only.mp3 poster.jpg; do
   curl -s -X POST -H "Authorization: token $TOK" -H "Content-Type: application/octet-stream" --data-binary @$O/$f "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$f" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('name'),d.get('size'),d.get('browser_download_url'))"
 done
