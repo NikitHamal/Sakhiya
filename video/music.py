@@ -4,7 +4,7 @@ from scipy.signal import sosfilt, butter, fftconvolve
 
 BPM = 100; SPB = 60 / BPM
 CH = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]  # Am F C G
-INTENS = dict(hello=.35, about=.4, series=.65, n1=.6, n2=.6, n3=.6, n4=.6, n5=.6, fast=.9, app=.7, outro=.4)
+INTENS = dict(hello=.35, about=.42, series=.65, n1=.62, n2=.62, n3=.62, n4=.62, n5=.62, edu=.66, fast=.88, outro=.4)
 
 def f(m): return 440 * 2 ** ((m - 69) / 12)
 
@@ -68,7 +68,7 @@ def mix(voice, tl, B, SR):
     for i, sc in enumerate(tl["scenes"]):
         t0 = sc["t0"]; w = whoosh(1.1, SR, up=(i % 2 == 0), seed=i); s = max(0, int((t0 - .75) * SR))
         sfx[s:s + len(w)] += w[:max(0, min(len(w), n - s))]
-        if sc["id"] in ("n1", "n2", "n3", "n4", "n5", "app", "series"):
+        if sc["id"] in ("n1", "n2", "n3", "n4", "n5", "edu", "series", "fast"):
             h = hit(SR); s = int((t0 + .55) * SR); sfx[s:s + len(h)] += h[:max(0, min(len(h), n - s))] * .5
     h = hit(SR, 2.0); sfx[int(1.2 * SR):int(1.2 * SR) + len(h)] += h * .9
     st = np.stack([voice + music + sfx * .8, voice + music + sfx * .8], 1)

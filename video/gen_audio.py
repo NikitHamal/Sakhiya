@@ -15,7 +15,8 @@ def _init():
     global _m
     sys.path.insert(0, ROOT)
     from sakhiya.onnx_tts import SakhiyaONNX
-    _m = SakhiyaONNX(os.path.join(ROOT, "docs", "models_v2"), tiny=True, threads=2)
+    model_dir = os.environ.get("SAKHIYA_MODEL_DIR", os.path.join(ROOT, "docs", "models_sakhiya_one_vocos"))
+    _m = SakhiyaONNX(model_dir, tiny=True, threads=2)
 
 def _synth(job):
     lid, text = job
