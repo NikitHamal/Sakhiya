@@ -57,18 +57,44 @@ function avatar(c, x, y, R, T, p, amp, o = {}) {
 
 // ---- compact bilingual subtitles ----
 const _pg = {};
-function splitBal(s, n) {
-  const w = s.split(' '), tot = s.length, out = Array.from({ length: n }, () => []); let cum = 0;
+function splitClause(s, maxLen = 78) {
+  if (s.length <= maxLen) return [s];
+  // Prefer splitting at a natural comma or conjunction ('र', 'भने') near the middle
+  const commaIdx = s.indexOf(', ');
+  if (commaIdx >= 18 && commaIdx <= s.length - 18) {
+    return [s.slice(0, commaIdx + 1).trim(), s.slice(commaIdx + 2).trim()];
+  }
+  const w = s.split(' '), tot = s.length, n = Math.max(1, Math.ceil(tot / maxLen)), out = Array.from({ length: n }, () => []);
+  let cum = 0;
   w.forEach(x => { const pos = (cum + x.length / 2) / tot; out[Math.min(n - 1, Math.floor(pos * n))].push(x); cum += x.length + 1; });
   return out.map(a => a.join(' ')).filter(Boolean);
 }
 function pagesOf(l) {
   if (_pg[l.id]) return _pg[l.id];
-  const neS = l.ne.split(/(?<=।)\s*/).filter(Boolean), enS = l.en.split(/(?<=[.!?])\s+/).filter(Boolean); let ne = [], en = [];
+  const neS = l.ne.split(/(?<=[।?!])\s*/).filter(Boolean), enS = l.en.split(/(?<=[.!?])\s+/).filter(Boolean);
+  let ne = [], en = [], cuts = [];
   if (neS.length === enS.length) {
-    neS.forEach((x, i) => { const a = splitBal(x, Math.max(1, Math.ceil(x.length / 62))); a.forEach(q => { ne.push(q); en.push(enS[i]); }); });
-  } else { ne = splitBal(l.ne, Math.max(1, Math.ceil(l.ne.length / 56))); en = splitBal(l.en, ne.length); }
-  const tot = l.ne.length; let a = 0; const cuts = ne.map(x => (a += x.length + 1) / (tot + ne.length));
+    const sCuts = (l.s_cuts && l.s_cuts.length === neS.length) ? l.s_cuts : null;
+    let prevCut = 0;
+    neS.forEach((x, i) => {
+      const endCut = sCuts ? sCuts[i] : (i + 1) / neS.length;
+      const parts = splitClause(x, 78);
+      const subTot = parts.reduce((acc, q) => acc + q.length + 1, 0);
+      let subCum = 0;
+      parts.forEach(q => {
+        subCum += q.length + 1;
+        ne.push(q);
+        en.push(enS[i]);
+        cuts.push(prevCut + (endCut - prevCut) * (subCum / subTot));
+      });
+      prevCut = endCut;
+    });
+  } else {
+    ne = splitClause(l.ne, 76);
+    en = splitClause(l.en, Math.ceil(l.en.length / ne.length));
+    const tot = l.ne.length; let a = 0;
+    cuts = ne.map(x => (a += x.length + 1) / (tot + ne.length));
+  }
   return _pg[l.id] = { ne, en, cuts };
 }
 function caption(c, T, p, sc) {
@@ -101,11 +127,13 @@ function wavy(c, x0, x1, y, prog, T, p) {
   c.stroke();
 }
 function chrome(c, T, i, p) {
-  const sc = TL.scenes[i], a = i === 0 ? ss(T, 2.6, .5) : 1;
+  const sc = TL.scenes[i], isHero = sc.kind === 'hello' || sc.kind === 'outro', a = i === 0 ? ss(T, 1.2, .5) : 1;
   if (a > .01) {
     c.save(); c.globalAlpha *= a;
-    logo(c, 120, 36, 64, T);
-    txt(c, 'NEBians News', 198, 78, { sz: 31, w: 700, col: p.ink, ls: .2 });
+    if (!isHero) {
+      logo(c, 120, 36, 64, T);
+      txt(c, 'NEBians News', 198, 78, { sz: 31, w: 700, col: p.ink, ls: .2 });
+    }
     const lab = 'Episode 1  ·  Fri 27 Nov 2026', ww = tw(c, lab, 23, 600) + 48;
     box(c, W - 120 - ww, 44, ww, 52, 26, C(p.surf, .9), C(p.line, .8), 1.5); txt(c, lab, W - 120 - ww / 2, 78, { sz: 23, w: 600, col: p.mute, al: 'center' });
     c.restore();

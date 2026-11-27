@@ -115,17 +115,24 @@ def _synth(job):
     rt_cycle = [0.96, 0.97, 0.95, 0.965]
     parts = []
     sr_out = 24000
+    s_cuts = []
+    cur_samples = 0
     for s_i, sent in enumerate(sents):
         ps_val = ps_cycle[(idx_line + s_i) % 4] + (0.015 if (s_i == 0 and len(sents) > 1) else 0.0)
         rt_val = rt_cycle[(idx_line + s_i) % 4]
         w_s, sr_out = _m.say(sent, lang="ne", style="news", rate=rt_val, pitch_shift=ps_val)
         w_s = trim_sent(w_s, int(sr_out))
         parts.append(w_s)
+        cur_samples += len(w_s)
         if s_i + 1 < len(sents):
             # Enforce ~425 ms total inter-sentence pause on '।' (65 ms tail + 360 ms explicit silence)
-            parts.append(np.zeros(int(0.360 * sr_out), dtype=np.float32))
+            p_len = int(0.360 * sr_out)
+            s_cuts.append(cur_samples + int(0.220 * sr_out))
+            parts.append(np.zeros(p_len, dtype=np.float32))
+            cur_samples += p_len
     w_all = np.concatenate(parts) if len(parts) > 1 else parts[0]
-    return lid, w_all.astype(np.float32), int(sr_out)
+    s_fracs = [round(c / max(len(w_all), 1), 4) for c in s_cuts] + [1.0]
+    return lid, w_all.astype(np.float32), int(sr_out), s_fracs
 
 def check(w, sr, text):
     a = np.abs(w); fr = int(0.02 * sr); n = len(a) // fr
@@ -140,9 +147,9 @@ def check(w, sr, text):
 def main():
     lines = [(idx, l["id"], l["ne"]) for idx, (sc, l) in enumerate((sc, l) for sc in S["scenes"] for l in sc["lines"])]
     with Pool(min(4, len(lines)), initializer=_init) as p: res = p.map(_synth, lines)
-    clips, rep = {}, {}
+    clips, s_cuts_map, rep = {}, {}, {}
     line_map = {lid: txt for _, lid, txt in lines}
-    for lid, w, sr in res:
+    for lid, w, sr, s_fracs in res:
         w = resample_poly(w, SR, sr).astype(np.float32) if sr != SR else w.copy()
         w = clean(w, SR)
         # Gentle edge guard without re-clipping the 65 ms tail
@@ -152,14 +159,14 @@ def main():
         r = float(np.sqrt((active ** 2).mean()) if active.size else np.sqrt((w ** 2).mean())) + 1e-9
         w = w * (0.105 / r)
         pk = float(np.abs(w).max()); w = w * (0.89 / pk) if pk > 0.89 else w
-        clips[lid] = w; txt = line_map[lid]; rep[lid] = check(w, SR, txt)
+        clips[lid] = w; s_cuts_map[lid] = s_fracs; txt = line_map[lid]; rep[lid] = check(w, SR, txt)
         wav(f"{B}/clips/{lid}.wav", w)
     json.dump(rep, open(B + "/audio_report.json", "w"), indent=1)
     t, scenes, tl = 0.0, [], []
     for sc in S["scenes"]:
         t0 = t; t += sc["pre"]; ls = []
         for l in sc["lines"]:
-            d = len(clips[l["id"]]) / SR; ls.append(dict(l, t=round(t, 3), d=round(d, 3)))
+            d = len(clips[l["id"]]) / SR; ls.append(dict(l, t=round(t, 3), d=round(d, 3), s_cuts=s_cuts_map[l["id"]]))
             t += d + (0.44 if l["ne"].count("।") > 1 else 0.36)
         t = t - 0.36 + sc["post"]; scenes.append(dict({k: v for k, v in sc.items() if k != "lines"}, t0=round(t0, 3), t1=round(t, 3), lines=ls))
     total = t; tl = dict(total=round(total, 3), fps=FPS, scenes=scenes, title=S["title"], date=S["date"])
