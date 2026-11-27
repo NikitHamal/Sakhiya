@@ -238,6 +238,13 @@ class SakhiyaONNX:
                                 ds_in[idx_ai + 2] = base_ds * 1.22
                                 ds_in[idx_ai + 3] = base_ds * 1.22
                                 ds_in[idx_ai + 4] = base_ds * 1.05
+                    # Preserve full final schwa on 'हुन' (h-u-n-ʌ -> huna, never clipped to 'hun' before बाट/पर्छ/सक्छ)
+                    seq_huna = [S.SYM2ID.get(p, -1) for p in ("h", "u", "n", "ʌ")]
+                    if all(x >= 0 for x in seq_huna) and len(ids_s) >= 4:
+                        for idx_hu in range(len(ids_s) - 3):
+                            if ids_s[idx_hu : idx_hu + 4] == seq_huna and (idx_hu + 4 >= len(ids_s) or ids_s[idx_hu + 4] in (1, 4, 5, 6, 7, 8)):
+                                ds_in[idx_hu + 2] = base_ds * 0.95
+                                ds_in[idx_hu + 3] = base_ds * 1.45
                 w = self.single.run(None, {
                     "ids": ids_in,
                     "lang": np.array([1 if lang == "sa" else 0], dtype=np.int64),
