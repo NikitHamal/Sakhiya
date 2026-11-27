@@ -22,7 +22,7 @@ function bg(c, p, T) {
   shape(c, mixc(p.bg, p.cont, .55), 30, 1050, 430, 'flower', 'sunny', .5 + .5 * Math.sin(T * .25 + 1), -T * .06);
 }
 function chip(c, x, y, label, o = {}) {
-  const h = o.h || 50, sz = o.sz || 22, pad = 22, iw = o.icon ? h * .5 + 10 : 0, w = tw(c, label, sz, 600) + pad * 2 + iw, a = o.a ?? 1, s = o.s ?? 1;
+  const h = o.h || 50, sz = o.sz || 22, pad = 22, iw = o.icon ? h * .5 + 10 : 0, w = tw(c, label, sz, 600) + (o.ls || 0) * label.length + pad * 2 + iw, a = o.a ?? 1, s = o.s ?? 1;
   if (a <= .01) return w;
   c.save(); c.globalAlpha *= a; c.translate(x + w / 2, y + h / 2); c.scale(s, s); c.translate(-(x + w / 2), -(y + h / 2));
   box(c, x, y, w, h, h / 2, o.fill, o.stroke, 2);
@@ -58,7 +58,10 @@ function splitBal(s, n) {
 }
 function pagesOf(l) {
   if (_pg[l.id]) return _pg[l.id];
-  const n = Math.max(1, Math.ceil(l.ne.length / 56)), ne = splitBal(l.ne, n), en = splitBal(l.en, ne.length);
+  const neS = l.ne.split(/(?<=।)\s*/).filter(Boolean), enS = l.en.split(/(?<=[.!?])\s+/).filter(Boolean); let ne = [], en = [];
+  if (neS.length === enS.length) {
+    neS.forEach((x, i) => { const a = splitBal(x, Math.max(1, Math.ceil(x.length / 62))), b = splitBal(enS[i], a.length); a.forEach((q, j) => { ne.push(q); en.push(b[j] ?? b[b.length - 1] ?? ''); }); });
+  } else { ne = splitBal(l.ne, Math.max(1, Math.ceil(l.ne.length / 56))); en = splitBal(l.en, ne.length); }
   const tot = l.ne.length; let a = 0; const cuts = ne.map(x => (a += x.length + 1) / (tot + ne.length));
   return _pg[l.id] = { ne, en, cuts };
 }

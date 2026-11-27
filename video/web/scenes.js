@@ -1,4 +1,5 @@
 // NEBians News — scene layouts (all Material 3 Expressive: tonal surfaces, morphing shapes, spring motion)
+const STAGE = ['cookie12', 'sunny', 'cookie9', 'pebble', 'burst', 'penta'];
 function headerChips(c, t, sc, p, b) {
   const y = 176; let x = 120;
   const a1 = sp(t, b, .5), a2 = sp(t, b + .1, .5), a3 = sp(t, b + .2, .5);
@@ -7,7 +8,7 @@ function headerChips(c, t, sc, p, b) {
   if (sc.dates) chip(c, x, y, sc.dates, { stroke: p.line, ink: p.mute, icon: 'cal', a: a3, s: .8 + .2 * a3 });
 }
 function stageText(c, cx, cy, R, l, a, dy, p, ink) {
-  const f = fitText(c, l.big, R * 1.5, 112, 700, 44), n = f.lines.length, lh = f.sz * 1.12, y0 = cy - (n - 1) * lh / 2 + f.sz * .36 + dy;
+  const f = fitText(c, l.big, R * 1.42, 112, 700, 44), n = f.lines.length, lh = f.sz * 1.12, y0 = cy - (n - 1) * lh / 2 + f.sz * .36 + dy;
   f.lines.forEach((s, i) => txt(c, s, cx, y0 + i * lh, { sz: f.sz, w: 700, col: ink, al: 'center', a }));
 }
 SC.story = (c, t, sc, p, T) => {
@@ -23,8 +24,8 @@ SC.story = (c, t, sc, p, T) => {
   }
   txt(c, String(k + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0'), sx + 14, 840, { sz: 22, w: 600, col: p.mute });
   // stage
-  const cx = 1385, cy = 470, R = 262, ent = sp(t, b, .9), kk = Math.max(0, cur(sc, t));
-  const A = SHAPES6[(kk + 5) % 6], B = SHAPES6[kk % 6], m = kk ? ss(t, lt(sc, kk), .8) : 1;
+  const cx = 1385, cy = 472, R = 288, ent = sp(t, b, .9), kk = Math.max(0, cur(sc, t));
+  const A = STAGE[(kk + 5) % 6], B = STAGE[kk % 6], m = kk ? ss(t, lt(sc, kk), .8) : 1;
   c.save(); c.globalAlpha *= clamp(ent * 1.5);
   shape(c, p.secC, cx + 34, cy + 26, R * ent, B, A, 1 - m, -T * .16 + 1);
   shape(c, p.priC, cx, cy, R * 1.0 * ent, B, A, 1 - m, T * .2);
@@ -36,7 +37,7 @@ SC.story = (c, t, sc, p, T) => {
   c.restore();
   swap(sc, t, (l, a, dy) => {
     stageText(c, cx, cy, R, l, a, dy, p, p.onPriC);
-    const f = 30, w = tw(c, l.label, f, 600) + 56, y = cy + R + 36 + dy * .5;
+    const f = 30, w = tw(c, l.label, f, 600) + 56, y = cy + R + 30 + dy * .5;
     box(c, cx - w / 2, y, w, 56, 28, C(p.surf, a), C(p.line, a), 2); txt(c, l.label, cx, y + 38, { sz: f, w: 600, col: p.ink, al: 'center', a });
   });
 };
@@ -86,10 +87,10 @@ SC.series = (c, t, sc, p, T) => {
   bg(c, p, T); const b = .3, k = cur(sc, t);
   chip(c, 165, 176, 'THE SHOW', { fill: p.pri, ink: p.onPri, a: sp(t, b, .5), s: .8 + .2 * sp(t, b, .5), ls: 1 });
   swap(sc, t, (l, a, dy) => {
-    txt(c, l.big, 165, 300 + dy, { sz: 88, w: 700, col: p.ink, a });
-    txt(c, l.label, 168, 352 + dy * .7, { sz: 32, w: 500, col: p.mute, a });
+    txt(c, l.big, 165, 322 + dy, { sz: 88, w: 700, col: p.ink, a });
+    txt(c, l.label, 168, 376 + dy * .7, { sz: 32, w: 500, col: p.mute, a });
   }, { dy: 44 });
-  const names = ['SAT', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI'], tw_ = 210, g = 20, x0 = (W - (7 * tw_ + 6 * g)) / 2, y0 = 400, lc = lt(sc, 3), dur = sc.lines[3].d;
+  const names = ['SAT', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI'], tw_ = 210, g = 20, x0 = (W - (7 * tw_ + 6 * g)) / 2, y0 = 420, lc = lt(sc, 3), dur = sc.lines[3].d;
   for (let i = 0; i < 7; i++) {
     const e = sp(t, b + .15 + i * .07, .7); if (e <= .001) continue;
     const fri = i === 6, sw = k >= 3 ? clamp((t - lc - .1) / Math.max(.1, dur * .8) * 7 - i + .6) : 0, hot = fri ? 1 : (k >= 3 ? eo3(sw) : 0);
