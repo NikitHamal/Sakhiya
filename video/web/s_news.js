@@ -145,7 +145,7 @@ SC.n2 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
   catTag: 'CHIPS & SEMICONDUCTORS',
   ic: 'chip',
   shape: 'cookie12',
-  title: 'Nvidia Reinstates Huang & Tightens Exports',
+  title: 'Nvidia: Huang Returns & Export Curbs',
   neTitle: 'जेन्सेन हुआङको पुनरागमन र चिप निर्यातमा कडाइ',
   src: 'CNBC · Reuters · Bloomberg (23–27 Nov 2026)',
   beats: [
@@ -277,7 +277,7 @@ SC.n4 = (c, t, sc, th, T) => story(c, t, sc, th, T, {
   catTag: 'CYBERSECURITY & LAW',
   ic: 'shield',
   shape: 'shieldShape',
-  title: 'Shirudo Linux Defense, 3.5B Leak & NY Toy Ban',
+  title: 'Shirudo Linux, 3.5B Leak & NY Toy Ban',
   neTitle: 'लिनक्स सुरक्षा सिरुडो, डाटा चुहावट र एआई खेलौना प्रतिबन्ध',
   src: 'Wired · The Hacker News · TechCrunch (23–26 Nov 2026)',
   beats: [
