@@ -36,6 +36,8 @@ import pyarrow.parquet as pq
 import soundfile as sf
 import torch
 import torch.nn.functional as F
+
+sys.modules.setdefault("torchaudio", None)
 from transformers import Wav2Vec2ForCTC
 
 warnings.filterwarnings("ignore")
