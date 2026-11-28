@@ -1,0 +1,184 @@
+{
+  "experiment": "exp2_acoustic_and_signal_forensics",
+  "elapsed_sec": 26.98,
+  "version_pack_forensics": {
+    "cand_b_v2__other": {
+      "hpvr_harmonic_clarity_dB": 19.9077,
+      "mod_syllabic_3_8Hz": 0.0821,
+      "mod_consonant_12_35Hz": 0.0106,
+      "consonant_articulation_ratio": 0.1291,
+      "f0_spread_std_st": 3.015,
+      "f0_spread_iqr_st": 3.9708,
+      "mid_vowel_warble_st": 0.1211,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 22.328,
+        "presence_3_5p5kHz": -11.532,
+        "sibilant_5p5_8p5kHz": -21.73,
+        "air_8p5_11p5kHz": -24.06
+      },
+      "n_clips_analyzed": 6
+    },
+    "studio_80m__bigvgan_frozen_fp32": {
+      "hpvr_harmonic_clarity_dB": 22.6343,
+      "mod_syllabic_3_8Hz": 0.0364,
+      "mod_consonant_12_35Hz": 0.005,
+      "consonant_articulation_ratio": 0.137,
+      "f0_spread_std_st": 2.7902,
+      "f0_spread_iqr_st": 2.8792,
+      "mid_vowel_warble_st": 0.1115,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 19.355,
+        "presence_3_5p5kHz": -13.31,
+        "sibilant_5p5_8p5kHz": -26.492,
+        "air_8p5_11p5kHz": -27.113
+      },
+      "n_clips_analyzed": 6
+    },
+    "studio_80m__vocos24k_fp32": {
+      "hpvr_harmonic_clarity_dB": 21.7878,
+      "mod_syllabic_3_8Hz": 0.0393,
+      "mod_consonant_12_35Hz": 0.0045,
+      "consonant_articulation_ratio": 0.114,
+      "f0_spread_std_st": 2.831,
+      "f0_spread_iqr_st": 3.0417,
+      "mid_vowel_warble_st": 0.1081,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 19.782,
+        "presence_3_5p5kHz": -13.783,
+        "sibilant_5p5_8p5kHz": -28.122,
+        "air_8p5_11p5kHz": -29.033
+      },
+      "n_clips_analyzed": 6
+    },
+    "sakhiya_one": {
+      "hpvr_harmonic_clarity_dB": 20.36,
+      "mod_syllabic_3_8Hz": 0.0811,
+      "mod_consonant_12_35Hz": 0.0101,
+      "consonant_articulation_ratio": 0.1244,
+      "f0_spread_std_st": 3.2248,
+      "f0_spread_iqr_st": 4.0833,
+      "mid_vowel_warble_st": 0.1028,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 24.082,
+        "presence_3_5p5kHz": -11.423,
+        "sibilant_5p5_8p5kHz": -24.575,
+        "air_8p5_11p5kHz": -25.257
+      },
+      "n_clips_analyzed": 6
+    },
+    "sakhiya_news_v2_candidate": {
+      "hpvr_harmonic_clarity_dB": 21.1333,
+      "mod_syllabic_3_8Hz": 0.107,
+      "mod_consonant_12_35Hz": 0.0121,
+      "consonant_articulation_ratio": 0.1129,
+      "f0_spread_std_st": 3.4605,
+      "f0_spread_iqr_st": 4.2583,
+      "mid_vowel_warble_st": 0.0926,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 21.78,
+        "presence_3_5p5kHz": -10.963,
+        "sibilant_5p5_8p5kHz": -21.482,
+        "air_8p5_11p5kHz": -23.382
+      },
+      "n_clips_analyzed": 6
+    },
+    "v15_v1_chandas": {
+      "hpvr_harmonic_clarity_dB": 23.0663,
+      "mod_syllabic_3_8Hz": 0.0951,
+      "mod_consonant_12_35Hz": 0.0118,
+      "consonant_articulation_ratio": 0.124,
+      "f0_spread_std_st": 4.1863,
+      "f0_spread_iqr_st": 4.5875,
+      "mid_vowel_warble_st": 0.1015,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 14.637,
+        "presence_3_5p5kHz": -12.432,
+        "sibilant_5p5_8p5kHz": -28.247,
+        "air_8p5_11p5kHz": -27.903
+      },
+      "n_clips_analyzed": 6
+    },
+    "v14_atom_lite": {
+      "hpvr_harmonic_clarity_dB": 22.0253,
+      "mod_syllabic_3_8Hz": 0.0943,
+      "mod_consonant_12_35Hz": 0.0115,
+      "consonant_articulation_ratio": 0.1215,
+      "f0_spread_std_st": 4.2173,
+      "f0_spread_iqr_st": 3.9625,
+      "mid_vowel_warble_st": 0.0987,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 17.602,
+        "presence_3_5p5kHz": -15.535,
+        "sibilant_5p5_8p5kHz": -28.037,
+        "air_8p5_11p5kHz": -28.087
+      },
+      "n_clips_analyzed": 6
+    },
+    "sakhiya_v4_pico": {
+      "hpvr_harmonic_clarity_dB": 22.4895,
+      "mod_syllabic_3_8Hz": 0.0752,
+      "mod_consonant_12_35Hz": 0.0096,
+      "consonant_articulation_ratio": 0.1272,
+      "f0_spread_std_st": 3.8757,
+      "f0_spread_iqr_st": 4.2667,
+      "mid_vowel_warble_st": 0.0852,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 21.73,
+        "presence_3_5p5kHz": -12.995,
+        "sibilant_5p5_8p5kHz": -26.408,
+        "air_8p5_11p5kHz": -29.463
+      },
+      "n_clips_analyzed": 6
+    }
+  },
+  "unconditioned_f0_harmonic_blur_proof": {
+    "ground_truth_source_filter": {
+      "hpvr_harmonic_clarity_dB": 46.717,
+      "mid_vowel_warble_st": 0.0201
+    },
+    "unconditioned_f0_expected_spectrum_vocoder": {
+      "hpvr_harmonic_clarity_dB": 15.266,
+      "mid_vowel_warble_st": 0.0377,
+      "hpvr_loss_dB": 31.451
+    },
+    "conclusion": "Averaging spectral targets across ±1.4 semitones of unconditioned F0 variation collapses Harmonic Peak-to-Valley Ratio from 46.72 dB down to 15.27 dB (-31.45 dB loss of harmonic definition) and increases mid-vowel pitch warble from 0.0201 st to 0.0377 st. In contrast, TinyVoca's Homomorphic Cepstral Source-Filter separates pitch (oscillator) from vocal-tract envelope (low-quefrency cepstrum), preserving 46.72 dB harmonic clarity with 25,862 parameters."
+  },
+  "gen_audio_dsp_bandaid_audit": {
+    "raw_cand_b_v2_int8": {
+      "hpvr_harmonic_clarity_dB": 20.636,
+      "mod_syllabic_3_8Hz": 0.06422,
+      "mod_consonant_12_35Hz": 0.00868,
+      "consonant_articulation_ratio": 0.1352,
+      "f0_spread_std_st": 2.869,
+      "f0_spread_iqr_st": 2.9,
+      "mid_vowel_warble_st": 0.1196,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 21.55,
+        "presence_3_5p5kHz": -12.79,
+        "sibilant_5p5_8p5kHz": -23.23,
+        "air_8p5_11p5kHz": -24.08
+      }
+    },
+    "after_gen_audio_clean_dsp": {
+      "hpvr_harmonic_clarity_dB": 20.731,
+      "mod_syllabic_3_8Hz": 0.06353,
+      "mod_consonant_12_35Hz": 0.00865,
+      "consonant_articulation_ratio": 0.1361,
+      "f0_spread_std_st": 2.881,
+      "f0_spread_iqr_st": 3.05,
+      "mid_vowel_warble_st": 0.1293,
+      "ltas_rel_formant_dB": {
+        "chest_150_450Hz": 27.88,
+        "presence_3_5p5kHz": -17.6,
+        "sibilant_5p5_8p5kHz": -30.69,
+        "air_8p5_11p5kHz": -30.92
+      }
+    },
+    "dsp_ltas_delta_dB": {
+      "chest_150_450Hz": 6.33,
+      "presence_3_5p5kHz": -4.81,
+      "sibilant_5p5_8p5kHz": -7.46,
+      "air_8p5_11p5kHz": -6.84
+    }
+  }
+}

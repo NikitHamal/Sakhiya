@@ -1,0 +1,344 @@
+{
+  "experiment": "exp1_architecture_autopsy",
+  "elapsed_sec": 51.45,
+  "architecture_comparison": {
+    "sakhiya_one_compact": {
+      "total_params": 9049217,
+      "breakdown": {
+        "text_encoder": 1674551,
+        "duration_predictor": 139393,
+        "frame_prosody_f0_head": 146946,
+        "frame_acoustic_decoder_vel": 2214581,
+        "waveform_vocoder": 4873746
+      },
+      "pct_in_acoustic_and_text_vs_vocoder": {
+        "linguistic_prosodic_acoustic_pct": 46.14,
+        "waveform_vocoder_pct": 53.86
+      },
+      "architectural_Bottlenecks": [
+        "d_enc=144 with SVD rank r_enc=104 truncation on ConvNeXt FFN",
+        "Frame decoder (SakhiyaOneMeanFlowDecoder, d=160, 8 blocks) has ZERO self-attention; receptive field is only 8 * (7-1) = 48 frames (~512 ms)",
+        "Walsh-Hadamard + Monarch block-diagonal MLPs restrict cross-channel formant coupling",
+        "AWPVocoder operates on 33-bin n_fft=64 (375 Hz bin width), forcing neural MRF blocks to synthesize pitch harmonics inside coarse 375 Hz bins"
+      ]
+    },
+    "cand_b_v2_vocos_flagship": {
+      "total_params": 17652875,
+      "breakdown": {
+        "text_encoder": 1674551,
+        "duration_predictor_frozen": 139393,
+        "frame_prosody_f0_head_active": 0,
+        "frame_acoustic_decoder_vel": 2214581,
+        "mel_80_to_100_adapter": 92700,
+        "waveform_vocoder_vocos24k": 13531650
+      },
+      "pct_in_acoustic_and_text_vs_vocoder": {
+        "linguistic_prosodic_acoustic_pct": 23.35,
+        "waveform_vocoder_pct": 76.65
+      },
+      "architectural_Bottlenecks": [
+        "76.0% of all parameters (13.49M / 17.76M) sit in the Vocos mel-to-wav inverter while only 23.5% (4.18M) model text, timing, prosody, and acoustics",
+        "ZERO explicit F0 or Voicing predictor in SakhiyaOneVocosV2.infer(): f0_head, f0_pred, and vuv_pred are bypassed and frozen",
+        "Stage AM and Stage B2 trained with p_enc = 0 (zero F0 conditioning), forcing the deterministic mu_y-start decoder to average harmonic peaks across pitches",
+        "Stage B2 applied narrowband STFT (n_fft=1024, 2048) + <4kHz phase + CQT losses between unconditioned-F0 AM predictions and real GT waveforms, teaching the model to blur harmonics",
+        "No frame-level self-attention in acoustic decoder (48-frame = 0.51s local Conv1d receptive field only)",
+        "Static sib_cavity_prof step-function added identically to both dental/alveolar 's' (स) and palatal 'ʃ' (श/ष)"
+      ]
+    },
+    "sakhiya_studio_80m_clean": {
+      "total_am_params": 107824819,
+      "vocoder_bigvgan_params": 112400000,
+      "breakdown": {
+        "text_encoder_8L_rope": 14073956,
+        "prosody_and_prior_predictor": 5727083,
+        "acoustic_dit_16L_rope": 88023780
+      },
+      "notes": "Clean 19.18 dB HNR and 1.379 comb grit, but 195.6M total params (AM+BigVGAN) and 32 ODE steps (~780 MB FP32, not browser/edge deployable), and ne_pcer=0.0716 due to 6,164-utterance corpus limit."
+    },
+    "tiny_voca_4p5m_reference": {
+      "total_params": 4537291,
+      "voices": [
+        "F2 (Female)",
+        "M2 (Male)"
+      ],
+      "breakdown": {
+        "embeddings_phoneme_stress_voice": 15552,
+        "text_encoder_4L_rope_d192": 1588864,
+        "duration_and_pause_predictor": 123906,
+        "frame_transformer_A_prosody_2L_rope": 796355,
+        "frame_transformer_B_acoustic_5L_rope": 1986752,
+        "source_filter_cepstral_waveform_head": 25862
+      },
+      "pct_in_acoustic_and_text_vs_vocoder": {
+        "linguistic_prosodic_acoustic_pct": 99.43,
+        "waveform_vocoder_pct": 0.57
+      },
+      "why_it_wins": [
+        "99.43% of parameters (4.511M / 4.537M) are dedicated to full-rank RoPE Transformers (d=192, ff=640, k=7 conv + dense FFN, ZERO SVD/Monarch/Hadamard)",
+        "7 full-utterance Frame-Level RoPE Self-Attention Transformer blocks (2 prosody + 5 acoustic) give global sentence-level coarticulation and prosody context",
+        "Explicit per-phoneme Stress embedding (0/1/2) + dual-output Duration Predictor (log_dur + BCE pause-presence logit so word boundaries only pause when truly silent)",
+        "Explicit Frame Prosody Head (log_F0, voiced_logit, log_energy) trained with Global-Variance Pitch-Spread Loss so contours never flatten",
+        "Oscillator follows ground-truth F0 during training while Frame Transformer B predicts pitch-invariant complex cepstra (80 causal + 16 anti-causal + 32 noise cepstra)",
+        "25,862-param Homomorphic Cepstral Source-Filter head with closed-form band-limited Dirichlet pulse train (0 neural phase-guessing buzz) and 4 noise sub-frame gains per frame (2.67 ms stop-burst precision)"
+      ]
+    }
+  },
+  "shipped_tiers_cpu_benchmark": {
+    "sakhiya_one": {
+      "label": "Sakhiya-One Compact (8.5 MB)",
+      "mb": 8.487,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 8.487,
+        "total_initializer_params": 8028729,
+        "int8_pct": 98.15,
+        "fp16_pct": 1.45,
+        "fp32_pct": 0.4,
+        "total_nodes": 5192,
+        "top_ops": {
+          "Constant": 1430,
+          "Mul": 638,
+          "Cast": 405,
+          "Add": 361,
+          "Conv": 292,
+          "Unsqueeze": 272,
+          "Shape": 191,
+          "Gather": 154
+        }
+      },
+      "rtf_1t_mean": 0.0607,
+      "speed_1t_x": 16.5,
+      "rtf_4t_mean": 0.0333,
+      "speed_4t_x": 30.0,
+      "clip_durs_s": [
+        5.09,
+        9.08,
+        6.49
+      ]
+    },
+    "sakhiya_one_vocos": {
+      "label": "Sakhiya-One Studio (Vocos · Default)",
+      "mb": 23.011,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 23.011,
+        "total_initializer_params": 17675045,
+        "int8_pct": 71.19,
+        "fp16_pct": 28.71,
+        "fp32_pct": 0.1,
+        "total_nodes": 4440,
+        "top_ops": {
+          "Constant": 1175,
+          "Mul": 489,
+          "Cast": 453,
+          "Add": 324,
+          "Unsqueeze": 266,
+          "Conv": 253,
+          "Shape": 185,
+          "Gather": 151
+        }
+      },
+      "rtf_1t_mean": 0.0359,
+      "speed_1t_x": 27.9,
+      "rtf_4t_mean": 0.0191,
+      "speed_4t_x": 52.3,
+      "clip_durs_s": [
+        4.83,
+        9.08,
+        6.44
+      ]
+    },
+    "sakhiya_one_vocos_fp16": {
+      "label": "Sakhiya-One Studio FP16 (Unquantized)",
+      "mb": 35.528,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 35.528,
+        "total_initializer_params": 17658661,
+        "int8_pct": 0.0,
+        "fp16_pct": 99.99,
+        "fp32_pct": 0.01,
+        "total_nodes": 4440,
+        "top_ops": {
+          "Constant": 1175,
+          "Mul": 489,
+          "Cast": 469,
+          "Add": 324,
+          "Unsqueeze": 266,
+          "Conv": 253,
+          "Shape": 185,
+          "Gather": 151
+        }
+      },
+      "rtf_1t_mean": 0.0375,
+      "speed_1t_x": 26.7,
+      "rtf_4t_mean": 0.018,
+      "speed_4t_x": 55.5,
+      "clip_durs_s": [
+        4.83,
+        9.08,
+        6.44
+      ]
+    },
+    "v1": {
+      "label": "Sakhiya-V1",
+      "mb": 15.981,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 4.261,
+        "total_initializer_params": 4145752,
+        "int8_pct": 99.79,
+        "fp16_pct": 0.0,
+        "fp32_pct": 0.21,
+        "total_nodes": 1983,
+        "top_ops": {
+          "Constant": 605,
+          "Mul": 227,
+          "Cast": 162,
+          "Add": 126,
+          "Unsqueeze": 121,
+          "DequantizeLinear": 100,
+          "Div": 59,
+          "Gather": 57
+        }
+      },
+      "rtf_1t_mean": 0.1669,
+      "speed_1t_x": 6.0,
+      "rtf_4t_mean": 0.0978,
+      "speed_4t_x": 10.2,
+      "clip_durs_s": [
+        6.29,
+        10.75,
+        8.9
+      ]
+    },
+    "nano": {
+      "label": "Sakhiya-V1-Nano",
+      "mb": 8.932,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 2.31,
+        "total_initializer_params": 2213370,
+        "int8_pct": 99.7,
+        "fp16_pct": 0.03,
+        "fp32_pct": 0.26,
+        "total_nodes": 1778,
+        "top_ops": {
+          "Constant": 542,
+          "Mul": 210,
+          "Cast": 149,
+          "Add": 118,
+          "Unsqueeze": 107,
+          "DequantizeLinear": 82,
+          "Div": 52,
+          "Gather": 50
+        }
+      },
+      "rtf_1t_mean": 0.0494,
+      "speed_1t_x": 20.2,
+      "rtf_4t_mean": 0.0272,
+      "speed_4t_x": 36.8,
+      "clip_durs_s": [
+        6.11,
+        10.26,
+        10.5
+      ]
+    },
+    "atom": {
+      "label": "Sakhiya-V1-Atom",
+      "mb": 6.509,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 0.874,
+        "total_initializer_params": 792006,
+        "int8_pct": 99.18,
+        "fp16_pct": 0.4,
+        "fp32_pct": 0.42,
+        "total_nodes": 1573,
+        "top_ops": {
+          "Constant": 479,
+          "Mul": 193,
+          "Cast": 158,
+          "Add": 110,
+          "Unsqueeze": 93,
+          "Div": 45,
+          "Gather": 43,
+          "DequantizeLinear": 42
+        }
+      },
+      "rtf_1t_mean": 0.0482,
+      "speed_1t_x": 20.8,
+      "rtf_4t_mean": 0.0237,
+      "speed_4t_x": 42.2,
+      "clip_durs_s": [
+        5.91,
+        10.47,
+        10.33
+      ]
+    },
+    "atom_lite": {
+      "label": "Sakhiya-V1-Atom-Lite",
+      "mb": 2.717,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 0.874,
+        "total_initializer_params": 792006,
+        "int8_pct": 99.18,
+        "fp16_pct": 0.4,
+        "fp32_pct": 0.42,
+        "total_nodes": 1573,
+        "top_ops": {
+          "Constant": 479,
+          "Mul": 193,
+          "Cast": 158,
+          "Add": 110,
+          "Unsqueeze": 93,
+          "Div": 45,
+          "Gather": 43,
+          "DequantizeLinear": 42
+        }
+      },
+      "rtf_1t_mean": 0.0184,
+      "speed_1t_x": 54.4,
+      "rtf_4t_mean": 0.0114,
+      "speed_4t_x": 88.0,
+      "clip_durs_s": [
+        6.16,
+        9.82,
+        10.74
+      ]
+    },
+    "pico": {
+      "label": "Sakhiya-Pico (t1)",
+      "mb": 1.444,
+      "onnx_inspection": {
+        "exists": true,
+        "file_mb": 1.444,
+        "total_initializer_params": 1217933,
+        "int8_pct": 96.06,
+        "fp16_pct": 2.8,
+        "fp32_pct": 1.14,
+        "total_nodes": 2905,
+        "top_ops": {
+          "Constant": 864,
+          "Mul": 407,
+          "Cast": 260,
+          "Add": 220,
+          "Conv": 121,
+          "Unsqueeze": 92,
+          "DequantizeLinear": 70,
+          "Clip": 62
+        }
+      },
+      "rtf_1t_mean": 0.015,
+      "speed_1t_x": 66.7,
+      "rtf_4t_mean": 0.0091,
+      "speed_4t_x": 109.7,
+      "clip_durs_s": [
+        5.57,
+        8.37,
+        6.79
+      ]
+    }
+  }
+}

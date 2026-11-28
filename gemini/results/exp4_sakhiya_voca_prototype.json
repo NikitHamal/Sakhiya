@@ -1,0 +1,72 @@
+{
+  "architecture": "Sakhiya-Voca-4.5M (Dual-Voice Female + Male, Nepali + Sanskrit, Homomorphic Cepstral Source-Filter)",
+  "total_parameters": 4534795,
+  "parameter_breakdown": {
+    "embeddings": 13056,
+    "text_encoder_4L_rope": 1588864,
+    "duration_and_pause_predictor": 123906,
+    "frame_transformer_A_prosody_2L_rope": 796355,
+    "frame_transformer_B_acoustic_5L_rope": 1986752,
+    "nepali_source_filter_head": 25862
+  },
+  "voices_supported": [
+    "0: F_sakhiya (Female, 215 Hz base)",
+    "1: M_sagar (Male, 125 Hz base)"
+  ],
+  "female_vs_male_output_shapes": [
+    [
+      1,
+      111360
+    ],
+    [
+      1,
+      219648
+    ]
+  ],
+  "pytorch_vs_onnx_max_abs_diff": 0.034999,
+  "onnx_exports_and_cpu_rtf": {
+    "fp32_1T": {
+      "size_mb": 21.283,
+      "audio_dur_s": 4.64,
+      "latency_ms": 48.45,
+      "rtf": 0.0104,
+      "realtime_factor_x": 95.8
+    },
+    "fp32_4T": {
+      "size_mb": 21.283,
+      "audio_dur_s": 4.64,
+      "latency_ms": 28.78,
+      "rtf": 0.0062,
+      "realtime_factor_x": 161.2
+    },
+    "fp16_1T": {
+      "size_mb": 10.849,
+      "audio_dur_s": 4.64,
+      "latency_ms": 48.02,
+      "rtf": 0.0103,
+      "realtime_factor_x": 96.6
+    },
+    "fp16_4T": {
+      "size_mb": 10.849,
+      "audio_dur_s": 4.64,
+      "latency_ms": 28.75,
+      "rtf": 0.0062,
+      "realtime_factor_x": 161.4
+    },
+    "int8_mixed_1T": {
+      "size_mb": 6.556,
+      "audio_dur_s": 4.65,
+      "latency_ms": 47.89,
+      "rtf": 0.0103,
+      "realtime_factor_x": 97.1
+    },
+    "int8_mixed_4T": {
+      "size_mb": 6.556,
+      "audio_dur_s": 4.65,
+      "latency_ms": 32.13,
+      "rtf": 0.0069,
+      "realtime_factor_x": 144.8
+    }
+  },
+  "elapsed_sec": 5.81
+}

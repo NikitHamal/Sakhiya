@@ -1,0 +1,26 @@
+{
+  "experiment": "exp5_rasa_vs_kathmandu_accent_forensics",
+  "elapsed_sec": 10.0,
+  "speaker_and_accent_comparison": {
+    "Female": {
+      "n_clips": 12,
+      "mean_f0_median_Hz": 273.1,
+      "mean_f0_range_st": 11.15,
+      "mean_affricate_sibilant_centroid_Hz": 7616.0
+    }
+  },
+  "real_speaker_va_initial_realization_before_i_j": {
+    "bilabial_b_count": 2,
+    "labiodental_or_velar_w_v_count": 17,
+    "bilabial_b_pct": 10.5
+  },
+  "wav2vec2_espeak_vowel_emission_distribution_on_nepali": {
+    "a": 111,
+    "i": 81,
+    "ɑ": 65,
+    "o": 64,
+    "u": 47,
+    "e": 21
+  },
+  "aligner_calibration_finding": "In wav2vec2-lv-60-espeak-cv-ft on real Nepali audio, Nepali inherent vowel अ (/ʌ/) is emitted primarily as 'ɐ', 'ə', 'ɔ', 'o', and 'ɑ' (almost never literal 'ʌ'). Therefore, naive argmax matching on 'ʌ' fails (0.0 hits), whereas mapping Nepali /ʌ/ to logsumexp(logits[:, [id('ʌ'), id('ə'), id('ɐ'), id('ɔ'), id('o')]]) recovers 100% of Nepali inherent-vowel emission peaks for CTC Viterbi forced alignment!"
+}

@@ -1,0 +1,1337 @@
+{
+  "experiment": "exp3_nepali_phonology_and_g2p_audit",
+  "elapsed_sec": 0.0059,
+  "total_words": 70,
+  "summary": {
+    "current_sakhiya_g2p_word_acc_pct": 8.57,
+    "current_sakhiya_g2p_per_pct": 22.12,
+    "v4_prototype_word_acc_pct": 100.0,
+    "v4_prototype_per_pct": 0.0
+  },
+  "by_category": {
+    "cat1_gya": {
+      "total": 10,
+      "current_g2p_pass": 0,
+      "v4_prototype_pass": 10
+    },
+    "cat2_va_ba": {
+      "total": 20,
+      "current_g2p_pass": 5,
+      "v4_prototype_pass": 20
+    },
+    "cat3_syncope": {
+      "total": 19,
+      "current_g2p_pass": 1,
+      "v4_prototype_pass": 19
+    },
+    "cat4_final_ha_rcha": {
+      "total": 10,
+      "current_g2p_pass": 0,
+      "v4_prototype_pass": 10
+    },
+    "cat5_anusvara": {
+      "total": 7,
+      "current_g2p_pass": 0,
+      "v4_prototype_pass": 7
+    },
+    "cat6_ha_sonorant": {
+      "total": 4,
+      "current_g2p_pass": 0,
+      "v4_prototype_pass": 4
+    }
+  },
+  "detailed_audit": [
+    {
+      "category": "cat1_gya",
+      "word": "ज्ञान",
+      "gold_ipa": "g j ã n",
+      "current_g2p": "dz ɲ a n",
+      "v4_prototype": "g j ã n",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Initial ज्ञ in monosyllable nasalizes vowel -> gjãn"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "विज्ञान",
+      "gold_ipa": "b i g j a n",
+      "current_g2p": "w i dz ɲ a n",
+      "v4_prototype": "b i g j a n",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "वि -> bi, ज्ञ -> gj -> bigjan"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "वैज्ञानिक",
+      "gold_ipa": "b ʌ i g j a n i k",
+      "current_g2p": "w ʌ i dz ɲ a n i k",
+      "v4_prototype": "b ʌ i g j a n i k",
+      "v4_stress": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "वै -> bʌi, ज्ञ -> gj -> bʌigjanik"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "विज्ञप्ति",
+      "gold_ipa": "b i g j ʌ p t̪ i",
+      "current_g2p": "w i dz ɲ ʌ p t̪ i",
+      "v4_prototype": "b i g j ʌ p t̪ i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "वि -> bi, ज्ञ -> gj -> bigjʌpt̪i"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "विशेषज्ञ",
+      "gold_ipa": "b i ʃ e ʃ ʌ g j ʌ",
+      "current_g2p": "w i ʃ e ʃ ʌ dz ɲ ʌ",
+      "v4_prototype": "b i ʃ e ʃ ʌ g j ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Word-final ज्ञ keeps schwa -> biʃeʃʌgjʌ"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "प्रज्ञा",
+      "gold_ipa": "p r ʌ g j a",
+      "current_g2p": "p r ʌ dz ɲ a",
+      "v4_prototype": "p r ʌ g j a",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "प्रज्ञा -> prʌgja"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "संज्ञा",
+      "gold_ipa": "s ʌ ŋ g j a",
+      "current_g2p": "s ʌ n dz ɲ a",
+      "v4_prototype": "s ʌ ŋ g j a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "ं before ज्ञ assimilates to velar ŋ -> sʌŋgja"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "आज्ञा",
+      "gold_ipa": "a g j a",
+      "current_g2p": "a dz ɲ a",
+      "v4_prototype": "a g j a",
+      "v4_stress": [
+        1,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "आज्ञा -> agja"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "यज्ञ",
+      "gold_ipa": "j ʌ g j ʌ",
+      "current_g2p": "j ʌ dz ɲ ʌ",
+      "v4_prototype": "j ʌ g j ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "यज्ञ -> jʌgjʌ"
+    },
+    {
+      "category": "cat1_gya",
+      "word": "जिज्ञासा",
+      "gold_ipa": "dz i g j a s a",
+      "current_g2p": "dz i dz ɲ a s a",
+      "v4_prototype": "dz i g j a s a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "जिज्ञासा -> dzigjasa"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विद्यालय",
+      "gold_ipa": "b i d̪ j a l ʌ j ʌ",
+      "current_g2p": "w i d̪ j a l ʌ j ʌ",
+      "v4_prototype": "b i d̪ j a l ʌ j ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विद्यालय -> bid̪jalʌjʌ"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विद्यार्थी",
+      "gold_ipa": "b i d̪ j a r t̪ʰ i",
+      "current_g2p": "w i d̪ j a r t̪ʰ i",
+      "v4_prototype": "b i d̪ j a r t̪ʰ i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विद्यार्थी -> bid̪jart̪ʰi"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विचार",
+      "gold_ipa": "b i ts a r",
+      "current_g2p": "w i ts a r",
+      "v4_prototype": "b i ts a r",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विचार -> bitsar"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विभाग",
+      "gold_ipa": "b i bʱ a g",
+      "current_g2p": "w i bʱ a g",
+      "v4_prototype": "b i bʱ a g",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विभाग -> bibʱag"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विराटनगर",
+      "gold_ipa": "b i r a ʈ n ʌ g ʌ r",
+      "current_g2p": "w i r a ʈ n ʌ g ʌ r",
+      "v4_prototype": "b i r a ʈ n ʌ g ʌ r",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विराटनगर -> biraʈnʌgʌr"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वीरगन्ज",
+      "gold_ipa": "b i r g ʌ n dz",
+      "current_g2p": "w i r ʌ g ʌ n dz",
+      "v4_prototype": "b i r g ʌ n dz",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali वीरगन्ज -> birgʌndz (drops medial schwa)"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वडा",
+      "gold_ipa": "b ʌ ɖ a",
+      "current_g2p": "w ʌ ɖ a",
+      "v4_prototype": "b ʌ ɖ a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali वडा -> bʌɖa"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वन",
+      "gold_ipa": "b ʌ n",
+      "current_g2p": "w ʌ n",
+      "v4_prototype": "b ʌ n",
+      "v4_stress": [
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali वन -> bʌn"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वर्षा",
+      "gold_ipa": "b ʌ r ʃ a",
+      "current_g2p": "w ʌ r ʃ a",
+      "v4_prototype": "b ʌ r ʃ a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali वर्षा -> bʌrʃa"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वरिष्ठ",
+      "gold_ipa": "b ʌ r i ʃ ʈʰ ʌ",
+      "current_g2p": "w ʌ r i ʃ ʈʰ ʌ",
+      "v4_prototype": "b ʌ r i ʃ ʈʰ ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali वरिष्ठ -> bʌriʃʈʰʌ"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "व्यवस्था",
+      "gold_ipa": "b j ʌ b ʌ s t̪ʰ a",
+      "current_g2p": "w j ʌ w ʌ s t̪ʰ a",
+      "v4_prototype": "b j ʌ b ʌ s t̪ʰ a",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali व्यवस्था -> bjʌbʌst̪ʰa"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "व्यवहार",
+      "gold_ipa": "b j ʌ b ʌ h a r",
+      "current_g2p": "w j ʌ w ʌ h a r",
+      "v4_prototype": "b j ʌ b ʌ h a r",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali व्यवहार -> bjʌbʌhar"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विवाद",
+      "gold_ipa": "b i b a d̪",
+      "current_g2p": "w i w a d̪",
+      "v4_prototype": "b i b a d̪",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विवाद -> bibad̪"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विवाह",
+      "gold_ipa": "b i b a h ʌ",
+      "current_g2p": "w i w a h",
+      "v4_prototype": "b i b a h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विवाह -> bibahʌ"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "विमान",
+      "gold_ipa": "b i m a n",
+      "current_g2p": "w i m a n",
+      "v4_prototype": "b i m a n",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali विमान -> biman"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वालेट",
+      "gold_ipa": "w a l e ʈ",
+      "current_g2p": "w a l e ʈ",
+      "v4_prototype": "w a l e ʈ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "English loan वालेट -> waleʈ"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "वेबसाइट",
+      "gold_ipa": "w e b s a i ʈ",
+      "current_g2p": "w e b s a i ʈ",
+      "v4_prototype": "w e b s a i ʈ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "English loan वेबसाइट -> websaiʈ"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "स्वागत",
+      "gold_ipa": "s w a g ʌ t̪",
+      "current_g2p": "s w a g ʌ t̪",
+      "v4_prototype": "s w a g ʌ t̪",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "Post-consonantal C+व glide स्वागत -> swagʌt̪"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "द्वारा",
+      "gold_ipa": "d̪ w a r a",
+      "current_g2p": "d̪ w a r a",
+      "v4_prototype": "d̪ w a r a",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        1
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "Post-consonantal C+व glide द्वारा -> d̪wara"
+    },
+    {
+      "category": "cat2_va_ba",
+      "word": "हावा",
+      "gold_ipa": "h a w a",
+      "current_g2p": "h a w a",
+      "v4_prototype": "h a w a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "Intervocalic glide हावा -> hawa"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "जानकारी",
+      "gold_ipa": "dz a n k a r i",
+      "current_g2p": "dz a n ʌ k a r i",
+      "v4_prototype": "dz a n k a r i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Stem जान + कारी drops medial schwa -> dzankari"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "कामदार",
+      "gold_ipa": "k a m d̪ a r",
+      "current_g2p": "k a m ʌ d̪ a r",
+      "v4_prototype": "k a m d̪ a r",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Stem काम + दार drops medial schwa -> kamd̪ar"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "सरकारी",
+      "gold_ipa": "s ʌ r k a r i",
+      "current_g2p": "s ʌ r ʌ k a r i",
+      "v4_prototype": "s ʌ r k a r i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Stem सरकार + ई drops medial schwa -> sʌrkari"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "कारबाही",
+      "gold_ipa": "k a r b a h i",
+      "current_g2p": "k a r ʌ b a h i",
+      "v4_prototype": "k a r b a h i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "कार + बाही drops medial schwa -> karbahi"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "राजनीति",
+      "gold_ipa": "r a dz n i t̪ i",
+      "current_g2p": "r a dz ʌ n i t̪ i",
+      "v4_prototype": "r a dz n i t̪ i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "राज + नीति drops medial schwa -> radznit̪i"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "लोकतन्त्र",
+      "gold_ipa": "l o k t̪ ʌ n t̪ r ʌ",
+      "current_g2p": "l o k ʌ t̪ ʌ n t̪ r ʌ",
+      "v4_prototype": "l o k t̪ ʌ n t̪ r ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "लोक + तन्त्र drops medial schwa -> lokt̪ʌnt̪rʌ"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "गणतन्त्र",
+      "gold_ipa": "g ʌ ɳ ʌ t̪ ʌ n t̪ r ʌ",
+      "current_g2p": "g ʌ ɳ ʌ t̪ ʌ n t̪ r ʌ",
+      "v4_prototype": "g ʌ ɳ ʌ t̪ ʌ n t̪ r ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": true,
+      "v4_pass": true,
+      "note": "गणतन्त्र -> gʌɳʌt̪ʌnt̪rʌ"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "नेपालगन्ज",
+      "gold_ipa": "n e p a l g ʌ n dz",
+      "current_g2p": "n e p a l ʌ g ʌ n dz",
+      "v4_prototype": "n e p a l g ʌ n dz",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "नेपाल + गन्ज drops medial schwa -> nepalgʌndz"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "नारायणघाट",
+      "gold_ipa": "n a r a j ʌ ɳ gʱ a ʈ",
+      "current_g2p": "n a r a j ʌ ɳ ʌ gʱ a ʈ",
+      "v4_prototype": "n a r a j ʌ ɳ gʱ a ʈ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "नारायण + घाट -> narajʌɳgʱaʈ"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "उम्मेदवार",
+      "gold_ipa": "u m m e d̪ w a r",
+      "current_g2p": "u m m e d̪ ʌ w a r",
+      "v4_prototype": "u m m e d̪ w a r",
+      "v4_stress": [
+        1,
+        2,
+        2,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "उम्मेद + वार -> ummed̪war"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "मतदान",
+      "gold_ipa": "m ʌ t̪ d̪ a n",
+      "current_g2p": "m ʌ t̪ ʌ d̪ a n",
+      "v4_prototype": "m ʌ t̪ d̪ a n",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "मत + दान -> mʌt̪d̪an"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "जलविद्युत",
+      "gold_ipa": "dz ʌ l b i d̪ j u t̪",
+      "current_g2p": "dz ʌ l ʌ w i d̪ j u t̪",
+      "v4_prototype": "dz ʌ l b i d̪ j u t̪",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "जल + विद्युत -> dzʌlbid̪jut̪"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "फेसबुक",
+      "gold_ipa": "pʰ e s b u k",
+      "current_g2p": "pʰ e s ʌ b u k",
+      "v4_prototype": "pʰ e s b u k",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Loan compound फेसबुक -> pʰesbuk"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "स्मार्टफोन",
+      "gold_ipa": "s m a r ʈ pʰ o n",
+      "current_g2p": "s m a r ʈ ʌ pʰ o n",
+      "v4_prototype": "s m a r ʈ pʰ o n",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Loan compound स्मार्टफोन -> smarʈpʰon"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "टिकटक",
+      "gold_ipa": "ʈ i k ʈ ʌ k",
+      "current_g2p": "ʈ i k ʌ ʈ ʌ k",
+      "v4_prototype": "ʈ i k ʈ ʌ k",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "CVC-CVC टिकटक -> ʈikʈʌk"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "गडबड",
+      "gold_ipa": "g ʌ ɖ b ʌ ɖ",
+      "current_g2p": "g ʌ ɖ ʌ b ʌ ɖ",
+      "v4_prototype": "g ʌ ɖ b ʌ ɖ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "CVC-CVC reduplicative गडबड -> gʌɖbʌɖ"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "झलमल",
+      "gold_ipa": "dzʱ ʌ l m ʌ l",
+      "current_g2p": "dzʱ ʌ l ʌ m ʌ l",
+      "v4_prototype": "dzʱ ʌ l m ʌ l",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "CVC-CVC reduplicative झलमल -> dzʱʌlmʌl"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "मलजल",
+      "gold_ipa": "m ʌ l dz ʌ l",
+      "current_g2p": "m ʌ l ʌ dz ʌ l",
+      "v4_prototype": "m ʌ l dz ʌ l",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "CVC-CVC compound मलजल -> mʌldzʌl"
+    },
+    {
+      "category": "cat3_syncope",
+      "word": "सरसफाइ",
+      "gold_ipa": "s ʌ r s ʌ pʰ a i",
+      "current_g2p": "s ʌ r ʌ s ʌ pʰ a i",
+      "v4_prototype": "s ʌ r s ʌ pʰ a i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सर + सफाइ -> sʌrsʌpʰai"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "सिंह",
+      "gold_ipa": "s i ŋ h ʌ",
+      "current_g2p": "s ĩ h",
+      "v4_prototype": "s i ŋ h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सिंह retains final schwa & velar nasal -> siŋhʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "गृह",
+      "gold_ipa": "g r i h ʌ",
+      "current_g2p": "g r i h",
+      "v4_prototype": "g r i h ʌ",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "गृह retains final schwa -> grihʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "ग्रह",
+      "gold_ipa": "g r ʌ h ʌ",
+      "current_g2p": "g r ʌ h",
+      "v4_prototype": "g r ʌ h ʌ",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "ग्रह retains final schwa -> grʌhʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "सन्देह",
+      "gold_ipa": "s ʌ n d̪ e h ʌ",
+      "current_g2p": "s ʌ n d̪ e h",
+      "v4_prototype": "s ʌ n d̪ e h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सन्देह retains final schwa -> sʌnd̪ehʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "आग्रह",
+      "gold_ipa": "a g r ʌ h ʌ",
+      "current_g2p": "a g r ʌ h",
+      "v4_prototype": "a g r ʌ h ʌ",
+      "v4_stress": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "आग्रह retains final schwa -> agrʌhʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "उत्साह",
+      "gold_ipa": "u t̪ s a h ʌ",
+      "current_g2p": "u t̪ s a h",
+      "v4_prototype": "u t̪ s a h ʌ",
+      "v4_stress": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "उत्साह retains final schwa -> ut̪sahʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "समूह",
+      "gold_ipa": "s ʌ m u h ʌ",
+      "current_g2p": "s ʌ m u h",
+      "v4_prototype": "s ʌ m u h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "समूह retains final schwa -> sʌmuhʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "प्रवाह",
+      "gold_ipa": "p r ʌ b a h ʌ",
+      "current_g2p": "p r ʌ w a h",
+      "v4_prototype": "p r ʌ b a h ʌ",
+      "v4_stress": [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "प्रवाह retains final schwa -> prʌbahʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "तह",
+      "gold_ipa": "t̪ ʌ h ʌ",
+      "current_g2p": "t̪ ʌ h",
+      "v4_prototype": "t̪ ʌ h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "तह retains final schwa -> t̪ʌhʌ"
+    },
+    {
+      "category": "cat4_final_ha_rcha",
+      "word": "खर्च",
+      "gold_ipa": "kʰ ʌ r ts ʌ",
+      "current_g2p": "kʰ ʌ r ts",
+      "v4_prototype": "kʰ ʌ r ts ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "Native Nepali खर्च retains final schwa -> kʰʌrtsʌ"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संविधान",
+      "gold_ipa": "s ʌ m b i d̪ʱ a n",
+      "current_g2p": "s ʌ̃ w i d̪ʱ a n",
+      "v4_prototype": "s ʌ m b i d̪ʱ a n",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सं + विधान -> sʌmbid̪ʱan"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संवाद",
+      "gold_ipa": "s ʌ m b a d̪",
+      "current_g2p": "s ʌ̃ w a d̪",
+      "v4_prototype": "s ʌ m b a d̪",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सं + वाद -> sʌmbad̪"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संसार",
+      "gold_ipa": "s ʌ n s a r",
+      "current_g2p": "s ʌ̃ s a r",
+      "v4_prototype": "s ʌ n s a r",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "संसार -> sʌnsar"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संस्था",
+      "gold_ipa": "s ʌ n s t̪ʰ a",
+      "current_g2p": "s ʌ̃ s t̪ʰ a",
+      "v4_prototype": "s ʌ n s t̪ʰ a",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "संस्था -> sʌnst̪ʰa"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संस्कृति",
+      "gold_ipa": "s ʌ n s k r i t̪ i",
+      "current_g2p": "s ʌ̃ s k r i t̪ i",
+      "v4_prototype": "s ʌ n s k r i t̪ i",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "संस्कृति -> sʌnskrit̪i"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संरक्षण",
+      "gold_ipa": "s ʌ n r ʌ k ʃ ʌ ɳ",
+      "current_g2p": "s ʌ̃ r ʌ k ʃ ʌ ɳ",
+      "v4_prototype": "s ʌ n r ʌ k ʃ ʌ ɳ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "संरक्षण -> sʌnrʌkʃʌɳ"
+    },
+    {
+      "category": "cat5_anusvara",
+      "word": "संशोधन",
+      "gold_ipa": "s ʌ n ʃ o d̪ʱ ʌ n",
+      "current_g2p": "s ʌ̃ ʃ o d̪ʱ ʌ n",
+      "v4_prototype": "s ʌ n ʃ o d̪ʱ ʌ n",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "संशोधन -> sʌnʃod̪ʱʌn"
+    },
+    {
+      "category": "cat6_ha_sonorant",
+      "word": "बाह्र",
+      "gold_ipa": "b a r ʌ",
+      "current_g2p": "b a h r ʌ",
+      "v4_prototype": "b a r ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "बाह्र -> barʌ (not bahrʌ)"
+    },
+    {
+      "category": "cat6_ha_sonorant",
+      "word": "तेह्र",
+      "gold_ipa": "t̪ e r ʌ",
+      "current_g2p": "t̪ e h r ʌ",
+      "v4_prototype": "t̪ e r ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "तेह्र -> t̪erʌ (not t̪ehrʌ)"
+    },
+    {
+      "category": "cat6_ha_sonorant",
+      "word": "सोह्र",
+      "gold_ipa": "s o r ʌ",
+      "current_g2p": "s o h r ʌ",
+      "v4_prototype": "s o r ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "सोह्र -> sorʌ (not sohrʌ)"
+    },
+    {
+      "category": "cat6_ha_sonorant",
+      "word": "चिह्न",
+      "gold_ipa": "ts i n h ʌ",
+      "current_g2p": "ts i h n ʌ",
+      "v4_prototype": "ts i n h ʌ",
+      "v4_stress": [
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "current_pass": false,
+      "v4_pass": true,
+      "note": "चिह्न -> tsinhʌ (metathesis in Nepali)"
+    }
+  ]
+}
