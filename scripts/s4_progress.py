@@ -74,7 +74,13 @@ def launch(name, cmd, restart=False, tag=None, cwd="/work/tts/repo", max_restart
     os.makedirs("/work/tts/logs", exist_ok=True)
     log = f"/work/tts/logs/{name}.log"
     full = f"cd {cwd} && S4_JOB_TAG={tag} setsid nohup bash -c 'exec -a {tag} {cmd}' >> {log} 2>&1 < /dev/null & echo $!"
-    pid = int(subprocess.run(full, shell=True, capture_output=True, text=True, executable="/bin/bash").stdout.strip().splitlines()[-1])
+    # S4 fix (Sonnet): the old `subprocess.run(full, capture_output=True)` blocked until the JOB ended, because the backgrounded
+    # `cd && setsid ... &` list kept the capture pipe open (launch hung -> kernel retried -> duplicate jobs). Use Popen + own session.
+    env = dict(os.environ, S4_JOB_TAG=tag)
+    lf = open(log, "ab")
+    proc = subprocess.Popen(["bash", "-c", f"exec -a {tag} {cmd}"], cwd=cwd, env=env, stdout=lf, stderr=subprocess.STDOUT,
+                            stdin=subprocess.DEVNULL, start_new_session=True)
+    pid = proc.pid
     jp = f"{S4}/jobs.json"
     jobs = json.load(open(jp)) if os.path.exists(jp) else {"jobs": []}
     jobs["jobs"] = [j for j in jobs["jobs"] if j["name"] != name]
