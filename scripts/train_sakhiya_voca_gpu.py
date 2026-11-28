@@ -119,11 +119,16 @@ def measure_vowel_hpvr_db(wave: np.ndarray, sr: int = 24000) -> float:
 
 class RasaVocaRAMDataset:
     """Loads prepared `ai4bharat/Rasa` Nepali shards into system RAM for zero-I/O GPU training."""
-    def __init__(self, data_dir: Path, split: str = "train"):
+    def __init__(self, data_dir: Path, split: str = "train", min_prob: float = 0.0, min_vowel_voiced: float = 0.0):
         self.data_dir = Path(data_dir)
         manifest_path = self.data_dir / "manifest.jsonl"
         all_rows = [json.loads(line) for line in manifest_path.open("r", encoding="utf-8") if line.strip()]
         self.rows = [r for r in all_rows if r["split"] == split]
+        if split == "train" and (min_prob > 0 or min_vowel_voiced > 0):
+            # S4 (Sonnet): stricter alignment filter on TRAIN only (val/test stay untouched => comparable numbers)
+            n0 = len(self.rows)
+            self.rows = [r for r in self.rows if r.get("mean_token_prob", 1.0) >= min_prob and r.get("vowel_voiced", 1.0) >= min_vowel_voiced]
+            print(f"[dataset] alignment filter prob>={min_prob} vowel_voiced>={min_vowel_voiced}: kept {len(self.rows)}/{n0}", flush=True)
         if not self.rows:
             self.rows = all_rows
 
@@ -150,8 +155,8 @@ class RasaVocaRAMDataset:
                 "stress": torch.tensor(r["stress"], dtype=torch.long),
                 "durations": torch.tensor(r["durations"], dtype=torch.long),
                 "frames": int(r["frames"]),
-                "wave": tensors["wave"].float(),
-                "mel": tensors["mel"].float(),
+                "wave": tensors["wave"],     # fp16 (or fp32 for legacy shards); cast per batch in collate
+                "mel": tensors["mel"],
                 "prosody": tensors["prosody"].float(),
             })
 
@@ -171,46 +176,73 @@ class RasaVocaRAMDataset:
         return picked
 
 
-def collate_batch(items: list[dict], device: torch.device) -> dict:
+def collate_cpu(items: list[dict], pin: bool = False) -> dict:
+    """Pad on CPU (optionally pinned) so a background thread can prepare batches while the GPU computes."""
     b = len(items)
     max_tok = max(len(x["ids"]) for x in items)
     max_frm = max(x["frames"] for x in items)
     hop = 256
 
-    tokens = torch.zeros((b, max_tok), device=device, dtype=torch.long)
-    stress = torch.zeros((b, max_tok), device=device, dtype=torch.long)
-    durations = torch.zeros((b, max_tok), device=device, dtype=torch.long)
-    tok_lens = torch.tensor([len(x["ids"]) for x in items], device=device, dtype=torch.long)
-    frm_lens = torch.tensor([x["frames"] for x in items], device=device, dtype=torch.long)
-    speakers = torch.tensor([x["speaker_id"] for x in items], device=device, dtype=torch.long)
-    styles = torch.tensor([x["style_id"] for x in items], device=device, dtype=torch.long)
-    prosody = torch.zeros((b, max_frm, 3), device=device, dtype=torch.float32)
-    mel = torch.zeros((b, max_frm, 80), device=device, dtype=torch.float32)
-    wave = torch.zeros((b, max_frm * hop), device=device, dtype=torch.float32)
+    tokens = torch.zeros((b, max_tok), dtype=torch.long)
+    stress = torch.zeros((b, max_tok), dtype=torch.long)
+    durations = torch.zeros((b, max_tok), dtype=torch.long)
+    tok_lens = torch.tensor([len(x["ids"]) for x in items], dtype=torch.long)
+    frm_lens = torch.tensor([x["frames"] for x in items], dtype=torch.long)
+    speakers = torch.tensor([x["speaker_id"] for x in items], dtype=torch.long)
+    styles = torch.tensor([x["style_id"] for x in items], dtype=torch.long)
+    prosody = torch.zeros((b, max_frm, 3), dtype=torch.float32)
+    mel = torch.zeros((b, max_frm, 80), dtype=torch.float32)
+    wave = torch.zeros((b, max_frm * hop), dtype=torch.float32)
 
     for i, x in enumerate(items):
         n = len(x["ids"])
         f = x["frames"]
-        tokens[i, :n] = x["ids"].to(device)
-        stress[i, :n] = x["stress"].to(device)
-        durations[i, :n] = x["durations"].to(device)
-        prosody[i, :f] = x["prosody"][:f].to(device)
-        mel[i, :f] = x["mel"][:f].to(device)
+        tokens[i, :n] = x["ids"]
+        stress[i, :n] = x["stress"]
+        durations[i, :n] = x["durations"]
+        prosody[i, :f] = x["prosody"][:f]
+        mel[i, :min(f, len(x["mel"]))] = x["mel"][:f]
         w = x["wave"][:f * hop]
-        wave[i, :len(w)] = w.to(device)
+        wave[i, :len(w)] = w
 
-    return {
-        "tokens": tokens,
-        "stress": stress,
-        "durations": durations,
-        "token_lengths": tok_lens,
-        "frame_lengths": frm_lens,
-        "speakers": speakers,
-        "styles": styles,
-        "prosody": prosody,
-        "mel": mel,
-        "wave": wave,
+    out = {
+        "tokens": tokens, "stress": stress, "durations": durations,
+        "token_lengths": tok_lens, "frame_lengths": frm_lens,
+        "speakers": speakers, "styles": styles,
+        "prosody": prosody, "mel": mel, "wave": wave,
     }
+    if pin:
+        out = {k: v.pin_memory() for k, v in out.items()}
+    return out
+
+
+def batch_to_device(batch: dict, device: torch.device) -> dict:
+    return {k: v.to(device, non_blocking=True) for k, v in batch.items()}
+
+
+def collate_batch(items: list[dict], device: torch.device) -> dict:
+    return batch_to_device(collate_cpu(items), device)
+
+
+class BatchPrefetcher:
+    """Background thread keeps `depth` pinned CPU batches ready (the old loop sampled+padded+copied synchronously)."""
+    def __init__(self, ds: "RasaVocaRAMDataset", batch_size: int, seed: int, depth: int = 6, pin: bool = True):
+        import queue
+        import threading
+        self.q: "queue.Queue" = queue.Queue(maxsize=depth)
+        self.ds, self.bs, self.pin = ds, batch_size, pin
+        self.rng = random.Random(seed)
+        self.stop = False
+        self.t = threading.Thread(target=self._run, daemon=True)
+        self.t.start()
+
+    def _run(self):
+        while not self.stop:
+            items = self.ds.sample_batch(self.bs, self.rng)
+            self.q.put(collate_cpu(items, pin=self.pin))
+
+    def get(self, device: torch.device) -> dict:
+        return batch_to_device(self.q.get(), device)
 
 
 class SakhiyaVocaTrainingSystem(nn.Module):
@@ -520,13 +552,17 @@ def main():
     ap.add_argument("--log-every", type=int, default=25)
     ap.add_argument("--run-smoke-gates", action="store_true")
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--min-prob", type=float, default=0.0, help="drop TRAIN utterances with alignment mean_token_prob below this")
+    ap.add_argument("--min-vowel-voiced", type=float, default=0.0)
+    ap.add_argument("--run-name", type=str, default=None, help="override run/ckpt dir name (default voca_<variant>)")
+    ap.add_argument("--no-transplant", action="store_true")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.benchmark = True
     torch.set_float32_matmul_precision("high")
 
-    run_name = f"voca_{args.variant}"
+    run_name = args.run_name or f"voca_{args.variant}"
     out_dir = args.out_dir or Path(f"/work/tts/s4/checkpoints/{run_name}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -538,7 +574,7 @@ def main():
         config = SakhiyaVocaConfig.pro_9_5m(num_styles=8)
 
     print(f"[{run_name}] Loading dataset from {args.data_dir} into RAM...", flush=True)
-    train_ds = RasaVocaRAMDataset(args.data_dir, split="train")
+    train_ds = RasaVocaRAMDataset(args.data_dir, split="train", min_prob=args.min_prob, min_vowel_voiced=args.min_vowel_voiced)
     val_ds = RasaVocaRAMDataset(args.data_dir, split="validation")
     print(f"[{run_name}] Loaded {len(train_ds)} train clips and {len(val_ds)} val clips on {device}.", flush=True)
 
@@ -556,7 +592,7 @@ def main():
 
     system = SakhiyaVocaTrainingSystem(config).to(device)
     critics = Discriminators().to(device)
-    tx_report = transplant_from_tiny_voca(system.model, tv_pt_path, r_share=0.30)
+    tx_report = {} if args.no_transplant else transplant_from_tiny_voca(system.model, tv_pt_path, r_share=0.30)
     print(f"[{run_name}] Transplanted from tiny-voca.pt: {tx_report}", flush=True)
 
     ema_model = copy.deepcopy(system.model).to(device).eval()
@@ -593,7 +629,7 @@ def main():
     prog = Progress(run_name, total=args.steps, stage="spectral warmup") if Progress else None
     tick_gate("G3", "doing", f"training {run_name} ({sum(p.numel() for p in system.model.parameters()):,} params) on Blackwell")
 
-    rng = random.Random(1337 + start_step)
+    prefetch = BatchPrefetcher(train_ds, args.batch_size, seed=1337 + start_step)
     win_acc = defaultdict(float)
     win_steps = 0
     win_t0 = time.monotonic()
@@ -615,8 +651,7 @@ def main():
             if step < args.teacher_hold
             else max(0.0, 1.0 - (step - args.teacher_hold) / max(args.teacher_ramp, 1))
         )
-        batch_items = train_ds.sample_batch(args.batch_size, rng)
-        batch = collate_batch(batch_items, device)
+        batch = prefetch.get(device)
 
         system.train()
         opt.zero_grad(set_to_none=True)

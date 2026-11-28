@@ -402,7 +402,7 @@ def _decode_row_worker(row_dict: dict) -> dict | None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", type=Path, default=Path("/work/tts/s4/data/rasa_ne_voca"))
-    ap.add_argument("--max-clips", type=int, default=6000, help="Total Female + Male clips to prepare and align")
+    ap.add_argument("--max-clips", type=int, default=0, help="0 = ALL cached Rasa Nepali clips (default); N = cap")
     ap.add_argument("--batch-size", type=int, default=32)
     args = ap.parse_args()
 
@@ -415,7 +415,7 @@ def main():
     assert g70["correct"] == g70["total"], f"G2P v4 failed: {g70}"
     tick_gate("A3", "pass", f"g2p_v4 verified {g70['correct']}/{g70['total']} (100% word acc) + JS parity green")
 
-    prog = Progress("rasa_import_gpu", total=args.max_clips, stage="scanning Rasa shards") if Progress else None
+    prog = Progress("rasa_import_gpu", total=args.max_clips or 31000, stage="scanning Rasa shards") if Progress else None
     tick_gate("A2", "doing", "running GPU-accelerated Rasa 48->24 kHz + LogSumExp alignment")
     tick_gate("G1", "doing", "caching 24 kHz wav + mel + F0 + energy + alignments on Blackwell")
 
@@ -424,40 +424,47 @@ def main():
     if not parquet_files:
         raise RuntimeError("No cached Rasa Nepali parquet shards found in /work/hf_cache")
 
-    raw_female, raw_male = [], []
-    half = args.max_clips // 2
-    for pf in parquet_files:
-        table = pq.read_table(pf, columns=["audio", "text", "gender", "style", "filename"])
-        df = table.to_pandas()
-        for r in df.itertuples():
-            g_str = str(r.gender).lower()
-            st_str = str(r.style).upper()
-            spk_id = 0 if g_str == "female" else 1
-            if spk_id == 0 and len(raw_female) >= int(half * 1.15):
-                continue
-            if spk_id == 1 and len(raw_male) >= int(half * 1.15):
-                continue
-            item = {
-                "id": str(r.filename),
-                "speaker_id": spk_id,
-                "style": st_str,
-                "style_id": STYLE2ID.get(st_str, 0),
-                "text": str(r.text),
-                "audio_bytes": r.audio["bytes"],
-            }
-            if spk_id == 0:
-                raw_female.append(item)
-            else:
-                raw_male.append(item)
-        if len(raw_female) >= int(half * 1.15) and len(raw_male) >= int(half * 1.15):
-            break
+    limit = args.max_clips if args.max_clips > 0 else 10**9
 
-    # Interleave Female & Male evenly
-    candidates = []
-    for f_row, m_row in zip(raw_female, raw_male):
-        candidates.extend([f_row, m_row])
-    candidates = candidates[:int(args.max_clips * 1.15)]
-    print(f"Loaded {len(candidates)} candidate Rasa Nepali studio clips ({len(raw_female)} F, {len(raw_male)} M) in {time.time()-t0:.1f}s", flush=True)
+    def iter_candidates():
+        """S4 (Sonnet): stream EVERY cached Rasa Nepali parquet shard (F + M, all 8 styles) one file at a time.
+
+        Previous version collected `max_clips*1.15` rows up-front, which (a) capped training at 4.1 h of the 55 h we own and
+        (b) would hold 20 GB of encoded audio in RAM if uncapped. Now memory is one parquet file at a time.
+        """
+        n_f = n_m = 0
+        for pf in parquet_files:
+            table = pq.read_table(pf, columns=["audio", "text", "gender", "style", "filename"])
+            df = table.to_pandas()
+            del table
+            for r in df.itertuples():
+                g_str = str(r.gender).lower()
+                st_str = str(r.style).upper()
+                spk_id = 0 if g_str == "female" else 1
+                if spk_id == 0:
+                    n_f += 1
+                else:
+                    n_m += 1
+                yield {
+                    "id": str(r.filename),
+                    "speaker_id": spk_id,
+                    "style": st_str,
+                    "style_id": STYLE2ID.get(st_str, 0),
+                    "text": str(r.text),
+                    "audio_bytes": r.audio["bytes"],
+                }
+            print(f"[prepare] streamed {os.path.basename(pf)} (running F={n_f} M={n_m}) t={time.time()-t0:.0f}s", flush=True)
+            del df
+
+    cand_iter = iter_candidates()
+
+    def next_chunk(n):
+        out = []
+        for row in cand_iter:
+            out.append(row)
+            if len(out) >= n:
+                break
+        return out
 
     # 3. Load wav2vec2-lv-60-espeak-cv-ft on GPU in FP16
     tok = open("/tmp/hf_token").read().strip() if os.path.exists("/tmp/hf_token") else None
@@ -483,11 +490,13 @@ def main():
         prog.set_stage("GPU YIN + wav2vec2 LogSumExp align")
 
     with ProcessPoolExecutor(max_workers=16) as pool:
-        for start_i in range(0, len(candidates), chunk_size):
-            if len(prepared_rows) >= args.max_clips:
+        while True:
+            if len(prepared_rows) >= limit:
                 break
-            sub_cands = candidates[start_i:start_i + chunk_size]
-            decoded = [d for d in pool.map(_decode_row_worker, sub_cands) if d is not None]
+            sub_cands = next_chunk(chunk_size)
+            if not sub_cands:
+                break
+            decoded = [d for d in pool.map(_decode_row_worker, sub_cands, chunksize=4) if d is not None]
             if not decoded:
                 continue
 
@@ -526,7 +535,7 @@ def main():
             aligned_res = list(pool.map(_align_single_worker, align_tasks))
 
             for i, al in enumerate(aligned_res):
-                if al is None or len(prepared_rows) >= args.max_clips:
+                if al is None or len(prepared_rows) >= limit:
                     continue
                 d = decoded[i]
                 split_name = "validation" if d["bucket"] < 25 else ("test" if d["bucket"] < 50 else "train")
@@ -534,8 +543,8 @@ def main():
                 shard_file = f"shard_{shard_idx:04d}.pt"
                 shard_items.append({
                     "id": d["id"],
-                    "wave": torch.from_numpy(d["wave_24k"]),
-                    "mel": torch.from_numpy(all_mel[i]),
+                    "wave": torch.from_numpy(d["wave_24k"]).half(),   # fp16 on disk/RAM (~2x smaller); trainer casts per batch
+                    "mel": torch.from_numpy(all_mel[i]).half(),
                     "prosody": torch.from_numpy(all_prosody[i]),
                 })
                 row_meta = {
@@ -568,7 +577,7 @@ def main():
             rate = len(prepared_rows) / max(elapsed, 1e-3)
             mean_prob = float(np.mean([r["mean_token_prob"] for r in prepared_rows[-100:]])) if prepared_rows else 0.0
             mean_pauses = float(np.mean([r["pauses_assigned"] for r in prepared_rows[-100:]])) if prepared_rows else 0.0
-            print(f"[prepare_rasa_voca_gpu] {len(prepared_rows)}/{args.max_clips} aligned ({rate:.1f} utts/s) | prob={mean_prob:.3f} | pauses/utt={mean_pauses:.2f}", flush=True)
+            print(f"[prepare_rasa_voca_gpu] {len(prepared_rows)}/{limit if limit < 10**9 else 'all'} aligned ({rate:.1f} utts/s) | prob={mean_prob:.3f} | pauses/utt={mean_pauses:.2f}", flush=True)
             if prog:
                 prog.update(len(prepared_rows), force=True, rate_utts_s=rate, token_prob=mean_prob, pauses_per_utt=mean_pauses)
 
