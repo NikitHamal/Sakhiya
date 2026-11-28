@@ -5,6 +5,8 @@ import os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import molab_exec as M
 
+_t = open(os.environ.get("MOLAB_TOKEN_FILE", "/tmp/molab_token")).read().strip()
+M.run_py(f"import os; open('/tmp/molab_token','w').write({_t!r}); os.chmod('/tmp/molab_token',0o600)")  # guardian needs it for its loopback websocket (box-local, never committed)
 print(M.run_sh("cd /work/tts/repo && export GIT_ASKPASS=/tmp/gitenv.sh GIT_TERMINAL_PROMPT=0 && git stash -q 2>/dev/null; git pull -q --rebase origin main 2>&1 | tail -1; git log --oneline | head -1"))
 print(M.run_sh("mkdir -p /work/tts/s4/progress /work/tts/logs; cd /work/tts/repo && (setsid nohup python3 -u scripts/s4_guardian.py >> /work/tts/logs/s4_guardian.log 2>&1 < /dev/null &) ; sleep 4; tail -3 /work/tts/logs/s4_guardian.log; cat /work/tts/s4/guardian.pid"))
 code = '''
