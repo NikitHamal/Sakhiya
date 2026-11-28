@@ -261,10 +261,15 @@ def main():
     os.makedirs(f"{S4}/progress", exist_ok=True)
     os.makedirs(LOGS, exist_ok=True)
     me = os.getpid()
-    others = [p for p in sh("pgrep -f '[s]4_guardian.py'").split() if int(p) != me and int(p) != os.getppid()]
-    if others:
-        print("s4_guardian already running:", others)
-        return
+    pf = f"{S4}/guardian.pid"
+    try:
+        old = int(open(pf).read().strip())
+        if old != me and pid_alive(old) and "s4_guardian" in open(f"/proc/{old}/cmdline").read():
+            print("s4_guardian already running:", old)
+            return
+    except Exception:
+        pass
+    open(pf, "w").write(str(me))
     event("guardian", f"started pid={me}")
     i = 0
     while True:

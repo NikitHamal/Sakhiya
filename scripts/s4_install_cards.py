@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import molab_exec as M
 
 print(M.run_sh("cd /work/tts/repo && export GIT_ASKPASS=/tmp/gitenv.sh GIT_TERMINAL_PROMPT=0 && git stash -q 2>/dev/null; git pull -q --rebase origin main 2>&1 | tail -1; git log --oneline | head -1"))
-print(M.run_sh("mkdir -p /work/tts/s4/progress /work/tts/logs; pgrep -f '[s]4_guardian.py' >/dev/null && echo guardian-already-running || (cd /work/tts/repo && setsid nohup python3 -u scripts/s4_guardian.py > /work/tts/logs/s4_guardian.log 2>&1 < /dev/null & sleep 3; echo guardian-started)"))
+print(M.run_sh("mkdir -p /work/tts/s4/progress /work/tts/logs; cd /work/tts/repo && (setsid nohup python3 -u scripts/s4_guardian.py >> /work/tts/logs/s4_guardian.log 2>&1 < /dev/null &) ; sleep 4; tail -3 /work/tts/logs/s4_guardian.log; cat /work/tts/s4/guardian.pid"))
 code = '''
 import importlib.util as _u
 _s = _u.spec_from_file_location("s4_cells", "/work/tts/repo/monitor/s4_cells.py"); C = _u.module_from_spec(_s); _s.loader.exec_module(C)
