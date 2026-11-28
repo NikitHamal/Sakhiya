@@ -117,9 +117,16 @@ def measure_vowel_hpvr_db(wave: np.ndarray, sr: int = 24000) -> float:
     return float(np.percentile(band, 90) - np.percentile(band, 15))
 
 
+EMOTIVE_STYLES = {"ANGER", "FEAR", "HAPPY", "SAD", "SURPRISE", "DISGUST"}
+# S4 (Sonnet): the prep script mapped every unknown Rasa style (PROPER NOUN, SURPRISE, DISGUST, ALEXA, BB, DIGI, UMANG) to id 0 (WIKI),
+# silently labelling 2.4 k emotive utterances per voice as neutral WIKI. Remap properly at load time.
+STYLE_REMAP = {"WIKI": 0, "NEWS": 1, "CONV": 2, "BOOK": 3, "HAPPY": 4, "SAD": 5, "ANGER": 6, "FEAR": 7,
+               "SURPRISE": 4, "DISGUST": 6, "PROPER NOUN": 0, "DIGI": 1, "ALEXA": 2, "BB": 2, "UMANG": 2}
+
+
 class RasaVocaRAMDataset:
     """Loads prepared `ai4bharat/Rasa` Nepali shards into system RAM for zero-I/O GPU training."""
-    def __init__(self, data_dir: Path, split: str = "train", min_prob: float = 0.0, min_vowel_voiced: float = 0.0):
+    def __init__(self, data_dir: Path, split: str = "train", min_prob: float = 0.0, min_vowel_voiced: float = 0.0, style_mode: str = "all"):
         self.data_dir = Path(data_dir)
         manifest_path = self.data_dir / "manifest.jsonl"
         all_rows = [json.loads(line) for line in manifest_path.open("r", encoding="utf-8") if line.strip()]
@@ -129,6 +136,11 @@ class RasaVocaRAMDataset:
             n0 = len(self.rows)
             self.rows = [r for r in self.rows if r.get("mean_token_prob", 1.0) >= min_prob and r.get("vowel_voiced", 1.0) >= min_vowel_voiced]
             print(f"[dataset] alignment filter prob>={min_prob} vowel_voiced>={min_vowel_voiced}: kept {len(self.rows)}/{n0}", flush=True)
+        if split == "train" and style_mode == "neutral":
+            # a model with NO style input must not average angry/sad/happy delivery into its single neutral prosody
+            n0 = len(self.rows)
+            self.rows = [r for r in self.rows if str(r.get("style", "")).upper() not in EMOTIVE_STYLES]
+            print(f"[dataset] neutral-only: kept {len(self.rows)}/{n0} (dropped emotive styles)", flush=True)
         if not self.rows:
             self.rows = all_rows
 
@@ -148,7 +160,7 @@ class RasaVocaRAMDataset:
             self.items.append({
                 "id": r["id"],
                 "speaker_id": int(r["speaker_id"]),
-                "style_id": int(r.get("style_id", 0)),
+                "style_id": STYLE_REMAP.get(str(r.get("style", "")).upper(), int(r.get("style_id", 0))),
                 "text": r["text"],
                 "symbols": r["symbols"],
                 "ids": torch.tensor(r["ids"], dtype=torch.long),
@@ -556,6 +568,7 @@ def main():
     ap.add_argument("--min-vowel-voiced", type=float, default=0.0)
     ap.add_argument("--run-name", type=str, default=None, help="override run/ckpt dir name (default voca_<variant>)")
     ap.add_argument("--no-transplant", action="store_true")
+    ap.add_argument("--styles", choices=["auto", "neutral", "all"], default="auto", help="auto = neutral-only when the model has no style input, else all with corrected style ids")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -574,7 +587,8 @@ def main():
         config = SakhiyaVocaConfig.pro_9_5m(num_styles=8)
 
     print(f"[{run_name}] Loading dataset from {args.data_dir} into RAM...", flush=True)
-    train_ds = RasaVocaRAMDataset(args.data_dir, split="train", min_prob=args.min_prob, min_vowel_voiced=args.min_vowel_voiced)
+    train_ds = RasaVocaRAMDataset(args.data_dir, split="train", min_prob=args.min_prob, min_vowel_voiced=args.min_vowel_voiced,
+                                 style_mode=(args.styles if args.styles != "auto" else ("neutral" if config.num_styles == 0 else "all")))
     val_ds = RasaVocaRAMDataset(args.data_dir, split="validation")
     print(f"[{run_name}] Loaded {len(train_ds)} train clips and {len(val_ds)} val clips on {device}.", flush=True)
 
