@@ -50,10 +50,16 @@ class SakhiyaWeb {
     ort.env.wasm.wasmPaths = ORT_URL; ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
     if (this.base !== base) { this.base = base; this.cfg = null; this.variant = null; this.sess = {}; }
     this.cfg = this.cfg || await (await fetch(base + "config.json", { cache: "no-cache" })).json();
-    if (this.variant === variant) return; const suf = variant === "tiny" ? ".int8.onnx" : ".onnx", t0 = performance.now();
+    if (this.variant === variant) return; const suf = variant === "tiny" ? ".int8.onnx" : (variant === "fp16" ? ".fp16.onnx" : ".onnx"), t0 = performance.now();
     if (this.cfg && this.cfg.single_graph) {
-      try { this.sess.single = await ort.InferenceSession.create(base + "model" + suf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
-      catch (_) { this.sess.single = await ort.InferenceSession.create(base + "model.int8.onnx", { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); }
+      const order = variant === "tiny" ? [".int8.onnx", ".fp16.onnx", ".onnx"] : (variant === "fp16" ? [".fp16.onnx", ".onnx", ".int8.onnx"] : [".onnx", ".fp16.onnx", ".int8.onnx"]);
+      let loaded = null;
+      for (const ext of order) {
+        try { loaded = await ort.InferenceSession.create(base + "model" + ext, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }); break; }
+        catch (_) {}
+      }
+      if (!loaded) throw new Error("Failed to load single-graph model from " + base);
+      this.sess.single = loaded;
       this.variant = variant; this.loadMs = performance.now() - t0; return;
     }
     for (const n of ["encoder", "decoder", "vocoder"]) {

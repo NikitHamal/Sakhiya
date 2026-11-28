@@ -18,12 +18,24 @@ def test_tiers_json_has_no_handtyped_quality():
     T = json.load(open(f"{R}/docs/tiers.json"))["tiers"]
     ids = [t["id"] for t in T]
     assert "sakhiya_one" in ids and ("sakhiya_one_vocos" in ids or "sakhiya_one_fast" in ids)
+    assert "sakhiya_one_vocos_fp16" in ids
+    assert os.path.exists(f"{R}/docs/models_sakhiya_one_vocos/model.fp16.onnx")
     assert "t5" not in ids and "micro" not in ids
     for t in T:
         if not t.get("ready", True):
             continue
         assert isinstance(t.get("mb"), (int, float)) and t["mb"] > 0
         assert t.get("utmos") is None or (1.0 <= float(t["utmos"]) <= 5.0)
+
+
+def test_sakhiya_one_vocos_fp16_runtime():
+    import numpy as np
+    from sakhiya.onnx_tts import SakhiyaONNX
+    d = os.path.join(R, "docs", "models_sakhiya_one_vocos")
+    m = SakhiyaONNX(d, tiny=False, threads=1)
+    assert m.single is not None
+    w, sr = m.say("नमस्ते, आजको विशेष समाचार।", lang="ne", style="news")
+    assert sr == 24000 and w.size > 1000 and np.isfinite(w).all()
 
 
 def test_sakhiya_one_4layer_forensic_reports():

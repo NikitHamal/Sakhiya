@@ -96,12 +96,18 @@ def stitch(wavs, sr, xf_ms=25, edge_ms=90):
 class SakhiyaONNX:
     def __init__(self, d, tiny=False, threads=1):
         o = ort.SessionOptions(); o.intra_op_num_threads = threads
-        suf = ".int8.onnx" if tiny else ".onnx"
-        mk = lambda n: ort.InferenceSession(os.path.join(d, n + (suf if os.path.exists(os.path.join(d, n + suf)) else ".onnx")), o, providers=["CPUExecutionProvider"])
+        exts = (".int8.onnx", ".fp16.onnx", ".onnx") if tiny else (".onnx", ".fp16.onnx", ".int8.onnx")
+        def _pick(n):
+            for ext in exts:
+                p = os.path.join(d, n + ext)
+                if os.path.exists(p):
+                    return p
+            return None
+        mk = lambda n: ort.InferenceSession(_pick(n), o, providers=["CPUExecutionProvider"])
         self.cfg = json.load(open(os.path.join(d, "config.json")))
-        m_p = os.path.join(d, "model" + (suf if os.path.exists(os.path.join(d, "model" + suf)) else ".onnx"))
-        has = lambda n: os.path.exists(os.path.join(d, n + suf)) or os.path.exists(os.path.join(d, n + ".onnx"))
-        self.single = ort.InferenceSession(m_p, o, providers=["CPUExecutionProvider"]) if os.path.exists(m_p) and not has("encoder") else None
+        m_p = _pick("model")
+        has = lambda n: _pick(n) is not None
+        self.single = ort.InferenceSession(m_p, o, providers=["CPUExecutionProvider"]) if m_p and not has("encoder") else None
         self.enc = mk("encoder") if has("encoder") else self.single
         self.dec = mk("decoder") if has("decoder") else None
         self.voc = mk("vocoder") if has("vocoder") else None

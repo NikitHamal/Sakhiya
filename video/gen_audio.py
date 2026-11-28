@@ -16,7 +16,7 @@ def _init():
     sys.path.insert(0, ROOT)
     from sakhiya.onnx_tts import SakhiyaONNX
     model_dir = os.environ.get("SAKHIYA_MODEL_DIR", os.path.join(ROOT, "docs", "models_sakhiya_one_vocos"))
-    _m = SakhiyaONNX(model_dir, tiny=True, threads=2)
+    _m = SakhiyaONNX(model_dir, tiny=bool(int(os.environ.get("SAKHIYA_TINY", "0"))), threads=2)
 
 PRON = S.get("pron", {})
 def tts_text(t):

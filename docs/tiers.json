@@ -34,6 +34,21 @@
    "rtf_onnx": 0.0299
   },
   {
+   "id": "sakhiya_one_vocos_fp16",
+   "label": "Sakhiya-One Studio FP16 (Unquantized)",
+   "prec": "fp16",
+   "dir": "models_sakhiya_one_vocos/",
+   "variant": "fp16",
+   "mb": 35.528,
+   "rtf": 0.0274,
+   "ne_pcer": 0.0356,
+   "sa_pcer": 0.105,
+   "ready": true,
+   "desc": "Unquantized FP16 Studio Master (cand_b_v2 · ZERO INT8 quantization) · Real-GT Kathmandu AM + pad=384 Mel80To100Adapter + LoHiBand Vocos-24kHz · ne_pcer=0.0356, HF_LSD=0.708dB",
+   "onnx_mb": 35.528,
+   "rtf_onnx": 0.0274
+  },
+  {
    "id": "v1",
    "label": "Sakhiya-V1",
    "prec": "int8",
