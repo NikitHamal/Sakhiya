@@ -1,0 +1,25 @@
+rasa_F|BI {'n': 40, 'b': 0.975, 'v/w': 0.025}
+rasa_F|CHA {'n': 41, 'ʃ/s': 0.366, 'ts': 0.22, 'other:t': 0.171, 'tʃ/c': 0.098, 'other:ts.': 0.073, 'dʒ/ɟ': 0.049}
+rasa_F|CHH {'n': 40, 'other:th': 0.275, 'ts': 0.15, 'other:t': 0.125, 'other:tsh': 0.125, 'ʃ/s': 0.125, 'other:ts.h': 0.075}
+rasa_F|GY {'n': 4, 'g': 0.75, 'other:m': 0.25}
+rasa_F|SW {'n': 16, 'ʃ/s': 1.0}
+rasa_F|VI {'n': 52, 'v/w': 0.731, 'b': 0.173, 'other:m': 0.077, 'other:d': 0.019}
+rasa_M|BI {'n': 40, 'b': 0.775, 'other:p': 0.175, 'other:m': 0.025, 'v/w': 0.025}
+rasa_M|CHA {'n': 41, 'tʃ/c': 0.439, 'ʃ/s': 0.146, 'dʒ/ɟ': 0.122, 'ts': 0.098, 'other:ts.': 0.098, 'other:s.': 0.024}
+rasa_M|CHH {'n': 40, 'other:ts.h': 0.275, 'other:tɕh': 0.175, 'ʃ/s': 0.125, 'other:tsh': 0.1, 'tʃ/c': 0.1, 'other:t': 0.075}
+rasa_M|GY {'n': 12, 'g': 0.25, 'j': 0.25, 'other:k': 0.167, 'b': 0.167, 'other:n': 0.083, 'other:r': 0.083}
+rasa_M|SW {'n': 25, 'ʃ/s': 0.88, 'v/w': 0.12}
+rasa_M|VI {'n': 60, 'b': 0.517, 'v/w': 0.367, 'other:p': 0.05, 'other:d': 0.017, 'other:r': 0.017, 'other:m': 0.017}
+slr43|BI {'n': 40, 'b': 0.85, 'other:p': 0.075, 'other:m': 0.025, 'other:n': 0.025, 'v/w': 0.025}
+slr43|CHA {'n': 40, 'ʃ/s': 0.35, 'other:t': 0.325, 'tʃ/c': 0.1, 'ts': 0.1, 'dʒ/ɟ': 0.05, 'other:tɕh': 0.025}
+slr43|CHH {'n': 35, 'other:t': 0.314, 'other:tsh': 0.257, 'other:tɕh': 0.114, 'ts': 0.114, 'ʃ/s': 0.057, 'other:th': 0.057}
+slr43|GY {'n': 4, 'g': 0.5, 'j': 0.25, 'other:r': 0.25}
+slr43|SW {'n': 7, 'ʃ/s': 1.0}
+slr43|VI {'n': 60, 'b': 0.7, 'v/w': 0.2, 'other:p': 0.05, 'other:d': 0.017, 'ʃ/s': 0.017, 'other:t': 0.017}
+slr54|BI {'n': 40, 'b': 0.775, 'v/w': 0.125, 'other:p': 0.05, 'ʃ/s': 0.025, 'other:m': 0.025}
+slr54|CHA {'n': 29, 'other:t': 0.31, 'ʃ/s': 0.241, 'ts': 0.207, 'tʃ/c': 0.103, 'other:ts.': 0.034, 'other:tɕh': 0.034}
+slr54|CHH {'n': 40, 'other:t': 0.375, 'ʃ/s': 0.225, 'other:th': 0.1, 'other:ts.h': 0.1, 'other:tsh': 0.05, 'ts': 0.05}
+slr54|GY {'n': 8, 'g': 0.5, 'other:l': 0.125, 'other:n': 0.125, 'ʃ/s': 0.125, 'other:m': 0.125}
+slr54|SW {'n': 8, 'ʃ/s': 0.875, 'v/w': 0.125}
+slr54|VI {'n': 56, 'b': 0.768, 'v/w': 0.089, 'other:m': 0.054, 'other:d': 0.036, 'other:p': 0.018, 'other:z': 0.018}
+GY (n_with_g, n_with_dʒ/ɲ, n): {'rasa_F': [4, 0, 4], 'rasa_M': [11, 0, 12], 'slr54': [7, 0, 8], 'slr43': [4, 0, 4]}
