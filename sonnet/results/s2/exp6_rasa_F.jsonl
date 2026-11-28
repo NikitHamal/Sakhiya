@@ -1,0 +1,193 @@
+{"corp": "rasa_F", "id": "0", "cls": "BI", "word": "बुनाइ", "dur": 0.3, "ali_score": 0.922, "ph": ["b", "u", "n", "a", "j"], "first": "b"}
+{"corp": "rasa_F", "id": "0", "cls": "BI", "word": "बनाइएको", "dur": 0.441, "ali_score": 0.992, "ph": ["b", "u", "n", "a", "j", "a", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "0", "cls": "VI", "word": "विवरण", "dur": 0.461, "ali_score": 0.994, "ph": ["v", "iː", "v", "a", "r", "a", "n"], "first": "v"}
+{"corp": "rasa_F", "id": "0", "cls": "CHH", "word": "छोडेको", "dur": 0.36, "ali_score": 0.996, "ph": ["t", "o̞", "l", "i", "k", "e̞"], "first": "t"}
+{"corp": "rasa_F", "id": "1", "cls": "CHA", "word": "चल्दैछ", "dur": 0.445, "ali_score": 0.994, "ph": ["ts", "ɑu5", "l", "l", "aɪ", "s"], "first": "ts"}
+{"corp": "rasa_F", "id": "2", "cls": "CHH", "word": "छोरा", "dur": 0.3, "ali_score": 0.872, "ph": ["ts", "u", "r", "a"], "first": "ts"}
+{"corp": "rasa_F", "id": "2", "cls": "BI", "word": "बनेसँगै", "dur": 0.66, "ali_score": 0.995, "ph": ["b", "a", "n", "i", "s", "a", "ŋ", "a", "iː"], "first": "b"}
+{"corp": "rasa_F", "id": "2", "cls": "BI", "word": "बल्बनलाई", "dur": 0.721, "ali_score": 0.875, "ph": ["b", "ɑ", "l", "b", "ɑ", "n", "l", "aɪ"], "first": "b"}
+{"corp": "rasa_F", "id": "2", "cls": "BI", "word": "बाह्र", "dur": 0.24, "ali_score": 0.007, "ph": ["b", "a", "r"], "first": "b"}
+{"corp": "rasa_F", "id": "2", "cls": "CHH", "word": "छयालिसमा", "dur": 0.741, "ali_score": 0.25, "ph": ["t", "a", "j", "a", "l", "i", "s", "m", "a"], "first": "t"}
+{"corp": "rasa_F", "id": "2", "cls": "BI", "word": "बनाइएपछि", "dur": 0.801, "ali_score": 0.986, "ph": ["b", "o", "n", "a", "j", "e", "p", "o", "t", "iː"], "first": "b"}
+{"corp": "rasa_F", "id": "3", "cls": "BI", "word": "बेकरले", "dur": 0.56, "ali_score": 0.983, "ph": ["b", "i", "k", "ɔ", "l", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "3", "cls": "CHH", "word": "छुट्यो", "dur": 0.28, "ali_score": 0.996, "ph": ["th", "u5", "t", "iouɜ"], "first": "th"}
+{"corp": "rasa_F", "id": "4", "cls": "CHA", "word": "चबाउने", "dur": 0.42, "ali_score": 0.952, "ph": ["s", "ɑ", "b", "aʊ", "n", "i"], "first": "s"}
+{"corp": "rasa_F", "id": "5", "cls": "CHA", "word": "चाहन्छु", "dur": 0.401, "ali_score": 0.987, "ph": ["ts", "a5", "h", "a5", "n", "ts.", "u5"], "first": "ts"}
+{"corp": "rasa_F", "id": "5", "cls": "CHH", "word": "छोड्न", "dur": 0.241, "ali_score": 0.97, "ph": ["ts.h", "uo5", "n"], "first": "ts.h"}
+{"corp": "rasa_F", "id": "6", "cls": "BI", "word": "बाहिर", "dur": 0.341, "ali_score": 0.997, "ph": ["b", "a", "h", "iː", "d", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "6", "cls": "CHH", "word": "छ्या", "dur": 0.261, "ali_score": 0.884, "ph": ["tɕh", "i5", "iɑ5"], "first": "tɕh"}
+{"corp": "rasa_F", "id": "11", "cls": "BI", "word": "बजेटको", "dur": 0.461, "ali_score": 0.995, "ph": ["b", "aː", "z", "i", "t", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "13", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.361, "ali_score": 0.84, "ph": ["s", "a", "s", "t", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "13", "cls": "BI", "word": "बोलिरहेको", "dur": 0.622, "ali_score": 0.994, "ph": ["b", "u", "l", "iː", "ɾ", "h", "a", "i", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "16", "cls": "CHA", "word": "चौधमध्ये", "dur": 0.741, "ali_score": 0.948, "ph": ["s", "a", "d", "a", "m", "a", "d", "i"], "first": "s"}
+{"corp": "rasa_F", "id": "16", "cls": "CHA", "word": "चारवटा", "dur": 0.72, "ali_score": 0.969, "ph": ["s", "a", "r", "v", "o", "t", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "16", "cls": "CHA", "word": "चलिरहेको", "dur": 0.64, "ali_score": 0.992, "ph": ["tʃ", "a", "l", "iː", "d", "ə", "h", "aɪ", "k", "u"], "first": "tʃ"}
+{"corp": "rasa_F", "id": "16", "cls": "BI", "word": "बाँकी", "dur": 0.28, "ali_score": 0.793, "ph": ["b", "a", "k", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "16", "cls": "CHA", "word": "चलिरहेछ", "dur": 0.62, "ali_score": 0.997, "ph": ["ts", "ɑu5", "l", "i5", "t", "ɑu5", "x", "ei5", "s"], "first": "ts"}
+{"corp": "rasa_F", "id": "17", "cls": "CHA", "word": "चार", "dur": 0.341, "ali_score": 0.369, "ph": ["dʒ", "a", "r"], "first": "dʒ"}
+{"corp": "rasa_F", "id": "17", "cls": "BI", "word": "बाह्र", "dur": 0.321, "ali_score": 0.161, "ph": ["b", "a", "d"], "first": "b"}
+{"corp": "rasa_F", "id": "19", "cls": "SW", "word": "स्वाद", "dur": 0.22, "ali_score": 0.78, "ph": ["s", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "19", "cls": "BI", "word": "बिग्रियो", "dur": 0.38, "ali_score": 0.815, "ph": ["b", "i", "ɡ", "r", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "19", "cls": "BI", "word": "बारेको", "dur": 0.38, "ali_score": 0.981, "ph": ["b", "a", "h", "a", "r", "i", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "21", "cls": "VI", "word": "विरुद्धमा", "dur": 0.421, "ali_score": 0.874, "ph": ["b", "i", "r", "u", "d", "a", "m", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "21", "cls": "BI", "word": "बोल्न", "dur": 0.221, "ali_score": 0.996, "ph": ["b", "u", "n"], "first": "b"}
+{"corp": "rasa_F", "id": "21", "cls": "CHA", "word": "चाहन्नँ", "dur": 0.381, "ali_score": 0.735, "ph": ["t", "a", "h", "a", "n", "n", "ɑ"], "first": "t"}
+{"corp": "rasa_F", "id": "23", "cls": "CHA", "word": "चुनौती", "dur": 0.521, "ali_score": 0.892, "ph": ["s", "u", "n", "aʊ", "t", "i"], "first": "s"}
+{"corp": "rasa_F", "id": "28", "cls": "CHA", "word": "चञ्चला", "dur": 0.443, "ali_score": 0.86, "ph": ["ts", "onɡ5", "ŋ", "ts", "əɜ", "l", "ɑ5"], "first": "ts"}
+{"corp": "rasa_F", "id": "30", "cls": "BI", "word": "बनाएपछि", "dur": 0.621, "ali_score": 0.997, "ph": ["b", "u", "n", "a", "i", "p", "o", "ts", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "31", "cls": "VI", "word": "विभिन्न", "dur": 0.36, "ali_score": 0.999, "ph": ["v", "iː", "v", "i", "n"], "first": "v"}
+{"corp": "rasa_F", "id": "31", "cls": "BI", "word": "बैठक", "dur": 0.42, "ali_score": 0.99, "ph": ["b", "aɪ", "t", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "31", "cls": "BI", "word": "बोलाउनुभएको", "dur": 0.84, "ali_score": 0.997, "ph": ["b", "u", "l", "aʊ", "n", "u", "v", "x", "aɪ", "k", "o"], "first": "b"}
+{"corp": "rasa_F", "id": "34", "cls": "VI", "word": "विदर्भ", "dur": 0.525, "ali_score": 0.86, "ph": ["v", "i", "d", "aː", "r", "b", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "36", "cls": "CHA", "word": "चिया", "dur": 0.243, "ali_score": 0.925, "ph": ["th", "i5", "j", "iɑ5"], "first": "th"}
+{"corp": "rasa_F", "id": "37", "cls": "BI", "word": "बालबालिकामाथि", "dur": 1.143, "ali_score": 0.916, "ph": ["b", "a", "l", "b", "a", "l", "i", "k", "a", "m", "a", "t", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "38", "cls": "BI", "word": "बरालकै", "dur": 0.541, "ali_score": 0.991, "ph": ["b", "a", "r", "a", "n", "t", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "38", "cls": "BI", "word": "बङ्गाली", "dur": 0.42, "ali_score": 0.973, "ph": ["b", "u", "ŋ", "ɡ", "a", "l", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "38", "cls": "CHA", "word": "चाल", "dur": 0.24, "ali_score": 0.994, "ph": ["ts.", "a5", "n"], "first": "ts."}
+{"corp": "rasa_F", "id": "38", "cls": "CHA", "word": "चरित्रचित्रणको", "dur": 0.981, "ali_score": 0.997, "ph": ["tʃ", "a", "l", "i", "t", "r", "a", "tʃ", "i", "t", "r", "a", "n", "k", "u"], "first": "tʃ"}
+{"corp": "rasa_F", "id": "41", "cls": "BI", "word": "बुधबारे", "dur": 0.672, "ali_score": 0.972, "ph": ["b", "u", "d", "h", "ɑ", "b", "a", "r", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "43", "cls": "BI", "word": "ब्याङ्क", "dur": 0.22, "ali_score": 0.551, "ph": ["b", "a", "n"], "first": "b"}
+{"corp": "rasa_F", "id": "43", "cls": "BI", "word": "ब्याङ्कको", "dur": 0.34, "ali_score": 0.609, "ph": ["b", "a", "n", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "43", "cls": "CHA", "word": "चारजना", "dur": 0.58, "ali_score": 0.981, "ph": ["s", "a", "a", "r", "d", "ɑ", "n", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "43", "cls": "CHH", "word": "छोड्यो", "dur": 0.28, "ali_score": 0.985, "ph": ["tsh", "uo5", "l", "i5"], "first": "tsh"}
+{"corp": "rasa_F", "id": "44", "cls": "CHH", "word": "छन्", "dur": 0.201, "ali_score": 0.987, "ph": ["th", "a5", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "45", "cls": "CHH", "word": "छक्कै", "dur": 0.701, "ali_score": 0.684, "ph": ["ə", "th", "e̞", "k", "aɪ"], "first": "th"}
+{"corp": "rasa_F", "id": "49", "cls": "GY", "word": "अज्ञात", "dur": 0.442, "ali_score": 0.974, "ph": ["ɑ", "ɡ", "a"], "first": "ɡ"}
+{"corp": "rasa_F", "id": "50", "cls": "BI", "word": "बन्यो", "dur": 0.24, "ali_score": 0.821, "ph": ["b", "ɑ", "n", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "50", "cls": "CHH", "word": "छन्", "dur": 0.2, "ali_score": 0.923, "ph": ["th", "əɜ", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "54", "cls": "CHA", "word": "चौध", "dur": 0.301, "ali_score": 0.0, "ph": ["s", "aʊ", "d"], "first": "s"}
+{"corp": "rasa_F", "id": "55", "cls": "BI", "word": "बिग्रिएको", "dur": 0.54, "ali_score": 0.912, "ph": ["b", "i", "ɡ", "r", "i", "e", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "56", "cls": "CHA", "word": "चितल", "dur": 0.461, "ali_score": 0.982, "ph": ["tɕ", "i", "t", "ʌ", "l"], "first": "tɕ"}
+{"corp": "rasa_F", "id": "56", "cls": "CHH", "word": "छन्", "dur": 0.22, "ali_score": 0.989, "ph": ["s", "ɔ", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "57", "cls": "VI", "word": "विश्वासघात", "dur": 0.761, "ali_score": 0.995, "ph": ["m", "i", "s", "w", "a", "z", "k", "a"], "first": "m"}
+{"corp": "rasa_F", "id": "57", "cls": "CHA", "word": "चोट", "dur": 0.2, "ali_score": 0.997, "ph": ["tʃ", "o"], "first": "tʃ"}
+{"corp": "rasa_F", "id": "57", "cls": "CHA", "word": "चाञ्चल्य", "dur": 0.561, "ali_score": 0.629, "ph": ["ts.", "a5", "n", "ts", "o5", "l"], "first": "ts."}
+{"corp": "rasa_F", "id": "59", "cls": "BI", "word": "बिताउन", "dur": 0.38, "ali_score": 0.994, "ph": ["b", "i", "t", "a", "u", "n"], "first": "b"}
+{"corp": "rasa_F", "id": "61", "cls": "VI", "word": "विश्वास", "dur": 0.382, "ali_score": 0.989, "ph": ["b", "i", "s", "w", "a", "s"], "first": "b"}
+{"corp": "rasa_F", "id": "62", "cls": "BI", "word": "बाटोमा", "dur": 0.441, "ali_score": 0.995, "ph": ["b", "a", "t", "u", "m", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "62", "cls": "CHA", "word": "चलाएर", "dur": 0.381, "ali_score": 0.599, "ph": ["t", "ɑ", "n", "a", "r"], "first": "t"}
+{"corp": "rasa_F", "id": "63", "cls": "VI", "word": "विश्वविद्यालयमा", "dur": 1.062, "ali_score": 0.995, "ph": ["v", "i", "ʃ", "w", "a", "v", "i", "d", "i", "aː", "l", "a", "j", "m", "aː"], "first": "v"}
+{"corp": "rasa_F", "id": "63", "cls": "CHH", "word": "छात्र", "dur": 0.381, "ali_score": 0.998, "ph": ["n", "t", "a", "d", "r", "ɑ"], "first": "n"}
+{"corp": "rasa_F", "id": "65", "cls": "CHH", "word": "छक्क", "dur": 0.241, "ali_score": 0.973, "ph": ["iː", "ts", "ä", "k", "ə"], "first": "ts"}
+{"corp": "rasa_F", "id": "70", "cls": "BI", "word": "बमवर्षकहरूको", "dur": 1.281, "ali_score": 0.923, "ph": ["w", "a", "m", "b", "a", "r", "ʃ", "a", "k", "h", "ɑ", "d", "u", "k", "u"], "first": "w"}
+{"corp": "rasa_F", "id": "70", "cls": "CHH", "word": "छुट्टै", "dur": 0.42, "ali_score": 0.998, "ph": ["ts", "u", "d", "aɪ"], "first": "ts"}
+{"corp": "rasa_F", "id": "70", "cls": "BI", "word": "बम", "dur": 0.22, "ali_score": 0.693, "ph": ["b", "ɑ"], "first": "b"}
+{"corp": "rasa_F", "id": "70", "cls": "VI", "word": "विस्फोटका", "dur": 0.58, "ali_score": 0.866, "ph": ["v", "iː", "s", "oː", "t", "ɡ", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "71", "cls": "BI", "word": "बङ्गलोर", "dur": 0.38, "ali_score": 0.942, "ph": ["b", "a", "ŋ", "n", "u", "r"], "first": "b"}
+{"corp": "rasa_F", "id": "71", "cls": "CHA", "word": "चलाउनु", "dur": 0.36, "ali_score": 0.996, "ph": ["t", "a", "l", "a", "m", "u"], "first": "t"}
+{"corp": "rasa_F", "id": "74", "cls": "CHA", "word": "चाहन्नँ", "dur": 0.522, "ali_score": 0.687, "ph": ["ts", "a", "ħ", "a", "n", "n", "ɔ"], "first": "ts"}
+{"corp": "rasa_F", "id": "76", "cls": "CHH", "word": "छन्", "dur": 0.22, "ali_score": 0.995, "ph": ["tsh", "a5", "n"], "first": "tsh"}
+{"corp": "rasa_F", "id": "77", "cls": "BI", "word": "बारम्बार", "dur": 0.601, "ali_score": 0.955, "ph": ["b", "a", "r", "ə", "m", "b", "a", "r"], "first": "b"}
+{"corp": "rasa_F", "id": "77", "cls": "BI", "word": "ब्याङ्कमा", "dur": 0.361, "ali_score": 0.618, "ph": ["b", "aː", "n", "m", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "78", "cls": "BI", "word": "ब्याङ्कको", "dur": 0.401, "ali_score": 0.544, "ph": ["b", "a", "n", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "79", "cls": "BI", "word": "बनाएको", "dur": 0.541, "ali_score": 0.997, "ph": ["b", "o", "n", "aɪ", "k", "u"], "first": "b"}
+{"corp": "rasa_F", "id": "82", "cls": "VI", "word": "विस्तारित", "dur": 0.582, "ali_score": 0.979, "ph": ["v", "i", "s", "t", "aː", "r", "i", "d"], "first": "v"}
+{"corp": "rasa_F", "id": "86", "cls": "CHA", "word": "चहक", "dur": 0.28, "ali_score": 0.993, "ph": ["dʒ", "a", "h", "a"], "first": "dʒ"}
+{"corp": "rasa_F", "id": "86", "cls": "CHH", "word": "छायो", "dur": 0.3, "ali_score": 0.997, "ph": ["th", "ɑ5", "j"], "first": "th"}
+{"corp": "rasa_F", "id": "88", "cls": "CHA", "word": "चाहन्छु", "dur": 0.44, "ali_score": 0.969, "ph": ["ts", "x", "a5", "n", "ts.h", "u5"], "first": "ts"}
+{"corp": "rasa_F", "id": "90", "cls": "CHA", "word": "चेन्नईदेखि", "dur": 0.62, "ali_score": 0.865, "ph": ["t", "e", "n", "n", "a", "d", "a", "k", "i"], "first": "t"}
+{"corp": "rasa_F", "id": "94", "cls": "BI", "word": "बुझेँ", "dur": 0.341, "ali_score": 0.796, "ph": ["b", "u", "z", "e"], "first": "b"}
+{"corp": "rasa_F", "id": "94", "cls": "BI", "word": "बन्द", "dur": 0.22, "ali_score": 0.998, "ph": ["b", "aː", "n"], "first": "b"}
+{"corp": "rasa_F", "id": "95", "cls": "CHH", "word": "छैन", "dur": 0.241, "ali_score": 0.993, "ph": ["s", "aː", "i", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "96", "cls": "BI", "word": "बिहारको", "dur": 0.56, "ali_score": 0.988, "ph": ["b", "i", "h", "a", "r", "k", "o"], "first": "b"}
+{"corp": "rasa_F", "id": "96", "cls": "CHA", "word": "चल्छ", "dur": 0.34, "ali_score": 0.911, "ph": ["s", "ɑu5", "l", "ts"], "first": "s"}
+{"corp": "rasa_F", "id": "98", "cls": "CHH", "word": "छयसट्ठीमा", "dur": 0.842, "ali_score": 0.221, "ph": ["ts", "aɪ", "s", "ɔ", "t", "iː", "m", "a"], "first": "ts"}
+{"corp": "rasa_F", "id": "98", "cls": "CHA", "word": "चलेको", "dur": 0.441, "ali_score": 0.997, "ph": ["t", "ɑ", "l", "i", "k", "u"], "first": "t"}
+{"corp": "rasa_F", "id": "101", "cls": "CHH", "word": "छेउमा", "dur": 0.281, "ali_score": 0.995, "ph": ["tɕh", "iou2", "m", "a5"], "first": "tɕh"}
+{"corp": "rasa_F", "id": "104", "cls": "VI", "word": "विकास", "dur": 0.301, "ali_score": 0.995, "ph": ["m", "i", "k", "aː", "s"], "first": "m"}
+{"corp": "rasa_F", "id": "105", "cls": "CHA", "word": "चाहिएका", "dur": 0.442, "ali_score": 0.996, "ph": ["ts", "a", "j", "i", "k", "a"], "first": "ts"}
+{"corp": "rasa_F", "id": "108", "cls": "SW", "word": "स्वर्ण", "dur": 0.36, "ali_score": 0.983, "ph": ["s", "ɔ", "d", "n", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "111", "cls": "VI", "word": "विचारलाई", "dur": 0.541, "ali_score": 0.998, "ph": ["v", "i", "t", "a", "r", "l", "aɪ"], "first": "v"}
+{"corp": "rasa_F", "id": "111", "cls": "VI", "word": "विकास", "dur": 0.4, "ali_score": 0.999, "ph": ["v", "i", "k", "aː", "s"], "first": "v"}
+{"corp": "rasa_F", "id": "112", "cls": "BI", "word": "बलले", "dur": 0.321, "ali_score": 0.753, "ph": ["b", "aː", "l", "i"], "first": "b"}
+{"corp": "rasa_F", "id": "112", "cls": "CHA", "word": "चेप्टायो", "dur": 0.541, "ali_score": 0.888, "ph": ["s", "iː", "ɔ", "p", "t", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "113", "cls": "SW", "word": "स्वतन्त्र", "dur": 0.52, "ali_score": 0.976, "ph": ["s", "w", "ɔ", "t", "ə", "n", "t", "r", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "113", "cls": "BI", "word": "बम्बई", "dur": 0.42, "ali_score": 0.796, "ph": ["b", "ʌ", "m", "b", "ʌ"], "first": "b"}
+{"corp": "rasa_F", "id": "116", "cls": "SW", "word": "स्वभावमा", "dur": 0.502, "ali_score": 0.835, "ph": ["s", "o5", "ph", "aʊ", "m", "ɑ5"], "first": "s"}
+{"corp": "rasa_F", "id": "116", "cls": "CHA", "word": "चाञ्चल्य", "dur": 0.542, "ali_score": 0.728, "ph": ["ts", "a5", "n", "th", "ɔ", "l"], "first": "ts"}
+{"corp": "rasa_F", "id": "117", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.992, "ph": ["th", "a5", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "122", "cls": "CHA", "word": "चोर", "dur": 0.3, "ali_score": 0.372, "ph": ["ts", "u5"], "first": "ts"}
+{"corp": "rasa_F", "id": "122", "cls": "CHA", "word": "चोर", "dur": 0.24, "ali_score": 0.353, "ph": ["t", "o"], "first": "t"}
+{"corp": "rasa_F", "id": "123", "cls": "CHA", "word": "चेन्नई", "dur": 0.401, "ali_score": 0.427, "ph": ["s", "e", "n", "n", "aɪ"], "first": "s"}
+{"corp": "rasa_F", "id": "126", "cls": "CHA", "word": "चकित", "dur": 0.42, "ali_score": 0.981, "ph": ["s", "a", "k", "i", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "127", "cls": "CHA", "word": "चाहन्छु", "dur": 0.441, "ali_score": 0.977, "ph": ["t", "a", "h", "a", "n", "t", "uː"], "first": "t"}
+{"corp": "rasa_F", "id": "130", "cls": "CHA", "word": "चलचित्रमध्ये", "dur": 1.08, "ali_score": 0.994, "ph": ["s", "ɑ", "l", "a", "s", "i", "t", "r", "a", "m", "m", "a", "d", "e"], "first": "s"}
+{"corp": "rasa_F", "id": "130", "cls": "CHA", "word": "चौधलाई", "dur": 0.56, "ali_score": 0.5, "ph": ["s", "ou5", "t", "ə1", "l", "aɪ"], "first": "s"}
+{"corp": "rasa_F", "id": "130", "cls": "CHA", "word": "चलचित्रका", "dur": 0.82, "ali_score": 0.996, "ph": ["ʃ", "ɑ", "l", "a", "tʃ", "i", "t", "r", "ɑ", "k", "a"], "first": "ʃ"}
+{"corp": "rasa_F", "id": "138", "cls": "VI", "word": "विशाल", "dur": 0.34, "ali_score": 0.95, "ph": ["b", "i", "s", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "141", "cls": "VI", "word": "विकास", "dur": 0.361, "ali_score": 0.996, "ph": ["v", "i", "k", "aː"], "first": "v"}
+{"corp": "rasa_F", "id": "142", "cls": "CHA", "word": "चम्मच", "dur": 0.561, "ali_score": 0.961, "ph": ["s", "a", "m", "a", "t"], "first": "s"}
+{"corp": "rasa_F", "id": "144", "cls": "CHH", "word": "छत्रपति", "dur": 0.743, "ali_score": 0.982, "ph": ["s", "a", "t", "r", "a", "p", "a", "t", "i"], "first": "s"}
+{"corp": "rasa_F", "id": "146", "cls": "CHA", "word": "चौध", "dur": 0.342, "ali_score": 0.833, "ph": ["ʃ", "ɑ", "d"], "first": "ʃ"}
+{"corp": "rasa_F", "id": "146", "cls": "CHA", "word": "चौवन्न", "dur": 0.603, "ali_score": 0.346, "ph": ["ts.", "ɑu5", "w", "a5", "n"], "first": "ts."}
+{"corp": "rasa_F", "id": "149", "cls": "GY", "word": "मनोवैज्ञानिक", "dur": 0.861, "ali_score": 0.991, "ph": ["m", "o", "n", "u", "v", "ɔ", "ɡ", "a", "n", "i"], "first": "m"}
+{"corp": "rasa_F", "id": "149", "cls": "VI", "word": "विश्लेषण", "dur": 0.521, "ali_score": 0.801, "ph": ["v", "iː", "ç", "l", "ɪ", "s", "a", "n"], "first": "v"}
+{"corp": "rasa_F", "id": "151", "cls": "CHH", "word": "छक्क", "dur": 0.501, "ali_score": 0.763, "ph": ["ts", "ɔ", "k", "ɔ"], "first": "ts"}
+{"corp": "rasa_F", "id": "163", "cls": "CHH", "word": "छैन", "dur": 0.261, "ali_score": 0.972, "ph": ["s", "aɪ", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "163", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.995, "ph": ["th", "a5", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "166", "cls": "CHH", "word": "छैटौँ", "dur": 0.501, "ali_score": 0.955, "ph": ["tsh", "aɪ", "t", "onɡ5"], "first": "tsh"}
+{"corp": "rasa_F", "id": "167", "cls": "VI", "word": "विवाहित", "dur": 0.481, "ali_score": 0.997, "ph": ["v", "i", "v", "a", "h", "i", "t"], "first": "v"}
+{"corp": "rasa_F", "id": "167", "cls": "CHH", "word": "छोरो", "dur": 0.321, "ali_score": 0.936, "ph": ["s.", "u5", "t", "o5"], "first": "s."}
+{"corp": "rasa_F", "id": "167", "cls": "CHH", "word": "छोरी", "dur": 0.301, "ali_score": 0.99, "ph": ["t", "uo5", "r", "i5"], "first": "t"}
+{"corp": "rasa_F", "id": "168", "cls": "VI", "word": "विशेष", "dur": 0.36, "ali_score": 1.0, "ph": ["v", "iː", "s", "i", "s"], "first": "v"}
+{"corp": "rasa_F", "id": "174", "cls": "CHH", "word": "छर्किन", "dur": 0.42, "ali_score": 0.847, "ph": ["n", "s", "h", "a", "r", "ɡ", "i", "n", "a"], "first": "n"}
+{"corp": "rasa_F", "id": "175", "cls": "CHH", "word": "छिन्", "dur": 0.24, "ali_score": 0.99, "ph": ["th", "i5", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "175", "cls": "VI", "word": "विश्वास", "dur": 0.461, "ali_score": 1.0, "ph": ["b", "i", "s", "w", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "180", "cls": "VI", "word": "विशेष", "dur": 0.44, "ali_score": 1.0, "ph": ["v", "i", "s", "e"], "first": "v"}
+{"corp": "rasa_F", "id": "181", "cls": "VI", "word": "विचलित", "dur": 0.461, "ali_score": 0.999, "ph": ["v", "iː", "t", "a", "l", "i", "d"], "first": "v"}
+{"corp": "rasa_F", "id": "182", "cls": "VI", "word": "विविध", "dur": 0.36, "ali_score": 0.992, "ph": ["v", "i", "b", "i"], "first": "v"}
+{"corp": "rasa_F", "id": "182", "cls": "VI", "word": "विशेष", "dur": 0.4, "ali_score": 1.0, "ph": ["v", "iː", "s", "e", "s"], "first": "v"}
+{"corp": "rasa_F", "id": "190", "cls": "CHH", "word": "छैन", "dur": 0.28, "ali_score": 0.998, "ph": ["ts", "aɪ", "n"], "first": "ts"}
+{"corp": "rasa_F", "id": "191", "cls": "VI", "word": "विपक्षमा", "dur": 0.701, "ali_score": 0.998, "ph": ["v", "iː", "b", "ɔ", "k", "s", "ɔ", "m", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "193", "cls": "VI", "word": "विश्वयुद्धमा", "dur": 0.901, "ali_score": 0.999, "ph": ["v", "i", "s", "w", "a", "j", "u", "d", "ɔ", "m", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "200", "cls": "VI", "word": "विभिन्न", "dur": 0.321, "ali_score": 0.997, "ph": ["b", "i", "b", "i", "n", "n"], "first": "b"}
+{"corp": "rasa_F", "id": "200", "cls": "CHH", "word": "छन्", "dur": 0.22, "ali_score": 0.996, "ph": ["t", "ɔ", "n"], "first": "t"}
+{"corp": "rasa_F", "id": "207", "cls": "CHH", "word": "छैन", "dur": 0.261, "ali_score": 0.995, "ph": ["t", "aɪ", "n"], "first": "t"}
+{"corp": "rasa_F", "id": "213", "cls": "VI", "word": "विनोबा", "dur": 0.461, "ali_score": 0.772, "ph": ["v", "i", "n", "o", "b", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "214", "cls": "VI", "word": "विनय", "dur": 0.281, "ali_score": 0.986, "ph": ["v", "i", "n", "aɪ"], "first": "v"}
+{"corp": "rasa_F", "id": "216", "cls": "GY", "word": "ज्ञान", "dur": 0.34, "ali_score": 0.997, "ph": ["ɡ", "i", "aː"], "first": "ɡ"}
+{"corp": "rasa_F", "id": "216", "cls": "VI", "word": "विकासका", "dur": 0.52, "ali_score": 0.998, "ph": ["v", "i", "k", "a", "s", "k", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "217", "cls": "CHH", "word": "छन्", "dur": 0.22, "ali_score": 0.997, "ph": ["tsh", "a5", "n"], "first": "tsh"}
+{"corp": "rasa_F", "id": "220", "cls": "VI", "word": "विश्वरूपको", "dur": 0.842, "ali_score": 0.984, "ph": ["b", "i", "s", "w", "a", "r", "u", "k", "o"], "first": "b"}
+{"corp": "rasa_F", "id": "220", "cls": "VI", "word": "विशेषता", "dur": 0.541, "ali_score": 0.998, "ph": ["b", "i", "s", "e", "s", "t", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "227", "cls": "VI", "word": "विराटले", "dur": 0.52, "ali_score": 0.908, "ph": ["iː", "d", "aː", "t", "l", "i"], "first": "d"}
+{"corp": "rasa_F", "id": "229", "cls": "CHH", "word": "छैन", "dur": 0.26, "ali_score": 0.995, "ph": ["th", "aɪ", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "234", "cls": "VI", "word": "विद्यार्थीहरूको", "dur": 0.863, "ali_score": 0.939, "ph": ["v", "i", "d", "aː", "r", "t", "r", "k", "u"], "first": "v"}
+{"corp": "rasa_F", "id": "237", "cls": "CHH", "word": "छोड्यो", "dur": 0.34, "ali_score": 0.953, "ph": ["ts.h", "uo5", "l", "iou2"], "first": "ts.h"}
+{"corp": "rasa_F", "id": "245", "cls": "CHH", "word": "छोडेन", "dur": 0.341, "ali_score": 0.997, "ph": ["i5", "tsh", "uo5", "l", "iɜ", "n"], "first": "tsh"}
+{"corp": "rasa_F", "id": "275", "cls": "CHH", "word": "छक्क", "dur": 0.481, "ali_score": 0.926, "ph": ["th", "ɔ", "k", "ə"], "first": "th"}
+{"corp": "rasa_F", "id": "278", "cls": "SW", "word": "स्वयं", "dur": 0.32, "ali_score": 0.845, "ph": ["s", "w", "ei5", "m"], "first": "s"}
+{"corp": "rasa_F", "id": "278", "cls": "CHH", "word": "छन्", "dur": 0.2, "ali_score": 0.996, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "279", "cls": "VI", "word": "वित्त", "dur": 0.24, "ali_score": 0.967, "ph": ["v", "iː", "t"], "first": "v"}
+{"corp": "rasa_F", "id": "279", "cls": "VI", "word": "विभागमा", "dur": 0.421, "ali_score": 0.994, "ph": ["v", "i", "b", "a", "ɡ", "m", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "281", "cls": "VI", "word": "विद्यार्थी", "dur": 0.464, "ali_score": 0.926, "ph": ["v", "i", "d", "j", "aː", "t", "i"], "first": "v"}
+{"corp": "rasa_F", "id": "281", "cls": "CHH", "word": "छन्", "dur": 0.222, "ali_score": 0.943, "ph": ["th", "a5", "n"], "first": "th"}
+{"corp": "rasa_F", "id": "313", "cls": "CHH", "word": "छन्", "dur": 0.28, "ali_score": 0.996, "ph": ["ts.h", "a5", "n"], "first": "ts.h"}
+{"corp": "rasa_F", "id": "316", "cls": "VI", "word": "विभिन्न", "dur": 0.361, "ali_score": 0.987, "ph": ["v", "b", "i", "n", "aː"], "first": "v"}
+{"corp": "rasa_F", "id": "329", "cls": "VI", "word": "विभागबाट", "dur": 0.641, "ali_score": 0.998, "ph": ["v", "iː", "b", "a", "ŋ", "b", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "340", "cls": "VI", "word": "विशेष", "dur": 0.344, "ali_score": 0.998, "ph": ["m", "i", "s", "e", "s"], "first": "m"}
+{"corp": "rasa_F", "id": "342", "cls": "VI", "word": "विस्तार", "dur": 0.501, "ali_score": 0.973, "ph": ["v", "i", "s", "t", "aː"], "first": "v"}
+{"corp": "rasa_F", "id": "342", "cls": "VI", "word": "विशेषता", "dur": 0.521, "ali_score": 0.995, "ph": ["v", "i", "s", "e", "s", "t", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "343", "cls": "GY", "word": "अज्ञानमा", "dur": 0.441, "ali_score": 0.981, "ph": ["ɑ", "ɡ", "i", "a", "n", "m", "a"], "first": "ɡ"}
+{"corp": "rasa_F", "id": "343", "cls": "SW", "word": "स्वास्थ्यपूर्वक", "dur": 0.741, "ali_score": 0.971, "ph": ["s", "u", "a", "s", "t", "i", "p", "u", "r", "v", "a", "ŋ"], "first": "s"}
+{"corp": "rasa_F", "id": "346", "cls": "VI", "word": "विश्वासै", "dur": 0.621, "ali_score": 0.997, "ph": ["b", "i", "s", "w", "a", "s", "aɪ"], "first": "b"}
+{"corp": "rasa_F", "id": "361", "cls": "SW", "word": "स्वाधीन", "dur": 0.401, "ali_score": 0.998, "ph": ["s", "w", "a", "d", "i", "n"], "first": "s"}
+{"corp": "rasa_F", "id": "383", "cls": "VI", "word": "विषय", "dur": 0.26, "ali_score": 0.999, "ph": ["v", "i", "ɕ", "e"], "first": "v"}
+{"corp": "rasa_F", "id": "389", "cls": "VI", "word": "विजयवाडा", "dur": 0.787, "ali_score": 0.836, "ph": ["v", "i", "z", "aɪ", "v", "a", "d", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "391", "cls": "VI", "word": "विवाह", "dur": 0.3, "ali_score": 0.955, "ph": ["u", "m", "iː", "v", "a", "ħ"], "first": "m"}
+{"corp": "rasa_F", "id": "393", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.361, "ali_score": 0.978, "ph": ["s", "w", "a", "s", "t", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "395", "cls": "SW", "word": "स्वाद", "dur": 0.26, "ali_score": 0.895, "ph": ["s", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "400", "cls": "SW", "word": "स्वत", "dur": 0.281, "ali_score": 0.932, "ph": ["s", "w", "a"], "first": "s"}
+{"corp": "rasa_F", "id": "405", "cls": "SW", "word": "स्वस्थ", "dur": 0.32, "ali_score": 0.996, "ph": ["s", "w", "a", "s", "t"], "first": "s"}
+{"corp": "rasa_F", "id": "412", "cls": "VI", "word": "विष्णु", "dur": 0.381, "ali_score": 0.861, "ph": ["v", "iː", "s", "n", "uː"], "first": "v"}
+{"corp": "rasa_F", "id": "415", "cls": "VI", "word": "वित्तीय", "dur": 0.38, "ali_score": 0.99, "ph": ["v", "i", "t", "i"], "first": "v"}
+{"corp": "rasa_F", "id": "415", "cls": "VI", "word": "विवरण", "dur": 0.48, "ali_score": 0.992, "ph": ["v", "i", "v", "a", "r", "a", "n"], "first": "v"}
+{"corp": "rasa_F", "id": "416", "cls": "SW", "word": "स्वतन्त्र", "dur": 0.501, "ali_score": 0.994, "ph": ["s", "w", "a", "t", "ə", "n", "d", "r", "ə"], "first": "s"}
+{"corp": "rasa_F", "id": "419", "cls": "VI", "word": "विगत", "dur": 0.3, "ali_score": 0.944, "ph": ["b", "i", "ɡ", "a"], "first": "b"}
+{"corp": "rasa_F", "id": "419", "cls": "VI", "word": "विरुद्ध", "dur": 0.28, "ali_score": 0.924, "ph": ["v", "i", "r", "u", "d"], "first": "v"}
+{"corp": "rasa_F", "id": "430", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.38, "ali_score": 0.951, "ph": ["s", "a", "s", "t", "eː"], "first": "s"}
+{"corp": "rasa_F", "id": "438", "cls": "SW", "word": "स्वादबाट", "dur": 0.501, "ali_score": 0.867, "ph": ["s", "w", "a", "d", "b", "a", "t"], "first": "s"}
+{"corp": "rasa_F", "id": "442", "cls": "VI", "word": "वितरक", "dur": 0.38, "ali_score": 0.941, "ph": ["v", "iː", "t", "o", "r", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "443", "cls": "VI", "word": "विगत", "dur": 0.281, "ali_score": 0.995, "ph": ["v", "i", "ɡ", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "445", "cls": "VI", "word": "विज्ञप्तिमा", "dur": 0.82, "ali_score": 0.94, "ph": ["v", "i", "ɡ", "i", "a", "p", "t", "i", "m", "a"], "first": "v"}
+{"corp": "rasa_F", "id": "446", "cls": "SW", "word": "स्वामी", "dur": 0.301, "ali_score": 0.999, "ph": ["s", "w", "aː", "m", "i"], "first": "s"}
