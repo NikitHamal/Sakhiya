@@ -17,30 +17,8 @@ import torch.nn.functional as F
 from .model import ALL_PULSES, NO_PULSES, NepaliPolish, SakhiyaVoca
 
 
-def _cepstrum_matrices(positions: list[int], fft: int) -> tuple[torch.Tensor, torch.Tensor]:
-    buf = torch.zeros(len(positions), fft, dtype=torch.float64)
-    buf[torch.arange(len(positions)), torch.tensor(positions)] = 1.0
-    sp = torch.fft.rfft(buf, dim=-1)
-    return sp.real.float(), sp.imag.float()
-
-
-def _analysis_kernels(window: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    fft = len(window)
-    sp = torch.fft.rfft(torch.eye(fft, dtype=torch.float64) * window.double(), dim=-1)
-    return sp.real.T[:, None].float().contiguous(), sp.imag.T[:, None].float().contiguous()
-
-
-def _synthesis_kernel(window: torch.Tensor) -> torch.Tensor:
-    fft = len(window)
-    bins = fft // 2 + 1
-    unit = torch.eye(bins, dtype=torch.complex128)
-    re = torch.fft.irfft(unit, n=fft, dim=-1)
-    im = torch.fft.irfft(unit * 1j, n=fft, dim=-1)
-    return (torch.cat((re, im), dim=0) * window.double())[:, None].float().contiguous()
-
-
 class ExportableSakhiyaVoca(nn.Module):
-    """Single-graph ONNX-exportable wrapper for `SakhiyaVoca` using 1D convolutions for STFT/iSTFT and matrix products for cepstra."""
+    """Single-graph ONNX-exportable wrapper for `SakhiyaVoca` using compact runtime-constructed DFT kernels (<4 KB storage)."""
     def __init__(self, model: SakhiyaVoca, polish: NepaliPolish = NepaliPolish()):
         super().__init__()
         self.model = model
@@ -50,38 +28,55 @@ class ExportableSakhiyaVoca(nn.Module):
 
         causal = list(range(c.cep_causal))
         anti = [c.synth_fft - 1 - i for i in range(c.cep_anti)]
-        h_re, h_im = _cepstrum_matrices(causal + anti, c.synth_fft)
-        n_re, n_im = _cepstrum_matrices(list(range(c.noise_cep)), c.noise_fft)
-        self.register_buffer("harmonic_real", h_re)
-        self.register_buffer("harmonic_imag", h_im)
-        self.register_buffer("noise_real", n_re)
-        self.register_buffer("noise_imag", n_im)
+        self.register_buffer("harm_pos", torch.tensor(causal + anti, dtype=torch.float32), persistent=False)
+        self.register_buffer("noise_pos", torch.arange(c.noise_cep, dtype=torch.float32), persistent=False)
 
         for name, win in (("synth", v.synth_window), ("noise", v.noise_window)):
-            a_re, a_im = _analysis_kernels(win)
-            self.register_buffer(f"{name}_ana_re", a_re)
-            self.register_buffer(f"{name}_ana_im", a_im)
-            self.register_buffer(f"{name}_syn", _synthesis_kernel(win))
-            self.register_buffer(f"{name}_env", (win.double().square()).float()[None, None].contiguous())
+            fft = len(win)
+            bins = fft // 2 + 1
+            mult = torch.full((bins, 1, 1), 2.0 / fft, dtype=torch.float32)
+            mult[0, 0, 0] = 1.0 / fft
+            mult[bins - 1, 0, 0] = 1.0 / fft
+            self.register_buffer(f"{name}_win", win.float().contiguous(), persistent=False)
+            self.register_buffer(f"{name}_mult", mult, persistent=False)
+            self.register_buffer(f"{name}_env", (win.double().square()).float()[None, None].contiguous(), persistent=False)
 
-        self.register_buffer("ramp", torch.arange(c.hop, dtype=torch.float32) / c.hop)
+        self.register_buffer("ramp", torch.arange(c.hop, dtype=torch.float32) / c.hop, persistent=False)
         self.phase_steps = 1 << 24
 
         chosen = torch.ones(c.cep_causal, dtype=torch.float32)
         chosen[polish.sharpen_from:polish.sharpen_to] = polish.sharpen
         mirror = torch.ones(c.cep_anti, dtype=torch.float32)
-        self.register_buffer("sharpen_vec", torch.cat((chosen, mirror)))
+        self.register_buffer("sharpen_vec", torch.cat((chosen, mirror)), persistent=False)
 
         k = polish.pitch_smooth
         tri = torch.cat((torch.arange(1, k + 2), torch.arange(k, 0, -1))).float()
-        self.register_buffer("pitch_kernel", (tri / tri.sum())[None, None])
-        self.register_buffer("rumble_cut", torch.sigmoid((v.synth_frequency - 90.0) / 12.0)[None, :, None])
+        self.register_buffer("pitch_kernel", (tri / tri.sum())[None, None], persistent=False)
+        self.register_buffer("rumble_cut", torch.sigmoid((v.synth_frequency - 90.0) / 12.0)[None, :, None], persistent=False)
 
-    def _analysis(self, source: torch.Tensor, name: str, fft: int, hop: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def _cep_basis(self, pos: torch.Tensor, fft: int, zero: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        bins = fft // 2 + 1
+        k = torch.arange(bins, device=pos.device, dtype=torch.float32)[None, :]
+        ang = (-2.0 * math.pi / fft) * ((pos[:, None] + zero) * k)
+        return torch.cos(ang), torch.sin(ang)
+
+    def _dft_kernels(self, name: str, fft: int, zero: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        bins = fft // 2 + 1
+        win = getattr(self, f"{name}_win")[None, :]
+        mult = getattr(self, f"{name}_mult")
+        n = torch.arange(fft, device=win.device, dtype=torch.float32)[None, :] + zero
+        k = torch.arange(bins, device=win.device, dtype=torch.float32)[:, None]
+        ang = (-2.0 * math.pi / fft) * (k * n)
+        a_re = (torch.cos(ang) * win)[:, None, :]
+        a_im = (torch.sin(ang) * win)[:, None, :]
+        syn = torch.cat((a_re * mult, a_im * mult), dim=0)
+        return a_re, a_im, syn
+
+    def _analysis(self, source: torch.Tensor, ana_re: torch.Tensor, ana_im: torch.Tensor, fft: int, hop: int) -> tuple[torch.Tensor, torch.Tensor]:
         padded = F.pad(source[:, None], (fft // 2, fft))
         return (
-            F.conv1d(padded, getattr(self, f"{name}_ana_re"), stride=hop),
-            F.conv1d(padded, getattr(self, f"{name}_ana_im"), stride=hop),
+            F.conv1d(padded, ana_re, stride=hop),
+            F.conv1d(padded, ana_im, stride=hop),
         )
 
     def _synthesis(
@@ -90,6 +85,7 @@ class ExportableSakhiyaVoca(nn.Module):
         s_im: torch.Tensor,
         h_re: torch.Tensor,
         h_im: torch.Tensor,
+        syn_k: torch.Tensor,
         name: str,
         fft: int,
         hop: int,
@@ -99,7 +95,7 @@ class ExportableSakhiyaVoca(nn.Module):
         h_re_t = h_re[:, :t_frames].transpose(1, 2)
         h_im_t = h_im[:, :t_frames].transpose(1, 2)
         prod = torch.cat((s_re * h_re_t - s_im * h_im_t, s_re * h_im_t + s_im * h_re_t), dim=1)
-        wave = F.conv_transpose1d(prod, getattr(self, f"{name}_syn"), stride=hop)
+        wave = F.conv_transpose1d(prod, syn_k, stride=hop)
         env = F.conv_transpose1d(torch.ones_like(s_re[:, :1]), getattr(self, f"{name}_env"), stride=hop)
         return (wave / env)[:, 0, fft // 2:fft // 2 + samples]
 
@@ -202,11 +198,17 @@ class ExportableSakhiyaVoca(nn.Module):
         q_taper = torch.cat((torch.ones_like(q_taper[..., :1]), q_taper[..., 1:], torch.ones((1, sub_h.shape[0], c.cep_anti), device=acoustic.device)), dim=-1)
         env_h = env_h * q_taper
 
+        zero = (speed * 0.0).reshape(1, 1)
+        harm_re_b, harm_im_b = self._cep_basis(self.harm_pos, c.synth_fft, zero)
+        noise_re_b, noise_im_b = self._cep_basis(self.noise_pos, c.noise_fft, zero)
+        s_ana_re, s_ana_im, s_syn = self._dft_kernels("synth", c.synth_fft, zero)
+        n_ana_re, n_ana_im, n_syn = self._dft_kernels("noise", c.noise_fft, zero)
+
         gain_h = h[..., split:].flatten(1).index_select(1, sub_h)[None]
         gain_h = F.conv1d(F.pad(gain_h, (1, 1), mode="replicate"), v.gain_smooth_h)[:, 0, :, None]
         env_h = torch.cat((env_h[..., :1] + gain_h, env_h[..., 1:]), dim=-1)
-        mag_h = torch.exp((env_h @ self.harmonic_real).clamp(-14.0, 6.0))
-        ang_h = env_h @ self.harmonic_imag
+        mag_h = torch.exp((env_h @ harm_re_b).clamp(-14.0, 6.0))
+        ang_h = env_h @ harm_im_b
         h_re, h_im = mag_h * torch.cos(ang_h), mag_h * torch.sin(ang_h)
 
         # Noise cepstral envelope (4 sub-frames per frame)
@@ -219,8 +221,8 @@ class ExportableSakhiyaVoca(nn.Module):
         gain_n = n[..., c.noise_cep:].flatten(1).index_select(1, sub_n)[None]
         gain_n = F.conv1d(F.pad(gain_n, (2, 2), mode="replicate"), v.gain_smooth_n)[:, 0, :, None]
         env_n = torch.cat((env_n[..., :1] + gain_n, env_n[..., 1:]), dim=-1)
-        mag_n = torch.exp((env_n @ self.noise_real).clamp(-14.0, 6.0))
-        ang_n = env_n @ self.noise_imag
+        mag_n = torch.exp((env_n @ noise_re_b).clamp(-14.0, 6.0))
+        ang_n = env_n @ noise_im_b
         n_re, n_im = mag_n * torch.cos(ang_n), mag_n * torch.sin(ang_n)
 
         pulses, theta = self._pulses(f0)
@@ -246,8 +248,8 @@ class ExportableSakhiyaVoca(nn.Module):
         mvf = torch.where((kind == 2) | (kind == 4), torch.where(voiced_bool, torch.full_like(mvf, p.consonant_limit), torch.full_like(mvf, NO_PULSES)), mvf)
         mvf = torch.where(kind == 3, torch.full_like(mvf, NO_PULSES), mvf)
 
-        p_re, p_im = self._analysis(pulses, "synth", c.synth_fft, c.synth_hop)
-        b_re, b_im = self._analysis(breath, "synth", c.synth_fft, c.synth_hop)
+        p_re, p_im = self._analysis(pulses, s_ana_re, s_ana_im, c.synth_fft, c.synth_hop)
+        b_re, b_im = self._analysis(breath, s_ana_re, s_ana_im, c.synth_fft, c.synth_hop)
         t_stft = p_re.shape[-1]
         stft_sub = torch.minimum(torch.arange(t_stft, device=acoustic.device), steps_h * total - 1)
         lim = mvf.index_select(1, torch.div(stft_sub, steps_h, rounding_mode="floor"))[:, None, :]
@@ -257,9 +259,9 @@ class ExportableSakhiyaVoca(nn.Module):
         keep = torch.where(lim <= 10.0, torch.zeros_like(keep), keep)
         other = torch.sqrt((1.0 - keep.square()).clamp_min(0.0)) * self.rumble_cut
 
-        harm_wave = self._synthesis(p_re * keep + b_re * other, p_im * keep + b_im * other, h_re, h_im, "synth", c.synth_fft, c.synth_hop, pulses.shape[1])
-        n_s_re, n_s_im = self._analysis(noise, "noise", c.noise_fft, c.noise_hop)
-        hiss_wave = self._synthesis(n_s_re, n_s_im, n_re, n_im, "noise", c.noise_fft, c.noise_hop, pulses.shape[1])
+        harm_wave = self._synthesis(p_re * keep + b_re * other, p_im * keep + b_im * other, h_re, h_im, s_syn, "synth", c.synth_fft, c.synth_hop, pulses.shape[1])
+        n_s_re, n_s_im = self._analysis(noise, n_ana_re, n_ana_im, c.noise_fft, c.noise_hop)
+        hiss_wave = self._synthesis(n_s_re, n_s_im, n_re, n_im, n_syn, "noise", c.noise_fft, c.noise_hop, pulses.shape[1])
 
         return harm_wave + hiss_wave, durations
 
