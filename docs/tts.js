@@ -116,6 +116,43 @@ class SakhiyaWeb {
   async chunk(ph, o) {
     const S = SK.F.symbols, ids = BigInt64Array.from(SK.encode(ph).map(BigInt)), f32 = v => new ort.Tensor("float32", Float32Array.of(v), []);
     if (this.sess.single) {
+      if (this.sess.single.inputNames && this.sess.single.inputNames.includes("tokens") && this.sess.single.inputNames.includes("stress")) {
+        const vowSet = new Set(["ʌ", "a", "i", "u", "e", "o", "ɛ", "ɔ", "ʌ̃", "ã", "ĩ", "ũ", "ẽ", "õ"]);
+        const longVow = new Set(["a", "i", "u", "e", "o", "ã", "ĩ", "ũ", "ẽ", "õ"]);
+        const bndSet = new Set(["<s>", "</s>", "|", ",", ".", "?", "!", ";", "<breath>"]);
+        const phV = ["<s>"];
+        for (const p of ph) if (p !== "<s>" && p !== "</s>") phV.push(p);
+        phV.push("</s>");
+        const idsV = BigInt64Array.from(SK.encode(phV).map(BigInt));
+        const stressV = new BigInt64Array(idsV.length);
+        let firstVow = true;
+        for (let i = 0; i < phV.length; i++) {
+          const p = phV[i];
+          if (bndSet.has(p)) { firstVow = true; stressV[i] = 0n; }
+          else if (vowSet.has(p)) {
+            if (firstVow) { stressV[i] = 1n; firstVow = false; }
+            else stressV[i] = longVow.has(p) ? 2n : 0n;
+          } else stressV[i] = 0n;
+        }
+        const vId = ([1, 6, 20, 21].includes(Number(o.spk)) || /^(1|m|male|m_sagar|sagar)$/i.test(String(o.spk))) ? 1n : 0n;
+        const r = await this.sess.single.run({
+          tokens: new ort.Tensor("int64", idsV, [1, idsV.length]),
+          stress: new ort.Tensor("int64", stressV, [1, stressV.length]),
+          voice: new ort.Tensor("int64", BigInt64Array.of(vId), [1]),
+          speed: new ort.Tensor("float32", Float32Array.of(Math.max(0.5, Number(o.rate || 1.0))), [1]),
+          pitch_shift: new ort.Tensor("float32", Float32Array.of(Number(o.pitch_shift || 0.0)), [1]),
+          pitch_range: new ort.Tensor("float32", Float32Array.of(Number(o.pitch_scale || 1.0)), [1]),
+        });
+        const wav = new Float32Array((r.audio || r.wav).data); let pk = 1e-4;
+        for (let i = 0; i < wav.length; i++) pk = Math.max(pk, Math.abs(wav[i]));
+        const sc = 0.90 / pk; for (let i = 0; i < wav.length; i++) wav[i] = Math.max(-1, Math.min(1, wav[i] * sc));
+        if (wav.length > 256) for (let i = 0; i < 128; i++) { const w = 0.5 - 0.5 * Math.cos(Math.PI * i / 128); wav[i] *= w; wav[wav.length - 1 - i] *= w; }
+        const F = Math.max(1, (wav.length / 256) | 0), mel = new Float32Array(80 * F), sre = new Float32Array(513 * F), sim = new Float32Array(513 * F);
+        this._stft(wav, F, sre, sim);
+        for (let m = 0; m < 80; m++) { const k0 = Math.floor(Math.pow(m / 80, 1.6) * 480) + 2, k1 = Math.max(k0 + 1, Math.floor(Math.pow((m + 1) / 80, 1.6) * 480) + 2);
+          for (let f = 0; f < F; f++) { let e = 1e-5; for (let k = k0; k < k1; k++) e += Math.hypot(sre[k * F + f], sim[k * F + f]); mel[m * F + f] = Math.log(e / (k1 - k0)) - 2.2; } }
+        return { mel, F, wav };
+      }
       const isNews = /news/.test(String((this.cfg && (this.cfg.arch || this.cfg.tier)) || ""));
       const phNorm = ph.map((p, idx) => (p === "<breath>" || (isNews && o.lang !== "sa" && p === "," && idx > 0 && idx < ph.length - 1)) ? ";" : p);
       const phS = (phNorm.length && phNorm[0] === "|") ? phNorm : ["|", ...phNorm];

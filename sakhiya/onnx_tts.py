@@ -176,6 +176,27 @@ class SakhiyaONNX:
                     c_arr[0] = c_in[idx_c]
             feeds_add["contour"] = c_arr
         if self.single is not None and self.dec is None:
+            if "tokens" in self.enc_in and "stress" in self.enc_in:
+                from .voca.frontend import phonemize_utterance
+                _, tok_ids, stress_ids = phonemize_utterance(text, lang=lang, v_mode=str(k.get("v_mode", "kathmandu")))
+                v_id = 1 if (spk in (1, 6, 20, 21) or str(spk).lower() in ("1", "m", "male", "m_sagar", "sagar")) else 0
+                w_out, dur_out = self.single.run(None, {
+                    "tokens": np.array([tok_ids], dtype=np.int64),
+                    "stress": np.array([stress_ids], dtype=np.int64),
+                    "voice": np.array([v_id], dtype=np.int64),
+                    "speed": np.array([max(float(k.get("rate", 1.0)), 0.5)], dtype=np.float32),
+                    "pitch_shift": np.array([float(k.get("pitch_shift", 0.0))], dtype=np.float32),
+                    "pitch_range": np.array([float(k.get("pitch_scale", 1.0))], dtype=np.float32),
+                })
+                w = w_out[0].astype(np.float32)
+                self.trace.append((np.zeros(len(tok_ids), dtype=np.float32), dur_out[0].astype(int).copy()))
+                pk = float(np.max(np.abs(w))) if w.size else 0.0
+                if pk > 1e-4:
+                    w = np.clip(w * (0.90 / pk), -1.0, 1.0)
+                if w.size > 256:
+                    ramp = (0.5 - 0.5 * np.cos(np.pi * np.arange(128, dtype=np.float32) / 128)).astype(np.float32)
+                    w[:128] *= ramp; w[-128:] *= ramp[::-1]
+                return w
             if "dur_scale" in self.enc_in:
                 is_news = "news" in str(self.cfg.get("arch", "")) or "news" in str(self.cfg.get("tier", ""))
                 raw_list = ids[0].tolist()

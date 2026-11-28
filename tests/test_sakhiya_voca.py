@@ -52,5 +52,5 @@ def test_sakhiya_voca_onnx_export(tmp_path):
     rep = export_onnx_models(model, tmp_path / "onnx", prefix="test_voca")
     assert rep["nan_count"] == 0
     assert rep["len_diff_int8"] == 0
-    assert rep["int8_mb"] < 7.0
+    assert rep["int8_mb"] <= 5.0
     assert rep["rtf_1t_cpu"] < 0.05
