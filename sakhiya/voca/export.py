@@ -224,14 +224,19 @@ class ExportableSakhiyaVoca(nn.Module):
         n_re, n_im = mag_n * torch.cos(ang_n), mag_n * torch.sin(ang_n)
 
         pulses, theta = self._pulses(f0)
-        # Deterministic Box-Muller pseudo-Gaussian noise for reproducible cross-platform ONNX/WASM execution
+        # Deterministic Box-Muller pseudo-Gaussian noise using Floor+Sub (ONNX opset 17 native)
         t_idx = torch.arange(pulses.shape[1], device=pulses.device, dtype=torch.float32)[None, :]
-        u1 = torch.frac(torch.sin(t_idx * 12.9898 + 78.233) * 43758.5453).clamp(1e-6, 1.0 - 1e-6)
-        u2 = torch.frac(torch.sin(t_idx * 93.9898 + 12.345) * 28461.1357)
+        s1 = torch.sin(t_idx * 12.9898 + 78.233) * 43758.5453
+        s2 = torch.sin(t_idx * 93.9898 + 12.345) * 28461.1357
+        u1 = (s1 - torch.floor(s1)).clamp(1e-6, 1.0 - 1e-6)
+        u2 = s2 - torch.floor(s2)
         noise = torch.sqrt(-2.0 * torch.log(u1)) * torch.cos(2.0 * math.pi * u2)
-        b_u1 = torch.frac(torch.sin(t_idx * 41.1234 + 19.876) * 31415.9265).clamp(1e-6, 1.0 - 1e-6)
-        b_u2 = torch.frac(torch.sin(t_idx * 67.5432 + 54.321) * 27182.8182)
-        breath = torch.sqrt(-2.0 * torch.log(b_u1)) * torch.cos(2.0 * math.pi * b_u2) * math.sqrt(0.5 / c.harmonic_limit)
+        bs1 = torch.sin(t_idx * 41.1234 + 19.876) * 31415.9265
+        bs2 = torch.sin(t_idx * 67.5432 + 54.321) * 27182.8182
+        b_u1 = (bs1 - torch.floor(bs1)).clamp(1e-6, 1.0 - 1e-6)
+        b_u2 = bs2 - torch.floor(bs2)
+        puff = (1.0 - 0.30 * torch.cos(theta)) * (1.0 / math.sqrt(1.0 + 0.5 * 0.30 * 0.30))
+        breath = torch.sqrt(-2.0 * torch.log(b_u1)) * torch.cos(2.0 * math.pi * b_u2) * puff * math.sqrt(0.5 / c.harmonic_limit)
 
         # Split-band harmonic + breath excitation
         kind = m.sound_kind[frm_tokens]

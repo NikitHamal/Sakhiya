@@ -10,6 +10,7 @@ from .frontend import (
     phonemize_utterance,
     sentence_split_bucket,
 )
+from .export import ExportableSakhiyaVoca, export_onnx_models
 from .model import (
     NepaliPolish,
     NepaliSourceFilterHead,
@@ -27,6 +28,8 @@ __all__ = [
     "g2p_v4_word",
     "phonemize_utterance",
     "sentence_split_bucket",
+    "ExportableSakhiyaVoca",
+    "export_onnx_models",
     "NepaliPolish",
     "NepaliSourceFilterHead",
     "SakhiyaVoca",

@@ -43,3 +43,14 @@ def test_sakhiya_voca_4_5m_synthesize():
     wave, durs = model.synthesize(tok, st, speaker=0)
     assert wave.shape[0] == 1 and wave.shape[1] == int(durs.sum().item()) * cfg.hop
     assert not torch.isnan(wave).any()
+
+
+def test_sakhiya_voca_onnx_export(tmp_path):
+    from sakhiya.voca import export_onnx_models
+    cfg = SakhiyaVocaConfig.tiny_4_5m()
+    model = SakhiyaVoca(cfg).eval()
+    rep = export_onnx_models(model, tmp_path / "onnx", prefix="test_voca")
+    assert rep["nan_count"] == 0
+    assert rep["len_diff_int8"] == 0
+    assert rep["int8_mb"] < 6.0
+    assert rep["rtf_1t_cpu"] < 0.05

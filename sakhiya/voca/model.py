@@ -156,7 +156,7 @@ class RoPEAttention(nn.Module):
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor, table: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
         b, t, c = x.shape
-        q, k, v = self.qkv(x).view(b, t, 3, self.heads, c // self.heads).permute(2, 0, 3, 1, 4)
+        q, k, v = self.qkv(x).view(b, t, 3, self.heads, c // self.heads).permute(2, 0, 3, 1, 4).unbind(0)
         q, k = rotate(q, table), rotate(k, table)
         attn_mask = mask[:, None, None, :] if mask is not None else None
         y = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, dropout_p=self.dropout if self.training else 0.0)

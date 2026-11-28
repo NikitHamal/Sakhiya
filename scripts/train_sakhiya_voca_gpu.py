@@ -569,7 +569,7 @@ def main():
     start_step = 0
     last_ckpt = out_dir / "last.pt"
     if args.resume and last_ckpt.exists():
-        st = torch.load(last_ckpt, map_location=device, weights_only=True)
+        st = torch.load(last_ckpt, map_location=device, weights_only=False)
         system.load_state_dict(st["system"])
         ema_model.load_state_dict(st["ema_model"])
         critics.load_state_dict(st["critics"])
