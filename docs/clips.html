@@ -1,30 +1,51 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya · Clip Library — listen, check, fix</title>
-<style>
-:root{--bg:#10131a;--card:#1a1f2b;--tx:#e8ecf4;--mu:#97a1b5;--ok:#37c978;--bad:#ff6b6b;--wa:#f5b942;--ac:#6aa5ff}
-@media(prefers-color-scheme:light){:root{--bg:#f4f6fb;--card:#fff;--tx:#14181f;--mu:#5b6578}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px;border-bottom:1px solid #8883}
-h1{font-size:20px;margin:0 0 6px}a{color:var(--ac)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-select,input,button,textarea{font:inherit;color:var(--tx);background:var(--card);border:1px solid #8885;border-radius:10px;padding:7px 10px}
-button{cursor:pointer}button.p{background:var(--ac);color:#fff;border:0}
-main{max-width:980px;margin:0 auto;padding:12px 16px 80px}
-.c{background:var(--card);border-radius:14px;padding:12px 14px;margin:10px 0;border:2px solid transparent}
-.c.fixed{border-color:var(--ok)}.c.rej{border-color:var(--bad)}
-.chip{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:#8883;margin-right:6px}
-.chip.g{background:#37c97833;color:var(--ok)}.chip.r{background:#ff6b6b33;color:var(--bad)}.chip.y{background:#f5b94233;color:var(--wa)}
-audio{width:100%;margin:8px 0}textarea{width:100%;min-height:60px;font-size:17px;line-height:1.6}
-.mu{color:var(--mu);font-size:13px}#msg{padding:14px;color:var(--wa)}
-</style></head><body>
-<header><h1>🎧 Sakhiya Clip Library <span class="mu" id="sum"></span></h1>
-<div class="row"><select id="st"></select><select id="sy"></select><input id="q" placeholder="search words / id" size="16">
-<select id="vd"><option value="">all</option><option value="todo">not checked yet</option><option value="ok">I marked OK</option><option value="fix">I fixed words</option><option value="bad">I marked BAD</option></select>
-<button id="sh">🔀 shuffle</button><button class="p" id="ex">⬇ Save my fixes (<span id="nf">0</span>)</button><button id="cp">Copy fixes</button>
-<a href="index.html">← back to Sakhiya</a></div></header>
-<main><div id="msg">Loading clips…</div><div id="list"></div><div class="row" id="pg" style="justify-content:center"></div>
-<p class="mu">How to fix: listen, correct the words in the box (use ? ! , । as you hear them), press ✔ OK / ✎ Fixed / ✖ BAD. Everything is saved in this browser automatically. Press “Save my fixes” and send me the file (or paste via “Copy fixes”) — it feeds the next training run. Clips marked BAD are dropped from training.</p></main>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sakhiya · Clip library</title>
+<meta name="description" content="Listen, check and fix Sakhiya training clips.">
+<meta name="theme-color" content="#a8272f">
+<script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='11' fill='%23a8272f'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
+<link rel="stylesheet" href="m3e.css?v=60">
+</head>
+<body>
+<header class="appbar" id="appbar"><div class="appbar-in">
+  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span>Sakhiya</span></a>
+  <button class="icon-btn" id="theme" aria-label="Toggle light or dark theme"><span class="ms">contrast</span></button>
+</div></header>
+<nav class="tabs" aria-label="Sections">
+  <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
+  <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
+  <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
+  <a href="ampixa.html"><span class="ms">fact_check</span><b>Bench</b></a>
+  <a href="clips.html" class="on" aria-current="page"><span class="ms">library_music</span><b>Clips</b></a>
+  <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
+</nav>
+
+<main>
+  <div class="page-head">
+    <div><h1>Clip library</h1><p>Listen, correct the words, mark OK / fixed / bad. Everything saves in this browser and feeds the next training run. <span class="mu" id="sum"></span></p></div>
+  </div>
+  <div class="filters">
+    <select id="st" aria-label="Kind"></select><select id="sy" aria-label="Style"></select>
+    <input id="q" type="search" placeholder="search words or id">
+    <select id="vd" aria-label="Verdict"><option value="">all</option><option value="todo">not checked yet</option><option value="ok">marked OK</option><option value="fix">fixed words</option><option value="bad">marked BAD</option></select>
+    <button class="fbtn" id="sh"><span class="ms" style="vertical-align:middle;font-size:20px">shuffle</span> Shuffle</button>
+    <button class="fbtn p" id="ex"><span class="ms" style="vertical-align:middle;font-size:20px">download</span> Save fixes (<span id="nf">0</span>)</button>
+    <button class="fbtn" id="cp">Copy fixes</button>
+  </div>
+  <div id="msg">Loading clips…</div><div id="list"></div>
+  <div class="row" id="pg" style="justify-content:center;margin-top:14px"></div>
+  <p class="mu" style="margin-top:18px">How to fix: listen, correct the words in the box (use ? ! , । as you hear them), then press OK / Fixed / BAD. Press “Save fixes” and send the file, or paste via “Copy fixes”.</p>
+</main>
+<style>#pg button{height:44px;width:44px;border-radius:50%;background:var(--c3);font-weight:800}#pg button:hover{border-radius:14px}</style>
 <script>
+(function(){var b=document.getElementById("theme");if(b)b.onclick=function(){var n=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}}})();
 const LBL={kept:"Kept for training",heard:"Heard (words checked)",cleaned:"Clean audio",vedic_gold:"Sanskrit · verified gold",vedic_ok:"Sanskrit · verified",vedic_bad:"Sanskrit · REJECTED (garbage)",sakhiya:"Sakhiya voice (converted)"};
 const SYL={storytelling:"Storytelling",news:"News",conversational:"Conversation",vedic_chant:"Vedic chant"};
 let L=[],V=[],page=0;const PS=25,$=i=>document.getElementById(i);

@@ -3,11 +3,10 @@
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var WANT = ["sakhiya_one_vocos", "sakhiya_one_polish", "sakhiya_one_base_4step_g2p", "sakhiya_one_baseline_a61c100", "sakhiya_one", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_v5_vedic", "sakhiya_v5_nepali", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
-  var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v5_micro: 1, sakhiya_v4_pico: 1, sakhiya_v5_pico: 1 };
+  var WANT = ["sakhiya_one_vocos", "sakhiya_one_polish", "sakhiya_one_base_4step_g2p", "sakhiya_one_baseline_a61c100", "sakhiya_one", "sakhiya_pro_v3", "sakhiya_v3_t30", "sakhiya_v3_t15", "sakhiya_v3_t10", "sakhiya_v3_t1", "sakhiya_pro_v4_vedic", "sakhiya_pro_v4"];
+  var RETIRED_OR_DUP = { sakhiya_v3_t5: 1, sakhiya_v4_micro: 1, sakhiya_v4_pico: 1 };
   var EPS = [
-    ["sakhiya_pro/ep01_v5/voiceover_ep01.mp3", "Episode 01 · v5 master", "33/33 lines, -14.0 LUFS"],
-    ["sakhiya_pro/ep01_v4/voiceover_ep01.mp3", "Episode 01 · v4", "previous master"]
+    ["sakhiya_pro/ep01_v4/voiceover_ep01.mp3", "Episode 01 · broadcast master", "33/33 lines"]
   ];
   var cur = null;
 
@@ -78,7 +77,7 @@
       }).join("") + "</div>";
       var cards = abSystems.map(function (sys) {
         var title = revealed ? sys.real : sys.blind;
-        var sub = revealed ? sys.metrics : "Click 'Reveal Identities & 4-Layer Gate' after listening to unmask";
+        var sub = revealed ? sys.metrics : "Click 'Reveal identities' after listening to unmask";
         var src = "samples/versions/" + sys.tag + "/" + clipObj.id + ".mp3";
         return clipCard(src, title, sub, clipObj.text);
       }).join("");
@@ -90,7 +89,7 @@
     if (revBtn) {
       revBtn.addEventListener("click", function () {
         revealed = !revealed;
-        if (revLbl) revLbl.textContent = revealed ? "Hide Identities (Blind Mode)" : "Reveal Identities & 4-Layer Gate";
+        if (revLbl) revLbl.textContent = revealed ? "Hide identities" : "Reveal identities";
         renderBlindDesk();
       });
     }

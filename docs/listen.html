@@ -2,96 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya · Listening Desk</title>
-<meta name="description" content="Play every frozen Sakhiya 15-clip pack, Episode 01 v5 and the Vedic chants in one place.">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sakhiya · Listening desk</title>
+<meta name="description" content="Blind A/B listening desk and every frozen Sakhiya sample pack.">
+<meta name="theme-color" content="#a8272f">
 <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='11' fill='%23a8272f'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
-<link rel="stylesheet" href="m3x/tokens.css"><link rel="stylesheet" href="m3x/shapes.css"><link rel="stylesheet" href="style.css?v=55"><link rel="stylesheet" href="m3x/pro.css?v=55">
+<link rel="stylesheet" href="m3e.css?v=60">
 </head>
 <body>
 <header class="appbar" id="appbar"><div class="appbar-in">
-  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span class="brand-nm">Sakhiya</span></a>
-  <nav class="tabs" aria-label="Sections">
-    <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
-    <a href="v5.html"><span class="ms">verified</span><b>v5 Clean</b></a>
-    <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
-    <a href="listen.html" class="on" aria-current="page"><span class="ms">headphones</span><b>Listen</b></a>
-    <a href="ampixa.html"><span class="ms">fact_check</span><b>Ampixa Lab</b></a>
-    <a href="clips.html"><span class="ms">library_music</span><b>Clips</b></a>
-    <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
-  </nav>
+  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span>Sakhiya</span></a>
   <button class="icon-btn" id="theme" aria-label="Toggle light or dark theme"><span class="ms">contrast</span></button>
 </div></header>
+<nav class="tabs" aria-label="Sections">
+  <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
+  <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
+  <a href="listen.html" class="on" aria-current="page"><span class="ms">headphones</span><b>Listen</b></a>
+  <a href="ampixa.html"><span class="ms">fact_check</span><b>Bench</b></a>
+  <a href="clips.html"><span class="ms">library_music</span><b>Clips</b></a>
+  <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
+</nav>
+
 <main>
   <div class="page-head">
-    <div><h1>Listening Desk</h1><p>Every frozen 15-clip pack straight from <code>samples/versions/</code>, plus Episode 01. Pick a pack and press play. Only one clip plays at a time.</p></div>
-    <div class="status"><a class="btn tonal" href="ampixa.html"><span class="ms">fact_check</span>Ampixa Lab (365 prompts)</a></div>
+    <div><h1>Listening desk</h1><p>Judge with your ears first. Clips are loudness-matched; identities stay hidden until you reveal them.</p></div>
+    <div class="status"><a class="btn tonal" href="ampixa.html"><span class="ms">fact_check</span>365-prompt bench</a></div>
   </div>
-  <div class="card" id="owner-4clips-desk" style="margin-bottom:24px;border:2px solid var(--md-primary)">
-    <div class="card-h" style="flex-wrap:wrap;gap:10px">
-      <span class="ms">verified</span>
-      <h2>Sakhiya-One Studio Breakthrough · Side-by-Side Comparison Desk (-16 LUFS · <code>Candidate B v2: Sakhiya-One-Vocos v2 23.01 MB INT8 [Promoted Default]</code> vs <code>cand_b_v2 FP16</code> vs <code>Previous Cand B v1 3a64f596</code> vs <code>Candidate A Compact 8.49 MB</code>)</h2>
+  <div class="card" id="blind-ab-desk" style="margin-bottom:16px">
+    <div class="card-h">
+      <span class="ms">compare_arrows</span><h2>Blind A / B / C / D</h2>
+      <button class="btn tonal" id="toggle-reveal" type="button"><span class="ms">visibility</span><span id="reveal-lbl">Reveal identities</span></button>
     </div>
-    <p class="muted" style="margin-bottom:12px">Breakthrough <b>Candidate B v2 (<code>cand_b_v2</code> · 23.011 MB INT8 / 35.528 MB FP16 · Promoted Studio Default)</b>: eliminates <code>स</code>/<code>श</code> sibilant ring (<code>sibSFM: 0.741 &rarr; 0.552</code>, matching real human <code>0.512</code>) and <code>त</code>/<code>ट</code> glare (<code>grit: 1.5017 &rarr; 1.3927</code>, <code>slope: -1.63 &rarr; -2.91 dB</code>) via Real-GT Kathmandu AM liberation, <code>pad=384</code> aligned <code>Mel80To100Adapter</code> (<code>R2=0.99719</code>), <code>LoHiBandStudioDiscriminator</code> + <code>&lt;4 kHz</code> phase guard, and FP16-AM / STE-INT8-Vocos export (<code>len_diff=0</code> everywhere, <code>STFT_LSD=0.1573 dB</code>, <code>36/36 PASS</code> including crisp <code>वालेट != बालेट</code> and native Kathmandu <code>च</code>/<code>छ</code>).</p>
-    <div style="display:grid;grid-template-columns:1fr;gap:14px">
-      <div class="card sm" style="padding:12px 14px;border:1.5px solid var(--md-primary)">
-        <b>🔥 Dedicated स/त/च &amp; Kathmandu Affricate Stress Clip (<code>विशेष, विश्वभर, प्रतिशतले, सुरक्षित, संवेदनशील, नमस्ते, अत्यन्तै, प्रत्यक्ष, चर्चा, चन्द्र, त चलौँ</code>)</b>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>🚀 Candidate B v2: Sakhiya-One-Vocos v2 [23.011 MB INT8 · grit=1.3927 · sibSFM=0.552 · slope=-2.91dB · Promoted Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>✨ Candidate B v2 FP16 [35.528 MB FP16 · Unquantized Reference · len_diff=0]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha_fp16.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>📦 Previous Candidate B v1 [3a64f596 · 19.70 MB INT8 · grit=1.502 · sibSFM=0.741]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/stress_sa_ta_cha_v1.mp3" style="width:100%;height:36px"></audio></div>
-        </div>
-      </div>
-      <div class="card sm" style="padding:12px 14px">
-        <b>Owner Clip 1 · Episode-01 AI Models (<code>जेमिनाई फोर नियोन, अनुसन्धानात्मक, विशेष, ओपन एआईले, जीपीटी सिक्स पोइन्ट टु, प्रयोगकर्ताको, सुरक्षित, च्याटजिपिटी वालेट</code>)</b>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>🚀 Candidate B v2: Sakhiya-One-Vocos v2 [23.011 MB INT8 · Promoted Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>✨ Candidate B v2 FP16 [35.528 MB FP16 · len_diff=0]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip1_ai_models_fp16.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>📦 Previous Candidate B v1 [3a64f596 · 19.70 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip1_ai_models_v1.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>🪶 Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip1_ai_models.mp3" style="width:100%;height:36px"></audio></div>
-        </div>
-      </div>
-      <div class="card sm" style="padding:12px 14px">
-        <b>Owner Clip 2 · Episode-01 AI &amp; Global Share Market (<code>बुद्धिमत्ता, बृहत, विश्व, एन्थ्रोपिकको, १७ प्रतिशतले, उल्लेखनीय, १४ प्रतिशतले, गिरावट आयो, उतारचढाव, त्रैमासिकमा, संवेदनशील</code>)</b>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>🚀 Candidate B v2: Sakhiya-One-Vocos v2 [23.011 MB INT8 · Promoted Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>✨ Candidate B v2 FP16 [35.528 MB FP16 · len_diff=0]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip2_share_market_fp16.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>📦 Previous Candidate B v1 [3a64f596 · 19.70 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip2_share_market_v1.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>🪶 Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip2_share_market.mp3" style="width:100%;height:36px"></audio></div>
-        </div>
-      </div>
-      <div class="card sm" style="padding:12px 14px">
-        <b>Owner Clip 3 · Episode-01 Tech Bulletin Intro (<code>वाचक, विशेष, विश्वभर, बुद्धिमत्ता, अर्थात, उपलब्धिहरू, विकास, मोबाइल एप्लिकेसन, गर्नेछौँ, व्यवसायमा, त चलौँ, लागौँ</code>)</b>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px">
-          <div><small class="muted"><b>🚀 Candidate B v2: Sakhiya-One-Vocos v2 [23.011 MB INT8 · Promoted Default]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>✨ Candidate B v2 FP16 [35.528 MB FP16 · len_diff=0]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip3_intro_bulletin_fp16.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>📦 Previous Candidate B v1 [3a64f596 · 19.70 MB INT8]</b></small><audio controls preload="none" src="samples/versions/sakhiya_cand_b_v2/owner_clip3_intro_bulletin_v1.mp3" style="width:100%;height:36px"></audio></div>
-          <div><small class="muted"><b>🪶 Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b></small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip3_intro_bulletin.mp3" style="width:100%;height:36px"></audio></div>
-        </div>
-      </div>
-    </div>
+    <p class="muted" style="margin-bottom:12px">Same sentence, four builds, −16 LUFS. Hard cases included: वालेट ≠ बालेट, geminates, halanta compounds, numerals, long news leads.</p>
+    <div id="blind-ab-mount">Loading blind pack…</div>
   </div>
-  <div class="card" id="blind-ab-desk" style="margin-bottom:24px;border:1.5px solid var(--md-primary)">
-    <div class="card-h" style="flex-wrap:wrap;gap:10px">
-      <span class="ms">compare_arrows</span>
-      <h2>4-Way Blind A/B/C/D Listening Desk (-16 LUFS Loudness-Matched · <code>Candidate A Polish</code> vs <code>Candidate B Vocos</code> vs <code>Baseline+G2P+4step</code> vs <code>Original Baseline a61c100</code>)</h2>
-      <button class="btn tonal" id="toggle-reveal" type="button" style="margin-left:auto"><span class="ms">visibility</span><span id="reveal-lbl">Reveal Identities &amp; Fixed 4-Layer Forensic Gate</span></button>
-    </div>
-    <p class="muted" style="margin-bottom:12px">All clips are normalized to <b>-16.0 LUFS</b> so loudness never biases your ear. Includes long 25-word news leads, dense conjuncts, numerals, geminate pairs (<code>कति/कत्ति</code>, <code>पक्कै/चिटिक्क</code>), separate <code>स</code> vs <code>छ</code> stress (<code>सफा, चिसो, सास, शान्ति, छाता</code>), and multi-clause <code>&lt;breath&gt;</code> sentences.</p>
-    <div id="blind-ab-mount">Loading -16 LUFS Blind A/B pack…</div>
-  </div>
-  <div class="card" id="featured" style="margin-bottom:24px">
-    <div class="card-h"><span class="ms">podcasts</span><h2>Episode 01 · Broadcast master</h2></div>
+  <div class="card" id="featured" style="margin-bottom:16px">
+    <div class="card-h"><span class="ms">podcasts</span><h2>Episode 01 · broadcast master</h2></div>
     <div class="clip-grid" id="eps"></div>
   </div>
-  <div class="label" style="margin-top:4px">Packs</div>
-  <div class="packs chips scroll" id="tabs" role="tablist" aria-label="Frozen packs"></div>
-  <div class="card" id="pack"><p class="muted">Loading…</p></div>
+  <div class="label">Frozen packs</div>
+  <div class="chips scroll" id="tabs" role="tablist" aria-label="Frozen packs" style="margin-top:0"></div>
+  <div class="card" id="pack" style="margin-top:12px"><p class="muted">Loading…</p></div>
 </main>
-<script src="listen.js?v=55"></script>
+<script src="listen.js?v=60"></script>
 </body>
 </html>

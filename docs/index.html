@@ -2,49 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya-One Studio (Vocos) · सखिया — Nepali &amp; Sanskrit Browser TTS (23.0 MB INT8 / 35.5 MB FP16 Studio &amp; 8.5 MB Compact)</title>
-<meta name="description" content="One studio-clean Pro-v3 female voice for Nepali and Sanskrit, fully on-device. Powered by Sakhiya-One Studio Vocos v2 (23.01 MB INT8 / 35.53 MB FP16 Unquantized, RTF 0.027–0.030) and compact Sakhiya-One-Polish (8.49 MB INT8).">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sakhiya · सखिया — Nepali &amp; Sanskrit speech that runs on your device</title>
+<meta name="description" content="Sakhiya is a tiny on-device text-to-speech engine for Nepali and Sanskrit. Type, listen, compare models. Nothing is uploaded.">
+<meta name="theme-color" content="#a8272f">
 <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='11' fill='%23a8272f'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
-<link rel="stylesheet" href="m3x/tokens.css"><link rel="stylesheet" href="m3x/shapes.css"><link rel="stylesheet" href="style.css?v=55"><link rel="stylesheet" href="m3x/pro.css?v=55">
+<link rel="stylesheet" href="m3e.css?v=60">
 </head>
 <body>
 <header class="appbar" id="appbar"><div class="appbar-in">
-  <a class="brand" href="#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span class="brand-nm">Sakhiya</span></a>
-  <nav class="tabs" aria-label="Sections">
-    <a href="#studio" class="on"><span class="ms">graphic_eq</span><b>Studio</b></a>
-    <a href="v5.html"><span class="ms">verified</span><b>v5 Clean</b></a>
-    <a href="#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
-    <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
-    <a href="ampixa.html"><span class="ms">fact_check</span><b>Ampixa Lab</b></a>
-    <a href="clips.html" id="tab-clips"><span class="ms">library_music</span><b>Clips</b></a>
-    <a href="#about"><span class="ms">info</span><b>About</b></a>
-  </nav>
+  <a class="brand" href="#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span>Sakhiya</span></a>
   <button class="icon-btn" id="theme" aria-label="Toggle light or dark theme"><span class="ms">contrast</span></button>
 </div></header>
+<nav class="tabs" aria-label="Sections">
+  <a href="#studio" class="on"><span class="ms">graphic_eq</span><b>Studio</b></a>
+  <a href="#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
+  <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
+  <a href="ampixa.html"><span class="ms">fact_check</span><b>Bench</b></a>
+  <a href="clips.html" id="tab-clips"><span class="ms">library_music</span><b>Clips</b></a>
+  <a href="#about"><span class="ms">info</span><b>About</b></a>
+</nav>
 
 <main>
 <section id="studio" class="on">
   <div class="page-head">
-    <div><h1>Studio</h1><p>Type Nepali or Sanskrit and hear it spoken on your device. Nothing is uploaded.</p></div>
+    <div><h1>Speak Nepali.<br>On your device.</h1><p>Type Nepali, Sanskrit or romanised text and hear it instantly. Nothing is uploaded.</p></div>
     <div class="status"><span class="pill tone" id="mdl"><span class="ms">deployed_code</span><i>model loads on first use</i></span><span class="pill" id="rtf"><span class="ms">speed</span><i>RTF —</i></span></div>
   </div>
   <div class="split">
     <div class="stack">
       <div class="card">
         <div class="card-h"><span class="ms">edit_note</span><h2>Text</h2><span class="count" id="count">0</span></div>
-        <textarea id="text" rows="5" spellcheck="false" aria-label="Text to speak"></textarea>
+        <textarea id="text" rows="4" spellcheck="false" aria-label="Text to speak" placeholder="यहाँ नेपाली लेख्नुहोस्…"></textarea>
         <div class="chips scroll" id="presets" aria-label="Example texts"></div>
         <div class="label">Language</div>
-        <div class="chips wrap" id="langs" role="radiogroup" aria-label="Language"></div>
+        <div class="chips" id="langs" role="radiogroup" aria-label="Language"></div>
         <div class="actions">
           <button class="btn filled" id="go"><span class="spin"></span><span class="ms">play_arrow</span><span id="golbl">Speak</span></button>
           <a class="btn tonal" id="dl" download="sakhiya.wav" hidden><span class="ms">download</span>WAV</a>
-          <span class="hint" id="msg">Roman input works too, for example “ma ghar jadai chu”.</span>
+          <span class="hint" id="msg">Roman input works too — “ma ghar jadai chu”.</span>
         </div>
       </div>
       <div class="card">
@@ -52,6 +52,10 @@
         <div class="viz"><canvas id="mel" height="120" aria-label="Spectrogram"></canvas><canvas id="wavc" height="64" aria-label="Waveform"></canvas></div>
         <audio id="player" controls preload="none"></audio>
         <details class="more"><summary>Normalised text and phones</summary><p id="norm" class="muted"></p><pre id="ph"></pre></details>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="ms">auto_awesome</span><h2>Latest studio vs compact</h2></div>
+        <div class="gallery" id="featuredClips" style="margin-top:0"></div>
       </div>
     </div>
     <aside class="stack">
@@ -61,108 +65,57 @@
       </div>
       <div class="card">
         <div class="card-h"><span class="ms">theater_comedy</span><h2>Style</h2></div>
-        <div class="chips wrap" id="styles" role="radiogroup" aria-label="Speaking style"></div>
-        <p class="hint" id="styleinfo"></p>
+        <div class="chips" id="styles" role="radiogroup" aria-label="Speaking style" style="margin-top:0"></div>
+        <p class="hint" id="styleinfo" style="margin-top:8px"></p>
       </div>
       <div class="card">
-        <div class="card-h"><span class="ms">memory</span><h2>Model size</h2></div>
+        <div class="card-h"><span class="ms">memory</span><h2>Model</h2></div>
         <div class="tiers" id="tiers" role="radiogroup" aria-label="Model tier"></div>
       </div>
-      <details class="card fold" id="prosody" open><summary><span class="ms">tune</span><h2>Fine Voice Controls</h2><span class="ms chev">expand_more</span></summary><div id="sliders"></div><button class="btn text" id="reset"><span class="ms">restart_alt</span>Reset to style</button></details>
+      <details class="card fold" id="prosody"><summary><span class="ms">tune</span><h2>Fine controls</h2><span class="ms chev">expand_more</span></summary><div id="sliders"></div><button class="btn text" id="reset" style="margin-top:10px"><span class="ms">restart_alt</span>Reset to style</button></details>
     </aside>
-  </div>
-  <div class="card" id="sakhiya-one-showcase-studio" style="margin-top:22px;border:1.5px solid var(--md-primary)">
-    <div class="card-h"><span class="ms">auto_awesome</span><h2>Sakhiya-One Studio (Vocos v2 · 23.01 MB INT8 Default &amp; 35.53 MB FP16 Unquantized) &amp; Compact Sakhiya-One-Polish (8.49 MB INT8) — 36/36 Pronunciation PASS</h2><a class="btn filled" href="listen.html" style="margin-left:auto"><span class="ms">headphones</span>Open 4-Way Side-by-Side Listening Desk</a></div>
-    <p class="muted" style="margin-bottom:14px">Built strictly by warm-starting from locked <b>Sakhiya-One</b> (<code>a61c100</code>, full-utterance inference with zero short-crop windowing): fixes <code>वालेट &ne; बालेट</code>, geminate doubling (<code>बुद्धिमत्ता, उल्लेखनीय, पक्कै, चिटिक्क</code>), halanta stops (<code>बृहत्, अर्थात्</code>), chandrabindu diphthongs (<code>गर्नेछौँ, लागौँ, चलौँ</code>), and clause-onset padding (<code>त चलौँ</code>). Ships <b>Candidate B v2: Sakhiya-One Studio Vocos (23.01 MB INT8 Default &amp; 35.53 MB FP16 Unquantized · Real-GT Kathmandu AM + <code>pad=384</code> <code>Mel80To100Adapter</code> + <code>LoHiBand</code> <code>charactr/vocos-mel-24khz</code> · <code>ne_pcer = 0.0356–0.0360</code> · <code>RTF = 0.0274–0.0299</code>)</b> alongside <b>Candidate A: Sakhiya-One-Polish (8.49 MB INT8 Compact)</b>.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎙️ Candidate B · Sakhiya-One Studio Vocos [19.70 MB INT8 · Default]</b> — Owner Clip 1 (वालेट, जेमिनाई, अनुसन्धानात्मक)</small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip1_ai_models.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>✨ Candidate A · Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b> — Owner Clip 1</small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip1_ai_models.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎙️ Candidate B · Sakhiya-One Studio Vocos [19.70 MB INT8 · Default]</b> — Owner Clip 2 (बुद्धिमत्ता, बृहत, १७ प्रतिशतले)</small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip2_share_market.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>✨ Candidate A · Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b> — Owner Clip 2</small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip2_share_market.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎙️ Candidate B · Sakhiya-One Studio Vocos [19.70 MB INT8 · Default]</b> — Owner Clip 3 (गर्नेछौँ, त चलौँ, लागौँ)</small><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/owner_clip3_intro_bulletin.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>✨ Candidate A · Sakhiya-One-Polish [8.49 MB INT8 · Compact]</b> — Owner Clip 3</small><audio controls preload="none" src="samples/versions/sakhiya_one_polish/owner_clip3_intro_bulletin.mp3" style="width:100%;height:38px"></audio></div>
-    </div>
-  </div>
-  <div class="card" id="v5-vedic-showcase-studio" style="margin-top:22px">
-    <div class="card-h"><span class="ms">verified</span><h2>Sakhiya v5 Clean Recovery · Nepali Master (<code>v3b-600</code>), Isolated Vedic LoRA-800 &amp; Shrunk INT8 Browser Model (Pico 1.44 MB)</h2><a class="btn filled" href="v5.html" style="margin-left:auto"><span class="ms">headphones</span>Open v5 Clean Studio &amp; Desk</a></div>
-    <p class="muted" style="margin-bottom:14px">Audition <b>Sakhiya v5 Nepali Master</b> (<code>v3b-600</code> + de-karkar, <code>11/11</code> Nepali pack clean, <code>33/33</code> Episode 01 at <code>-14.0 LUFS</code>, 0 clicks), <b>Isolated Vedic LoRA-800</b> (<code>adapter-800</code>, frozen base weights <code>SHA 5517602c2d24c470</code>, <code>5/5</code> benchmark + unseen chants pass with 0 leaks, 0 loops, 0 clicks, sustained <code>ॐ</code> <code>1.46s–2.44s</code>), and <b>Sakhiya-v5-Pico (1.44 MB INT8)</b> with deterministic Chandas-Laya-Svara &amp; WebAudio Tanpura.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎙️ Episode 01 v5 Broadcast Master</b> (-14.0 LUFS · 33/33 lines · 0 clicks)</small><audio controls preload="none" src="sakhiya_pro/ep01_v5/voiceover_ep01.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Vedic LoRA-800 · Rigveda 1.1.1</b> — अग्निमीळे पुरोहितं (0 leaks/loops/clicks)</small><audio controls preload="none" src="samples/versions/sakhiya_v5_vedic/sa_rv.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Vedic LoRA-800 · Shanti Mantra</b> — ॐ पूर्णमदः (Sustained ॐ 1.46s)</small><audio controls preload="none" src="samples/versions/sakhiya_v5_vedic/sa_om.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Vedic LoRA-800 · Gayatri Mantra</b> — ॐ भूर्भुवः स्वः (Sustained ॐ 2.44s)</small><audio controls preload="none" src="samples/versions/sakhiya_v5_vedic/sa_gayatri.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>⚡ v5-Pico (1.44 MB INT8)</b> — काठमाडौँ</small><audio controls preload="none" src="samples/versions/sakhiya_v5_pico/ne_kathmandu.mp3" style="width:100%;height:38px"></audio></div>
-    </div>
-  </div>
-  <div class="card" id="v4-vedic-showcase-studio" style="margin-top:22px">
-    <div class="card-h"><span class="ms">self_improvement</span><h2>Sakhiya-Pro v4 &amp; Sacred Vedic Chanting Breakthrough + Active 4-Tier Ladder (<code>t30, t15, t10, t1 Pico</code>)</h2></div>
-    <p class="muted" style="margin-bottom:14px">Audition <b>Sakhiya-Pro v4</b> (<code>v4b_checkpoint-100</code> · Kathmandu downward clause-ending lock <code>-1.29 st</code>, <code>0.125</code> clicks/clip, UTMOS <code>3.970</code>, CER <code>3.89%</code>), <b>Episode 01 v4 Broadcast Master</b> (<code>33/33</code> lines, <code>-14.0 LUFS</code>, <code>-56 dB</code> room-tone bed), <b>Sacred Vedic Chanting v4</b> (3-Tone Rigveda Svara, <code>1.68s</code> resonant Pranava <code>ॐ</code>, Gayatri &amp; Anushtubh Laya, zero heavy visarga), and our active 4-tier single-graph INT8 ONNX ladder (<b>T30, T15, T10, and Pico t1 1.44 MB</b>).</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🎙️ Episode 01 v4 Broadcast Master</b> (-14.0 LUFS · 33/33 lines · fixed अब लागौँ, तलको, पाथवेज)</small><audio controls preload="none" src="sakhiya_pro/ep01_v4/voiceover_ep01.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Rigveda 1.1.1 (3-Tone Svara · 11.0 st)</b> — अग्निमीळे पुरोहितं</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v4_vedic/sa_rv.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Shanti Mantra (1.68s Sustained ॐ)</b> — ॐ पूर्णमदः पूर्णमिदं</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v4_vedic/sa_om.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Gayatri Mantra (3&times;8 Tripada Laya)</b> — ॐ भूर्भुवः स्वः</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v4_vedic/sa_gayatri.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Bhagavad Gita 1.1 (4&times;8 Anushtubh)</b> — धर्मक्षेत्रे कुरुक्षेत्रे</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v4_vedic/sa_gita.mp3" style="width:100%;height:38px"></audio></div>
-      <div class="card sm" style="padding:12px 14px"><small class="muted" style="display:block;margin-bottom:4px"><b>🕉️ Unseen Guru Stotram (Anushtubh)</b> — गुरूर्ब्रह्मा गुरूर्विष्णुः</small><audio controls preload="none" src="samples/versions/sakhiya_pro_v4_vedic/sa_unseen_guru.mp3" style="width:100%;height:38px"></audio></div>
-    </div>
-  </div>
-  <div class="card" id="ggml-proof-studio" style="margin-top:22px">
-    <div class="card-h"><span class="ms">terminal</span><h2>Standalone GGML C++ Engine (<code>sakhiya-cli</code>) · Bit-Exact PyTorch vs C++ Audio Proof (<code>cosine_sim = 1.000000</code> · CPU RTF 0.084)</h2></div>
-    <p class="muted" style="margin-bottom:14px">Zero Python/PyTorch/ONNX dependency: one standalone C++17 binary linked against <code>ggml</code> running from a single <code>.gguf</code> weight file (FP32 / FP16 / Q8_0). Verified stage-by-stage against PyTorch with <b>100% exact phoneme IDs &amp; durations</b>, <b>mel <code>max_abs_diff &le; 2.2e-4 &lt; 1e-3</code></b>, <b>24 kHz waveform <code>max_abs_diff &le; 1.5e-4 &lt; 1e-3</code></b>, and <b><code>cosine_sim = 1.000000</code></b> at ~12&times; real-time on CPU.</p>
-    <div id="ggml-proof-mount">Loading GGML C++ vs PyTorch audio proof…</div>
-  </div>
-  <div class="card" id="ver-cmp-studio" style="margin-top:22px">
-    <div class="card-h"><span class="ms">compare_arrows</span><h2>Model Comparator (15 Master Clips · GGML C++ CLI vs Sakhiya-V1 v15 vs Sakhiya-Pro vs Nano vs Atom)</h2></div>
-    <p class="muted" style="margin-bottom:14px">Compare <b>Sakhiya-V1 · GGML C++ CLI (<code>sakhiya-cli</code> · cos=1.000000)</b>, <b>Sakhiya-V1 (v15 Chandas · UTMOS 3.957)</b>, <b>Sakhiya-Pro</b>, <b>V5 Final</b>, <b>Sakhiya-V1-Nano</b>, <b>Sakhiya-V1-Atom</b>, and <b>Atom-Lite (2.7 MB)</b> side by side on all 15 master clips.</p>
-    <div id="ver-cmp-mount">Loading version registry…</div>
   </div>
 </section>
 
 <section id="samples">
-  <div class="page-head"><div><h1>Samples &amp; Model Comparator</h1><p>Side-by-side comparison of <b>GGML C++ CLI (<code>sakhiya-cli</code>)</b>, <b>Sakhiya-V1</b>, <b>Sakhiya-V1-Nano</b>, and <b>Sakhiya-V1-Atom</b> across all 15 master clips.</p></div><div class="status"><span class="pill" id="sgen"><span class="ms">update</span><i></i></span></div></div>
-  <div class="card" id="ggml-proof-samples" style="margin-bottom:20px"><div id="ggml-proof-mount-samples">Loading GGML C++ vs PyTorch audio proof…</div></div>
-  <div class="card" id="ver-cmp-samples" style="margin-bottom:20px"><div id="ver-cmp-mount-samples">Loading version comparator…</div></div>
-  <div class="chips scroll" id="sgroups" aria-label="Sample groups"></div>
-  <div class="gallery" id="gallery"><div class="card">Loading samples…</div></div>
-  <div class="card" id="sizes"></div>
+  <div class="page-head">
+    <div><h1>Compare</h1><p>Pick any two builds and hear them on the same sentences.</p></div>
+    <div class="status"><span class="pill" id="sgen"><span class="ms">update</span><i></i></span></div>
+  </div>
+  <div class="stack">
+    <div class="card" id="ver-cmp-samples"><div id="ver-cmp-mount-samples">Loading comparator…</div></div>
+    <div class="card" id="ggml-proof-samples"><div class="card-h"><span class="ms">terminal</span><h2>C++ engine proof · PyTorch vs <code>sakhiya-cli</code></h2></div><div id="ggml-proof-mount-samples">Loading…</div></div>
+    <div class="chips scroll" id="sgroups" aria-label="Sample groups"></div>
+    <div class="gallery" id="gallery"><div class="card">Loading samples…</div></div>
+    <div class="card" id="sizes"></div>
+  </div>
 </section>
 
 <section id="about">
-  <div class="page-head"><div><h1>About Sakhiya-V1</h1><p>Nepali and Sanskrit on-device speech in three clean tiers: Sakhiya-V1, Sakhiya-V1-Nano, and Sakhiya-V1-Atom.</p></div></div>
+  <div class="page-head"><div><h1>About</h1><p>A tiny, honest Nepali voice — what it is, what it isn’t yet.</p></div></div>
   <div class="gallery about">
-    <div class="card"><div class="card-h"><span class="ms">database</span><h2>Expressive + Vagdhenu Vedic Provenance</h2></div><p class="muted">Sakhiya-V1 unifies Rasa Nepali expressive styles (HAPPY, SURPRISE, BOOK, CONV, NEWS), Rasa Sanskrit, and Vagdhenu studio Vedic chanting (CC-BY-4.0) into one canonical female voice via Neural VC.</p></div>
-    <div class="card"><div class="card-h"><span class="ms">translate</span><h2>Sakhiya-V1-Nano (4.4 MB) &amp; Sakhiya-V1-Atom (1.8 MB)</h2></div><p class="muted">Compact students distilled from Sakhiya-V1 with frozen MelCTCAligner pronunciation supervision and pitch-driven Source-Filter Harmonic iSTFT vocoders running ~46×–55× real-time on CPU.</p></div>
-    <div class="card"><div class="card-h"><span class="ms">tune</span><h2>One Unified Voice · 3 Mastered Modes</h2></div><p class="muted">One unmistakable female voice (<b>सखिया · Sakhiya</b>) across <b>News</b>, <b>Storytelling</b> (living exclamation &amp; question prosody), and <b>Vedic Chant</b> (musical sur, metrical laya, and prolonged resonant ॐ).</p></div>
+    <div class="card hero-card"><div class="card-h"><span class="ms">flag</span><h2>Where we are</h2></div><p>The shipped default (Studio Vocos v2, 23 MB) is intelligible and fast, but not yet the natural, clean-accent voice we want. Session 4 is a full rebuild: pure studio Rasa Female + Male data, a 4.5 M-parameter two-voice model, Kathmandu pronunciation front-end, and blind-listening gates before anything is promoted.</p></div>
     <div class="card"><div class="card-h"><span class="ms">compress</span><h2>Model tiers</h2></div><div id="tierstate" class="muted"></div></div>
-    <div class="card"><div class="card-h"><span class="ms">lock</span><h2>Runs on your device</h2></div><p class="muted">Synthesis runs in WebAssembly with onnxruntime-web. Your text never leaves the page.</p></div>
+    <div class="card"><div class="card-h"><span class="ms">lock</span><h2>Private by design</h2></div><p class="muted">Synthesis runs in WebAssembly with onnxruntime-web. Your text never leaves the page.</p></div>
+    <div class="card"><div class="card-h"><span class="ms">music_note</span><h2>Chandas · Laya · Svara</h2></div><p class="muted">Vedic chant mode scans aksharas as laghu/guru, matches a metre (Gāyatrī, Anuṣṭubh, Triṣṭubh…) and shapes pitch with a three-tone svara contour over an optional tanpura drone.</p></div>
     <div class="card"><div class="card-h"><span class="ms">code</span><h2>Source</h2></div><p class="muted"><a href="https://github.com/NikitHamal/Sakhiya" rel="noopener">github.com/NikitHamal/Sakhiya</a></p></div>
-      <div class="card"><div class="card-h"><span class="ms">music_note</span><h2>Chandas · Laya · Svara</h2></div><p class="muted">In Vedic Chant mode the text is split into aksharas, scanned as Laghu / Guru, matched to a meter (Gāyatrī, Anuṣṭubh, Triṣṭubh, Jagatī) and compiled into exact syllable durations (Laya BPM) and a just-intonation pitch line on the voice’s own tonic (about 215 Hz). The same code runs in Python and in your browser (<code>chandas.js</code>, parity tested). An optional tanpura drone is generated with WebAudio, with no audio file.</p></div>
-    <div class="card"><div class="card-h"><span class="ms">auto_awesome</span><h2>Expression Cartridges</h2></div><p class="muted">Sixteen tiny hand-designed presets (5.8 KB in total): News Crisp, Warm Folk Story, Excited वाह!, Gayatri 72 BPM, Rigveda Svara and more. Today they drive the speed, pause, tone and svara controls. You can also hum 3 seconds into the microphone to build your own; nothing leaves your device.</p></div>
-    <div class="card"><div class="card-h"><span class="ms">terminal</span><h2>GGML C/C++ Standalone CLI (<code>sakhiya-cli</code>)</h2></div><p class="muted">Compile a standalone native binary linked against <code>ggml</code> (CPU + optional CUDA / Vulkan / Metal) reading a single <code>.gguf</code> file (FP32 58.1 MB, FP16 40.0 MB, Q8_0 36.7 MB) with bit-exact PyTorch parity (<code>cosine_sim = 1.000000</code>, <code>max_abs_diff &lt; 1e-3</code> at every stage, ~12&times; real-time on CPU).</p></div>
-    <div class="card dev-card" style="grid-column:1/-1"><div class="card-h"><span class="ms">integration_instructions</span><h2>Native C++ / Python / Android (<code>sakhiya.cpp</code>)</h2></div><p class="muted">One zero-dependency C++17 engine and one C ABI (<code>cpp/sakhiya.h</code>) power <code>sakhiya-cli</code>, <code>libsakhiya.so</code>, the Android JNI wrapper, the Python wrapper and the <code>sakhiya.wasm</code> that runs this page. Single-file GGUF models (Atom-Lite Q8_0 3.0 MB &middot; Atom 7.4 MB &middot; Nano 10.1 MB &middot; V1 37.5 MB) live on <a href="https://huggingface.co/NikitHamal/sakhiya-gguf" rel="noopener">Hugging Face</a> and the <a href="https://github.com/NikitHamal/Sakhiya/releases/tag/v15-ggml-gguf" rel="noopener">v15-ggml-gguf release</a>.</p><div id="dev-sakhiya-cpp"></div></div>
-  </div>
-</section>
-
-<section id="ampixa">
-  <div class="page-head">
-    <div>
-      <h1>Ampixa NepTTS-Bench · On-device self-test</h1>
-      <p>Interactive local self-test of all 365 official prompts from <code>ampixa.benchmarks.cloud/#submit</code> across 9 linguistic &amp; prosodic categories. Synthesizes 100% on-device — nothing is uploaded or submitted.</p>
-    </div>
-    <div class="status"><span class="pill tone"><span class="ms">verified</span><i>365 Official Prompts · Local Self-Test Only</i></span></div>
-  </div>
-  <div class="card" style="margin-bottom:20px;background:var(--md-primary-container);color:var(--md-on-primary-container)">
-    <div class="card-h" style="margin-bottom:8px"><span class="ms">bolt</span><h2>Skip the wait: pre-rendered, cleaned clips</h2></div>
-    <p style="margin-bottom:14px">All 365 prompts are already rendered on our GPU box for Sakhiya-V1, Pro-v3 T30, Pro-v3 T15, V2-Micro and V2-Pico, denoised, de-shuttered and de-clicked. Compare models side by side without loading any model.</p>
-    <a class="btn filled" href="ampixa.html"><span class="ms">fact_check</span>Open Ampixa Lab</a>
-  </div>
-  <div class="card">
-    <div class="card-h"><span class="ms">fact_check</span><h2>Synthesize and self-rate prompts live in your browser</h2></div>
-    <div id="ampixa-mount">Loading 365 official Ampixa benchmark prompts…</div>
+    <div class="card" style="grid-column:1/-1"><div class="card-h"><span class="ms">integration_instructions</span><h2>Native · Python · Android (<code>sakhiya.cpp</code>)</h2></div><p class="muted">One zero-dependency C++17 engine and C ABI power <code>sakhiya-cli</code>, <code>libsakhiya.so</code>, the Android wrapper, Python bindings and the WASM build that runs this page. GGUF models live on <a href="https://huggingface.co/NikitHamal/sakhiya-gguf" rel="noopener">Hugging Face</a>.</p><div id="dev-sakhiya-cpp"></div></div>
   </div>
 </section>
 </main>
 
-<script type="module" src="ggml_engine.js?v=54"></script><script src="nav.js?v=54"></script><script src="buildbadge.js?v=54"></script><script src="g2p.js?v=54"></script><script src="sanskrit.js?v=54"></script><script src="mixed.js?v=54"></script><script src="roman.js?v=54"></script><script src="chandas.js?v=54"></script><script src="tanpura.js?v=54"></script><script src="tts.js?v=54"></script><script src="app.js?v=54"></script><script src="studio_v6.js?v=54"></script><script src="samples.js?v=54"></script><script src="ampixa_test.js?v=54"></script>
+<div id="ampixa-mount" hidden></div>
+<script>
+/* Featured studio-vs-compact owner clips (static, no model needed). */
+(function(){
+  var R=[["वालेट, जेमिनाई, अनुसन्धानात्मक","owner_clip1_ai_models"],["बुद्धिमत्ता, बृहत, १७ प्रतिशतले","owner_clip2_share_market"],["गर्नेछौँ, त चलौँ, लागौँ","owner_clip3_intro_bulletin"]];
+  var h="";R.forEach(function(r,i){h+='<div class="card sm"><b>Clip '+(i+1)+'</b> <span class="hint">'+r[0]+'</span>'+
+   '<div class="hint" style="margin-top:8px">Studio · 23 MB</div><audio controls preload="none" src="samples/versions/sakhiya_one_vocos/'+r[1]+'.mp3"></audio>'+
+   '<div class="hint" style="margin-top:8px">Compact · 8.5 MB</div><audio controls preload="none" src="samples/versions/sakhiya_one_polish/'+r[1]+'.mp3"></audio></div>';});
+  var m=document.getElementById("featuredClips");if(m)m.innerHTML=h;
+  document.addEventListener("play",function(e){document.querySelectorAll("audio").forEach(function(a){if(a!==e.target&&!a.paused)a.pause();});},true);
+})();
+</script>
+<script type="module" src="ggml_engine.js?v=60"></script><script src="nav.js?v=60"></script><script src="buildbadge.js?v=60"></script><script src="g2p.js?v=60"></script><script src="sanskrit.js?v=60"></script><script src="mixed.js?v=60"></script><script src="roman.js?v=60"></script><script src="chandas.js?v=60"></script><script src="tanpura.js?v=60"></script><script src="tts.js?v=60"></script><script src="app.js?v=60"></script><script src="samples.js?v=60"></script>
 </body>
 </html>

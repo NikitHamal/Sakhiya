@@ -2,29 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sakhiya · Ampixa Lab — 365 prompts, pre-rendered on the GPU box</title>
-<meta name="description" content="Every Ampixa NepTTS-Bench prompt, pre-rendered with Sakhiya-V1, Pro-v3 T30, Pro-v3 T15, V2-Micro and V2-Pico, then denoised, de-shuttered and de-clicked. Press play, nothing runs in your browser.">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sakhiya · Bench</title>
+<meta name="description" content="All 365 NepTTS-Bench prompts, pre-rendered and cleaned, for every promoted Sakhiya model.">
+<meta name="theme-color" content="#a8272f">
 <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230058df'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='11' fill='%23a8272f'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='white'%3E%E0%A4%B8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
-<link rel="stylesheet" href="m3x/tokens.css"><link rel="stylesheet" href="m3x/shapes.css"><link rel="stylesheet" href="style.css?v=55"><link rel="stylesheet" href="m3x/pro.css?v=55">
+<link rel="stylesheet" href="m3e.css?v=60">
 </head>
 <body>
 <header class="appbar" id="appbar"><div class="appbar-in">
-  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span class="brand-nm">Sakhiya</span></a>
-  <nav class="tabs" aria-label="Sections">
-    <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
-    <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
-    <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
-    <a href="ampixa.html" class="on" aria-current="page"><span class="ms">fact_check</span><b>Ampixa Lab</b></a>
-    <a href="clips.html"><span class="ms">library_music</span><b>Clips</b></a>
-    <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
-  </nav>
+  <a class="brand" href="index.html#studio" aria-label="Sakhiya home"><span class="glyph">स</span><span>Sakhiya</span></a>
   <button class="icon-btn" id="theme" aria-label="Toggle light or dark theme"><span class="ms">contrast</span></button>
 </div></header>
+<nav class="tabs" aria-label="Sections">
+  <a href="index.html#studio"><span class="ms">graphic_eq</span><b>Studio</b></a>
+  <a href="index.html#samples"><span class="ms">compare_arrows</span><b>Compare</b></a>
+  <a href="listen.html"><span class="ms">headphones</span><b>Listen</b></a>
+  <a href="ampixa.html" class="on" aria-current="page"><span class="ms">fact_check</span><b>Bench</b></a>
+  <a href="clips.html"><span class="ms">library_music</span><b>Clips</b></a>
+  <a href="index.html#about"><span class="ms">info</span><b>About</b></a>
+</nav>
 
 <main>
   <section class="hero">
@@ -60,6 +61,6 @@
   <button class="x" id="mClose" aria-label="Close player"><span class="ms">close</span></button>
 </div>
 
-<script src="ampixa_lab.js?v=55"></script>
+<script src="ampixa_lab.js?v=60"></script>
 </body>
 </html>

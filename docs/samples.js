@@ -6,7 +6,7 @@
   let M = null, T = {}, group = "All", loaded = false, REG = null, verA = "sakhiya_one_vocos", verB = "sakhiya_one_polish";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  const RETIRED_OR_DUP_TAGS = new Set(["sakhiya_v3_t5", "sakhiya_v4_micro", "sakhiya_v5_micro", "sakhiya_v4_pico", "sakhiya_v5_pico"]);
+  const RETIRED_OR_DUP_TAGS = new Set(["sakhiya_v3_t5", "sakhiya_v4_micro", "sakhiya_v4_pico"]);
   function renderComparatorInto(mountId) {
     const mount = document.getElementById(mountId);
     if (!mount || !REG || !REG.versions || !REG.versions.length) return;
@@ -101,7 +101,7 @@
       </div>
       <p class="tx" style="margin:4px 0 10px;font-size:14px">${esc(GGML_TEXTS[s.id] || s.id)}</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
-        <div><small class="muted" style="display:block;margin-bottom:4px"><b>PyTorch Reference</b> (<code>v5_c1/am.pt + voc.pt</code>)</small><audio controls preload="none" src="ggml_proof/pytorch_${esc(s.id)}.mp3" style="height:38px;margin:0"></audio></div>
+        <div><small class="muted" style="display:block;margin-bottom:4px"><b>PyTorch Reference</b> (PyTorch FP32)</small><audio controls preload="none" src="ggml_proof/pytorch_${esc(s.id)}.mp3" style="height:38px;margin:0"></audio></div>
         <div><small class="muted" style="display:block;margin-bottom:4px"><b>GGML C++ CLI</b> (<code>sakhiya-cli</code> · <code>.gguf</code>)</small><audio controls preload="none" src="ggml_proof/sakhiya_cpp_${esc(s.id)}.mp3" style="height:38px;margin:0"></audio></div>
       </div>
     </div>`).join("");
