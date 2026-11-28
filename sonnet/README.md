@@ -31,6 +31,13 @@ We are behind because we kept polishing a **student of a synthetic teacher** (Om
 ## Recommendation (details in `04`)
 **Reset to *Sakhiya-Tiny-NE***: tiny-voca topology (T4.5 ≈ 4.5 M and T10 ≈ 9.7 M), two voices (Rasa F/M) + style ids, real-data-only training, pretrained-aligner durations with explicit pauses, data-driven Nepali pronunciation lexicon, end-to-end source-filter + GAN, ≤ 11 MB INT8. Promotion only by blind human test; automatic metrics as tripwires with *real-speech-relative* bands. Run the CPU prep list (`06 §A`) before the GPU session; keep V1 as the incumbent until the new model wins CMOS.
 
+## Session 2 (pickup) — new documents and measurements
+| File | Content |
+|---|---|
+| `07_session2_findings.md` | Word-level accent probe **with Nepal controls** (Rasa-F `[v/w]` 73 % vs Nepal 7–20 % on `वि-`; Rasa-M 37 %), Rasa text audit (test split 43.5 % contaminated, F/M share 48 % of sentences, no digits/Latin), Rasa audio audit, verification/peer review of the Gemini lane |
+| `08_revised_plan_v2_and_next_session_gates.md` | Final ranked causes, decisions taken (use Rasa, accent as controllable variant, male-first, own held-out split), unproven items with cheapest tests, CPU prep list v2, GPU gates |
+| `experiments/exp6..exp8` + `exp6_aggregate.py`, `exp6_stats.py` | Reproducible scripts; raw outputs in `results/s2/` |
+
 ## Caveats & open questions for the owner
 * **Gate G0 (accent)**: listen to raw Rasa F/M clips first. If the accent is not the target, we still use Rasa as the phonetic backbone and adapt to SLR43-6834.
 * Rasa is CC-BY-4.0 (commercial use with attribution OK); Edge TTS outputs are reference-only, never training data.
