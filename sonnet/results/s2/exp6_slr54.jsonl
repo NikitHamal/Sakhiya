@@ -1,0 +1,230 @@
+{"corp": "slr54", "id": "0f08e3fe00", "cls": "CHA", "word": "चलेको", "dur": 0.442, "ali_score": 0.994, "ph": ["s", "ɑu5", "l", "iɜ", "k", "u5"], "first": "s"}
+{"corp": "slr54", "id": "070f1af459", "cls": "SW", "word": "स्वतन्त्रताको", "dur": 1.005, "ali_score": 0.97, "ph": ["s", "o", "t", "ə", "m", "r", "ɐ", "t", "a", "k", "u"], "first": "s"}
+{"corp": "slr54", "id": "0cc46a42cd", "cls": "SW", "word": "स्वतन्त्र", "dur": 0.383, "ali_score": 0.879, "ph": ["s", "u", "t", "o", "n", "d", "ɾ", "a"], "first": "s"}
+{"corp": "slr54", "id": "0f2c3d9f2a", "cls": "BI", "word": "बाटो", "dur": 0.362, "ali_score": 0.544, "ph": ["b", "a", "t", "o"], "first": "b"}
+{"corp": "slr54", "id": "0caa0f2e09", "cls": "BI", "word": "बाहिर", "dur": 0.201, "ali_score": 0.939, "ph": ["b", "aɪ", "ɹ"], "first": "b"}
+{"corp": "slr54", "id": "05428ce51e", "cls": "VI", "word": "विन्नीसँग", "dur": 0.763, "ali_score": 0.899, "ph": ["b", "i", "n", "n", "iː", "s", "a", "ŋ"], "first": "b"}
+{"corp": "slr54", "id": "0b96e4dd09", "cls": "BI", "word": "बसे", "dur": 0.241, "ali_score": 0.943, "ph": ["b", "a", "s", "i"], "first": "b"}
+{"corp": "slr54", "id": "014dc6a49c", "cls": "CHH", "word": "छन्", "dur": 0.2, "ali_score": 0.995, "ph": ["th", "a5", "n"], "first": "th"}
+{"corp": "slr54", "id": "029bf8052c", "cls": "CHA", "word": "चैत्र", "dur": 0.401, "ali_score": 0.712, "ph": ["s", "ʌ", "i", "t", "r"], "first": "s"}
+{"corp": "slr54", "id": "0489c300d9", "cls": "GY", "word": "ज्ञानका", "dur": 0.382, "ali_score": 0.994, "ph": ["ɡ", "a", "n", "t", "a"], "first": "ɡ"}
+{"corp": "slr54", "id": "0f7b8e9eee", "cls": "VI", "word": "विकास", "dur": 0.202, "ali_score": 0.972, "ph": ["b", "i", "ɡ", "a", "s"], "first": "b"}
+{"corp": "slr54", "id": "06b5cf1909", "cls": "CHA", "word": "चैत्रमा", "dur": 0.402, "ali_score": 0.866, "ph": ["s", "a", "i", "t", "r", "a", "m", "a"], "first": "s"}
+{"corp": "slr54", "id": "0d5c30ad4a", "cls": "CHA", "word": "चैत", "dur": 0.422, "ali_score": 0.38, "ph": ["ts", "ɑ"], "first": "ts"}
+{"corp": "slr54", "id": "0fed6d6ae8", "cls": "BI", "word": "बेलायतको", "dur": 0.602, "ali_score": 0.914, "ph": ["b", "i", "l", "aː", "e", "t", "k", "u"], "first": "b"}
+{"corp": "slr54", "id": "005d160d81", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.983, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "slr54", "id": "06237fd2d6", "cls": "CHH", "word": "छोरीकी", "dur": 0.303, "ali_score": 0.387, "ph": ["t", "ɔ", "r", "i", "ɡ", "i"], "first": "t"}
+{"corp": "slr54", "id": "00cb3ba0f6", "cls": "VI", "word": "विद्यालय", "dur": 0.583, "ali_score": 0.89, "ph": ["p", "i", "t", "a", "l", "oɪ"], "first": "p"}
+{"corp": "slr54", "id": "0438ebafbb", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.939, "ph": ["ts.h", "a5", "n"], "first": "ts.h"}
+{"corp": "slr54", "id": "00c25a5a0e", "cls": "BI", "word": "बेतियादेखि", "dur": 0.763, "ali_score": 0.453, "ph": ["b", "i", "t", "iː", "a", "d", "k", "i"], "first": "b"}
+{"corp": "slr54", "id": "077e959667", "cls": "CHA", "word": "चन्दा", "dur": 0.241, "ali_score": 0.375, "ph": ["t", "i", "n", "d", "aː"], "first": "t"}
+{"corp": "slr54", "id": "0903e89820", "cls": "BI", "word": "बराबरको", "dur": 0.443, "ali_score": 0.271, "ph": ["s", "b", "a", "r", "aː", "b", "a", "r", "k", "u"], "first": "s"}
+{"corp": "slr54", "id": "009a9d1b4f", "cls": "BI", "word": "बुढाथोकी", "dur": 0.503, "ali_score": 0.759, "ph": ["b", "u", "r", "aː", "t", "u", "k", "i"], "first": "b"}
+{"corp": "slr54", "id": "0e2a4c71c6", "cls": "BI", "word": "बजेटमा", "dur": 0.443, "ali_score": 0.982, "ph": ["b", "ɑ", "z", "i", "t", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "0ed3b4644c", "cls": "BI", "word": "बैशाख", "dur": 0.382, "ali_score": 0.268, "ph": ["b", "ɑ", "j", "s", "a"], "first": "b"}
+{"corp": "slr54", "id": "08876be225", "cls": "CHH", "word": "छोराछोरी", "dur": 0.644, "ali_score": 0.768, "ph": ["th", "u5", "ʐ", "ɑ5", "tsh", "u5", "l", "i5"], "first": "th"}
+{"corp": "slr54", "id": "03178f0115", "cls": "VI", "word": "विभाजित", "dur": 0.541, "ali_score": 0.829, "ph": ["b", "i", "v", "aː", "z", "i"], "first": "b"}
+{"corp": "slr54", "id": "03a9b42a00", "cls": "VI", "word": "विभाजित", "dur": 0.543, "ali_score": 0.903, "ph": ["b", "i", "v", "a", "dʒ", "i", "t"], "first": "b"}
+{"corp": "slr54", "id": "01bd57d0d6", "cls": "BI", "word": "बुँदे", "dur": 0.222, "ali_score": 0.159, "ph": ["w", "ʉ", "ð", "i"], "first": "w"}
+{"corp": "slr54", "id": "053003d80f", "cls": "BI", "word": "बढेको", "dur": 0.343, "ali_score": 0.992, "ph": ["b", "ɑ", "r", "i", "k", "o"], "first": "b"}
+{"corp": "slr54", "id": "0a93eed080", "cls": "BI", "word": "बढ्न", "dur": 0.363, "ali_score": 0.398, "ph": ["b", "ɑ", "d", "n"], "first": "b"}
+{"corp": "slr54", "id": "099b455e99", "cls": "BI", "word": "बताएपछि", "dur": 0.544, "ali_score": 0.988, "ph": ["v", "ɔ", "t", "a", "j", "p", "ə", "s", "i"], "first": "v"}
+{"corp": "slr54", "id": "072ed72d5d", "cls": "CHA", "word": "चारवटा", "dur": 0.484, "ali_score": 0.875, "ph": ["s", "aː", "r", "w", "o", "d", "a"], "first": "s"}
+{"corp": "slr54", "id": "031561e553", "cls": "BI", "word": "बनाइयो", "dur": 0.523, "ali_score": 0.938, "ph": ["b", "ɑ", "n", "a", "o"], "first": "b"}
+{"corp": "slr54", "id": "09672f92f9", "cls": "BI", "word": "बनाइयो", "dur": 0.543, "ali_score": 0.965, "ph": ["b", "o", "n", "aɪ", "o"], "first": "b"}
+{"corp": "slr54", "id": "0e901fc558", "cls": "BI", "word": "बढी", "dur": 0.282, "ali_score": 0.862, "ph": ["b", "ɑ", "d", "h", "i"], "first": "b"}
+{"corp": "slr54", "id": "0f2defdcf4", "cls": "BI", "word": "बिलम्ब", "dur": 0.422, "ali_score": 0.791, "ph": ["b", "i", "l", "a", "m"], "first": "b"}
+{"corp": "slr54", "id": "0dbd068935", "cls": "BI", "word": "बैंकहरूका", "dur": 0.684, "ali_score": 0.99, "ph": ["b", "aɪ", "n", "k", "ɑ", "r", "u", "ɡ", "a"], "first": "b"}
+{"corp": "slr54", "id": "0fa17d59a2", "cls": "CHA", "word": "चाहेको", "dur": 0.403, "ali_score": 0.836, "ph": ["ts.", "ɑ5", "k", "u5"], "first": "ts."}
+{"corp": "slr54", "id": "0f30689935", "cls": "GY", "word": "अज्ञात", "dur": 0.402, "ali_score": 0.898, "ph": ["l", "ɡ", "i", "a"], "first": "l"}
+{"corp": "slr54", "id": "0daa410e79", "cls": "VI", "word": "विकास", "dur": 0.403, "ali_score": 0.98, "ph": ["b", "i", "k", "aː", "s"], "first": "b"}
+{"corp": "slr54", "id": "019bbeb19f", "cls": "VI", "word": "विचारमा", "dur": 0.422, "ali_score": 0.992, "ph": ["b", "i", "tʃ", "a", "r", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "0d8d5cca68", "cls": "BI", "word": "बनाएका", "dur": 0.423, "ali_score": 0.99, "ph": ["b", "o", "n", "a", "i", "k", "a"], "first": "b"}
+{"corp": "slr54", "id": "008520f056", "cls": "BI", "word": "बाउन्ने", "dur": 0.863, "ali_score": 0.699, "ph": ["b", "aː", "n", "n", "i"], "first": "b"}
+{"corp": "slr54", "id": "00789e449f", "cls": "VI", "word": "विशेष", "dur": 0.322, "ali_score": 0.997, "ph": ["b", "s", "e", "s"], "first": "b"}
+{"corp": "slr54", "id": "0840ba66bf", "cls": "CHH", "word": "छैनन्", "dur": 0.364, "ali_score": 0.987, "ph": ["t", "aɪ", "n", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "02fe5e02f9", "cls": "CHH", "word": "छन्", "dur": 0.222, "ali_score": 0.968, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "01ed39becf", "cls": "BI", "word": "बनेकी", "dur": 0.302, "ali_score": 0.712, "ph": ["b", "n", "a", "ɡ", "i"], "first": "b"}
+{"corp": "slr54", "id": "0af1a187f6", "cls": "VI", "word": "विनय", "dur": 0.262, "ali_score": 0.498, "ph": ["b", "i", "n", "aː"], "first": "b"}
+{"corp": "slr54", "id": "0326a17acb", "cls": "BI", "word": "बाहिर", "dur": 0.322, "ali_score": 0.998, "ph": ["b", "a", "h", "i", "d", "o"], "first": "b"}
+{"corp": "slr54", "id": "026f9d13b8", "cls": "GY", "word": "अनभिज्ञतावश", "dur": 0.966, "ali_score": 0.658, "ph": ["o", "n", "a", "v", "i", "ɡ", "e", "t", "a", "v", "o", "s"], "first": "n"}
+{"corp": "slr54", "id": "0b9964989a", "cls": "BI", "word": "बस्नेछु", "dur": 0.483, "ali_score": 0.981, "ph": ["b", "ɑ", "s", "n", "i", "t", "u"], "first": "b"}
+{"corp": "slr54", "id": "00fd5f19fb", "cls": "BI", "word": "बहुमूल्य", "dur": 0.423, "ali_score": 0.353, "ph": ["b", "a", "w", "m", "a", "l", "l"], "first": "b"}
+{"corp": "slr54", "id": "07b730be23", "cls": "SW", "word": "स्वयम्", "dur": 0.323, "ali_score": 0.576, "ph": ["s", "t", "u", "j", "a", "m"], "first": "s"}
+{"corp": "slr54", "id": "014c4f0a2f", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.675, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "014c4f0a2f", "cls": "VI", "word": "विशेष", "dur": 0.382, "ali_score": 0.994, "ph": ["b", "i", "s", "e", "s"], "first": "b"}
+{"corp": "slr54", "id": "007e2ce2b9", "cls": "CHH", "word": "छोड्दछन्", "dur": 0.602, "ali_score": 0.953, "ph": ["t", "u", "r", "ð", "a", "s", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "0c1569b736", "cls": "BI", "word": "बारेमा", "dur": 0.362, "ali_score": 0.996, "ph": ["b", "a", "r", "i", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "01f4795ac4", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.988, "ph": ["s", "n"], "first": "s"}
+{"corp": "slr54", "id": "08a17a8d28", "cls": "BI", "word": "बालबालिकाहरू", "dur": 0.783, "ali_score": 0.881, "ph": ["v", "a", "l", "v", "a", "l", "i", "k", "aː", "r", "u"], "first": "v"}
+{"corp": "slr54", "id": "0c0469d0f5", "cls": "BI", "word": "बागलुङ", "dur": 0.423, "ali_score": 0.641, "ph": ["p", "a", "ɡ", "l", "u", "m"], "first": "p"}
+{"corp": "slr54", "id": "011d6a15b0", "cls": "VI", "word": "विधिहरू", "dur": 0.462, "ali_score": 0.982, "ph": ["b", "i", "d", "i", "a", "r"], "first": "b"}
+{"corp": "slr54", "id": "0857dfdbc7", "cls": "VI", "word": "विधिहरू", "dur": 0.583, "ali_score": 0.96, "ph": ["b", "i", "d", "i", "h", "a", "r"], "first": "b"}
+{"corp": "slr54", "id": "0f7aeb9ef3", "cls": "VI", "word": "विश्व", "dur": 0.221, "ali_score": 0.988, "ph": ["v", "i", "s"], "first": "v"}
+{"corp": "slr54", "id": "0172bb819c", "cls": "VI", "word": "विधवा", "dur": 0.381, "ali_score": 0.696, "ph": ["b", "i", "d", "ɑ", "w", "a"], "first": "b"}
+{"corp": "slr54", "id": "0925a420b6", "cls": "BI", "word": "बहिरङ्ग", "dur": 0.462, "ali_score": 0.716, "ph": ["b", "a", "h", "i", "r", "a", "ŋ", "ɡ", "a"], "first": "b"}
+{"corp": "slr54", "id": "024c6395ea", "cls": "VI", "word": "विभागमा", "dur": 0.564, "ali_score": 0.992, "ph": ["d", "i", "b", "aː", "d", "m", "a"], "first": "d"}
+{"corp": "slr54", "id": "024c6395ea", "cls": "VI", "word": "विषम", "dur": 0.342, "ali_score": 0.908, "ph": ["b", "i", "s", "a", "m"], "first": "b"}
+{"corp": "slr54", "id": "0f7c16f200", "cls": "VI", "word": "विभाजन", "dur": 0.362, "ali_score": 0.991, "ph": ["b", "i", "v", "aː", "z", "a", "m"], "first": "b"}
+{"corp": "slr54", "id": "0f90bee124", "cls": "VI", "word": "विमानस्थल", "dur": 0.624, "ali_score": 0.998, "ph": ["b", "i", "m", "aː", "n", "i", "s", "t", "a", "l"], "first": "b"}
+{"corp": "slr54", "id": "0aaf2e8b9a", "cls": "CHA", "word": "चरणसम्म", "dur": 0.684, "ali_score": 0.851, "ph": ["t", "a", "r", "a", "r", "s", "a", "m", "m"], "first": "t"}
+{"corp": "slr54", "id": "02a48f182c", "cls": "BI", "word": "बढाउने", "dur": 0.383, "ali_score": 0.978, "ph": ["p", "a", "ɾ", "aː", "u", "n", "i"], "first": "p"}
+{"corp": "slr54", "id": "00f6650270", "cls": "BI", "word": "बुधबार", "dur": 0.441, "ali_score": 0.372, "ph": ["b", "u", "t", "a", "v", "aː"], "first": "b"}
+{"corp": "slr54", "id": "0bba7feb5c", "cls": "BI", "word": "बहानामा", "dur": 0.543, "ali_score": 0.947, "ph": ["b", "a", "h", "a", "n", "aː", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "0f64f401a1", "cls": "CHH", "word": "छैन", "dur": 0.222, "ali_score": 0.99, "ph": ["t", "aɪ", "n"], "first": "t"}
+{"corp": "slr54", "id": "0c2aa435a8", "cls": "BI", "word": "बोल्नेको", "dur": 0.484, "ali_score": 0.993, "ph": ["b", "u", "l", "n", "e", "k", "u"], "first": "b"}
+{"corp": "slr54", "id": "05bb24c443", "cls": "CHH", "word": "छैन", "dur": 0.282, "ali_score": 0.996, "ph": ["t", "a", "i", "n"], "first": "t"}
+{"corp": "slr54", "id": "03f63bd30d", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.994, "ph": ["s.", "a5", "n"], "first": "s."}
+{"corp": "slr54", "id": "08b2c65308", "cls": "VI", "word": "विरुद्धमा", "dur": 0.482, "ali_score": 0.698, "ph": ["b", "i", "r", "u", "d", "t", "o", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "045bd85305", "cls": "VI", "word": "विश्वविद्यालयमा", "dur": 0.825, "ali_score": 0.927, "ph": ["b", "i", "s", "u", "b", "i", "d", "a", "l", "a", "j", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "09759139f4", "cls": "VI", "word": "विधिले", "dur": 0.402, "ali_score": 0.968, "ph": ["f", "i", "t", "i", "l", "i"], "first": "f"}
+{"corp": "slr54", "id": "06cca59898", "cls": "CHH", "word": "छन्", "dur": 0.302, "ali_score": 0.989, "ph": ["th", "w", "a", "n"], "first": "th"}
+{"corp": "slr54", "id": "01663d527e", "cls": "BI", "word": "बाँचेर", "dur": 0.323, "ali_score": 0.945, "ph": ["b", "a", "t", "i", "r"], "first": "b"}
+{"corp": "slr54", "id": "0d5d3e8f85", "cls": "VI", "word": "विशेष", "dur": 0.482, "ali_score": 0.998, "ph": ["b", "yɜ", "s", "ɪ", "s"], "first": "b"}
+{"corp": "slr54", "id": "0dc1a16408", "cls": "BI", "word": "बारा", "dur": 0.321, "ali_score": 0.458, "ph": ["b", "a", "r", "a"], "first": "b"}
+{"corp": "slr54", "id": "0200157b71", "cls": "BI", "word": "बच्चनका", "dur": 0.504, "ali_score": 0.529, "ph": ["v", "ʌ", "t", "ʌ", "n", "k", "ʌ"], "first": "v"}
+{"corp": "slr54", "id": "0204ccf18f", "cls": "BI", "word": "ब्लगमा", "dur": 0.322, "ali_score": 0.959, "ph": ["b", "l", "ɑ", "ɡ", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "0dab3ccd09", "cls": "CHH", "word": "छन्", "dur": 0.201, "ali_score": 0.992, "ph": ["tsh", "a5", "n"], "first": "tsh"}
+{"corp": "slr54", "id": "090f9bffea", "cls": "BI", "word": "ब्रिटेनको", "dur": 0.564, "ali_score": 0.984, "ph": ["b", "i", "t", "e", "n", "k", "u"], "first": "b"}
+{"corp": "slr54", "id": "022b97edaf", "cls": "VI", "word": "विज्ञान", "dur": 0.282, "ali_score": 0.991, "ph": ["b", "i", "k", "a", "n"], "first": "b"}
+{"corp": "slr54", "id": "01605b5099", "cls": "CHH", "word": "छुने", "dur": 0.262, "ali_score": 0.993, "ph": ["t", "u", "n", "i"], "first": "t"}
+{"corp": "slr54", "id": "0d294361a9", "cls": "VI", "word": "विकल्प", "dur": 0.362, "ali_score": 0.933, "ph": ["b", "i", "k", "a", "l", "b", "a"], "first": "b"}
+{"corp": "slr54", "id": "0518207f26", "cls": "CHA", "word": "चेलो", "dur": 0.301, "ali_score": 0.946, "ph": ["tɕ", "iɛ5", "l"], "first": "tɕ"}
+{"corp": "slr54", "id": "03bfd627a5", "cls": "VI", "word": "विधि", "dur": 0.221, "ali_score": 0.989, "ph": ["b", "i", "d", "i"], "first": "b"}
+{"corp": "slr54", "id": "041c3d499d", "cls": "BI", "word": "बताउनुहुन्छ", "dur": 0.823, "ali_score": 0.997, "ph": ["b", "a", "t", "aː", "n", "u", "h", "u", "n", "ts"], "first": "b"}
+{"corp": "slr54", "id": "0123dc7be6", "cls": "CHA", "word": "चारभागको", "dur": 0.823, "ali_score": 0.955, "ph": ["ts", "a", "r", "b", "a", "k", "o"], "first": "ts"}
+{"corp": "slr54", "id": "02ca0f2ede", "cls": "SW", "word": "स्वामित्व", "dur": 0.442, "ali_score": 0.994, "ph": ["s", "v", "a", "m", "i", "t", "u"], "first": "s"}
+{"corp": "slr54", "id": "032c61186c", "cls": "BI", "word": "बजार", "dur": 0.501, "ali_score": 0.336, "ph": ["m", "b", "ɑ", "z", "a", "r"], "first": "m"}
+{"corp": "slr54", "id": "06177e1946", "cls": "GY", "word": "ज्ञानको", "dur": 0.322, "ali_score": 0.935, "ph": ["ɡ", "a", "n", "ɡ", "o"], "first": "ɡ"}
+{"corp": "slr54", "id": "081f862a89", "cls": "VI", "word": "विजय", "dur": 0.341, "ali_score": 0.468, "ph": ["i", "z", "eɪ"], "first": "z"}
+{"corp": "slr54", "id": "09a7530c03", "cls": "VI", "word": "विशाल", "dur": 0.461, "ali_score": 0.984, "ph": ["b", "i", "s", "aː", "l"], "first": "b"}
+{"corp": "slr54", "id": "09a7530c03", "cls": "BI", "word": "बोलिन्छ", "dur": 0.481, "ali_score": 0.942, "ph": ["w", "ʌ", "l", "i", "n", "t"], "first": "w"}
+{"corp": "slr54", "id": "06cb42c5af", "cls": "VI", "word": "विद्यालय", "dur": 0.503, "ali_score": 0.918, "ph": ["b", "i", "d", "a", "l", "a"], "first": "b"}
+{"corp": "slr54", "id": "0219712651", "cls": "VI", "word": "विकास", "dur": 0.202, "ali_score": 0.779, "ph": ["b", "i", "k", "a", "s"], "first": "b"}
+{"corp": "slr54", "id": "0aa3cea3f4", "cls": "VI", "word": "विद्यार्थी", "dur": 0.421, "ali_score": 0.991, "ph": ["b", "i", "d", "aː", "t", "iː"], "first": "b"}
+{"corp": "slr54", "id": "0d96d354de", "cls": "CHH", "word": "छैन", "dur": 0.222, "ali_score": 0.957, "ph": ["t", "aɪ", "n"], "first": "t"}
+{"corp": "slr54", "id": "07b4178f60", "cls": "CHH", "word": "छैन", "dur": 0.201, "ali_score": 0.998, "ph": ["t", "aɪ", "n"], "first": "t"}
+{"corp": "slr54", "id": "03a7a9cef6", "cls": "GY", "word": "आज्ञाअनुसार", "dur": 0.603, "ali_score": 0.892, "ph": ["a", "ɡ", "a", "n", "s", "a", "r"], "first": "ɡ"}
+{"corp": "slr54", "id": "0cef71a7fb", "cls": "CHH", "word": "छन्", "dur": 0.222, "ali_score": 0.958, "ph": ["ts", "a5", "n"], "first": "ts"}
+{"corp": "slr54", "id": "0c6162fb09", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.989, "ph": ["ɕ", "əɜ", "n"], "first": "ɕ"}
+{"corp": "slr54", "id": "013c2a9e75", "cls": "CHH", "word": "छ्न्", "dur": 0.201, "ali_score": 0.739, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "0f32721eac", "cls": "CHH", "word": "छुवाछुत", "dur": 0.422, "ali_score": 0.829, "ph": ["s", "u", "a", "s", "ə", "t"], "first": "s"}
+{"corp": "slr54", "id": "0ad6ca4a98", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.981, "ph": ["th", "a", "n"], "first": "th"}
+{"corp": "slr54", "id": "06881bddaa", "cls": "CHH", "word": "छोइङ", "dur": 0.382, "ali_score": 0.018, "ph": ["ts.h", "uei5"], "first": "ts.h"}
+{"corp": "slr54", "id": "0f311ad5a1", "cls": "VI", "word": "विज्ञान", "dur": 0.282, "ali_score": 0.734, "ph": ["b", "i", "ɡ", "aː", "n"], "first": "b"}
+{"corp": "slr54", "id": "05374f8aad", "cls": "CHH", "word": "छैन", "dur": 0.262, "ali_score": 0.997, "ph": ["ts.h", "ai5", "n"], "first": "ts.h"}
+{"corp": "slr54", "id": "0fdcdc7233", "cls": "CHH", "word": "छन्", "dur": 0.242, "ali_score": 0.995, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "slr54", "id": "0c83c28bc9", "cls": "CHA", "word": "चिनिन्छ", "dur": 0.362, "ali_score": 0.958, "ph": ["tɕh", "i5", "l", "i5", "n", "ts.h"], "first": "tɕh"}
+{"corp": "slr54", "id": "0f31740b1c", "cls": "CHH", "word": "छोरा", "dur": 0.221, "ali_score": 0.882, "ph": ["t", "u", "r", "a"], "first": "t"}
+{"corp": "slr54", "id": "090a041ddb", "cls": "VI", "word": "विदेह", "dur": 0.483, "ali_score": 0.903, "ph": ["b", "i", "d", "eː", "h", "a"], "first": "b"}
+{"corp": "slr54", "id": "07178a2e1b", "cls": "CHA", "word": "चन्द्रमाको", "dur": 0.603, "ali_score": 0.994, "ph": ["t", "o", "m", "r", "u", "m", "a", "k", "u"], "first": "t"}
+{"corp": "slr54", "id": "042d425ec7", "cls": "CHA", "word": "चुनाव", "dur": 0.322, "ali_score": 0.981, "ph": ["s", "u", "n", "aː", "b"], "first": "s"}
+{"corp": "slr54", "id": "08088d67fe", "cls": "CHH", "word": "छन्", "dur": 0.222, "ali_score": 0.48, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "slr54", "id": "083aba34b9", "cls": "VI", "word": "विजया", "dur": 0.282, "ali_score": 0.934, "ph": ["b", "i", "dʒ", "a", "j", "aː"], "first": "b"}
+{"corp": "slr54", "id": "0dada40f97", "cls": "VI", "word": "विस्तार", "dur": 0.343, "ali_score": 0.966, "ph": ["m", "i", "s", "t", "a", "r"], "first": "m"}
+{"corp": "slr54", "id": "0fea5a4e37", "cls": "CHH", "word": "छन्", "dur": 0.221, "ali_score": 0.975, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "079c05a46d", "cls": "GY", "word": "भाषाविज्ञानमा", "dur": 0.924, "ali_score": 0.994, "ph": ["a", "s", "a", "b", "i", "k", "i", "a", "n", "m", "a"], "first": "s"}
+{"corp": "slr54", "id": "034a2e19cb", "cls": "CHA", "word": "चौबीसी", "dur": 0.462, "ali_score": 0.138, "ph": ["tʃ", "e̞", "b", "i", "s", "i"], "first": "tʃ"}
+{"corp": "slr54", "id": "096fefcc27", "cls": "SW", "word": "स्वर्ण", "dur": 0.422, "ali_score": 0.898, "ph": ["w", "a", "n"], "first": "w"}
+{"corp": "slr54", "id": "0f8126011c", "cls": "VI", "word": "विवाह", "dur": 0.302, "ali_score": 0.856, "ph": ["t", "i", "v", "a"], "first": "t"}
+{"corp": "slr54", "id": "031d3cdca0", "cls": "VI", "word": "विशिष्ट", "dur": 0.441, "ali_score": 0.998, "ph": ["b", "i", "s", "ɪ", "s", "t"], "first": "b"}
+{"corp": "slr54", "id": "01a5d56ab8", "cls": "CHA", "word": "चामल", "dur": 0.362, "ali_score": 0.994, "ph": ["t", "a", "m", "a", "l"], "first": "t"}
+{"corp": "slr54", "id": "0872f8d353", "cls": "CHA", "word": "चिप्स", "dur": 0.282, "ali_score": 0.916, "ph": ["dʒ", "e", "b", "s"], "first": "dʒ"}
+{"corp": "slr54", "id": "036e09ee3f", "cls": "CHA", "word": "चरा", "dur": 0.262, "ali_score": 0.989, "ph": ["t", "ɑ", "r", "a"], "first": "t"}
+{"corp": "slr54", "id": "0bf46f386f", "cls": "CHA", "word": "चराहरूलाई", "dur": 0.724, "ali_score": 0.991, "ph": ["t", "a", "r", "a", "h", "a", "r", "u", "l", "l", "aɪ"], "first": "t"}
+{"corp": "slr54", "id": "04ed2690e9", "cls": "VI", "word": "विज्ञानसम्बन्धी", "dur": 0.804, "ali_score": 0.878, "ph": ["b", "i", "ɡ", "æ", "n", "z", "ɐ", "m", "m", "ə", "n", "d", "i"], "first": "b"}
+{"corp": "slr54", "id": "084c502925", "cls": "CHA", "word": "चाहन्थे", "dur": 0.443, "ali_score": 0.879, "ph": ["ts", "a5", "n", "th", "i5"], "first": "ts"}
+{"corp": "slr54", "id": "087dfdcd3e", "cls": "CHH", "word": "छोरा", "dur": 0.322, "ali_score": 0.871, "ph": ["tsh", "u5", "r"], "first": "tsh"}
+{"corp": "slr54", "id": "0f823b47dc", "cls": "CHH", "word": "छोरी", "dur": 0.282, "ali_score": 0.924, "ph": ["tʃ", "o", "d", "i"], "first": "tʃ"}
+{"corp": "slr54", "id": "0d4e15ac23", "cls": "CHH", "word": "छापियो", "dur": 0.443, "ali_score": 0.984, "ph": ["ts.h", "a", "p", "o"], "first": "ts.h"}
+{"corp": "slr54", "id": "0b8e52308e", "cls": "VI", "word": "विवाह", "dur": 0.262, "ali_score": 0.986, "ph": ["d", "i", "b", "a", "h"], "first": "d"}
+{"corp": "slr54", "id": "01aa107111", "cls": "VI", "word": "विचार", "dur": 0.342, "ali_score": 0.998, "ph": ["b", "i", "t", "a", "r"], "first": "b"}
+{"corp": "slr54", "id": "0e4a8f84b7", "cls": "VI", "word": "विवाह", "dur": 0.282, "ali_score": 0.573, "ph": ["v", "i", "b", "a", "h"], "first": "v"}
+{"corp": "slr54", "id": "075416cc61", "cls": "CHA", "word": "चोपडाले", "dur": 0.484, "ali_score": 0.633, "ph": ["s", "o", "p", "o", "d", "a", "l", "i"], "first": "s"}
+{"corp": "slr54", "id": "0e1156d4a1", "cls": "CHH", "word": "छोरा", "dur": 0.222, "ali_score": 0.942, "ph": ["s", "o", "r", "a"], "first": "s"}
+{"corp": "slr54", "id": "025e6ee000", "cls": "CHA", "word": "चलाएको", "dur": 0.443, "ali_score": 0.91, "ph": ["ts", "e", "l", "aː", "j", "i", "k", "u"], "first": "ts"}
+{"corp": "slr54", "id": "0734bbe5e3", "cls": "CHH", "word": "छोडेको", "dur": 0.422, "ali_score": 0.995, "ph": ["s", "ɔ", "ɾ", "i", "k", "u"], "first": "s"}
+{"corp": "slr54", "id": "0be0676b0e", "cls": "SW", "word": "स्वरूप", "dur": 0.322, "ali_score": 0.806, "ph": ["s", "ɑ", "r", "u"], "first": "s"}
+{"corp": "slr54", "id": "0699249a65", "cls": "VI", "word": "विभिन्न", "dur": 0.262, "ali_score": 0.935, "ph": ["b", "i", "i", "n"], "first": "b"}
+{"corp": "slr54", "id": "014454032b", "cls": "VI", "word": "विवेकानन्दको", "dur": 0.885, "ali_score": 0.388, "ph": ["b", "i", "b", "e", "k", "aː", "n", "ʌ", "n", "d", "ʉ", "k", "o"], "first": "b"}
+{"corp": "slr54", "id": "02557470ea", "cls": "SW", "word": "स्वयं", "dur": 0.322, "ali_score": 0.761, "ph": ["s", "w", "aɪ"], "first": "s"}
+{"corp": "slr54", "id": "098e107bdc", "cls": "CHH", "word": "छन्", "dur": 0.222, "ali_score": 0.992, "ph": ["ts", "a", "n"], "first": "ts"}
+{"corp": "slr54", "id": "0eba093fd0", "cls": "VI", "word": "विशेष", "dur": 0.342, "ali_score": 0.982, "ph": ["b", "i", "s", "ɪ", "s"], "first": "b"}
+{"corp": "slr54", "id": "031a4b1adf", "cls": "GY", "word": "ज्ञानेन्द्र", "dur": 0.322, "ali_score": 0.264, "ph": ["m", "ɡ", "a", "n", "i", "n", "d", "r", "u"], "first": "m"}
+{"corp": "slr54", "id": "0b3cadd727", "cls": "CHA", "word": "चुरोट", "dur": 0.422, "ali_score": 0.975, "ph": ["ts", "ʉ", "r", "ɔ"], "first": "ts"}
+{"corp": "slr54", "id": "07ffbf3c9e", "cls": "CHH", "word": "छन्", "dur": 0.201, "ali_score": 0.973, "ph": ["ts.", "əɜ", "n"], "first": "ts."}
+{"corp": "slr54", "id": "08627a4011", "cls": "VI", "word": "विभागहरूमा", "dur": 0.864, "ali_score": 0.997, "ph": ["v", "i", "v", "a", "ɡ", "h", "ɑ", "r", "m", "a"], "first": "v"}
+{"corp": "slr54", "id": "0989ff9919", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.973, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "slr54", "id": "0cc43eb741", "cls": "CHH", "word": "छन्", "dur": 0.202, "ali_score": 0.002, "ph": ["s", "a", "n"], "first": "s"}
+{"corp": "slr54", "id": "0cb5380254", "cls": "CHH", "word": "छन्", "dur": 0.241, "ali_score": 0.981, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "02bb62e56c", "cls": "CHA", "word": "चौधरीको", "dur": 0.583, "ali_score": 0.913, "ph": ["ts", "aʊ", "t", "ə", "ɾ", "i", "k"], "first": "ts"}
+{"corp": "slr54", "id": "0a174e485a", "cls": "VI", "word": "विष्ट", "dur": 0.282, "ali_score": 0.708, "ph": ["v", "i", "s", "t"], "first": "v"}
+{"corp": "slr54", "id": "084f8770e0", "cls": "VI", "word": "विभिन्न", "dur": 0.342, "ali_score": 0.907, "ph": ["b", "v", "i", "n"], "first": "b"}
+{"corp": "slr54", "id": "01f993356b", "cls": "CHH", "word": "छन्", "dur": 0.282, "ali_score": 0.948, "ph": ["t", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "0463bdf222", "cls": "GY", "word": "आज्ञाबाट", "dur": 0.423, "ali_score": 0.821, "ph": ["a", "ɡ", "e", "m", "a", "t", "a"], "first": "ɡ"}
+{"corp": "slr54", "id": "0b1f7ff2b6", "cls": "CHA", "word": "चस्स", "dur": 0.261, "ali_score": 0.377, "ph": ["t", "ɑ", "s", "t", "a"], "first": "t"}
+{"corp": "slr54", "id": "0676bf05c3", "cls": "CHA", "word": "चम्चाले", "dur": 0.423, "ali_score": 0.928, "ph": ["t", "a", "m", "z", "a", "l", "i"], "first": "t"}
+{"corp": "slr54", "id": "0945110e79", "cls": "VI", "word": "विभिन्न", "dur": 0.242, "ali_score": 0.997, "ph": ["b", "i", "v", "i", "n"], "first": "b"}
+{"corp": "slr54", "id": "0864d637d0", "cls": "VI", "word": "विशेष", "dur": 0.281, "ali_score": 0.997, "ph": ["b", "i", "s", "e", "s"], "first": "b"}
+{"corp": "slr54", "id": "064c460aaa", "cls": "CHA", "word": "चलचित्रमा", "dur": 0.644, "ali_score": 0.997, "ph": ["z", "e", "l", "a", "dʒ", "i", "t", "r", "o", "m", "a"], "first": "z"}
+{"corp": "slr54", "id": "01f03d8242", "cls": "VI", "word": "विद्यार्थी", "dur": 0.462, "ali_score": 0.792, "ph": ["b", "i", "d", "aː", "r", "t"], "first": "b"}
+{"corp": "slr54", "id": "0ff60103f2", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.381, "ali_score": 0.893, "ph": ["s", "ɑ", "t", "a"], "first": "s"}
+{"corp": "slr54", "id": "04c850d3fc", "cls": "VI", "word": "विद्यालय", "dur": 0.422, "ali_score": 0.945, "ph": ["b", "i", "t", "aː", "l", "aː"], "first": "b"}
+{"corp": "slr54", "id": "08e2af0fa7", "cls": "VI", "word": "विचार", "dur": 0.282, "ali_score": 0.888, "ph": ["b", "i", "t", "a"], "first": "b"}
+{"corp": "slr54", "id": "0185d561e7", "cls": "VI", "word": "विषयमा", "dur": 0.443, "ali_score": 0.988, "ph": ["m", "i", "s", "e", "m", "aː"], "first": "m"}
+{"corp": "slr54", "id": "0607cfd7ea", "cls": "VI", "word": "विषयमा", "dur": 0.402, "ali_score": 0.989, "ph": ["b", "i", "s", "e", "m", "a"], "first": "b"}
+{"corp": "slr54", "id": "096127e0a3", "cls": "CHA", "word": "चलचित्र", "dur": 0.423, "ali_score": 0.999, "ph": ["t", "a", "l", "d", "i", "d", "r", "a"], "first": "t"}
+{"corp": "slr54", "id": "0df13a7bd8", "cls": "CHA", "word": "चम्चा", "dur": 0.401, "ali_score": 0.783, "ph": ["s", "a", "m", "t", "a"], "first": "s"}
+{"corp": "slr54", "id": "09c1ab6302", "cls": "VI", "word": "विकास", "dur": 0.241, "ali_score": 0.995, "ph": ["b", "i", "k", "a", "s"], "first": "b"}
+{"corp": "slr54", "id": "0e5ebcfe7f", "cls": "VI", "word": "विदेशी", "dur": 0.422, "ali_score": 0.998, "ph": ["b", "i", "d", "a", "s"], "first": "b"}
+{"corp": "slr54", "id": "00f377d517", "cls": "VI", "word": "विधा", "dur": 0.202, "ali_score": 0.939, "ph": ["m", "i", "d", "a"], "first": "m"}
+{"corp": "slr54", "id": "00eab0a931", "cls": "CHA", "word": "चितामा", "dur": 0.483, "ali_score": 0.928, "ph": ["tʃ", "i", "t", "a", "m", "a"], "first": "tʃ"}
+{"corp": "slr54", "id": "051d9edc4c", "cls": "SW", "word": "स्वचालित", "dur": 0.643, "ali_score": 0.862, "ph": ["s", "u", "tʃ", "a", "l", "i", "d"], "first": "s"}
+{"corp": "slr54", "id": "0355afd4f4", "cls": "CHA", "word": "चेलीबेटी", "dur": 0.483, "ali_score": 0.6, "ph": ["s", "a", "l", "i", "v", "a", "t", "i"], "first": "s"}
+{"corp": "slr54", "id": "01ff853cc9", "cls": "VI", "word": "विभाजित", "dur": 0.443, "ali_score": 0.838, "ph": ["b", "i", "v", "a", "dʒ", "i"], "first": "b"}
+{"corp": "slr54", "id": "0c6413721e", "cls": "VI", "word": "विकसित", "dur": 0.444, "ali_score": 0.991, "ph": ["ɪ", "k", "ʌ", "s", "ɪ"], "first": "k"}
+{"corp": "slr54", "id": "04793aaac4", "cls": "CHA", "word": "च्यानल", "dur": 0.322, "ali_score": 0.903, "ph": ["dʒ", "aː", "n", "a", "l"], "first": "dʒ"}
+{"corp": "slr54", "id": "0577a5801b", "cls": "VI", "word": "विश्वविद्यालय", "dur": 0.744, "ali_score": 0.978, "ph": ["b", "i", "s", "u", "b", "i", "d", "h", "a", "l", "aɪ"], "first": "b"}
+{"corp": "slr54", "id": "0f74f989b7", "cls": "CHA", "word": "चर्च", "dur": 0.322, "ali_score": 0.784, "ph": ["t", "ɑ", "d"], "first": "t"}
+{"corp": "slr54", "id": "033b840386", "cls": "CHA", "word": "चालेको", "dur": 0.482, "ali_score": 0.992, "ph": ["tʃ", "a", "l", "i", "k", "u"], "first": "tʃ"}
+{"corp": "slr54", "id": "00f7b42746", "cls": "VI", "word": "विश्वविद्यालयमा", "dur": 0.864, "ali_score": 0.992, "ph": ["b", "i", "s", "w", "u", "b", "i", "d", "i", "a", "l", "a", "j", "m", "aː"], "first": "b"}
+{"corp": "slr54", "id": "0210ba41de", "cls": "CHA", "word": "चलाएका", "dur": 0.423, "ali_score": 0.97, "ph": ["n", "s", "o", "l", "a", "k", "a"], "first": "n"}
+{"corp": "slr54", "id": "04633bb546", "cls": "CHA", "word": "चकलेट", "dur": 0.462, "ali_score": 0.91, "ph": ["d", "ɔ", "k", "l", "i"], "first": "d"}
+{"corp": "slr54", "id": "03c003fe70", "cls": "CHA", "word": "चुनिनुभएका", "dur": 0.864, "ali_score": 0.729, "ph": ["tʃ", "u", "n", "i", "n", "u", "b", "aː", "k", "aː"], "first": "tʃ"}
+{"corp": "slr54", "id": "0677f7dee4", "cls": "CHA", "word": "चलिरह्यो", "dur": 0.684, "ali_score": 0.918, "ph": ["tʃ", "a", "l", "iː", "d", "a", "h", "e", "j", "u"], "first": "tʃ"}
+{"corp": "slr54", "id": "0e975341f7", "cls": "SW", "word": "स्वयं", "dur": 0.282, "ali_score": 0.886, "ph": ["s", "a", "m"], "first": "s"}
+{"corp": "slr54", "id": "0fb1ff0773", "cls": "GY", "word": "अभिज्ञान", "dur": 0.402, "ali_score": 0.947, "ph": ["a", "b", "i", "ɡ", "a", "n"], "first": "b"}
+{"corp": "slr54", "id": "08dabd1b27", "cls": "CHA", "word": "चितवन", "dur": 0.363, "ali_score": 0.913, "ph": ["t", "i", "t", "w", "a", "n"], "first": "t"}
+{"corp": "slr54", "id": "0c4b0d7e5a", "cls": "CHA", "word": "चेचकको", "dur": 0.704, "ali_score": 0.955, "ph": ["t", "i", "t", "ʌ", "k", "u"], "first": "t"}
+{"corp": "slr54", "id": "0e99a2710e", "cls": "CHA", "word": "चेलीसँग", "dur": 0.463, "ali_score": 0.992, "ph": ["tʃ", "a", "l", "i", "s", "a", "ŋ", "a"], "first": "tʃ"}
+{"corp": "slr54", "id": "071fe370d5", "cls": "SW", "word": "स्वागत", "dur": 0.403, "ali_score": 0.998, "ph": ["s", "w", "a", "ɡ", "ə"], "first": "s"}
+{"corp": "slr54", "id": "0aefe287a5", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.482, "ali_score": 0.976, "ph": ["s", "w", "a", "s", "t", "ɑ"], "first": "s"}
+{"corp": "slr54", "id": "0cba8259a1", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.262, "ali_score": 0.473, "ph": ["s", "a", "s", "t", "i"], "first": "s"}
+{"corp": "slr54", "id": "05bfc10891", "cls": "GY", "word": "संज्ञा", "dur": 0.242, "ali_score": 0.576, "ph": ["s", "a", "ŋ", "j", "a"], "first": "s"}
+{"corp": "slr54", "id": "002c06d80c", "cls": "SW", "word": "स्वास्थ्य", "dur": 0.403, "ali_score": 0.955, "ph": ["w", "a", "s", "t", "i"], "first": "w"}
+{"corp": "slr54", "id": "05206159cb", "cls": "GY", "word": "वैज्ञानिकले", "dur": 0.584, "ali_score": 0.849, "ph": ["b", "ɜː", "ɡ", "æ", "n", "i", "k", "l", "ɪ"], "first": "b"}
+{"corp": "slr54", "id": "0f8d49ed34", "cls": "SW", "word": "स्वेको", "dur": 0.402, "ali_score": 0.85, "ph": ["ei5", "k", "u5"], "first": "k"}
+{"corp": "slr54", "id": "07b18ba4c8", "cls": "SW", "word": "स्वरूप", "dur": 0.302, "ali_score": 0.831, "ph": ["s", "o", "r", "u"], "first": "s"}
+{"corp": "slr54", "id": "079955894b", "cls": "SW", "word": "स्वाद", "dur": 0.302, "ali_score": 0.676, "ph": ["s", "w", "a", "d"], "first": "s"}
+{"corp": "slr54", "id": "0df8f63ef0", "cls": "SW", "word": "स्वशासन", "dur": 0.663, "ali_score": 0.991, "ph": ["ʃ", "ɑ", "ʃ", "a", "s", "ɑ", "n"], "first": "ʃ"}
+{"corp": "slr54", "id": "0b1113144a", "cls": "SW", "word": "स्वरका", "dur": 0.502, "ali_score": 0.707, "ph": ["s", "u", "r", "k", "a"], "first": "s"}
+{"corp": "slr54", "id": "0681de24a4", "cls": "SW", "word": "स्वतन्त्र", "dur": 0.342, "ali_score": 0.997, "ph": ["s", "u", "t", "a", "n", "d", "r", "o"], "first": "s"}
+{"corp": "slr54", "id": "0c1d39c829", "cls": "GY", "word": "ज्ञात", "dur": 0.342, "ali_score": 0.091, "ph": ["ɡ", "a", "t"], "first": "ɡ"}
+{"corp": "slr54", "id": "04240a8cce", "cls": "GY", "word": "ज्ञाताले", "dur": 0.443, "ali_score": 0.872, "ph": ["ɡ", "aː", "t", "aː", "l", "i"], "first": "ɡ"}
+{"corp": "slr54", "id": "010c0673c0", "cls": "GY", "word": "ज्ञानको", "dur": 0.303, "ali_score": 0.979, "ph": ["ɡ", "a", "n", "k", "o"], "first": "ɡ"}
+{"corp": "slr54", "id": "0d051de57f", "cls": "GY", "word": "ज्ञान", "dur": 0.222, "ali_score": 0.964, "ph": ["ɡ", "a"], "first": "ɡ"}
+{"corp": "slr54", "id": "09659803da", "cls": "GY", "word": "ज्ञान", "dur": 0.222, "ali_score": 0.997, "ph": ["ɡ", "aː"], "first": "ɡ"}
+{"corp": "slr54", "id": "049cb42eef", "cls": "GY", "word": "ज्ञान", "dur": 0.281, "ali_score": 0.99, "ph": ["ɡ", "aː", "n"], "first": "ɡ"}
+{"corp": "slr54", "id": "0a6eb1b731", "cls": "GY", "word": "ज्ञानयोगी", "dur": 0.664, "ali_score": 0.913, "ph": ["k", "aː", "n", "j", "ɡ", "i"], "first": "k"}
+{"corp": "slr54", "id": "081f358094", "cls": "GY", "word": "ज्ञान", "dur": 0.241, "ali_score": 0.523, "ph": ["ɡ", "a", "n"], "first": "ɡ"}
+{"corp": "slr54", "id": "01772ce60b", "cls": "GY", "word": "ज्ञानविज्ञान", "dur": 0.663, "ali_score": 0.649, "ph": ["d", "ɛ", "n", "b", "i", "ɡ", "æ"], "first": "d"}
+{"corp": "slr54", "id": "08b45dfc1f", "cls": "GY", "word": "ज्ञापन", "dur": 0.402, "ali_score": 0.697, "ph": ["ɡ", "aː", "p", "o", "n"], "first": "ɡ"}
+{"corp": "slr54", "id": "0624a67246", "cls": "GY", "word": "रत्नविज्ञहरू", "dur": 0.824, "ali_score": 0.989, "ph": ["r", "a", "t", "n", "a", "v", "i", "ɡ", "i", "h", "e", "r", "u"], "first": "r"}
+{"corp": "slr54", "id": "042455c513", "cls": "GY", "word": "ज्ञानेन्द्रले", "dur": 0.684, "ali_score": 0.41, "ph": ["ɡ", "a", "n", "i", "n", "d", "r", "ɑ", "l", "e"], "first": "ɡ"}
+{"corp": "slr54", "id": "015a010f0b", "cls": "SW", "word": "स्वास्थ्यलाई", "dur": 0.564, "ali_score": 0.893, "ph": ["s", "v", "a", "s", "t", "a", "l", "a"], "first": "s"}
+{"corp": "slr54", "id": "0325510dd5", "cls": "SW", "word": "स्वीकार", "dur": 0.383, "ali_score": 0.997, "ph": ["s", "u", "i", "k", "a", "r"], "first": "s"}
+{"corp": "slr54", "id": "0cb9d2ae83", "cls": "SW", "word": "स्वामित्व", "dur": 0.483, "ali_score": 0.711, "ph": ["ʃ", "w", "a", "m", "i", "t", "a"], "first": "ʃ"}
+{"corp": "slr54", "id": "0525a53502", "cls": "GY", "word": "वैज्ञानिकहरू", "dur": 0.544, "ali_score": 0.992, "ph": ["b", "e", "ɡ", "aː", "n", "i", "k", "a", "r", "u"], "first": "b"}
+{"corp": "slr54", "id": "0512b93412", "cls": "GY", "word": "वैज्ञानिक", "dur": 0.583, "ali_score": 0.978, "ph": ["b", "ʌ", "ɡ", "a", "n", "i"], "first": "b"}
+{"corp": "slr54", "id": "0667997af3", "cls": "SW", "word": "स्वभावको", "dur": 0.362, "ali_score": 0.968, "ph": ["s", "o", "v", "aː", "p", "k", "o"], "first": "s"}
+{"corp": "slr54", "id": "08aa9d4ff7", "cls": "SW", "word": "स्विट्जरल्यान्डमा", "dur": 0.883, "ali_score": 0.858, "ph": ["s", "uː", "z", "z", "ə", "l", "æ", "n", "m", "a"], "first": "s"}
