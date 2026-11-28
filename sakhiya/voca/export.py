@@ -52,30 +52,30 @@ class ExportableSakhiyaVoca(nn.Module):
         anti = [c.synth_fft - 1 - i for i in range(c.cep_anti)]
         h_re, h_im = _cepstrum_matrices(causal + anti, c.synth_fft)
         n_re, n_im = _cepstrum_matrices(list(range(c.noise_cep)), c.noise_fft)
-        self.register_buffer("harmonic_real", h_re, persistent=False)
-        self.register_buffer("harmonic_imag", h_im, persistent=False)
-        self.register_buffer("noise_real", n_re, persistent=False)
-        self.register_buffer("noise_imag", n_im, persistent=False)
+        self.register_buffer("harmonic_real", h_re)
+        self.register_buffer("harmonic_imag", h_im)
+        self.register_buffer("noise_real", n_re)
+        self.register_buffer("noise_imag", n_im)
 
         for name, win in (("synth", v.synth_window), ("noise", v.noise_window)):
             a_re, a_im = _analysis_kernels(win)
-            self.register_buffer(f"{name}_ana_re", a_re, persistent=False)
-            self.register_buffer(f"{name}_ana_im", a_im, persistent=False)
-            self.register_buffer(f"{name}_syn", _synthesis_kernel(win), persistent=False)
-            self.register_buffer(f"{name}_env", (win.double().square()).float()[None, None].contiguous(), persistent=False)
+            self.register_buffer(f"{name}_ana_re", a_re)
+            self.register_buffer(f"{name}_ana_im", a_im)
+            self.register_buffer(f"{name}_syn", _synthesis_kernel(win))
+            self.register_buffer(f"{name}_env", (win.double().square()).float()[None, None].contiguous())
 
-        self.register_buffer("ramp", torch.arange(c.hop, dtype=torch.float32) / c.hop, persistent=False)
+        self.register_buffer("ramp", torch.arange(c.hop, dtype=torch.float32) / c.hop)
         self.phase_steps = 1 << 24
 
         chosen = torch.ones(c.cep_causal, dtype=torch.float32)
         chosen[polish.sharpen_from:polish.sharpen_to] = polish.sharpen
         mirror = torch.ones(c.cep_anti, dtype=torch.float32)
-        self.register_buffer("sharpen_vec", torch.cat((chosen, mirror)), persistent=False)
+        self.register_buffer("sharpen_vec", torch.cat((chosen, mirror)))
 
         k = polish.pitch_smooth
         tri = torch.cat((torch.arange(1, k + 2), torch.arange(k, 0, -1))).float()
-        self.register_buffer("pitch_kernel", (tri / tri.sum())[None, None], persistent=False)
-        self.register_buffer("rumble_cut", torch.sigmoid((v.synth_frequency - 90.0) / 12.0)[None, :, None], persistent=False)
+        self.register_buffer("pitch_kernel", (tri / tri.sum())[None, None])
+        self.register_buffer("rumble_cut", torch.sigmoid((v.synth_frequency - 90.0) / 12.0)[None, :, None])
 
     def _analysis(self, source: torch.Tensor, name: str, fft: int, hop: int) -> tuple[torch.Tensor, torch.Tensor]:
         padded = F.pad(source[:, None], (fft // 2, fft))
@@ -333,8 +333,8 @@ def export_onnx_models(
         is_transformer_w = (
             arr.dtype == np.float32
             and arr.ndim == 2
-            and arr.size >= 4096
-            and any(k in init.name for k in ("encoder", "prosody_stack", "acoustic_stack"))
+            and min(arr.shape) >= 128
+            and not any(k in init.name for k in ("tokens", "harmonic", "noise"))
         )
         if is_transformer_w:
             max_val = np.maximum(np.max(np.abs(arr), axis=0, keepdims=True), 1e-8)
