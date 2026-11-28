@@ -304,9 +304,28 @@ def export_onnx_models(
             dynamo=False,
         )
 
+    def _compress_float_constants(graph) -> None:
+        replaced_nodes = []
+        extra_inits = []
+        for idx_n, node in enumerate(list(graph.node)):
+            if node.op_type == "Constant" and len(node.output) == 1:
+                val_attr = next((a for a in node.attribute if a.name == "value"), None)
+                if val_attr is not None:
+                    arr = numpy_helper.to_array(val_attr.t)
+                    if arr.dtype == np.float32 and arr.size >= 256:
+                        fp16_name = f"const_{idx_n}_fp16"
+                        extra_inits.append(numpy_helper.from_array(arr.astype(np.float16), name=fp16_name))
+                        replaced_nodes.append(helper.make_node("Cast", inputs=[fp16_name], outputs=[node.output[0]], to=TensorProto.FLOAT))
+                        continue
+            replaced_nodes.append(node)
+        del graph.node[:]
+        graph.node.extend(replaced_nodes)
+        graph.initializer.extend(extra_inits)
+
     # 1. Build FP16 ONNX (weights stored in FP16 with Cast->FP32 for bit-exact oscillator stability)
     base_m = onnx.load(str(fp32_path))
     g16 = base_m.graph
+    _compress_float_constants(g16)
     new_inits_16 = []
     cast_nodes_16 = []
     for init in list(g16.initializer):
@@ -326,6 +345,7 @@ def export_onnx_models(
     # 2. Build Selective Transformer-Only Per-Channel INT8 + FP16 ONNX
     m8 = onnx.load(str(fp32_path))
     g8 = m8.graph
+    _compress_float_constants(g8)
     new_inits_8 = []
     new_nodes_8 = []
     for init in list(g8.initializer):
