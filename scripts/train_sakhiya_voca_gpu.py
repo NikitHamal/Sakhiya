@@ -257,6 +257,21 @@ class BatchPrefetcher:
         return batch_to_device(self.q.get(), device)
 
 
+def masked_pitch_std(pred: torch.Tensor, tgt: torch.Tensor, mask: torch.Tensor, min_frames: int = 8):
+    """Vectorised per-utterance std over voiced frames (S4: replaces a per-sample Python loop with 2 GPU syncs per item)."""
+    m = mask.float()
+    n = m.sum(dim=1)
+    ok = (n >= min_frames).float()
+    nn_ = (n - 1.0).clamp_min(1.0)
+
+    def _std(x):
+        mean = (x * m).sum(dim=1) / n.clamp_min(1.0)
+        var = (((x - mean[:, None]) ** 2) * m).sum(dim=1) / nn_
+        return (var + 1e-8).sqrt()
+
+    return _std(pred), _std(tgt), ok
+
+
 class SakhiyaVocaTrainingSystem(nn.Module):
     """Wraps `SakhiyaVoca` + training-only `mel_head` + `SpectralLoss`."""
     def __init__(self, config: SakhiyaVocaConfig):
@@ -310,12 +325,8 @@ class SakhiyaVocaTrainingSystem(nn.Module):
         )
 
         # Global-Variance Utterance Pitch Spread Loss (`w = 2.0`)
-        spread_terms = []
-        for b_i in range(tokens.shape[0]):
-            vb = voiced_gt[b_i]
-            if int(vb.sum()) >= 8:
-                spread_terms.append((pros_pred[b_i, vb, 0].std() - pros_tgt[b_i, vb, 0].std()).abs())
-        pitch_spread_loss = torch.stack(spread_terms).mean() if spread_terms else torch.tensor(0.0, device=tokens.device)
+        sd_pred, sd_tgt, sd_ok = masked_pitch_std(pros_pred[..., 0], pros_tgt[..., 0], voiced_gt)
+        pitch_spread_loss = ((sd_pred - sd_tgt).abs() * sd_ok).sum() / sd_ok.sum().clamp_min(1.0)
 
         voicing_loss = F.binary_cross_entropy_with_logits(pros_pred[..., 1][frm_mask], (pros_tgt[..., 1][frm_mask] > 0.5).float())
         energy_loss = (pros_pred[..., 2] - pros_tgt[..., 2]).abs()[frm_mask].mean()
@@ -356,12 +367,8 @@ class SakhiyaVocaTrainingSystem(nn.Module):
             dur_ratio = (pred_frames / gt_frames).mean()
             pause_acc = (((dur_out[..., 1] > 0.0) == present)[pausable].float().mean() if pausable.any() else torch.tensor(1.0))
             voicing_acc = (((pros_pred[..., 1] > 0.0) == (pros_tgt[..., 1] > 0.5))[frm_mask].float().mean())
-            sp_ratios = []
-            for b_i in range(tokens.shape[0]):
-                vb = voiced_gt[b_i]
-                if int(vb.sum()) >= 8:
-                    sp_ratios.append(pros_pred[b_i, vb, 0].std() / pros_tgt[b_i, vb, 0].std().clamp_min(1e-3))
-            spread_ratio = torch.stack(sp_ratios).mean() if sp_ratios else torch.tensor(1.0)
+            spread_ratio = (((sd_pred.detach() / sd_tgt.detach().clamp_min(1e-3)) * sd_ok).sum() / sd_ok.sum().clamp_min(1.0)
+                            + (sd_ok.sum() == 0).float())
 
         metrics = {k: float(v.detach().item()) for k, v in terms.items()}
         metrics.update({
