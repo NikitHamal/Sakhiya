@@ -75,24 +75,29 @@ Following `tiny-voca/src/tiny_voca/align.py` and our `EXP5` calibration:
 
 ---
 
-## 4. Two-Stage Kathmandu-Native Multi-Voice Curriculum (Solving `Rasa` Volume + Kathmandu Accent)
+## 4. Pure `ai4bharat/Rasa` Dual-Voice Studio Curriculum (Session 2 Owner-Locked Update — Zero `SLR43`/`SLR54` Contamination)
 
-How do we get **both** the acoustic richness of `55.1 hours` of `48 kHz -> 24 kHz` studio `ai4bharat/Rasa` (Female + Male) **and** a 100% authentic **Nepal Kathmandu accent** in both Female and Male voices?
+In Session 2, the Owner locked the dataset decision:
+> *"ALSO, I AM FINE WITH RASA DATASET MAN. ITS DATASET IS NOT INDIAN ACCENT. EVEN IF IT IS, IT'S FINE. IT IS BETTER AT LEAST."*
 
-### Stage 1: Multi-Speaker Studio Backbone Pretraining (`Steps 0 -> 85,000`)
-Train on the combined, strictly speaker-ID-separated studio corpus (`n_speakers = 8`):
-- `spk 0`: **Kathmandu Female Target (`F_sakhiya`)** — `SLR43` speaker `nep_6834` + top 4 studio Kathmandu female speakers (`s0546`, `s3614`, `s2099`, `s3960`, acoustically timbre-matched and F0-normalized, `~3.8 h` pure 24 kHz Kathmandu female speech, oversampled `3×`).
-- `spk 1`: **Kathmandu Male Target (`M_sagar`)** — Top high-SNR wideband Nepal-born male speakers from `OpenSLR SLR54` + `FLEURS ne_np` male studio subset (`~4.2 h` pure Nepal male speech, oversampled `3×`).
-- `spk 2`: **`ai4bharat/Rasa` Nepali Female** (`~24 h` curated 24 kHz studio neutral/news/conv/book).
-- `spk 3`: **`ai4bharat/Rasa` Nepali Male** (`~22 h` curated 24 kHz studio neutral/news/conv/book).
-- `spk 4`: **`ai4bharat/Rasa` Sanskrit Female + Gita/Vagdhenu Studio Vedic** (`~6 h` curated 24 kHz studio Sanskrit).
-- `spk 5`: **`ai4bharat/Rasa` Sanskrit Male** (`~5 h` curated 24 kHz studio Sanskrit).
-
-**Why this works:** In `SakhiyaVoca`, the Transformer layers (`encoder`, `duration`, `prosody_stack`, `acoustic_stack`, `vocoder`) share `99.7%` of parameters across all speakers while `voices(spk)` and `frame_voices(spk)` (`384` floats per speaker!) absorb speaker-specific F0 height and vocal-tract length! And because `Rasa`'s `[ʋ]` realizations are labeled as token `w` during Stage 1, the shared Transformer backbone learns crystal-clear `[b]` vs `[w]` articulation from `60+ hours` of studio audio without any Indian `[ʋ]` leak into `[b]`!
-
-### Stage 2: Kathmandu Voice & Accent Lock (`Steps 85,000 -> 115,000`)
-- Anneal sampling weights to **70% Kathmandu Native (`spk 0` Female + `spk 1` Male, with Kathmandu `[ts]/[tsʰ]` affricates and `g2p_v4` schwa/phonology)** + **30% Studio High-Band Regularizer (`spk 2..5` with `duration` and `prosody_stack` gradients masked on `spk 2..5` so prosody, pausing, and accent lock 100% to native Kathmandu speakers while keeping 48->24 kHz studio bandwidth)**.
-- At export time, slice rows `0` (`F_sakhiya`) and `1` (`M_sagar`) of `voices` and `frame_voices` into the final 2-voice checkpoint!
+And our `EXP6` measurements (`gemini/06_session2_rasa_pure_voices_and_alpa_tinyvoca_hindi_breakthroughs.md`) proved why **100% Pure `ai4bharat/Rasa` (Female `28.74 h` + Male `26.36 h`) with ZERO `SLR43`/`SLR54` domain mixing** is acoustically and prosodically far superior:
+1. **`SLR43` (`nep_6834`) Has Almost Zero Interior Pauses (`0.15` pauses/utt, median `0.0`!)**: Fine-tuning on `SLR43` is what caused `cand_b_v2` (`0.20` pauses/utt) to rush breathlessly through sentences. By contrast, `Rasa` Female and `Rasa` Male both average **`2.15` natural breath pauses per utterance** (`48->24 kHz`, `-71 to -72 dBFS` studio noise floor, `-25.25 dB` real `8–12 kHz` studio air vs `-90.70 dB` Nyquist brickwall in `SLR54`).
+2. **One Single Studio Artist per Voice ID (`tiny-voca`'s #1 Rule)**:
+   - `voice = 0` (`F_sakhiya`): **100% `ai4bharat/Rasa` Nepali Female** (`~17.9 h` neutral `WIKI + NEWS + BOOK + CONV` in Stage 1, plus 6 expressive styles in `Sakhiya-Voca-Pro-9.5M`).
+   - `voice = 1` (`M_sagar`): **100% `ai4bharat/Rasa` Nepali Male** (`~17.4 h` neutral `WIKI + NEWS + BOOK + CONV` in Stage 1, plus 6 expressive styles in `Sakhiya-Voca-Pro-9.5M`), sharing `7,282` identical parallel sentences (`48.2%` text overlap) with `voice = 0`!
+   - Optional Sanskrit Studio Voices (`Rasa` Sanskrit Female & Male `~9.8 h` neutral `WIKI + CONV + NEWS + BOOK`).
+3. **Disambiguated `ब` (`b`) vs `व` (`w`) Phoneme Purity (`EXP6`)**:
+   - During `Rasa` training, keep orthographic `ब` (`U+092C`) as `b` and tag orthographic `व` (`U+0935`) as `w` when the speaker articulates `[ʋ]/[w]` and `b` when they articulate `[b]` (or `संव -> s ʌ m b`). This guarantees that the `b` phoneme embedding learns a **100% pure bilabial stop `[b]`** and `w` learns a **100% pure approximant `[ʋ]/[w]`**—allowing inference to switch cleanly between `v_mode = "rasa"` and `v_mode = "kathmandu"` (`विद्यालय -> b i d̪ j a l ʌ j ʌ`) with zero acoustic mud!
+4. **Articulatory + R-Colored (`0.30 * /ɹ/`) Warm-Start from `n4ze3m/tiny-voca.pt` (`EXP8`)**:
+   - Initialize `Sakhiya-Voca-4.5M` (`d=192`) from `n4ze3m/tiny-voca.pt` (`Apache-2.0`) via `build_articulatory_r_coloured_transplant` (`EXP8`), which starts at **`-48.9%` lower loss at Step 0** and reaches **`-53.4%` lower total loss (`9.90` vs `21.25`)** after just 30 steps on real `Rasa` Nepali Female & Male speech!
+5. **All 7 `SourceFilter` Physics Upgrades from `RL10x/tiny-voca-hindi` & `77ethers/alpa` Built In (`EXP7`)**:
+   - `adaptive_lifter = 0.65` (`-10.13 dB` high-pitch female double-comb reduction above `300 Hz`),
+   - Train+Infer differentiable 5-class split-band excitation `mvf_hz` (`0 Hz` voiceless, `1,400 Hz` voiced stops & murmured `घ/झ/ढ/ध/भ`, `4,500 Hz` vowels/sonorants, `-18 dB` vowel noise cap $\rightarrow$ `-65.31 dB` unvoiced buzz reduction),
+   - `smooth_noise_env` + `smooth_gains` + `smooth_noise_gains` (`-37.99 dB` `93.75 Hz` frame-rate hum reduction, `-50.75 dB` sub-frame gargle reduction),
+   - Glottal-phase-locked von Mises `breath_pulse` ($\kappa = 2.0$ at $\theta = -\pi/2$) + `natural_pulse_train` (`jitter = 0.005, shimmer = 0.035`),
+   - `16-D` `frame_noise` anti-blur latent + 4-band power-conserving `sharpen = 1.40` (`+9.47 dB` formant contrast),
+   - YIN target despiking (`clean_pyin_f0`) + `octave_fix = 1.6` + `voiced_vowels = True`,
+   - Sentence-disjoint hash split (`sha256(symbols) % 1000`, holding out both Female & Male readings of validation/test sentences) + `64 ms` leading / `96 ms` trailing edge silence padding on trimmed `Rasa` clips.
 
 ---
 

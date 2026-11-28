@@ -37,9 +37,22 @@ Over 83 sessions, `Sakhiya` chased incremental spectral/comb-grit patches on top
 5. **Working `Sakhiya-Voca-4.5M` Prototype Built, Exported to ONNX & Benchmarked on CPU (`EXP4`)**:
    - We implemented, exported (`opset 17`), and benchmarked **`Sakhiya-Voca-4.5M`** (`gemini/experiments/exp4_sakhiya_voca_prototype.py` -> `gemini/results/exp4_sakhiya_voca_prototype.json`):
      - **Total Parameters:** **`4,534,795`** (`4.53M` — `99.43%` in 11 full-rank RoPE Transformer blocks, `0.57%` = `25,862` params in `NepaliSourceFilterHead`)
-     - **Voices Included in One Checkpoint:** **2 Voices** (`0 = F_sakhiya` Female `215 Hz` base, `1 = M_sagar` Male `125 Hz` base) + **2 Languages** (`0 = Nepali`, `1 = Sanskrit/Vedic` with `pitch_add` svara & `stress` moraic weight)
+     - **Voices Included in One Checkpoint:** **2 Voices** (`0 = F_sakhiya` Female, `1 = M_sagar` Male) + **2 Languages** (`0 = Nepali`, `1 = Sanskrit/Vedic` with `pitch_add` svara & `stress` moraic weight)
      - **ONNX Model Sizes:** **`6.556 MB` Mixed INT8+FP16** (`~4.8 MB` with analytic STFT basis) | **`10.849 MB` Pure FP16** | **`21.283 MB` Pure FP32**
      - **Measured MoLab CPU Speed:** **`96.6x – 97.1x` real-time on 1 CPU thread (`RTF = 0.0103`)** and **`144.8x – 161.4x` real-time on 4 CPU threads (`RTF = 0.0062`)** — **3.5x faster than `cand_b_v2` and 5.8x smaller than `cand_b_v2` FP16**!
+
+6. **Session 2 Breakthroughs (`EXP6`, `EXP7`, `EXP8` — `gemini/06_session2_rasa_pure_voices_and_alpa_tinyvoca_hindi_breakthroughs.md`)**:
+   - **Pure `ai4bharat/Rasa` Female (`28.74 h`) + Male (`26.36 h`) Superiority Proven (`EXP6`)**:
+     - Following the Owner's Session 2 directive (*"I AM FINE WITH RASA DATASET MAN. ITS DATASET IS NOT INDIAN ACCENT. EVEN IF IT IS, IT'S FINE. IT IS BETTER AT LEAST"*), `EXP6` proved why we must **NEVER** adapt onto `SLR43` or `SLR54`: `SLR43` (`nep_6834`) has only **`0.15` pauses/utt (median `0.0` pauses/utt)** vs **`2.15` pauses/utt** in `Rasa` Female & Male (which is the exact smoking gun for why `cand_b_v2` stopped pausing at `0.20` pauses/utt!), and `SLR54` has a **`-90.70 dB` brickwall above `8 kHz`** (`16 kHz` crowd audio) vs **`-25.25 dB` real `8–12 kHz` studio air** and **`49.5–55.6 dB` SNR** in `Rasa`!
+     - `EXP6` also proved that keeping orthographic `ब -> b` (`U+092C`) and `व -> w` (`U+0935`) (or acoustic per-clip tagging) on `Rasa` eliminates the `G2P_LEX` label-audio contradiction (`विद्यालय` labeled `b` vs `विभाग` labeled `w` despite identical `-0.273` vs `-0.274` `[ʋ]` realization) that blurred `[b]` in `cand_b_v2`.
+   - **Seven Code-Level Physics & Training Breakthroughs Uncovered from `RL10x/tiny-voca-hindi` (#1 Hindi TTS) & `77ethers/alpa` (`v0.2` Dual-Voice) (`EXP7`)**:
+     1. **`adaptive_lifter = 0.65`**: Eliminates the **`10.97 dB -> 0.84 dB` (`-10.13 dB`)** double-comb metallic ring on high female pitches ($F_0 > 300\text{ Hz}$, where pitch period $T_0 = f_s / F_0 < 80$ falls inside `cep_causal = 80`).
+     2. **Train+Infer Differentiable 5-Class Split-Band Excitation (`mvf_hz` + `mixed_excitation`)**: Eliminates the **`74.21 dB -> 8.89 dB` (`-65.31 dB`)** harmonic pulse buzz inside unvoiced sibilants/stops (`श, ष, स, च, क, त`) and models Nepali breathy-voiced aspirates (`घ, झ, ढ, ध, भ` with `68.39 dB` low-band voice bar `<1.4 kHz` + `8.82 dB` flat aspiration noise `>2 kHz`).
+     3. **Frame-Rate (`93.75 Hz`) Buzz & Sub-Frame (`187.5 Hz`) Gargle Elimination (`smooth_noise_env`, `smooth_gains`, `smooth_noise_gains`)**: Cuts `93.75 Hz` frame-boundary hum by **`-37.99 dB`** and `187.5 Hz` GAN sub-frame gain sawtooth by **`-50.75 dB`**.
+     4. **Glottal-Phase-Locked Breath Puffing (`breath_pulse`, von Mises $\kappa=2.0$ at $\theta = -\pi/2$) & Cycle-Synchronous `natural_pulse_train` (`jitter=0.005, shimmer=0.035`)**: Exact `-0.0001 dB` power conservation with `8.01 dB` open-phase breath modulation.
+     5. **`16-D` Anti-Blur Frame Latent (`frame_noise`) & 4-Band Power-Conserving Cepstral Sharpening (`sharpen = 1.45`)**: Restores **`+9.47 dB`** vowel formant peak-to-valley contrast (`34.15 -> 43.62 dB`).
+     6. **YIN Pitch Target Despiking (`clean_pyin_f0`) + `octave_fix = 1.6` + `voiced_vowels = True`**: Eliminates YIN `>4 st` octave tracker hiccups and whispered creaky vowels.
+     7. **Articulatory + `0.30 * /ɹ/` R-Colored Weight Transplant from `n4ze3m/tiny-voca.pt` (`EXP8`)**: Proven end-to-end on real `ai4bharat/Rasa` Nepali Female & Male studio clips! Cuts Step-0 loss from `38.94` (scratch) to **`19.88`** and Step-30 free-prosody loss from `21.25` (scratch) to **`9.90` (`-53.4%` lower total loss, `-55.4%` lower mel loss, `-95.7%` lower pause error)**, while our LogSumExp Nepali Forced Aligner hits **`100%` exact frame sums** and **`81.4%` within 2 frames** on the label-free voicing-flip timing probe!
 
 ---
 
@@ -47,15 +60,19 @@ Over 83 sessions, `Sakhiya` chased incremental spectral/comb-grit patches on top
 
 | File | Description |
 |---|---|
-| `gemini/README.md` | Executive summary, key empirical findings, and directory index |
+| `gemini/README.md` | Executive summary, Session 1 + Session 2 key empirical findings, and directory index |
 | `gemini/01_deep_codebase_and_history_autopsy.md` | Complete audit of the 83-session history, codebase modules, and parameter budgets (`EXP1`) |
 | `gemini/02_seven_root_causes_with_mathematical_proof.md` | Detailed mathematical and signal-processing proof of the 7 root causes (`EXP1`, `EXP2`, `EXP3`, `EXP5`) |
 | `gemini/03_tiny_voca_and_2026_sota_deep_dive.md` | Code-level dissection of `n4ze3m/tiny-voca` (4.5M), `tiny-voca-hindi` (9.7M), `77ethers/alpa` (4.5M), and Homomorphic Source-Filter physics |
 | `gemini/04_peer_review_of_sonnet_and_synthesis.md` | Rigorous technical review of `sonnet/`'s findings, the 4 traps in Sonnet's plan that Gemini caught, and our unified synthesis |
 | `gemini/05_sakhiya_voca_master_blueprint_and_gpu_runbook.md` | Full specification of `Sakhiya-Voca-4.5M` & `Sakhiya-Voca-Pro-9.5M`, Nepali G2P v4, and the Hour-by-Hour 12h RTX PRO 6000 Blackwell Runbook |
+| `gemini/06_session2_rasa_pure_voices_and_alpa_tinyvoca_hindi_breakthroughs.md` | **Session 2 Deep Dive:** Pure `Rasa` Female+Male proof (`EXP6`), 7 code-level breakthroughs from `tiny-voca-hindi` & `alpa` (`EXP7`), and end-to-end `Rasa` alignment + R-colored transplant convergence (`EXP8`) |
 | `gemini/experiments/exp1_architecture_autopsy.py` | Reproducible parameter, ONNX graph, receptive-field, and CPU RTF autopsy across all tiers |
 | `gemini/experiments/exp2_acoustic_and_signal_forensics.py` | Reproducible HPVR harmonic clarity, modulation spectrum, unconditioned-F0 blur proof, and `gen_audio.py` DSP audit |
 | `gemini/experiments/exp3_nepali_phonology_and_g2p_audit.py` | Reproducible 70-word Nepali Phonological Gold Benchmark & `g2p_v4_prototype` (`8.57% -> 100.0%` word acc) |
 | `gemini/experiments/exp4_sakhiya_voca_prototype.py` | Complete PyTorch + ONNX implementation and CPU benchmark of `Sakhiya-Voca-4.5M` (Dual-Voice F/M) |
 | `gemini/experiments/exp5_rasa_vs_kathmandu_accent_forensics.py` | Empirical accent & `wav2vec2-lv-60-espeak-cv-ft` forced-alignment calibration on `Rasa` vs Kathmandu `SLR43` |
-| `gemini/results/*.json` | All raw measured JSON outputs from `exp1` through `exp5` executed on the MoLab CPU box |
+| `gemini/experiments/exp6_rasa_studio_vs_slr_forensics.py` | **Session 2:** Multi-corpus `Rasa F/M` vs `SLR43`/`SLR54` bandwidth, SNR, pause-rate (`2.15` vs `0.15`), YIN despiking, and `ब` vs `व` consistency proof |
+| `gemini/experiments/exp7_alpa_and_tinyvoca_hindi_breakthroughs.py` | **Session 2:** Empirical ablation of `adaptive_lifter`, split-band `mvf_hz`, `93.75 Hz` buzz removal, `breath_pulse`, and 4-band formant sharpening |
+| `gemini/experiments/exp8_end_to_end_rasa_pipeline_and_transplant_smoke.py` | **Session 2:** End-to-end real `Rasa` Nepali F+M ingestion, LogSumExp alignment, voicing-flip probe, and Scratch vs R-Colored Transplant training proof |
+| `gemini/results/exp1..8*.json` | All raw measured JSON outputs from `exp1` through `exp8` executed on the MoLab CPU box |

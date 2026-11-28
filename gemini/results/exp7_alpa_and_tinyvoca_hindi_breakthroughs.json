@@ -1,0 +1,35 @@
+{
+  "experiment": "EXP7_Alpa_and_TinyVoca_Hindi_Breakthrough_Proofs",
+  "elapsed_sec": 0.0,
+  "breakthrough_1_adaptive_lifter": {
+    "f0_hz": 350.0,
+    "pitch_period_samples": 68.57,
+    "cep_causal_limit": 80,
+    "vanilla_double_comb_peak_ripple_db": 10.973,
+    "adaptive_lifter_peak_ripple_db": 0.841,
+    "comb_ripple_reduction_db": 10.132,
+    "vanilla_envelope_rms_error_db": 3.104,
+    "adaptive_lifter_rms_error_db": 0.156
+  },
+  "breakthrough_2_split_band_phonation": {
+    "unvoiced_sibilant_vanilla_harmonic_buzz_prominence_1_8khz_db": 74.21,
+    "unvoiced_sibilant_splitband_harmonic_buzz_prominence_1_8khz_db": 8.89,
+    "unvoiced_buzz_reduction_db": 65.31,
+    "murmured_aspirate_dh_bh_lowband_150_1200hz_harmonicity_db": 68.39,
+    "murmured_aspirate_dh_bh_highband_2000_8000hz_noise_flatness_db": 8.82
+  },
+  "breakthrough_3_frame_rate_buzz_elimination": {
+    "frame_rate_93_75hz_buzz_reduction_db": 37.99,
+    "subframe_187_5hz_gargle_reduction_db": 50.75,
+    "raw_93hz_mod_db": 31.69,
+    "smoothed_93hz_mod_db": -6.3
+  },
+  "breakthrough_4_and_5_breath_pulse_and_formant_sharpening": {
+    "breath_pulse_mean_power_drift_db": -0.0001,
+    "breath_pulse_open_vs_closed_phase_modulation_db": 8.01,
+    "formant_peak_to_valley_orig_db": 34.15,
+    "formant_peak_to_valley_sharpened_db": 43.62,
+    "formant_contrast_gain_db": 9.47,
+    "max_broadband_power_drift_db": 1.96
+  }
+}

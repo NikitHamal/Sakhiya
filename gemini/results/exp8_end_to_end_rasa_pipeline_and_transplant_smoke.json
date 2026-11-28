@@ -1,0 +1,298 @@
+{
+  "experiment": "EXP8_End_to_End_Rasa_Pipeline_Alignment_and_Transplant_Smoke",
+  "elapsed_sec": 271.37,
+  "alignment_and_timing_probe": {
+    "n_aligned_clips": 12,
+    "n_female": 6,
+    "n_male": 6,
+    "exact_frame_sum_pass_rate": 1.0,
+    "mean_token_posterior_prob": 0.662,
+    "mean_vowel_voiced_ratio": 0.832,
+    "mean_interior_pauses_per_utt": 0.5,
+    "voicing_flip_timing_probe": {
+      "n_boundaries_probed": 86,
+      "mean_offset_frames": 0.744,
+      "mean_abs_frames": 1.581,
+      "within_1_frame_pct": 53.5,
+      "within_2_frames_pct": 81.4
+    }
+  },
+  "sample_aligned_utterances": [
+    {
+      "speaker": "female",
+      "text": "म वास्तवमा उनलाई लाइभ हेर्न चाहन्छु, तर म मुम्बई छोड्न पनि सक्दिनँ।",
+      "symbols": "<s> m ʌ | w a s t̪ ʌ b m a | u n l a i | l a i bʱ | h",
+      "durations_first_25": [
+        0,
+        4,
+        13,
+        0,
+        6,
+        11,
+        7,
+        4,
+        4,
+        5,
+        4,
+        11,
+        0,
+        6,
+        6,
+        2,
+        7,
+        8,
+        0,
+        3,
+        13,
+        6,
+        4,
+        0,
+        2
+      ],
+      "frames": 422,
+      "qc": {
+        "mean_token_prob": 0.658,
+        "vowel_voiced": 0.921,
+        "flips": [
+          3,
+          1,
+          0,
+          2,
+          -1
+        ],
+        "pauses_assigned": 1
+      }
+    },
+    {
+      "speaker": "female",
+      "text": "म महेश प्रदिप हूँ, र म स्वास्थ्य पत्रिकाको तर्फबाट बोलिरहेको छु।",
+      "symbols": "<s> m ʌ | m ʌ h e ʃ | p r ʌ d̪ i p | h ũ , r ʌ | m ʌ",
+      "durations_first_25": [
+        0,
+        9,
+        21,
+        0,
+        4,
+        9,
+        6,
+        9,
+        10,
+        0,
+        5,
+        4,
+        11,
+        2,
+        13,
+        4,
+        0,
+        4,
+        18,
+        45,
+        4,
+        11,
+        0,
+        4,
+        10
+      ],
+      "frames": 469,
+      "qc": {
+        "mean_token_prob": 0.736,
+        "vowel_voiced": 0.955,
+        "flips": [
+          2,
+          1,
+          -2,
+          1,
+          3,
+          0,
+          1,
+          4,
+          2,
+          1,
+          -1,
+          1,
+          3
+        ],
+        "pauses_assigned": 1
+      }
+    },
+    {
+      "speaker": "female",
+      "text": "अँ, म अहिले ठिक छु।",
+      "symbols": "<s> ʌ̃ , m ʌ | ʌ h i l e | ʈʰ i k | tsʰ u . </s>",
+      "durations_first_25": [
+        0,
+        54,
+        0,
+        4,
+        19,
+        0,
+        9,
+        6,
+        7,
+        4,
+        15,
+        0,
+        8,
+        13,
+        7,
+        0,
+        10,
+        15,
+        0,
+        0
+      ],
+      "frames": 171,
+      "qc": {
+        "mean_token_prob": 0.637,
+        "vowel_voiced": 0.947,
+        "flips": [
+          0,
+          2
+        ],
+        "pauses_assigned": 0
+      }
+    },
+    {
+      "speaker": "female",
+      "text": "चौधमध्ये चारवटा परियोजनाको काम चलिरहेको छ, बाँकी दसवटाको प्रक्रिया चलिरहेछ।",
+      "symbols": "<s> ts ʌ u d̪ʱ ʌ m ʌ d̪ʱ j e | ts a r ʌ b ʌ ʈ a | p ʌ r i",
+      "durations_first_25": [
+        0,
+        6,
+        11,
+        7,
+        6,
+        13,
+        6,
+        13,
+        4,
+        2,
+        22,
+        0,
+        9,
+        23,
+        7,
+        4,
+        4,
+        13,
+        6,
+        17,
+        0,
+        5,
+        8,
+        3,
+        10
+      ],
+      "frames": 695,
+      "qc": {
+        "mean_token_prob": 0.722,
+        "vowel_voiced": 0.863,
+        "flips": [
+          2,
+          -1,
+          -1,
+          -1,
+          -1,
+          1,
+          1,
+          1,
+          -1,
+          3,
+          0,
+          -1,
+          -1,
+          1,
+          0
+        ],
+        "pauses_assigned": 1
+      }
+    }
+  ],
+  "training_convergence_30_steps_cpu": {
+    "scratch_init": {
+      "step_0": {
+        "total_loss": 38.9351,
+        "stft_loss": 3.9155,
+        "mel_loss": 2.2846,
+        "pitch_l1": 0.6569,
+        "pitch_spread_l1": 0.0253,
+        "voicing_bce": 1.0721,
+        "dur_mse": 3.8056,
+        "pause_bce": 0.5437
+      },
+      "step_10": {
+        "total_loss": 25.4231,
+        "stft_loss": 2.8108,
+        "mel_loss": 1.7345,
+        "pitch_l1": 0.2192,
+        "pitch_spread_l1": 0.0457,
+        "voicing_bce": 0.5969,
+        "dur_mse": 0.4006,
+        "pause_bce": 0.1996
+      },
+      "step_20": {
+        "total_loss": 28.2934,
+        "stft_loss": 2.9262,
+        "mel_loss": 1.9467,
+        "pitch_l1": 0.4194,
+        "pitch_spread_l1": 0.0281,
+        "voicing_bce": 0.6477,
+        "dur_mse": 0.3354,
+        "pause_bce": 0.2778
+      },
+      "step_30": {
+        "total_loss": 21.2546,
+        "stft_loss": 2.4642,
+        "mel_loss": 1.4331,
+        "pitch_l1": 0.1876,
+        "pitch_spread_l1": 0.0221,
+        "voicing_bce": 0.5503,
+        "dur_mse": 0.1912,
+        "pause_bce": 0.2226
+      }
+    },
+    "articulatory_r_coloured_transplant": {
+      "step_0": {
+        "total_loss": 19.8833,
+        "stft_loss": 2.1561,
+        "mel_loss": 1.1812,
+        "pitch_l1": 0.2119,
+        "pitch_spread_l1": 0.0306,
+        "voicing_bce": 0.5501,
+        "dur_mse": 0.1462,
+        "pause_bce": 2.1976
+      },
+      "step_10": {
+        "total_loss": 12.4068,
+        "stft_loss": 1.6208,
+        "mel_loss": 0.7682,
+        "pitch_l1": 0.142,
+        "pitch_spread_l1": 0.0226,
+        "voicing_bce": 0.4815,
+        "dur_mse": 0.1701,
+        "pause_bce": 0.2523
+      },
+      "step_20": {
+        "total_loss": 11.6278,
+        "stft_loss": 1.5173,
+        "mel_loss": 0.7268,
+        "pitch_l1": 0.1818,
+        "pitch_spread_l1": 0.0205,
+        "voicing_bce": 0.3811,
+        "dur_mse": 0.1555,
+        "pause_bce": 0.0982
+      },
+      "step_30": {
+        "total_loss": 9.9049,
+        "stft_loss": 1.3842,
+        "mel_loss": 0.6385,
+        "pitch_l1": 0.098,
+        "pitch_spread_l1": 0.0155,
+        "voicing_bce": 0.1887,
+        "dur_mse": 0.0851,
+        "pause_bce": 0.0095
+      }
+    }
+  }
+}
