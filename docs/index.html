@@ -48,7 +48,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-h"><span class="ms">waveform</span><h2>Output</h2></div>
+        <div class="card-h"><span class="ms">graphic_eq</span><h2>Output</h2></div>
         <div class="viz"><canvas id="mel" height="120" aria-label="Spectrogram"></canvas><canvas id="wavc" height="64" aria-label="Waveform"></canvas></div>
         <audio id="player" controls preload="none"></audio>
         <details class="more"><summary>Normalised text and phones</summary><p id="norm" class="muted"></p><pre id="ph"></pre></details>
@@ -116,6 +116,6 @@
   document.addEventListener("play",function(e){document.querySelectorAll("audio").forEach(function(a){if(a!==e.target&&!a.paused)a.pause();});},true);
 })();
 </script>
-<script type="module" src="ggml_engine.js?v=60"></script><script src="nav.js?v=60"></script><script src="buildbadge.js?v=60"></script><script src="g2p.js?v=60"></script><script src="sanskrit.js?v=60"></script><script src="mixed.js?v=60"></script><script src="roman.js?v=60"></script><script src="chandas.js?v=60"></script><script src="tanpura.js?v=60"></script><script src="tts.js?v=60"></script><script src="app.js?v=60"></script><script src="samples.js?v=60"></script>
+<script type="module" src="ggml_engine.js?v=60"></script><script src="nav.js?v=60"></script><script src="g2p.js?v=60"></script><script src="sanskrit.js?v=60"></script><script src="mixed.js?v=60"></script><script src="roman.js?v=60"></script><script src="chandas.js?v=60"></script><script src="tanpura.js?v=60"></script><script src="tts.js?v=60"></script><script src="app.js?v=60"></script><script src="samples.js?v=60"></script>
 </body>
 </html>
