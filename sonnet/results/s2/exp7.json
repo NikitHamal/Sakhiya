@@ -1,0 +1,350 @@
+{
+ "n_utts": 31255,
+ "hours": 55.09,
+ "unique_sentences": {
+  "female": 15818,
+  "male": 15112,
+  "union": 23648,
+  "shared_F_and_M": 7282,
+  "shared_frac_of_male": 0.482
+ },
+ "test_train": {
+  "test_unique": 3027,
+  "train_unique": 21938,
+  "test_sentences_also_in_train": 1317,
+  "frac": 0.435,
+  "test_genders": {
+   "female": 1602,
+   "male": 1525
+  }
+ },
+ "chars": {
+  "n_distinct": 81,
+  "devanagari_distinct": 72,
+  "latin_chars": 0,
+  "ascii_digits": 0,
+  "deva_digits": 4,
+  "non_deva_non_ascii_top": {
+   "‌": 6
+  },
+  "rare_deva_lt20": {
+   "ड़": 4,
+   "ढ़": 1,
+   "ऽ": 3,
+   "ॉ": 7,
+   "ॆ": 1,
+   "ॠ": 1,
+   "ऑ": 1,
+   "१": 1,
+   "०": 1,
+   "२": 1,
+   "३": 1
+  },
+  "total_chars": 2219547
+ },
+ "utts_with_latin": 0,
+ "utts_with_digits": 2,
+ "words": {
+  "train_types": 47377,
+  "train_tokens": 306638,
+  "test_tokens": 34843,
+  "test_oov_token_rate": 0.0806,
+  "train_hapax_frac_of_types": 0.506,
+  "types_ge5": 8153,
+  "types_ge20": 2061
+ },
+ "styles": {
+  "female": {
+   "ALEXA": {
+    "utts": 274,
+    "hours": 0.28,
+    "mean_dur_s": 3.67,
+    "words_per_s_median": 1.85,
+    "chars_mean": 41.4,
+    "frac_dur_gt_15s": 0.0,
+    "frac_dur_lt_1s": 0.004
+   },
+   "ANGER": {
+    "utts": 475,
+    "hours": 1.26,
+    "mean_dur_s": 9.57,
+    "words_per_s_median": 1.83,
+    "chars_mean": 108.9,
+    "frac_dur_gt_15s": 0.053,
+    "frac_dur_lt_1s": 0.0
+   },
+   "BB": {
+    "utts": 172,
+    "hours": 0.34,
+    "mean_dur_s": 7.13,
+    "words_per_s_median": 1.85,
+    "chars_mean": 81.2,
+    "frac_dur_gt_15s": 0.064,
+    "frac_dur_lt_1s": 0.0
+   },
+   "BOOK": {
+    "utts": 1290,
+    "hours": 2.06,
+    "mean_dur_s": 5.75,
+    "words_per_s_median": 1.95,
+    "chars_mean": 68.2,
+    "frac_dur_gt_15s": 0.033,
+    "frac_dur_lt_1s": 0.009
+   },
+   "CONV": {
+    "utts": 2816,
+    "hours": 3.2,
+    "mean_dur_s": 4.1,
+    "words_per_s_median": 2.06,
+    "chars_mean": 51.3,
+    "frac_dur_gt_15s": 0.001,
+    "frac_dur_lt_1s": 0.016
+   },
+   "DIGI": {
+    "utts": 116,
+    "hours": 0.34,
+    "mean_dur_s": 10.54,
+    "words_per_s_median": 1.62,
+    "chars_mean": 96.4,
+    "frac_dur_gt_15s": 0.224,
+    "frac_dur_lt_1s": 0.0
+   },
+   "DISGUST": {
+    "utts": 502,
+    "hours": 1.22,
+    "mean_dur_s": 8.75,
+    "words_per_s_median": 1.78,
+    "chars_mean": 98.4,
+    "frac_dur_gt_15s": 0.022,
+    "frac_dur_lt_1s": 0.0
+   },
+   "FEAR": {
+    "utts": 536,
+    "hours": 1.29,
+    "mean_dur_s": 8.65,
+    "words_per_s_median": 1.89,
+    "chars_mean": 99.5,
+    "frac_dur_gt_15s": 0.03,
+    "frac_dur_lt_1s": 0.0
+   },
+   "HAPPY": {
+    "utts": 502,
+    "hours": 1.18,
+    "mean_dur_s": 8.45,
+    "words_per_s_median": 1.87,
+    "chars_mean": 99.5,
+    "frac_dur_gt_15s": 0.014,
+    "frac_dur_lt_1s": 0.0
+   },
+   "NEWS": {
+    "utts": 784,
+    "hours": 2.22,
+    "mean_dur_s": 10.21,
+    "words_per_s_median": 1.62,
+    "chars_mean": 115.9,
+    "frac_dur_gt_15s": 0.166,
+    "frac_dur_lt_1s": 0.005
+   },
+   "PROPER NOUN": {
+    "utts": 3946,
+    "hours": 2.01,
+    "mean_dur_s": 1.84,
+    "words_per_s_median": 1.31,
+    "chars_mean": 16.7,
+    "frac_dur_gt_15s": 0.0,
+    "frac_dur_lt_1s": 0.338
+   },
+   "SAD": {
+    "utts": 483,
+    "hours": 1.22,
+    "mean_dur_s": 9.06,
+    "words_per_s_median": 1.83,
+    "chars_mean": 102.4,
+    "frac_dur_gt_15s": 0.023,
+    "frac_dur_lt_1s": 0.0
+   },
+   "SURPRISE": {
+    "utts": 547,
+    "hours": 1.36,
+    "mean_dur_s": 8.97,
+    "words_per_s_median": 1.88,
+    "chars_mean": 102.0,
+    "frac_dur_gt_15s": 0.035,
+    "frac_dur_lt_1s": 0.0
+   },
+   "UMANG": {
+    "utts": 101,
+    "hours": 0.35,
+    "mean_dur_s": 12.49,
+    "words_per_s_median": 1.41,
+    "chars_mean": 108.3,
+    "frac_dur_gt_15s": 0.327,
+    "frac_dur_lt_1s": 0.0
+   },
+   "WIKI": {
+    "utts": 3472,
+    "hours": 10.39,
+    "mean_dur_s": 10.78,
+    "words_per_s_median": 1.47,
+    "chars_mean": 106.8,
+    "frac_dur_gt_15s": 0.163,
+    "frac_dur_lt_1s": 0.0
+   }
+  },
+  "male": {
+   "ALEXA": {
+    "utts": 297,
+    "hours": 0.28,
+    "mean_dur_s": 3.33,
+    "words_per_s_median": 1.8,
+    "chars_mean": 40.0,
+    "frac_dur_gt_15s": 0.0,
+    "frac_dur_lt_1s": 0.01
+   },
+   "ANGER": {
+    "utts": 425,
+    "hours": 1.01,
+    "mean_dur_s": 8.54,
+    "words_per_s_median": 2.09,
+    "chars_mean": 110.1,
+    "frac_dur_gt_15s": 0.031,
+    "frac_dur_lt_1s": 0.0
+   },
+   "BB": {
+    "utts": 156,
+    "hours": 0.28,
+    "mean_dur_s": 6.35,
+    "words_per_s_median": 1.96,
+    "chars_mean": 78.6,
+    "frac_dur_gt_15s": 0.019,
+    "frac_dur_lt_1s": 0.0
+   },
+   "BOOK": {
+    "utts": 1491,
+    "hours": 2.17,
+    "mean_dur_s": 5.23,
+    "words_per_s_median": 1.83,
+    "chars_mean": 59.0,
+    "frac_dur_gt_15s": 0.015,
+    "frac_dur_lt_1s": 0.009
+   },
+   "CONV": {
+    "utts": 2649,
+    "hours": 2.9,
+    "mean_dur_s": 3.95,
+    "words_per_s_median": 2.15,
+    "chars_mean": 51.8,
+    "frac_dur_gt_15s": 0.002,
+    "frac_dur_lt_1s": 0.017
+   },
+   "DIGI": {
+    "utts": 125,
+    "hours": 0.35,
+    "mean_dur_s": 10.14,
+    "words_per_s_median": 1.76,
+    "chars_mean": 99.9,
+    "frac_dur_gt_15s": 0.176,
+    "frac_dur_lt_1s": 0.0
+   },
+   "DISGUST": {
+    "utts": 476,
+    "hours": 1.07,
+    "mean_dur_s": 8.1,
+    "words_per_s_median": 1.89,
+    "chars_mean": 96.7,
+    "frac_dur_gt_15s": 0.004,
+    "frac_dur_lt_1s": 0.0
+   },
+   "FEAR": {
+    "utts": 428,
+    "hours": 1.04,
+    "mean_dur_s": 8.73,
+    "words_per_s_median": 1.93,
+    "chars_mean": 101.1,
+    "frac_dur_gt_15s": 0.026,
+    "frac_dur_lt_1s": 0.0
+   },
+   "HAPPY": {
+    "utts": 475,
+    "hours": 1.03,
+    "mean_dur_s": 7.77,
+    "words_per_s_median": 2.03,
+    "chars_mean": 98.3,
+    "frac_dur_gt_15s": 0.002,
+    "frac_dur_lt_1s": 0.0
+   },
+   "NEWS": {
+    "utts": 798,
+    "hours": 2.2,
+    "mean_dur_s": 9.92,
+    "words_per_s_median": 1.67,
+    "chars_mean": 117.2,
+    "frac_dur_gt_15s": 0.138,
+    "frac_dur_lt_1s": 0.001
+   },
+   "PROPER NOUN": {
+    "utts": 3189,
+    "hours": 1.66,
+    "mean_dur_s": 1.87,
+    "words_per_s_median": 1.4,
+    "chars_mean": 18.9,
+    "frac_dur_gt_15s": 0.0,
+    "frac_dur_lt_1s": 0.123
+   },
+   "SAD": {
+    "utts": 424,
+    "hours": 1.03,
+    "mean_dur_s": 8.76,
+    "words_per_s_median": 1.83,
+    "chars_mean": 99.2,
+    "frac_dur_gt_15s": 0.012,
+    "frac_dur_lt_1s": 0.0
+   },
+   "SURPRISE": {
+    "utts": 438,
+    "hours": 1.03,
+    "mean_dur_s": 8.46,
+    "words_per_s_median": 1.91,
+    "chars_mean": 97.7,
+    "frac_dur_gt_15s": 0.021,
+    "frac_dur_lt_1s": 0.0
+   },
+   "UMANG": {
+    "utts": 93,
+    "hours": 0.27,
+    "mean_dur_s": 10.45,
+    "words_per_s_median": 1.67,
+    "chars_mean": 109.7,
+    "frac_dur_gt_15s": 0.161,
+    "frac_dur_lt_1s": 0.0
+   },
+   "WIKI": {
+    "utts": 3775,
+    "hours": 10.06,
+    "mean_dur_s": 9.59,
+    "words_per_s_median": 1.69,
+    "chars_mean": 108.3,
+    "frac_dur_gt_15s": 0.08,
+    "frac_dur_lt_1s": 0.0
+   }
+  }
+ },
+ "duration_quantiles_s": {
+  "0.01": 0.64,
+  "0.05": 0.92,
+  "0.5": 5.5,
+  "0.95": 14.72,
+  "0.99": 19.28
+ },
+ "examples": {
+  "latin": [],
+  "digits": [
+   "फार्मेसी त रातको १० बजी नै बन्द भएको हो, तर म भित्रबाट केही चर्का आवाजहरू सुनिरहेको छु।",
+   "युवकको नाउँ श्री इन्द्रशेखर खँड्का उमेर प्रायः २३ वर्ष कलकत्ता युनिभर्सिटीका "
+  ],
+  "very_long": [
+   "यस महिनाको तलब मेरो ब्याङ्क खाता छ, आठ, नौ, पाँच, पाँच, आठ, चार,चार, एक, आठ, पाँचमा तमिलनाडू ग्राम ब्याङ्कमा जम्मा भएको छ कि छैन भनेर जाँच गर्न सक्नुहुन्छ?, अनि",
+   "छ \" पोखराजका पिता पुष्पजीवी, पिल्पिलाउँदो पिलन्धरे, पुवाले पगरी, पछ्यौरा र पटुका त्यसका परापूर्वको पहिरन, पोखराज छे परी जस्ती, हदकी हठी, पुष्पमणिले पोखराजको पुष"
+  ]
+ }
+}
