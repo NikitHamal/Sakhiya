@@ -65,7 +65,7 @@
     ];
     var baseClips = owner4Clips.concat(unseen5News).concat(hard5Pron);
     var abSystems = [
-      { blind: "Sample A (-16 LUFS)", real: "4 · Candidate B: Sakhiya-One Studio Vocos [19.70 MB INT8 · Mel80To100Adapter + Pretrained Vocos-24kHz · 4-Step]", metrics: "PROMOTED STUDIO DEFAULT ✅ · ne_pcer=0.0351 (+0.0031) · RTF=0.0318 (31.4×) · Zero Harmonic Comb", tag: "sakhiya_one_vocos" },
+      { blind: "Sample A (-16 LUFS)", real: "4 · Candidate B v2: Sakhiya-One Studio Vocos [23.01 MB INT8 / 35.53 MB FP16 · pad=384 Mel80To100Adapter + LoHiBand Vocos-24kHz · 4-Step]", metrics: "PROMOTED STUDIO DEFAULT ✅ · ne_pcer=0.0356–0.0360 · RTF=0.0274–0.0299 · grit=1.3927 · sibSFM=0.552", tag: "sakhiya_one_vocos" },
       { blind: "Sample B (-16 LUFS)", real: "3 · Candidate A: Sakhiya-One-Polish [8.49 MB INT8 · Anchored AM + MS-SB-CQT AWP · 4-Step]", metrics: "COMPACT ~8.5 MB TIER ✅ · 36/36 Pron Checklist (वालेट != बालेट) · MS-SB-CQT Joint E2E + LSQ QAT", tag: "sakhiya_one_polish" },
       { blind: "Sample C (-16 LUFS)", real: "2 · Baseline + Fixed G2P + 4-Step MeanFlow [0 Extra Bytes · 8.49 MB INT8]", metrics: "Zero-Training G2P + 4-Step Ablation: Fixes वालेट/एआई/geminates & reduces mid-vowel warble by 16.6%", tag: "sakhiya_one_base_4step_g2p" },
       { blind: "Sample D (-16 LUFS)", real: "1 · Original Baseline Sakhiya-One [Untouched a61c100 · 2-Step · 8.46 MB INT8]", metrics: "Original Shipped Baseline (a61c100): ne_pcer=0.0590 · comb_grit=1.4584 · बालेट leak on Clip 1", tag: "sakhiya_one_baseline_a61c100" }
