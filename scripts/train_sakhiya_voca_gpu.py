@@ -550,7 +550,7 @@ def main():
     else:
         tv_pt_path = Path(tv_candidates[0])
 
-    if args.run_smoke_gates:
+    if args.run_smoke_gates and not (out_dir.parent / "smoke_gate" / "smoke_report.json").exists():
         smoke_rep = run_smoke_and_overfit_gates(train_ds, tv_pt_path, out_dir.parent, device)
         print(f"[{run_name}] Smoke & Overfit Gates PASS:", json.dumps(smoke_rep), flush=True)
 

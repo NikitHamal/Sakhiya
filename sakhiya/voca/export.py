@@ -344,21 +344,26 @@ def export_onnx_models(
         g16.node.insert(0, n)
     onnx.save(base_m, str(fp16_path))
 
-    # 2. Build Selective Transformer-Only Per-Channel INT8 + FP16 ONNX
+    # 2. Build Selective Acoustic-Transformer Per-Channel INT8 + FP16 ONNX
+    # Keep encoder + duration + prosody_stack in FP16 so durations (len_diff_int8 == 0) and F0 phase are bit-identical to FP16
     m8 = onnx.load(str(fp32_path))
     g8 = m8.graph
     _compress_float_constants(g8)
+    cand_2d_names = [
+        init.name for init in g8.initializer
+        if numpy_helper.to_array(init).dtype == np.float32
+        and numpy_helper.to_array(init).ndim == 2
+        and min(numpy_helper.to_array(init).shape) >= 128
+        and not any(k in init.name for k in ("tokens", "harmonic", "noise"))
+    ]
+    n_acoustic_mats = 4 * model.config.acoustic_layers
+    int8_target_names = set(cand_2d_names[-n_acoustic_mats:]) if n_acoustic_mats > 0 else set()
+
     new_inits_8 = []
     new_nodes_8 = []
     for init in list(g8.initializer):
         arr = numpy_helper.to_array(init)
-        is_transformer_w = (
-            arr.dtype == np.float32
-            and arr.ndim == 2
-            and min(arr.shape) >= 128
-            and not any(k in init.name for k in ("tokens", "harmonic", "noise"))
-        )
-        if is_transformer_w:
+        if init.name in int8_target_names:
             max_val = np.maximum(np.max(np.abs(arr), axis=0, keepdims=True), 1e-8)
             scale = (max_val / 127.0).astype(np.float16)
             q = np.clip(np.round(arr / scale.astype(np.float32)), -127, 127).astype(np.int8)
@@ -413,8 +418,10 @@ def export_onnx_models(
     audio_sec = max(w8.shape[-1] / 24000.0, 0.1)
     rtf_1t = (infer_ms / 1000.0) / audio_sec
 
-    peak_diff_16 = float(np.max(np.abs(w32 - w16)) / max(float(np.max(np.abs(w32))), 1e-5))
-    peak_diff_8 = float(np.max(np.abs(w16 - w8)) / max(float(np.max(np.abs(w16))), 1e-5))
+    min_16 = min(w32.shape[-1], w16.shape[-1])
+    min_8 = min(w16.shape[-1], w8.shape[-1])
+    peak_diff_16 = float(np.max(np.abs(w32[..., :min_16] - w16[..., :min_16])) / max(float(np.max(np.abs(w32[..., :min_16]))), 1e-5))
+    peak_diff_8 = float(np.max(np.abs(w16[..., :min_8] - w8[..., :min_8])) / max(float(np.max(np.abs(w16[..., :min_8]))), 1e-5))
 
     return {
         "fp32_mb": round(fp32_path.stat().st_size / (1024 * 1024), 3),
