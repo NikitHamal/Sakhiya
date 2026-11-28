@@ -55,7 +55,9 @@ class Progress:
 
     def sample(self, wav_path, label=""):
         os.makedirs(f"{S4}/samples", exist_ok=True)
-        dst = f"{S4}/samples/{self.name}__{int(time.time())}.wav"
+        import re
+        tag = re.sub(r"[^A-Za-z0-9]+", "", (label.split("·")[1] if label.count("·") >= 1 else ""))[:12]   # S4 fix: F/M renders in the same second used to overwrite each other
+        dst = f"{S4}/samples/{self.name}__{time.time_ns()}_{tag}.wav"
         if os.path.abspath(wav_path) != os.path.abspath(dst):
             shutil.copy(wav_path, dst)
         with open(f"{S4}/samples/index.jsonl", "a") as f:
