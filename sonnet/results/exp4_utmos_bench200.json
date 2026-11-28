@@ -1,0 +1,33 @@
+{
+ "VOCOS_INT8_news": {
+  "utmos_mean": 2.8016,
+  "utmos_std": 0.3204,
+  "mean_dur_s": 4.795
+ },
+ "VOCOS_FP16_news": {
+  "utmos_mean": 2.8053,
+  "utmos_std": 0.3282,
+  "mean_dur_s": 4.795
+ },
+ "VOCOS_FP16_neutral": {
+  "utmos_mean": 2.8178,
+  "utmos_std": 0.3255,
+  "mean_dur_s": 4.794
+ },
+ "V1_INT8_news": {
+  "utmos_mean": 4.075,
+  "utmos_std": 0.2183,
+  "mean_dur_s": 5.54
+ },
+ "ONE_COMPACT_news": {
+  "utmos_mean": 3.529,
+  "utmos_std": 0.2716,
+  "mean_dur_s": 4.781
+ },
+ "NANO_news": {
+  "utmos_mean": 3.7537,
+  "utmos_std": 0.2472,
+  "mean_dur_s": 5.596
+ },
+ "note": "first 40 ne sentences of eval/bench_general_200.json; copied from exp4 log"
+}

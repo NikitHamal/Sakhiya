@@ -1,0 +1,21 @@
+{
+ "EDGE_HEMKALA_F": {
+  "utmos22": 3.418191009759903,
+  "cer": 0.08393253975684888,
+  "wer": 0.34617619857894455,
+  "pauses_per_utt": 0.025,
+  "graphemes_per_s": 7.552450858187042,
+  "mean_dur_s": 6.6024,
+  "abs_dF0_st_per_10ms": 0.47815704853617047
+ },
+ "EDGE_SAGAR_M": {
+  "utmos22": 3.6338027894496916,
+  "cer": 0.09297984856057352,
+  "wer": 0.37106351703534196,
+  "pauses_per_utt": 0.025,
+  "graphemes_per_s": 8.227935038419677,
+  "mean_dur_s": 6.0672,
+  "abs_dF0_st_per_10ms": 0.7240296146121642
+ },
+ "note": "Edge TTS reference on the same 40 Rasa test sentences as exp1/exp3; reference only, not a training source"
+}

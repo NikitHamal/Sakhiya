@@ -1,0 +1,191 @@
+{
+ "totals": {
+  "female": {
+   "utts": 16016,
+   "hours": 28.74
+  },
+  "male": {
+   "utts": 15239,
+   "hours": 26.36
+  }
+ },
+ "inventory": {
+  "female": {
+   "ALEXA": {
+    "utts": 274,
+    "hours": 0.28,
+    "mean_s": 3.67
+   },
+   "ANGER": {
+    "utts": 475,
+    "hours": 1.26,
+    "mean_s": 9.57
+   },
+   "BB": {
+    "utts": 172,
+    "hours": 0.34,
+    "mean_s": 7.13
+   },
+   "BOOK": {
+    "utts": 1290,
+    "hours": 2.06,
+    "mean_s": 5.75
+   },
+   "CONV": {
+    "utts": 2816,
+    "hours": 3.2,
+    "mean_s": 4.1
+   },
+   "DIGI": {
+    "utts": 116,
+    "hours": 0.34,
+    "mean_s": 10.54
+   },
+   "DISGUST": {
+    "utts": 502,
+    "hours": 1.22,
+    "mean_s": 8.75
+   },
+   "FEAR": {
+    "utts": 536,
+    "hours": 1.29,
+    "mean_s": 8.65
+   },
+   "HAPPY": {
+    "utts": 502,
+    "hours": 1.18,
+    "mean_s": 8.45
+   },
+   "NEWS": {
+    "utts": 784,
+    "hours": 2.22,
+    "mean_s": 10.21
+   },
+   "PROPER NOUN": {
+    "utts": 3946,
+    "hours": 2.01,
+    "mean_s": 1.84
+   },
+   "SAD": {
+    "utts": 483,
+    "hours": 1.22,
+    "mean_s": 9.06
+   },
+   "SURPRISE": {
+    "utts": 547,
+    "hours": 1.36,
+    "mean_s": 8.97
+   },
+   "UMANG": {
+    "utts": 101,
+    "hours": 0.35,
+    "mean_s": 12.49
+   },
+   "WIKI": {
+    "utts": 3472,
+    "hours": 10.39,
+    "mean_s": 10.78
+   }
+  },
+  "male": {
+   "ALEXA": {
+    "utts": 297,
+    "hours": 0.28,
+    "mean_s": 3.33
+   },
+   "ANGER": {
+    "utts": 425,
+    "hours": 1.01,
+    "mean_s": 8.54
+   },
+   "BB": {
+    "utts": 156,
+    "hours": 0.28,
+    "mean_s": 6.35
+   },
+   "BOOK": {
+    "utts": 1491,
+    "hours": 2.17,
+    "mean_s": 5.23
+   },
+   "CONV": {
+    "utts": 2649,
+    "hours": 2.9,
+    "mean_s": 3.95
+   },
+   "DIGI": {
+    "utts": 125,
+    "hours": 0.35,
+    "mean_s": 10.14
+   },
+   "DISGUST": {
+    "utts": 476,
+    "hours": 1.07,
+    "mean_s": 8.1
+   },
+   "FEAR": {
+    "utts": 428,
+    "hours": 1.04,
+    "mean_s": 8.73
+   },
+   "HAPPY": {
+    "utts": 475,
+    "hours": 1.03,
+    "mean_s": 7.77
+   },
+   "NEWS": {
+    "utts": 798,
+    "hours": 2.2,
+    "mean_s": 9.92
+   },
+   "PROPER NOUN": {
+    "utts": 3189,
+    "hours": 1.66,
+    "mean_s": 1.87
+   },
+   "SAD": {
+    "utts": 424,
+    "hours": 1.03,
+    "mean_s": 8.76
+   },
+   "SURPRISE": {
+    "utts": 438,
+    "hours": 1.03,
+    "mean_s": 8.46
+   },
+   "UMANG": {
+    "utts": 93,
+    "hours": 0.27,
+    "mean_s": 10.45
+   },
+   "WIKI": {
+    "utts": 3775,
+    "hours": 10.06,
+    "mean_s": 9.59
+   }
+  }
+ },
+ "unique_texts": {
+  "female": 15832,
+  "male": 15131
+ },
+ "text_len_chars_mean": 71.01414173732203,
+ "utmos22": {
+  "REAL_RASA_F": {
+   "mean": 3.7948081731796264,
+   "std": 0.300841585679688
+  },
+  "S_VOCOS_FP16": {
+   "mean": 2.6410952150821685,
+   "std": 0.3621460920169264
+  },
+  "S_V1_INT8": {
+   "mean": 4.0792860925197605,
+   "std": 0.23089591864690698
+  },
+  "S_ONE_COMPACT_INT8": {
+   "mean": 3.429814803600311,
+   "std": 0.2875783329106006
+  }
+ }
+}
