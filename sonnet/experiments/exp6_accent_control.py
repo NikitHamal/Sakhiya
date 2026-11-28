@@ -42,24 +42,26 @@ def iter_rows():
         import pyarrow.parquet as pq
         from huggingface_hub import hf_hub_download
         gen = "female" if CORP.endswith("F") else "male"
-        files = [hf_hub_download("ai4bharat/Rasa", f"Nepali/test-0000{i}-of-00007.parquet", repo_type="dataset", token=tok) for i in range(int(os.environ.get("RASA_SHARDS", "1")))]
+        # Rasa is sorted by gender: train shards 0-28 female, 29 mixed, 30-56 male; test-00000 is female only
+        names = os.environ.get("RASA_FILES", "test-00000-of-00007").split(",")
+        files = [hf_hub_download("ai4bharat/Rasa", f"Nepali/{n}.parquet", repo_type="dataset", token=tok) for n in names]
         for f in files:
             df = pq.read_table(f).to_pandas()
             df = df[df.gender.str.lower() == gen]
             for r in df.itertuples():
                 yield r.Index, r.text, (lambda b=r.audio["bytes"]: load16(b))
     elif CORP == "slr43":
-        D = "/work/sonnet/s2/data/slr43"
-        idx = [l.rstrip("\n").split("\t") for l in open(f"{D}/line_index_female.tsv", encoding="utf8")]
-        for p in idx:
-            if len(p) < 3: continue
-            yield p[0], p[-1], (lambda f=f"{D}/{p[0]}.wav": load16(f))
+        D = "/work/sonnet/s2/data/slr43/ne_np_female"
+        for l in open(f"{D}/line_index.tsv", encoding="utf8"):
+            p = l.rstrip("\n").split("\t")
+            if len(p) < 2: continue
+            yield p[0], p[-1], (lambda f=f"{D}/wavs/{p[0]}.wav": load16(f))
     elif CORP == "slr54":
-        D = "/work/sonnet/s2/data/slr54"
+        D = "/work/sonnet/s2/data/slr54/asr_nepali"
         for l in open(f"{D}/utt_spk_text.tsv", encoding="utf8"):
             p = l.rstrip("\n").split("\t")
             if len(p) < 3: continue
-            f = f"{D}/asr_nepali/data/{p[0][:2]}/{p[0]}.flac"
+            f = f"{D}/data/{p[0][:2]}/{p[0]}.flac"
             if os.path.exists(f): yield p[0], p[2], (lambda f=f: load16(f))
 
 # ---------------- models
