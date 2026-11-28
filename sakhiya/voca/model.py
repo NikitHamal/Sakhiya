@@ -27,7 +27,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from sakhiya.symbols import N_SYMBOLS, PAUSE, SYM2ID, SYMBOLS
+from sakhiya.symbols import N_SYMBOLS, SYM2ID, SYMBOLS
 from .frontend import PAUSE_SYMS, VOWEL_SYMS, classify_nepali_phonation_kinds
 
 ALL_PULSES = 12000.0
